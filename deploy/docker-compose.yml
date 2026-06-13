@@ -1,0 +1,77 @@
+# deploy/docker-compose.yml - ein Schritt: `docker compose -f deploy/docker-compose.yml up` (FND-01)
+# Topologie: caddy (einziger Ingress) -> api (intern) -> redis (Cache-Store).
+# arm64-Hinweis: caddy:2, redis:7.4-alpine und das aus python:3.13-slim-bookworm gebaute
+# api-Image sind alle multi-arch; auf CAX11 nativ bauen oder `buildx --platform linux/arm64`.
+services:
+  caddy:
+    image: caddy:2
+    # EINZIGER exponierter Port (lokal :80). Nur Caddy ownt den Ingress (Gateway-Prinzip, Pitfall 3).
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  api:
+    # Build-Context ist das Repo-Root (..), da dieses Compose-File in deploy/ liegt.
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    # expose (kein Port-Mapping): api ist NUR im internen Compose-Netz erreichbar (T-02-01, Pitfall 3).
+    expose:
+      - "8000"
+    # .env ist gitignored; nur .env.example wird committet. Secrets zur Laufzeit injiziert (T-02-03).
+    env_file:
+      - ../.env
+    volumes:
+      # Named volume fuer den append-only Tier-A-Store unter /app/data/archive (WORKDIR /app
+      # -> Default-Pfad data/archive). Muss Container-Neustarts ueberleben, sonst geht die
+      # nicht-nachholbare Historie (ARCH-01) bei `docker compose down` verloren (Pitfall 6, T-04-02).
+      - infranode_data:/app/data
+    environment:
+      # Service-Name-DNS im Compose-Netz; ueberschreibt einen evtl. abweichenden .env-Wert.
+      INFRANODE_REDIS_URL: redis://redis:6379/0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    # maxmemory + LRU-Eviction haelt RAM auf der 4-GB-Box im Zaum (T-02-04, Tuning final Phase 10).
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  kuma:
+    # Selbstgehostetes Uptime-Kuma (OPS-06): HTTP-Checks + Push-Monitore. Fester
+    # Major-Tag :2, NIE latest (reproduzierbar). Lokal optional fuer Monitor-Tests.
+    image: louislam/uptime-kuma:2
+    volumes:
+      # Kuma-internes Datenverzeichnis (SQLite + Settings), eigenes Volume.
+      # KEIN /var/run/docker.sock-Mount (Socket-Invariante, Pitfall 7): die
+      # Container-Gesundheit prueft der Host-Watchdog, nicht Kuma.
+      - kuma_data:/app/data
+    # Loopback-only (Gateway-Invariante): Dashboard nur lokal erreichbar.
+    ports:
+      - "127.0.0.1:3001:3001"
+    restart: unless-stopped
+
+# Persistente Volumes ueberleben den Container-Lifecycle (ARCH-01-Historie, Pitfall 6).
+volumes:
+  infranode_data:
+  # Kuma-Daten (Monitore + Settings) persistent, ohne Docker-Socket.
+  kuma_data:

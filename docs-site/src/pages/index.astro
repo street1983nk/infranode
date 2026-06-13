@@ -1,0 +1,222 @@
+---
+// Landing-Page der InfraNode-Doku. Hero mit Zahlen-Badges, ehrliche
+// Feature-Sektion (kanonischer Envelope, source_status-Semantik, Cache/ETag,
+// MCP, llms.txt). Nutzt das Docs-Layout (Drei-Spalten, Suche im Topbar). Der
+// Content-Slot ist data-pagefind-body, damit die Startseite indexiert wird.
+import Docs from "../layouts/Docs.astro";
+import JsonLd from "../components/JsonLd.astro";
+
+// FAQ fuer die Landing (GEO): konversationelle Dev-Fragen plus FAQPage-JSON-LD.
+// Single Source: eine Liste speist sowohl die sichtbare Sektion als auch das
+// strukturierte Markup, damit beide deckungsgleich bleiben.
+const faqs = [
+  {
+    q: "Brauche ich einen API-Schlüssel?",
+    a: "Nein. Die API ist offen und keylos: alle Endpunkte sind öffentlich lesbar, keine Anmeldung, kein Schlüssel. Aufrufe sind einfach pro IP begrenzt.",
+  },
+  {
+    q: "Was kostet die Nutzung?",
+    a: "Nichts. InfraNode ist eine kostenlose, öffentliche Open-Data-API, ohne Werbung und ohne Bezahlschranke. Die Veröffentlichung des Quellcodes als Open Source ist in Vorbereitung.",
+  },
+  {
+    q: "Welche Städte sind abgedeckt?",
+    a: "Alle 84 deutschen Großstädte über 100.000 Einwohner. Davon sind 28 Kern-Städte mit voller Quellen-Abdeckung gepflegt, die übrigen werden über AGS- und geobasierte Quellen bedient.",
+  },
+  {
+    q: "Woher kommen die Daten?",
+    a: "Aus öffentlichen, amtlichen Quellen. InfraNode bündelt sie hinter einer Schnittstelle und reicht sie normalisiert durch. Jede Antwort nennt im attribution-Block Lizenz und Herkunft.",
+  },
+  {
+    q: "Brauche ich einen API-Key? Gibt es Rate-Limits?",
+    a: "Kein API-Key nötig, die API ist offen. Aufrufe sind pro IP begrenzt (Schutz vor Missbrauch); bei Überschreitung antwortet die API mit Status 429. Jede Antwort trägt RateLimit-Header.",
+  },
+  {
+    q: "Wie aktuell sind die Daten?",
+    a: "Das hängt von der jeweiligen Quelle ab. Antworten tragen Zeitstempel im meta-Block sowie ETag- und Cache-Control-Header. Live-Endpunkte liefern aktuelle Messwerte, statische Daten werden länger gecacht.",
+  },
+];
+
+// FAQPage nach schema.org. JSON.stringify erzeugt gueltiges, escaptes JSON.
+const faqJsonLd = JSON.stringify({
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+});
+---
+
+<Docs
+  title="InfraNode API"
+  description="Kostenlose, öffentliche Open-Data-REST-API für normalisierte offene Daten deutscher Großstädte: ein konsistenter JSON-Envelope statt Dutzender Behörden-APIs."
+  current="home"
+  lang="de"
+  altLangPath="/en/"
+>
+  <JsonLd
+    slot="jsonld"
+    type="WebAPI"
+    name="InfraNode API"
+    description="Kostenlose, öffentliche Open-Data-REST-API für normalisierte offene Daten deutscher Großstädte."
+  />
+  <script slot="jsonld" type="application/ld+json" set:html={faqJsonLd} />
+
+  <p class="hero__eyebrow">Kostenlose, öffentliche Open-Data-API</p>
+  <h1>Offene Stadtdaten, ein konsistenter Envelope</h1>
+  <p class="hero__lede">
+    InfraNode bündelt fragmentierte offene Daten deutscher Großstädte hinter
+    einer einheitlichen REST-Schnittstelle. Jede Antwort folgt demselben
+    JSON-Envelope mit <code>data</code> und <code>meta</code>; jeder
+    data-Record trägt zusätzlich ein <code>attribution</code>-Feld mit
+    Lizenz und Herkunft, und der <code>meta</code>-Block nennt ehrlich den
+    Quellen-Status, statt Dutzender unterschiedlicher Behörden- und
+    Open-Data-APIs.
+  </p>
+
+  <div class="tldr">
+    <p class="tldr__title">Kurz gesagt</p>
+    <p>
+      InfraNode ist eine kostenlose, öffentliche Open-Data-REST-API, die offene
+      Daten deutscher Großstädte hinter einer einheitlichen Schnittstelle
+      bereitstellt. Statt dich bei Dutzenden Portalen anzumelden, fragst du alles
+      über einen konsistenten JSON-Envelope ab, ohne API-Schlüssel.
+    </p>
+    <ul>
+      <li>84 Großstädte, 48 Endpunkte, ein einheitlicher Envelope.</li>
+      <li>Kein Schlüssel nötig, kostenlos und ohne Werbung.</li>
+      <li>Betrieb auf einem Server in Deutschland, mit ehrlichem Quellen-Status.</li>
+    </ul>
+  </div>
+
+  <ul class="stats">
+    <li class="stat"><a href="/staedte/"><strong>84</strong> Großstädte</a></li>
+    <li class="stat"><strong>48</strong> Endpunkte</li>
+    <li class="stat"><strong>35+</strong> amtliche Datenquellen</li>
+    <li class="stat"><strong>Lizenz-Tag</strong> in jeder Antwort</li>
+  </ul>
+
+  <div class="hero__actions">
+    <a class="btn-primary" href="/quickstart/">Quick-Start</a>
+    <a class="btn-secondary" href="/api/getCities/">Endpunkte ansehen</a>
+  </div>
+
+  <h2>Abdeckung, ehrlich erklärt</h2>
+  <p>
+    InfraNode kennt alle <strong>84 deutschen Großstädte über 100.000
+    Einwohner</strong>. Davon sind <strong>28 Kern-Städte</strong> mit voller
+    Quellen-Abdeckung gepflegt; die übrigen Städte werden von den
+    automatischen, AGS- und geobasierten Quellen bedient. Wo eine Quelle für
+    eine Stadt nichts liefert, sagt die API das ehrlich über
+    <code>source_status</code>, statt einen Fehler vorzutäuschen.
+  </p>
+
+  <h2>Was die API ausmacht</h2>
+  <ul class="features">
+    <li class="feature">
+      <h3>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h10"></path></svg>
+        Kanonischer Envelope
+      </h3>
+      <p>
+        Jede Antwort hat dieselbe Form: <code>data</code> mit der Nutzlast und
+        <code>meta</code> mit Stadt, Zeitstempel, <code>source_status</code>,
+        <code>correlation_id</code> und <code>cache_status</code>. Jeder
+        data-Record trägt zusätzlich ein <code>attribution</code>-Feld mit
+        Lizenz und Herkunft.
+      </p>
+    </li>
+    <li class="feature">
+      <h3>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10"></path><path d="m9 12 2 2 4-4"></path></svg>
+        Ehrlicher Quellen-Status
+      </h3>
+      <p>
+        <code>source_status</code> unterscheidet <code>ok</code>,
+        <code>no_data</code> und <code>disabled</code>. Eine Quelle ohne Daten
+        liefert eine saubere 200er-Antwort, keinen 5xx-Fehler.
+      </p>
+    </li>
+    <li class="feature">
+      <h3>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9"></path><path d="M12 7v5l3 2"></path></svg>
+        Cache und ETag
+      </h3>
+      <p>
+        Antworten tragen <code>ETag</code>- und <code>Cache-Control</code>-Header.
+        Bedingte Requests sparen Bandbreite und treffen den Edge-Cache.
+      </p>
+    </li>
+    <li class="feature">
+      <h3>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v12H4z"></path><path d="M2 20h20"></path><path d="M8 10h8M8 13h5"></path></svg>
+        MCP für KI-Agenten
+      </h3>
+      <p>
+        Ein MCP-Server stellt die Endpunkte als Werkzeuge für KI-Agenten
+        bereit. Zusätzlich liegt eine <code>llms.txt</code> an der Wurzel für
+        den direkten Maschinen-Konsum.
+      </p>
+    </li>
+    <li class="feature">
+      <h3>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3 8 4-16 3 8h4"></path></svg>
+        Echtzeitdaten unter /live
+      </h3>
+      <p>
+        Unter <code>/api/v1/live/*</code> liefert InfraNode aktuelle Messwerte:
+        Verkehrslage, Baustellen, Parken, Laden und ÖPNV. Einige Live-Quellen
+        sind stadtspezifisch (zum Beispiel Köln Verkehrslage, Berlin
+        Verkehrsmeldungen, Hamburg HVV-Abfahrten in Echtzeit über
+        <code>/api/v1/live/hamburg/departures</code>). Neu ist die ÖPNV-Echtzeit mit Verspätungen je Halt,
+        Fahrt und Linie sowie Positionsschätzung unter
+        <code>/api/v1/live/&lbrace;stadt&rbrace;/transit/departures</code>,
+        <code>trips/&lbrace;id&rbrace;</code> und
+        <code>routes/&lbrace;id&rbrace;/status</code>. Die <code>stop_id</code>
+        ist numerisch oder im Format <code>de:AGS:...</code>. Daten von gtfs.de
+        (CC-BY-SA), <code>refresh_seconds</code> 45.
+      </p>
+    </li>
+    <li class="feature">
+      <h3>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        Betrieb in Deutschland
+      </h3>
+      <p>
+        InfraNode läuft auf einem Server in Deutschland, ohne Werbung, ohne
+        Tracking und ohne Cookies. Eine öffentliche
+        <a href="/abdeckung/">Status-Seite</a> zeigt die Verfügbarkeit je
+        Datenbereich; die <code>/abdeckung</code>-Seite nennt ehrlich, welcher
+        Endpunkt welche Städte bedient.
+      </p>
+    </li>
+  </ul>
+
+  <h2>Einstieg</h2>
+  <p>
+    Lies den <a href="/quickstart/">Quick-Start</a> für den ersten Aufruf, oder
+    springe direkt zu einem Endpunkt in der linken Navigation. Jede Operation
+    hat Code-Beispiele in curl, JavaScript und Python sowie eine Live-Konsole
+    für die aufrufbaren Endpunkte.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <div class="faq">
+    {
+      faqs.map((f) => (
+        <div class="faq__item">
+          <h3 class="faq__q">{f.q}</h3>
+          <p class="faq__a">{f.a}</p>
+        </div>
+      ))
+    }
+  </div>
+
+  <h2>Durchsuchbar</h2>
+  <p>
+    Nutze die Suche oben, um Endpunkte, Parameter und Beschreibungen sofort zu
+    finden. Die Doku wird statisch gebaut und vollständig clientseitig
+    durchsucht, ohne Server-Roundtrip.
+  </p>
+</Docs>

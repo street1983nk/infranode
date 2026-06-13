@@ -1,0 +1,52 @@
+# InfraNode MCP Remote Server - Streamable HTTP (Phase 2)
+# Eigenes Image, weil die mcp-Dependency-Gruppe BEWUSST nicht im API-Image ist
+# (T-12-MCP-IMG, Pitfall 2). Der Server ist ein duenner httpx-Proxy: er ruft die
+# api INTERN ueber das Compose-Netz (http://api:8000/api/v1) und gibt deren
+# normalisiertes JSON 1:1 zurueck. Multi-Stage uv-Build, non-root, wie das API-Image.
+
+# --- Builder-Stage: Deps (inkl. mcp-Gruppe) + Projekt installieren -----------
+FROM python:3.13-slim-bookworm AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+WORKDIR /app
+
+# Zweistufig fuer Layer-Caching. --group mcp zieht die sonst ausgeschlossene
+# MCP-SDK-Gruppe (mcp[cli]) hinzu; --no-dev laesst die Test-/Lint-Gruppe weg.
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --group mcp --no-install-project
+
+COPY src ./src
+RUN uv sync --frozen --no-dev --group mcp
+
+# --- Final-Stage: schlankes Laufzeit-Image, non-root -------------------------
+FROM python:3.13-slim-bookworm
+
+RUN useradd -m app
+WORKDIR /app
+
+# Nur venv + Quellen. KEINE Seeds/openapi.yaml: der MCP-Server liest keine
+# Datendateien, er proxyt nur HTTP auf die interne api.
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/src /app/src
+
+# Remote-Transport per Default; der Compose-Service setzt zusaetzlich
+# INFRANODE_MCP_API_BASE auf die interne api.
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH="/app/src" \
+    INFRANODE_MCP_TRANSPORT="streamable-http" \
+    INFRANODE_MCP_HOST="0.0.0.0" \
+    INFRANODE_MCP_PORT="8081"
+
+USER app
+EXPOSE 8081
+
+# Leichtgewichtiger Healthcheck: TCP-Connect auf den Port (der /mcp-Handshake
+# braucht eine JSON-RPC-Session, daher kein HTTP-Probe, das jedes Mal eine
+# Session erzeugen wuerde).
+HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
+    CMD ["python", "-c", "import socket,sys; s=socket.socket(); s.settimeout(2); sys.exit(0 if s.connect_ex(('localhost',8081))==0 else 1)"]
+
+CMD ["python", "-m", "infranode.mcp.server"]

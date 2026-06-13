@@ -1,0 +1,64 @@
+---
+// Ueber mich (/ueber): ausfuehrliche, persoenliche Seite auf Deutsch.
+// Seriose Dev-Sprache, kein Marketing. Gate-Regel: "buendeln/bereitstellen/
+// durchreichen" verwenden, keine verbotenen Vokabeln.
+import Docs from "../layouts/Docs.astro";
+---
+
+<Docs
+  title="Über"
+  description="InfraNode entsteht aus einem Entwickler-Frust: öffentliche Daten ohne Schlüssel und Portal-Registrierung. Wer dahinter steht und warum."
+  current="ueber"
+  lang="de"
+  altLangPath="/en/about/"
+>
+  <h1>Über InfraNode</h1>
+
+  <p>
+    Hallo, ich bin Khaled Cherif, Software-Developer aus Hamburg. InfraNode ist
+    mein Versuch, ein Problem zu lösen, das mir bei der Arbeit immer wieder
+    begegnet ist.
+  </p>
+
+  <h2>Wie es entstanden ist</h2>
+  <p>
+    Als Entwickler stand ich regelmäßig vor derselben Hürde: Sobald ich
+    öffentliche Daten einer Stadt brauchte, etwa zu Luftqualität, Wetter,
+    Verkehr oder ÖPNV, musste ich mich erst bei einem weiteren Portal
+    registrieren und einen API-Schlüssel beantragen. Jede Quelle hatte ihr
+    eigenes Format, ihre eigenen Eigenheiten und ihre eigene Anmeldung. Für ein
+    kleines Feature ging so unverhältnismäßig viel Zeit drauf, bevor überhaupt
+    die erste Zeile sinnvoller Code stand.
+  </p>
+  <p>
+    Daraus entstand die Idee hinter InfraNode: diese fragmentierten Quellen
+    hinter einer einzigen, einheitlichen REST-Schnittstelle zu bündeln und sie
+    für alle ohne Schlüssel bereitzustellen. Die API reicht die Daten der
+    amtlichen Quellen durch, normalisiert sie auf einen gemeinsamen Envelope und
+    benennt ehrlich, woher jede Antwort stammt und ob eine Quelle gerade etwas
+    liefert.
+  </p>
+
+  <h2>Wie das Projekt läuft</h2>
+  <p>
+    Das komplette Projekt ist kostenlos nutzbar und werbefrei. Die
+    Veröffentlichung des Quellcodes als Open Source ist in Vorbereitung. Es ist
+    auf Barrierefreiheit ausgelegt. Hinter Wartung und Betrieb steht eine
+    einzelne Person, nämlich ich. Alles läuft auf einem Server in Deutschland.
+  </p>
+  <p>
+    Diese Konstellation hat Vor- und Nachteile, und ich finde, das gehört
+    ehrlich gesagt: Eine Ein-Personen-Wartung bedeutet kurze Wege und klare
+    Verantwortung, aber auch, dass nicht alles rund um die Uhr betreut ist. Wo
+    eine Quelle ausfällt oder nichts liefert, sagt die API das offen über den
+    Quellen-Status, statt einen Fehler vorzutäuschen.
+  </p>
+
+  <h2>Kontakt</h2>
+  <p>
+    Für Anregungen, Fehlermeldungen und Anfragen erreichst du mich unter
+    <a href="mailto:admin@infranode.dev">admin@infranode.dev</a>. Ich biete
+    Software-Entwicklung auch als Dienstleistung an; wenn du Unterstützung bei
+    einem Projekt suchst, schreib mir gern unter derselben Adresse.
+  </p>
+</Docs>

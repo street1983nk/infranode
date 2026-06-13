@@ -1,0 +1,472 @@
+"""Diskriminierte Payload-Union der Normalisierungs-Library (CORE-01).
+
+Die domaenenspezifischen Nutzdaten variieren je Quelle. Ein ``kind``-Literal
+diskriminiert die Union; pydantic waehlt damit effizient das korrekte Modell und
+erzeugt einen sauberen OpenAPI-Discriminator. Neue Quellen (Phase 7 bis 9)
+ergaenzen nur ein weiteres Payload-Modell mit eigenem ``kind`` und ein
+Union-Mitglied, ohne Breaking Change am Envelope.
+"""
+
+from __future__ import annotations
+
+from typing import Annotated, Literal
+
+from pydantic import BaseModel, Field
+
+
+class CityBaseDataPayload(BaseModel):
+    """Stammdaten je Stadt (Einwohner, Flaeche)."""
+
+    kind: Literal["city_base"] = "city_base"
+    population: int | None = None
+    area_km2: float | None = None
+
+
+class AirQualityPayload(BaseModel):
+    """Luftqualitaets-Messwerte je Stadt (OpenAQ, Tier C live-only).
+
+    Erweitert um die real von OpenAQ gelieferten Schadstoff-Parameter. Alle
+    Felder optional, da nicht jede Messstation jeden Parameter liefert.
+    ``station_id`` traegt die stabile Mess-/Detektor-ID je Messpunkt (ARCH-02)
+    und dient als fachlicher Schluessel fuer die deterministische ``record_id``.
+    """
+
+    kind: Literal["air_quality"] = "air_quality"
+    station_id: str | None = None
+    pm10: float | None = None
+    no2: float | None = None
+    pm25: float | None = None
+    o3: float | None = None
+    so2: float | None = None
+
+
+class WeatherPayload(BaseModel):
+    """Wetter-Messwerte je Stadt (DWD/Bright Sky, Tier A).
+
+    Erweitert um Luftfeuchte, Windgeschwindigkeit und Wetterlage. Alle Felder
+    optional, da Bright Sky je Station unterschiedlich vollstaendig liefert.
+    ``station_id`` traegt die stabile Mess-/Detektor-ID je Messpunkt (ARCH-02)
+    und dient als fachlicher Schluessel fuer die deterministische ``record_id``.
+    """
+
+    kind: Literal["weather"] = "weather"
+    station_id: str | None = None
+    temperature_c: float | None = None
+    humidity: float | None = None
+    wind_speed: float | None = None
+    condition: str | None = None
+
+
+class PoiPayload(BaseModel):
+    """POIs je Stadt, gefiltert nach Typ (OSM/Overpass, Tier B copyleft).
+
+    ``items`` traegt je POI ein schlankes dict (z.B. name, lat, lon). Mutable
+    Default ueber ``Field(default_factory=list)`` (kein ``=[]``, ruff B006).
+    """
+
+    kind: Literal["poi"] = "poi"
+    poi_type: str
+    count: int
+    items: list[dict] = Field(default_factory=list)
+
+
+class TrafficEventPayload(BaseModel):
+    """Verkehrsereignisse je Stadt/Region (Autobahn-API, Tier A).
+
+    Trennt Baustellen (``roadworks``) von Verkehrswarnungen (``warnings``).
+    Mutable Defaults ueber ``Field(default_factory=list)`` (ruff B006).
+    ``station_id`` traegt die stabile Detektor-/Abschnitts-ID je Messpunkt
+    (ARCH-02) und dient als fachlicher Schluessel fuer die deterministische
+    ``record_id``; die feingranularen Einzel-Event-IDs liegen weiterhin je Event
+    als ``identifier`` in ``roadworks``/``warnings``.
+    """
+
+    kind: Literal["traffic_event"] = "traffic_event"
+    station_id: str | None = None
+    roadworks: list[dict] = Field(default_factory=list)
+    warnings: list[dict] = Field(default_factory=list)
+
+
+class TransitStopPayload(BaseModel):
+    """ÖPNV-Haltestelle (DELFI/HVV GTFS). Geo liegt im CanonicalRecord.geo.
+
+    Bildet eine GTFS-``stops.txt``-Zeile auf das kanonische Schema ab. Die
+    Koordinaten wandern in ``CanonicalRecord.geo``; hier verbleiben die
+    haltestellen-spezifischen GTFS-Felder. Alle Felder ausser ``stop_id`` und
+    ``stop_name`` sind optional, da GTFS-Feeds sie nicht durchgaengig fuellen.
+    Keine mutable Listen-Felder (kein B006-Risiko).
+    """
+
+    kind: Literal["transit_stop"] = "transit_stop"
+    stop_id: str
+    stop_name: str
+    location_type: int | None = None
+    parent_station: str | None = None
+    platform_code: str | None = None
+    wheelchair_boarding: int | None = None
+
+
+class ChargingStationPayload(BaseModel):
+    """E-Ladesaeulen-Standorte je Stadt (BNetzA, Tier A, nur Stammdaten).
+
+    Bildet die stadt-gefilterte Teilmenge des CSV-Bulk-Downloads ab (Batch-
+    Ingest ``ingest.bnetza``). ``stations`` traegt je Standort ein schlankes
+    dict (operator, power_kw, lat, lon; additiv station_id/status/charging_type/
+    points/plz/ort/connectors). Keine Belegung/Auslastung (bundesweit keine
+    freie Tier-A-Echtzeitquelle). Mutable Default ueber
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["charging_station"] = "charging_station"
+    count: int
+    stations: list[dict] = Field(default_factory=list)
+
+
+class WaterLevelPayload(BaseModel):
+    """Pegelstand je Stadt (PEGELONLINE, Tier A, Teilabdeckung).
+
+    Nur Staedte an Bundeswasserstrassen liefern eine nahe Station. Binnenstaedte
+    ohne nahe Station tragen ``station=None`` (ehrliche Teilabdeckung, kein
+    Fehler). Alle Felder optional.
+    """
+
+    kind: Literal["water_level"] = "water_level"
+    station: str | None = None
+    water: str | None = None
+    value: float | None = None
+    unit: str | None = None
+
+
+class FloodWarningPayload(BaseModel):
+    """Hochwasser-Warnungen je Stadt (LHP, Tier A, Event-Layer).
+
+    ``warnings`` traegt je kuratiertem Pegel ein dict (z.B. Warnstufe, Pegel).
+    ``stand`` haelt den Stand-Zeitstempel-Text der LHP-Antwort (Attributions-
+    Pflicht, siehe Mapper). Mutable Default ueber ``Field(default_factory=list)``
+    (ruff B006).
+    """
+
+    kind: Literal["flood_warning"] = "flood_warning"
+    warnings: list[dict] = Field(default_factory=list)
+    stand: str | None = None
+
+
+class PollenUvPayload(BaseModel):
+    """Pollenflug + UV-Index je Stadt (DWD opendata, Tier A, taeglich).
+
+    Daten sind nach DWD-Grossregionen gegliedert, NICHT stadtgenau:
+    ``region_id``/``region_name`` weisen die Grossregion ehrlich aus. ``pollen``
+    traegt je Pollenart die Belastungsstufen (today/tomorrow/dayafter). Mutable
+    Default ueber ``Field(default_factory=dict)`` (ruff B006).
+    """
+
+    kind: Literal["pollen_uv"] = "pollen_uv"
+    region_id: int | None = None
+    region_name: str | None = None
+    pollen: dict = Field(default_factory=dict)
+    uv_index: float | None = None
+
+
+class DemographicsPayload(BaseModel):
+    """Demografie-Zeitreihen je Stadt (GENESIS/Zensus, Tier A, DATA-17).
+
+    Stammwerte (Einwohner, Haushalte, Gebaeude, Durchschnittsmiete) plus eine
+    optionale Zeitreihe je Stichjahr in ``series``. Mutable Liste IMMER via
+    ``Field(default_factory=list)`` (ruff B006). ``reference_year`` traegt das
+    Stichjahr der Stammwerte, die Punkte in ``series`` ihre eigenen Jahre.
+    """
+
+    kind: Literal["demographics"] = "demographics"
+    population: int | None = None
+    households: int | None = None
+    buildings: int | None = None
+    rent_avg: float | None = None
+    reference_year: int | None = None
+    series: list[dict] = Field(default_factory=list)
+
+
+class EnergyAssetPayload(BaseModel):
+    """Energie-Anlagen je Stadt (MaStR, Tier A, DATA-18).
+
+    Aggregierte Anlagenzahl plus Aufschluesselung je Typ (pv/wind/speicher/
+    biogas) und die schlanken Einzel-Anlagen-dicts in ``assets``. Mutable
+    Defaults IMMER via ``Field(default_factory=...)`` (ruff B006).
+    """
+
+    kind: Literal["energy_asset"] = "energy_asset"
+    count: int
+    by_type: dict = Field(default_factory=dict)
+    assets: list[dict] = Field(default_factory=list)
+
+
+class AdminBoundaryPayload(BaseModel):
+    """Verwaltungsgrenze je Stadt (BKG VG250, Tier A, DATA-19).
+
+    Attributtabellen-Auszug (AGS, Gemeindename, Flaeche) ohne Geometrie-Body
+    (kein GDAL/geopandas, RESEARCH Pitfall 3). Alle Felder optional.
+    """
+
+    kind: Literal["admin_boundary"] = "admin_boundary"
+    ags: str | None = None
+    gen_name: str | None = None
+    area_km2: float | None = None
+    reference_year: int | None = None
+
+
+class ElectionResultPayload(BaseModel):
+    """Wahlergebnis je Stadt/Kreis (Bundeswahlleiterin, Tier A, DATA-20).
+
+    ``granularity`` weist die Abdeckung ehrlich aus (Default "teilweise":
+    Wahlkreis/Kreis, Stadt nur teilweise, RESEARCH Pitfall 7). Mutable Liste
+    IMMER via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["election_result"] = "election_result"
+    election: str | None = None
+    granularity: str = "teilweise"
+    area_name: str | None = None
+    # [VERIFIED 2026-06-10] Wahlbeteiligung aus der kerg2-Zeile
+    # Gruppenname=="Wählende", Spalte Prozent (String mit Dezimal-KOMMA,
+    # z.B. "82,5122"); additiv ergaenzt, nicht brechend.
+    turnout: str | None = None
+    results: list[dict] = Field(default_factory=list)
+
+
+class HolidayPayload(BaseModel):
+    """Feiertage und Schulferien je Bundesland (Seed, gemeinfrei, DATA-21).
+
+    Aus dem eingebetteten Seed je ``state`` aufgeloest, NICHT permissiv lizenziert
+    (Gratis-Reichweiten-Feature). Mutable Listen IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["holiday"] = "holiday"
+    state: str | None = None
+    year: int | None = None
+    holidays: list[dict] = Field(default_factory=list)
+    school_holidays: list[dict] = Field(default_factory=list)
+
+
+class HospitalPayload(BaseModel):
+    """Krankenhaus-Stammdaten je Stadt (Destatis-Verzeichnis, Tier A, DATA-25a).
+
+    Aggregierte Anzahl plus schlanke Einzel-Krankenhaus-dicts. Custom-Lizenz-
+    Wortlaut im Mapper (RESEARCH Pitfall 6). Mutable Liste IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["hospital"] = "hospital"
+    count: int
+    hospitals: list[dict] = Field(default_factory=list)
+    reference_date: str | None = None
+
+
+class IcuCapacityPayload(BaseModel):
+    """Intensivbetten-Kapazitaet je Kreis (DIVI, Tier C live-only, DATA-25b).
+
+    Klinikscharfes DB-Schutzrecht -> Tier C, nur Live-Anzeige (RESEARCH Pitfall 4).
+    Alle Felder optional. ``beds_free``/``beds_occupied`` traegt nur noch das
+    Tier-A-Kreis-Aggregat (RKI-DIVI-CSV, mappers/divi.py); die Live-API liefert
+    [VERIFIED 2026-06-10] KEINE numerische Belegung mehr, sondern qualitative
+    Status-Einschaetzungen je Klinik in ``hospitals`` (bezeichnung, ort,
+    letzte_meldung, status_high_care, status_ecmo). Additiv erweitert (nicht
+    brechend); mutable Liste IMMER via ``Field(default_factory=list)``
+    (ruff B006).
+    """
+
+    kind: Literal["icu_capacity"] = "icu_capacity"
+    kreis_id: str | None = None
+    kreis_name: str | None = None
+    beds_free: int | None = None
+    beds_occupied: int | None = None
+    hospitals: list[dict] = Field(default_factory=list)
+    datum: str | None = None
+
+
+class RoadEventPayload(BaseModel):
+    """Innerstaedtische Baustellen + Sperrungen je Stadt (DATA-15, Tier A).
+
+    Buendelt die Pro-Stadt-Verkehrsereignisse (Berlin VIZ, Hamburg, Koeln,
+    Muenchen, MobiData BW) zu einer einheitlichen Liste schlanker Event-dicts.
+    ``city_source`` weist die konkrete Quelle aus (berlin_viz/hamburg_baustellen/
+    koeln_verkehr/muenchen_baustellen/mobidata_bw). Keine strikte Geometry-
+    Validierung im Schema (Berlin liefert GeometryCollection, RESEARCH Pitfall 6):
+    je Event ein schlankes dict. Mutable Liste IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["road_event"] = "road_event"
+    city_source: str | None = None
+    events: list[dict] = Field(default_factory=list)
+
+
+class WebcamPayload(BaseModel):
+    """Autobahn-Webcams je Stadt (DATA-22, Tier A).
+
+    Erweitert den keylosen Autobahn-Adapter um den webcam-Sub-Service:
+    Koordinaten + Bild-URLs der Webcams im BBox um die Stadt. ``count`` traegt die
+    Anzahl, ``webcams`` je Cam ein schlankes dict (imageurl/coordinate/title).
+    Mutable Liste IMMER via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["webcam"] = "webcam"
+    count: int
+    webcams: list[dict] = Field(default_factory=list)
+
+
+class EventPayload(BaseModel):
+    """Stadt-Events und Veranstaltungen je Stadt (DATA-16, Tier A/B gemischt).
+
+    Buendelt die Pro-Stadt-Veranstaltungen (destination.one/eT4.META,
+    Koeln-Events-Feed) zu einer einheitlichen Liste schlanker Event-dicts.
+    ``city_source`` weist die konkrete Quelle aus (destination_one/koeln_events).
+    Das Lizenz-Tier wird je Record aus ``map_license`` abgeleitet (GOV-04), nicht
+    im Payload getragen: ein CC-BY-SA-Event traegt damit Tier B, ein
+    CC0/CC-BY-Event Tier A. Je Event ein schlankes dict (title/date_from/
+    date_to/location/...). Mutable Liste IMMER via ``Field(default_factory=list)``
+    (ruff B006).
+    """
+
+    kind: Literal["event"] = "event"
+    city_source: str | None = None
+    events: list[dict] = Field(default_factory=list)
+
+
+class TrafficFlowPayload(BaseModel):
+    """Live-Verkehrslage je Streckenabschnitt (Mobilithek DATEX-II V2, Phase 20).
+
+    Quelle: Koeln MeasuredDataPublication (minutenfrisch). ``station_id`` traegt
+    die measurementSiteReference-ID; ``measurements`` je Messpunkt ein schlankes
+    dict (z.B. speed/flow/observed_at). Reine Live-Daten (Tier C, kein Archiv).
+    Mutable Liste IMMER via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["traffic_flow"] = "traffic_flow"
+    station_id: str | None = None
+    measurements: list[dict] = Field(default_factory=list)
+
+
+class ParkingPayload(BaseModel):
+    """Live-Parkhaus-Belegung je Stadt (Mobilithek DATEX-II V2, Phase 20).
+
+    Quelle: Dortmund Parkleitsystem dynamisch (ParkingStatusPublication).
+    ``facilities`` je Parkhaus ein schlankes dict (z.B. name, free, capacity,
+    occupancy, observed_at). Reine Live-Daten (kein Archiv). Mutable Liste IMMER
+    via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["parking"] = "parking"
+    facilities: list[dict] = Field(default_factory=list)
+
+
+class CountStationPayload(BaseModel):
+    """Live-Zaehlstellen-Daten je Stadt (Mobilithek DATEX-II V2, Phase 20).
+
+    Quelle: Kiel MIV-Dauerzaehlstellen + Radzaehler (stuendlich). ``counts`` je
+    Zaehlstelle ein schlankes dict (z.B. station, value, vehicle_type,
+    observed_at). Reine Live-Daten (kein Archiv). Mutable Liste IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["count_station"] = "count_station"
+    counts: list[dict] = Field(default_factory=list)
+
+
+class ChargingStatusPayload(BaseModel):
+    """Live-Ladesaeulen-Belegung je Stadt (Mobilithek DATEX-II V3, Phase 20).
+
+    Quelle: eRound AFIR-Recharging dynamisch (EnergyInfrastructureStatus-
+    Publication, V3). Schliesst die bekannte Luecke DATA-09 (bisher keine freie
+    Echtzeit-Ladesaeulenbelegung). ``points`` je Ladepunkt ein schlankes dict
+    (z.B. refill_point_id, status, observed_at). Lizenz VOR Einbau verifizieren
+    (Plan 07). Mutable Liste IMMER via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["charging_status"] = "charging_status"
+    points: list[dict] = Field(default_factory=list)
+
+
+class TransitDeparturePayload(BaseModel):
+    """Live-Abfahrten je Halt mit Verspätung (GTFS-RT, Phase 19).
+
+    Quelle: gtfs.de bzw. Mobilithek-DELFI Trip Updates (protobuf). Tier B
+    (CC-BY-SA), reine Live-Daten, KEIN Archiv (T-20-ARCHIVE). ``stop_id`` traegt
+    die GTFS-Halt-ID; ``departures`` je Abfahrt ein schlankes dict (z.B. route,
+    trip_id, delay_s, planned, expected). Mutable Liste IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["transit_departure"] = "transit_departure"
+    stop_id: str | None = None
+    departures: list[dict] = Field(default_factory=list)
+
+
+class TransitTripPayload(BaseModel):
+    """Live-Fahrt-Detail inkl. geschätzter Position (GTFS-RT, Phase 19).
+
+    Quelle: gtfs.de bzw. Mobilithek-DELFI Trip Updates (protobuf). Tier B
+    (CC-BY-SA), reine Live-Daten, KEIN Archiv. ``delay_s`` ist die aktuelle
+    Verspätung in Sekunden (positiv = verspätet); ``estimated_position`` ist die
+    linear interpolierte Schätzung ({lat, lon, estimated=True, between}).
+    ``unresolved`` ist True, wenn die trip_id nicht gegen das statische GTFS
+    aufloesbar war (ehrlich statt 500, RESEARCH Pitfall 4). Mutable Liste IMMER
+    via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["transit_trip"] = "transit_trip"
+    trip_id: str
+    route_id: str | None = None
+    delay_s: int | None = None
+    estimated_position: dict | None = None
+    stop_time_updates: list[dict] = Field(default_factory=list)
+    unresolved: bool = False
+
+
+class TransitRouteStatusPayload(BaseModel):
+    """Live-Verspätungslage einer Linie (GTFS-RT, Phase 19).
+
+    Quelle: gtfs.de bzw. Mobilithek-DELFI Trip Updates (protobuf). Tier B
+    (CC-BY-SA), reine Live-Daten, KEIN Archiv. Aggregiert die aktiven Fahrten
+    einer Linie: ``active_trips`` Anzahl, ``avg_delay_s``/``max_delay_s`` die
+    Verspätungs-Kennzahlen, ``trips`` je Fahrt ein schlankes dict. Mutable Liste
+    IMMER via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["transit_route_status"] = "transit_route_status"
+    route_id: str | None = None
+    active_trips: int = 0
+    avg_delay_s: float | None = None
+    max_delay_s: int | None = None
+    trips: list[dict] = Field(default_factory=list)
+
+
+PayloadUnion = Annotated[
+    CityBaseDataPayload
+    | AirQualityPayload
+    | WeatherPayload
+    | PoiPayload
+    | TrafficEventPayload
+    | TransitStopPayload
+    | ChargingStationPayload
+    | WaterLevelPayload
+    | FloodWarningPayload
+    | PollenUvPayload
+    | DemographicsPayload
+    | EnergyAssetPayload
+    | AdminBoundaryPayload
+    | ElectionResultPayload
+    | HolidayPayload
+    | HospitalPayload
+    | IcuCapacityPayload
+    | RoadEventPayload
+    | WebcamPayload
+    | EventPayload
+    | TrafficFlowPayload
+    | ParkingPayload
+    | CountStationPayload
+    | ChargingStatusPayload
+    | TransitDeparturePayload
+    | TransitTripPayload
+    | TransitRouteStatusPayload,
+    Field(discriminator="kind"),
+]

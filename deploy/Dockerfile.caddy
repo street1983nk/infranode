@@ -1,0 +1,23 @@
+# deploy/Dockerfile.caddy - Custom-Caddy-Image mit DNS-01-Modul fuer Cloudflare (DEP-01)
+# Quelle: github.com/caddy-dns/cloudflare README [CITED]
+# Warum: Das Standard-Image caddy:2 enthaelt KEIN DNS-Provider-Modul. Hinter dem
+# Cloudflare-Proxy (orange cloud) scheitern HTTP-01/TLS-ALPN-Challenges; nur die
+# DNS-01-Challenge loest Auto-HTTPS sauber. Dafuer muss caddy mit dem Modul
+# github.com/caddy-dns/cloudflare neu kompiliert werden.
+#
+# Multi-Stage analog zum bestehenden Dockerfile (Builder kompiliert, Final-Stage
+# kopiert nur das fertige Binary in ein schlankes Laufzeit-Image).
+#
+# arm64-Hinweis: caddy:builder und caddy:2 sind multi-arch und auf der Hetzner-CAX
+# (ARM/aarch64) nativ baubar; alternativ `buildx --platform linux/arm64`.
+
+# --- Builder-Stage: caddy mit dem Cloudflare-DNS-Modul bauen ------------------
+FROM caddy:builder AS builder
+
+# Keine zusaetzlichen Module ueber das Cloudflare-DNS-Modul hinaus.
+RUN xcaddy build \
+    --with github.com/caddy-dns/cloudflare
+
+# --- Final-Stage: schlankes Laufzeit-Image, nur das gebaute Binary uebernehmen -
+FROM caddy:2
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy

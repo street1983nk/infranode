@@ -1,0 +1,172 @@
+---
+// Page-Actions je Endpunkt-Seite (DX-04, GEO). Bietet (1) "Copy page as
+// Markdown": ein inline-Script holt die .md-Variante der Seite per fetch und
+// schreibt sie in navigator.clipboard, mit Link-Fallback auf die .md-URL;
+// (2) "In Claude oeffnen" und (3) "In ChatGPT oeffnen" als Deep-Links mit
+// urlencodetem Prompt. Der Prompt verweist auf die .md-URL.
+// Sicherheit (T-12-GEO-INJECT): Prompt + URL strikt via encodeURIComponent in
+// die href, kein roher String. Icons als inline-SVG, keine Emojis. ASCII in
+// Code/URLs, Umlaute nur in Prosa, keine Em-Dashes.
+interface Props {
+  // Relative .md-URL der aktuellen Seite, z.B. "/api/getCityCharging.md".
+  mdUrl: string;
+  // Vorbereiteter Prompt-Text fuer die LLM-Deep-Links.
+  prompt: string;
+  // Sprache der Seite (de Standard). Steuert die sichtbaren Button-Texte.
+  lang?: "de" | "en";
+}
+
+const { mdUrl, prompt, lang = "de" } = Astro.props;
+const isEn = lang === "en";
+const t = {
+  region: isEn ? "Page actions" : "Seiten-Aktionen",
+  copyMd: isEn ? "Copy page as Markdown" : "Seite als Markdown kopieren",
+  copied: isEn ? "Copied" : "Kopiert",
+  openClaude: isEn ? "Open in Claude" : "In Claude öffnen",
+  openChatgpt: isEn ? "Open in ChatGPT" : "In ChatGPT öffnen",
+  openMd: isEn ? "Open Markdown version" : "Markdown-Variante öffnen",
+};
+
+// Absolute .md-URL fuer Prompt + Deep-Links (LLM braucht eine abrufbare URL).
+const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
+const absoluteMdUrl = `${site}${mdUrl}`;
+
+// Deep-Link-Prompt: erwaehnt die abrufbare .md-URL. encodeURIComponent kapselt
+// jeden Sonderzeichen-Inhalt; die Basis-Hosts sind statisch.
+const fullPrompt = `${prompt} ${absoluteMdUrl}`;
+const claudeUrl = `https://claude.ai/new?q=${encodeURIComponent(fullPrompt)}`;
+const chatgptUrl = `https://chatgpt.com/?q=${encodeURIComponent(fullPrompt)}`;
+---
+
+<div class="page-actions" aria-label={t.region}>
+  <button
+    type="button"
+    class="page-actions__btn"
+    data-copy-md
+    data-md-url={mdUrl}
+    data-copied-label={t.copied}
+  >
+    <svg
+      class="page-actions__icon"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </svg>
+    <span data-copy-label>{t.copyMd}</span>
+  </button>
+
+  <a class="page-actions__btn" href={claudeUrl} target="_blank" rel="noopener noreferrer">
+    <svg
+      class="page-actions__icon"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M14 9V5a3 3 0 0 0-6 0v4"></path>
+      <path d="M3 11h18l-1.5 9.5a2 2 0 0 1-2 1.5H6.5a2 2 0 0 1-2-1.5L3 11z"></path>
+    </svg>
+    <span>{t.openClaude}</span>
+  </a>
+
+  <a class="page-actions__btn" href={chatgptUrl} target="_blank" rel="noopener noreferrer">
+    <svg
+      class="page-actions__icon"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9"></circle>
+      <path d="M8 12h8M12 8v8"></path>
+    </svg>
+    <span>{t.openChatgpt}</span>
+  </a>
+
+  <noscript>
+    <a class="page-actions__btn" href={mdUrl}>{t.openMd}</a>
+  </noscript>
+</div>
+
+<script>
+  // Copy-as-Markdown: holt die .md-Variante per fetch und legt sie in die
+  // Zwischenablage. Faellt bei Fehler/fehlender Clipboard-API auf das Oeffnen
+  // der .md-URL zurueck. Kein innerHTML, nur textContent/Attribute.
+  const btn = document.querySelector<HTMLButtonElement>("[data-copy-md]");
+  const label = document.querySelector<HTMLElement>("[data-copy-label]");
+  if (btn) {
+    const original = label?.textContent ?? "";
+    const copiedLabel = btn.getAttribute("data-copied-label") ?? "Kopiert";
+    btn.addEventListener("click", async () => {
+      const url = btn.getAttribute("data-md-url");
+      if (!url) return;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const text = await res.text();
+        if (!navigator.clipboard) throw new Error("no clipboard");
+        await navigator.clipboard.writeText(text);
+        if (label) {
+          label.textContent = copiedLabel;
+          window.setTimeout(() => {
+            label.textContent = original;
+          }, 2000);
+        }
+      } catch {
+        // Fallback: .md-URL in neuem Tab oeffnen, damit der Nutzer sie manuell
+        // kopieren kann.
+        window.open(url, "_blank", "noopener");
+      }
+    });
+  }
+</script>
+
+<style>
+  .page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0 0 1.5rem;
+  }
+  .page-actions__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.7rem;
+    font: inherit;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    color: #1f2933;
+    background: #ffffff;
+    border: 1px solid #f0f0f0;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .page-actions__btn:hover {
+    border-color: #d9dde2;
+  }
+  .page-actions__icon {
+    flex: 0 0 auto;
+  }
+</style>

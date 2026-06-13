@@ -1,0 +1,306 @@
+---
+// Drei-Spalten-Doku-Layout (D-01/D-02): links Nav (endpoints-Collection nach
+// tag gruppiert + Quick-Start/Start), Mitte Content-Slot (in data-pagefind-body
+// fuer Pagefind, Pitfall 4), rechts "On this page" (clientseitig aus den
+// Headings des Slots). Pagefind-Suche im Topbar via Search-Komponente.
+import { getCollection } from "astro:content";
+import Search from "../components/Search.astro";
+import SeoHead from "../components/SeoHead.astro";
+import PageActions from "../components/PageActions.astro";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description?: string;
+  current?: string;
+  // Sprache der Seite (de Standard). Steuert <html lang>, Nav-/Footer-Texte
+  // und den Sprach-Switcher.
+  lang?: "de" | "en";
+  // Pfad der jeweils anderen Sprachfassung (fuer Switcher + hreflang). Leer,
+  // wenn es kein Pendant gibt.
+  altLangPath?: string;
+}
+
+const { title, description = "", current = "", lang = "de", altLangPath = "" } = Astro.props;
+const isEn = lang === "en";
+
+// Nicht-Endpunkt-Seiten (Start, Quick-Start, MCP, Impressum, Datenschutz,
+// Ueber, sowie deren EN-Pendants) bekommen keine Page-Actions. Endpunkt-Seiten
+// tragen die operationId als `current`.
+const NON_ENDPOINT = new Set([
+  "",
+  "home",
+  "quickstart",
+  "staedte",
+  "cities",
+  "abdeckung",
+  "coverage",
+  "mcp",
+  "ueber",
+  "impressum",
+  "datenschutz",
+]);
+const isEndpointPage = !NON_ENDPOINT.has(current);
+const mdUrl = isEndpointPage ? `/api/${current}.md` : "";
+const actionPrompt = isEndpointPage
+  ? isEn
+    ? `Here is the InfraNode API documentation for ${title} in Markdown format. Help me use this endpoint. Docs URL:`
+    : `Hier ist die InfraNode-API-Doku für ${title} im Markdown-Format. Hilf mir, diesen Endpunkt zu nutzen. Doku-URL:`
+  : "";
+
+// Nav-Eintraege aus der endpoints-Collection (Single Source openapi.yaml),
+// nach tag gruppiert und je Gruppe nach id sortiert.
+const endpoints = await getCollection("endpoints");
+const groups = new Map<string, { id: string; method: string; summary: string }[]>();
+for (const entry of endpoints) {
+  const tag = entry.data.tag || "meta";
+  if (!groups.has(tag)) groups.set(tag, []);
+  groups.get(tag)!.push({
+    id: entry.data.id,
+    method: entry.data.method,
+    summary: entry.data.summary,
+  });
+}
+for (const list of groups.values()) {
+  list.sort((a, b) => a.id.localeCompare(b.id));
+}
+const sortedTags = [...groups.keys()].sort();
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <SeoHead title={title} description={description} lang={lang} altLangPath={altLangPath} />
+    <slot name="jsonld" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="topbar__brand" href={isEn ? "/en/" : "/"} aria-label={isEn ? "InfraNode home" : "InfraNode Startseite"}>
+        <img
+          class="topbar__logo"
+          src="/logo-infranode.png"
+          alt="InfraNode"
+          width="68"
+          height="64"
+        />
+        <span class="topbar__wordmark">InfraNode<span class="topbar__wordmark-tld">.dev</span></span>
+      </a>
+      <Search lang={lang} />
+      <nav class="langswitch" aria-label={isEn ? "Language" : "Sprache"}>
+        <a
+          class="langswitch__link"
+          href={isEn ? altLangPath || "/" : "/"}
+          aria-current={!isEn ? "true" : undefined}
+          hreflang="de"
+          lang="de">DE</a
+        >
+        <span class="langswitch__sep" aria-hidden="true">|</span>
+        <a
+          class="langswitch__link"
+          href={isEn ? "/en/" : altLangPath || "/en/"}
+          aria-current={isEn ? "true" : undefined}
+          hreflang="en"
+          lang="en">EN</a
+        >
+      </nav>
+    </header>
+
+    <div class="layout">
+      <nav class="nav" aria-label={isEn ? "Documentation navigation" : "Doku-Navigation"}>
+        <details class="nav__disclosure" open>
+          <summary class="nav__toggle">{isEn ? "Menu" : "Menü"}</summary>
+          <div class="nav__inner">
+        {
+          isEn ? (
+            <div class="nav__group">
+              <p class="nav__title">Start</p>
+              <ul class="nav__list">
+                <li>
+                  <a class="nav__link" href="/en/" aria-current={current === "home" ? "page" : undefined}>
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a
+                    class="nav__link"
+                    href="/en/quickstart/"
+                    aria-current={current === "quickstart" ? "page" : undefined}
+                  >
+                    Quickstart
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/en/cities/" aria-current={current === "cities" ? "page" : undefined}>
+                    Cities
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/en/coverage/" aria-current={current === "abdeckung" ? "page" : undefined}>
+                    Coverage & status
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/en/mcp/" aria-current={current === "mcp" ? "page" : undefined}>
+                    MCP server
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/en/about/" aria-current={current === "ueber" ? "page" : undefined}>
+                    About
+                  </a>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div class="nav__group">
+              <p class="nav__title">Start</p>
+              <ul class="nav__list">
+                <li>
+                  <a class="nav__link" href="/" aria-current={current === "home" ? "page" : undefined}>
+                    Startseite
+                  </a>
+                </li>
+                <li>
+                  <a
+                    class="nav__link"
+                    href="/quickstart/"
+                    aria-current={current === "quickstart" ? "page" : undefined}
+                  >
+                    Quick-Start
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/staedte/" aria-current={current === "staedte" ? "page" : undefined}>
+                    Städte
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/abdeckung/" aria-current={current === "abdeckung" ? "page" : undefined}>
+                    Abdeckung & Status
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/mcp/" aria-current={current === "mcp" ? "page" : undefined}>
+                    MCP-Server
+                  </a>
+                </li>
+                <li>
+                  <a class="nav__link" href="/ueber/" aria-current={current === "ueber" ? "page" : undefined}>
+                    Über
+                  </a>
+                </li>
+              </ul>
+            </div>
+          )
+        }
+        {
+          sortedTags.map((tag) => (
+            <div class="nav__group">
+              <p class="nav__title">{tag}</p>
+              <ul class="nav__list">
+                {groups.get(tag)!.map((ep) => (
+                  <li>
+                    <a
+                      class="nav__link"
+                      href={isEn ? `/en/api/${ep.id}/` : `/api/${ep.id}/`}
+                      aria-current={current === ep.id ? "page" : undefined}
+                    >
+                      {ep.id}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))
+        }
+          </div>
+        </details>
+      </nav>
+
+      <main class="content">
+        {isEndpointPage && <PageActions mdUrl={mdUrl} prompt={actionPrompt} lang={lang} />}
+        <article data-pagefind-body data-content-root>
+          <slot />
+        </article>
+      </main>
+
+      <aside class="toc" aria-label={isEn ? "On this page" : "Auf dieser Seite"}>
+        <p class="toc__title">{isEn ? "On this page" : "Auf dieser Seite"}</p>
+        <ul class="toc__list" data-toc></ul>
+      </aside>
+    </div>
+
+    <footer class="footer">
+      <div class="footer__inner">
+        <p class="footer__brand">InfraNode</p>
+        {
+          isEn ? (
+            <nav class="footer__nav" aria-label="Footer">
+              <a class="footer__link" href="/en/">Home</a>
+              <a class="footer__link" href="/en/quickstart/">Quickstart</a>
+              <a class="footer__link" href="/en/cities/">Cities</a>
+              <a class="footer__link" href="/en/mcp/">MCP server</a>
+              <a class="footer__link" href="/en/about/">About</a>
+              <a class="footer__link" href="/en/imprint/">Imprint</a>
+              <a class="footer__link" href="/en/privacy/">Privacy</a>
+            </nav>
+          ) : (
+            <nav class="footer__nav" aria-label="Footer">
+              <a class="footer__link" href="/quickstart/">Quick-Start</a>
+              <a class="footer__link" href="/staedte/">Städte</a>
+              <a class="footer__link" href="/mcp/">MCP-Server</a>
+              <a class="footer__link" href="/ueber/">Über</a>
+              <a class="footer__link" href="/impressum/">Impressum</a>
+              <a class="footer__link" href="/datenschutz/">Datenschutz</a>
+            </nav>
+          )
+        }
+        <p class="footer__meta">
+          {
+            isEn
+              ? "Free, no ads, accessible. Operated on a server in Germany. Source code release in preparation."
+              : "Kostenlos, ohne Werbung, barrierefrei. Betrieb auf einem Server in Deutschland. Quellcode-Veröffentlichung in Vorbereitung."
+          }
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // "On this page" clientseitig aus den h2-Headings des Content-Slots.
+      const root = document.querySelector<HTMLElement>("[data-content-root]");
+      const tocList = document.querySelector<HTMLElement>("[data-toc]");
+      if (root && tocList) {
+        const headings = root.querySelectorAll<HTMLHeadingElement>("h2");
+        let index = 0;
+        for (const heading of headings) {
+          if (!heading.id) {
+            heading.id = `section-${index}`;
+          }
+          index += 1;
+          const li = document.createElement("li");
+          const link = document.createElement("a");
+          link.className = "toc__link";
+          link.href = `#${heading.id}`;
+          link.textContent = heading.textContent;
+          li.append(link);
+          tocList.append(li);
+        }
+      }
+
+      // Mobiles Navigationsmenue: auf schmalen Viewports die Funktionsliste
+      // standardmaessig einklappen, damit der Inhalt zuerst sichtbar ist. Auf
+      // Desktop bleibt sie offen. Ohne JS bleibt details[open] = kein Regress.
+      const navDisclosure = document.querySelector<HTMLDetailsElement>(".nav__disclosure");
+      if (navDisclosure) {
+        const navMq = window.matchMedia("(max-width: 1080px)");
+        const applyNavState = () => {
+          navDisclosure.open = !navMq.matches;
+        };
+        applyNavState();
+        navMq.addEventListener("change", applyNavState);
+      }
+    </script>
+  </body>
+</html>

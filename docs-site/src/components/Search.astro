@@ -1,0 +1,125 @@
+---
+// Eigene Such-UI (D-01, kein vorgefertigtes Pagefind-Default-UI). Laedt zur
+// Laufzeit /pagefind/pagefind.js dynamisch (existiert erst nach postbuild),
+// ruft pagefind.search(query) und rendert Treffer in eigenem Markup. Das
+// Sucheingabe-Icon ist inline-SVG (CLAUDE.md: Icons als SVG, keine Emojis).
+// Ergebnis-Titel/Excerpts kommen direkt von Pagefind als sub_result.excerpt
+// (bereits sanitisiertes HTML mit <mark>); wir setzen Titel via textContent
+// und Excerpt via die Pagefind-eigene markierte Ausgabe.
+interface Props {
+  // Sprache der Seite (de Standard). Steuert Placeholder/aria-label der Suche.
+  lang?: "de" | "en";
+}
+const { lang = "de" } = Astro.props;
+const isEn = lang === "en";
+const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
+---
+
+<div class="search" data-search>
+  <div class="search__field">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="8"></circle>
+      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+    <input
+      type="search"
+      class="search__input"
+      placeholder={searchLabel}
+      aria-label={searchLabel}
+      data-search-input
+    />
+  </div>
+  <div class="search__results" data-search-results role="listbox"></div>
+</div>
+
+<script>
+  // Pagefind-Typen sind zur Build-Zeit nicht vorhanden; lose typisieren.
+  type PagefindSubResult = { title: string; url: string; excerpt: string };
+  type PagefindResult = { data: () => Promise<{ url: string; meta: { title?: string }; excerpt: string; sub_results?: PagefindSubResult[] }> };
+  type Pagefind = { search: (q: string) => Promise<{ results: PagefindResult[] }> };
+
+  const root = document.querySelector<HTMLElement>("[data-search]");
+  if (root) {
+    const input = root.querySelector<HTMLInputElement>("[data-search-input]")!;
+    const out = root.querySelector<HTMLElement>("[data-search-results]")!;
+    let pagefind: Pagefind | null = null;
+    let loading = false;
+    let timer: number | undefined;
+
+    async function ensurePagefind(): Promise<Pagefind | null> {
+      if (pagefind || loading) return pagefind;
+      loading = true;
+      try {
+        // /pagefind/pagefind.js existiert erst nach dem postbuild im dist und
+        // ist zur Build-Zeit nicht aufloesbar. Der Pfad wird zur Laufzeit
+        // zusammengesetzt, damit Rollup ihn nicht statisch zu resolven
+        // versucht (sonst bricht der Build mit "failed to resolve import").
+        const path = ["", "pagefind", "pagefind.js"].join("/");
+        const mod = await import(/* @vite-ignore */ path);
+        pagefind = mod as unknown as Pagefind;
+      } catch {
+        pagefind = null;
+      }
+      loading = false;
+      return pagefind;
+    }
+
+    function clear(): void {
+      out.replaceChildren();
+    }
+
+    async function run(query: string): Promise<void> {
+      const q = query.trim();
+      if (q.length < 2) {
+        clear();
+        return;
+      }
+      const pf = await ensurePagefind();
+      if (!pf) {
+        clear();
+        return;
+      }
+      const search = await pf.search(q);
+      clear();
+      const top = search.results.slice(0, 8);
+      for (const result of top) {
+        const data = await result.data();
+        const link = document.createElement("a");
+        link.className = "search__result";
+        link.href = data.url;
+        link.setAttribute("role", "option");
+
+        const title = document.createElement("span");
+        title.className = "search__result-title";
+        // Titel als reiner Text (textContent, kein innerHTML, T-12-XSS-Geist).
+        title.textContent = data.meta.title || data.url;
+
+        const excerpt = document.createElement("span");
+        excerpt.className = "search__result-excerpt";
+        // Pagefind liefert excerpt als markiertes (sanitisiertes) Snippet mit
+        // <mark>; das ist Pagefind-eigene, nicht nutzergesteuerte Ausgabe.
+        excerpt.innerHTML = data.excerpt;
+
+        link.append(title, excerpt);
+        out.append(link);
+      }
+    }
+
+    input.addEventListener("input", () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        void run(input.value);
+      }, 150);
+    });
+  }
+</script>

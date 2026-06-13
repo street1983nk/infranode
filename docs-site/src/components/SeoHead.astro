@@ -1,0 +1,57 @@
+---
+// SEO-Head je Seite (DX-03): sauberer Title, Meta-Description und OpenGraph
+// (og:title/og:description/og:type/og:url) plus ein kanonischer Link. Die
+// absolute URL wird aus Astro.site + Astro.url.pathname gebildet (site-URL
+// aus astro.config.mjs / Env INFRANODE_DOCS_SITE). Keine schweren Scripts,
+// reines statisches Head-Markup (CWV-tauglich).
+interface Props {
+  title: string;
+  description?: string;
+  canonical?: string;
+  // Sprache der Seite (de Standard) und Pfad der anderen Sprachfassung. Sind
+  // beide gesetzt, rendert SeoHead hreflang-Alternates (de/en/x-default).
+  lang?: "de" | "en";
+  altLangPath?: string;
+}
+
+const { title, description = "", canonical, lang = "de", altLangPath = "" } = Astro.props;
+
+const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
+const path = Astro.url.pathname;
+const canonicalUrl = canonical ?? `${site}${path}`;
+const ogImage = `${site}/og-image.png`;
+
+// hreflang-Alternates nur, wenn ein Sprach-Pendant existiert. Das de-Dokument
+// ist jeweils x-default. self-Alternate + Pendant-Alternate decken de/en ab.
+const hasAlt = altLangPath !== "";
+const altUrl = `${site}${altLangPath.startsWith("/") ? altLangPath : "/" + altLangPath}`;
+const deUrl = lang === "de" ? canonicalUrl : altUrl;
+const enUrl = lang === "en" ? canonicalUrl : altUrl;
+---
+
+<title>{title} | InfraNode</title>
+{description && <meta name="description" content={description} />}
+<link rel="canonical" href={canonicalUrl} />
+{
+  hasAlt && (
+    <>
+      <link rel="alternate" hreflang="de" href={deUrl} />
+      <link rel="alternate" hreflang="en" href={enUrl} />
+      <link rel="alternate" hreflang="x-default" href={deUrl} />
+    </>
+  )
+}
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<meta name="theme-color" content="#1d4e5c" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content={lang === "en" ? "en_US" : "de_DE"} />
+<meta property="og:title" content={title} />
+{description && <meta property="og:description" content={description} />}
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content={ogImage} />

@@ -1,0 +1,60 @@
+---
+// English about page. Idiomatic translation of the German /ueber page.
+import Docs from "../../layouts/Docs.astro";
+---
+
+<Docs
+  title="About"
+  description="InfraNode grew out of a developer's frustration: open data without keys and portal sign-ups. Who is behind it and why."
+  current="ueber"
+  lang="en"
+  altLangPath="/ueber/"
+>
+  <h1>About InfraNode</h1>
+
+  <p>
+    Hi, I am Khaled Cherif, a software developer from Hamburg. InfraNode is my
+    attempt to solve a problem I kept running into at work.
+  </p>
+
+  <h2>How it came about</h2>
+  <p>
+    As a developer I faced the same hurdle again and again: the moment I needed a
+    city's open data, say on air quality, weather, traffic or public transit, I
+    first had to sign up at yet another portal and request an API key. Every
+    source had its own format, its own quirks and its own login. A small feature
+    swallowed a disproportionate amount of time before the first line of useful
+    code even existed.
+  </p>
+  <p>
+    That is where the idea behind InfraNode came from: to bring these fragmented
+    sources together behind a single, unified REST interface and make them
+    available to everyone without a key. The API passes the data of the official
+    sources through, normalises it onto a shared envelope and states honestly
+    where each response comes from and whether a source is currently returning
+    anything.
+  </p>
+
+  <h2>How the project runs</h2>
+  <p>
+    The entire project is free to use and ad-free. A source code release is in
+    preparation. It is built with accessibility in mind. Maintenance and
+    operation rest with a single person, namely me. Everything runs on a server
+    in Germany.
+  </p>
+  <p>
+    That setup has its trade-offs, and I think they are worth stating plainly: a
+    one-person maintenance means short paths and clear responsibility, but also
+    that not everything is covered around the clock. Where a source fails or
+    returns nothing, the API says so openly via the source status rather than
+    faking an error.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    For suggestions, bug reports and enquiries you can reach me at
+    <a href="mailto:admin@infranode.dev">admin@infranode.dev</a>. I also offer
+    software development as a service; if you need help with a project, feel free
+    to write to me at the same address.
+  </p>
+</Docs>

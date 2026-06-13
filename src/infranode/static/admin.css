@@ -1,0 +1,715 @@
+/* InfraNode Admin-Dashboard (OPS-01/OPS-02) selbstenthaltenes Stylesheet.
+   Kein CDN, keine externen Assets (UI-SPEC Registry Safety). Tokens exakt nach
+   UI-SPEC: 60/30/10-Palette, semantische Status-Farben, System-Font-Stack +
+   Monospace fuer Logs, 8er-Spacing (12px nur fuer horizontales Tabellen-Padding),
+   Typo 14/20/28 mit 400/600. */
+
+:root {
+  /* Palette (60/30/10) */
+  --bg: #f5f6f8;
+  --surface: #ffffff;
+  --accent: #2563eb;
+  /* Neutrale Struktur/Text */
+  --text: #1f2933;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  /* Semantische Status */
+  --ok: #16a34a;
+  --warn: #d97706;
+  --error: #dc2626;
+  /* Spacing-Scale */
+  --xs: 4px;
+  --sm: 8px;
+  --md: 16px;
+  --lg: 24px;
+  --xl: 32px;
+  --radius: 8px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* --- Login ---------------------------------------------------------------- */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--md);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--xl);
+  margin-top: var(--xl);
+}
+
+.login-card h1 {
+  margin-bottom: var(--lg);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sm);
+  margin-bottom: var(--md);
+}
+
+label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+input[type="password"] {
+  font-family: var(--font);
+  font-size: 14px;
+  padding: var(--sm) var(--md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+}
+
+input[type="password"]:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.btn-primary {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  padding: var(--sm) var(--md);
+  cursor: pointer;
+}
+
+.btn-primary:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.error-banner {
+  background: #fef2f2;
+  border: 1px solid var(--error);
+  color: var(--error);
+  border-radius: var(--radius);
+  padding: var(--sm) var(--md);
+  margin-bottom: var(--md);
+}
+
+/* --- Dashboard ------------------------------------------------------------ */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--xl);
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: var(--md);
+  }
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--lg);
+}
+
+/* Auch als <button> im POST-Logout-Form (Audit LOW-1): Button-Defaults neutralisieren. */
+.logout-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xs);
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.logout-link:hover {
+  color: var(--text);
+}
+
+.section {
+  margin-bottom: var(--lg);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--md);
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--md);
+}
+
+.stat-card .stat-label {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.stat-card .stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-family: var(--mono);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  padding: var(--md);
+  border-bottom: 1px solid var(--border);
+}
+
+table.logs {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+table.logs th,
+table.logs td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+table.logs th {
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+table.logs tbody tr:nth-child(even) {
+  background: #fafafa;
+}
+
+.status-2xx {
+  color: var(--ok);
+}
+
+.status-4xx {
+  color: var(--warn);
+}
+
+.status-5xx {
+  color: var(--error);
+}
+
+.empty-state {
+  padding: var(--xl);
+  text-align: center;
+}
+
+.empty-state h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 var(--xs);
+}
+
+.empty-state p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.muted-note {
+  color: var(--muted);
+  margin-top: var(--sm);
+  font-size: 14px;
+}
+
+/* --- Hit-Rate-Balken + Roh-Counts ---------------------------------------- */
+.bar-track {
+  margin-top: var(--sm);
+  height: 6px;
+  width: 100%;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+
+.counts-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md);
+  margin-top: var(--sm);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+/* --- Source-Health-Status-Punkte ----------------------------------------- */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: var(--xs);
+  vertical-align: middle;
+}
+
+.dot-ok {
+  background: var(--ok);
+}
+
+.dot-warn {
+  background: var(--warn);
+}
+
+.dot-error {
+  background: var(--error);
+}
+
+.dot-muted {
+  background: var(--muted);
+}
+
+table.logs.source-health {
+  font-family: var(--font);
+}
+
+/* --- Phase 17: Tab-Navigation (UI-SPEC §3/§10) --------------------------- */
+.tabs {
+  display: flex;
+  gap: var(--lg);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--lg);
+}
+
+.tab {
+  display: inline-block;
+  padding: var(--sm) 0;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  border-bottom: 2px solid transparent;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab[aria-current="page"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* --- Phase 17: Heatmap (UI-SPEC §2/§4.2) --------------------------------- */
+.heatmap-scroll {
+  overflow-x: auto;
+  padding: var(--md);
+}
+
+table.heatmap {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-family: var(--font);
+  font-size: 14px;
+}
+
+table.heatmap th {
+  font-weight: 600;
+  color: var(--muted);
+  padding: var(--xs) var(--sm);
+  text-align: center;
+  white-space: nowrap;
+}
+
+table.heatmap th.heatmap-rowhead,
+table.heatmap th.heatmap-corner {
+  position: sticky;
+  left: 0;
+  background: var(--surface);
+  text-align: left;
+  z-index: 1;
+}
+
+.heatmap-cell {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  text-align: center;
+  vertical-align: middle;
+  border-radius: var(--xs);
+}
+
+.cell-symbol {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.heatmap-empty {
+  background: var(--bg);
+}
+
+/* Farbige Zell-Hintergruende tragen dunkles Symbol (currentColor), nicht weiss. */
+.cell-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.cell-stale {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.cell-failed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.cell-nodata {
+  background: #e5e7eb;
+  color: var(--muted);
+}
+
+/* WR-03: bewusst deaktivierte Quelle (grau mit Strich), nie rot als Fehler. */
+.cell-disabled {
+  background: repeating-linear-gradient(
+    45deg,
+    #f3f4f6,
+    #f3f4f6 4px,
+    #e5e7eb 4px,
+    #e5e7eb 8px
+  );
+  color: var(--muted);
+}
+
+.cell-quarantined {
+  background: repeating-linear-gradient(
+    45deg,
+    #fef3c7,
+    #fef3c7 4px,
+    #fde68a 4px,
+    #fde68a 8px
+  );
+  color: #92400e;
+}
+
+/* --- Phase 17: Legende (UI-SPEC §4.2/§9) --------------------------------- */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--md);
+  padding: 0 var(--md) var(--md);
+  margin: 0;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--xs);
+}
+
+.legend-item dt {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.legend-item dd {
+  margin: 0;
+}
+
+.legend-swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--xs);
+}
+
+/* --- Phase 17: Badges (UI-SPEC §10) -------------------------------------- */
+.badge {
+  display: inline-block;
+  padding: 2px var(--sm);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font);
+}
+
+.badge-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge-muted {
+  background: var(--border);
+  color: var(--muted);
+}
+
+.badge-quarantined {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* --- Phase 17: Tages-Timeline (UI-SPEC §4.5) ----------------------------- */
+.timeline {
+  padding: var(--md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sm);
+}
+
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sm);
+}
+
+.timeline-label {
+  width: 90px;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.timeline-bar {
+  flex: 1;
+  display: flex;
+  height: 12px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.timeline-seg {
+  height: 100%;
+}
+
+.seg-ok {
+  background: var(--ok);
+}
+
+.seg-warn {
+  background: var(--warn);
+}
+
+.seg-error {
+  background: var(--error);
+}
+
+/* WR-04: legitime neutrale/erwartete Laeufe (no_data erwartet, quarantined,
+   disabled) als neutrale Graustufe, nicht rot als Fehler. */
+.seg-neutral {
+  background: #d1d5db;
+}
+
+.timeline-counts {
+  width: 70px;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* --- Phase 17: Run-Aufklapp-Button + Detail (UI-SPEC §4.6) --------------- */
+.run-toggle {
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.run-toggle:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.detail-row td {
+  padding: 0 12px;
+}
+
+.detail {
+  margin: 0;
+  padding: var(--sm) 0;
+}
+
+.detail-pair {
+  display: flex;
+  gap: var(--sm);
+  padding: var(--xs) 0;
+}
+
+.detail-pair dt {
+  width: 140px;
+  flex: none;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.detail-pair dd {
+  margin: 0;
+}
+
+.mono-id {
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+.htmx-indicator {
+  color: var(--muted);
+  opacity: 0;
+}
+
+.htmx-request .htmx-indicator {
+  opacity: 1;
+}
+
+/* --- Daten-Explorer (UI-SPEC §5/§10) -------------------------------------- */
+
+/* Filter-Form: Felder in einer flexiblen Zeile, gleiche Tokens wie das Bestand. */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--md);
+}
+
+.filter-bar label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--xs);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.filter-bar select,
+.filter-bar input {
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 400;
+  padding: var(--xs) var(--sm);
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.filter-bar select:focus,
+.filter-bar input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Sekundaer-Button (Outline, neutral, KEIN Akzent-Fill): vorgefertigte Sichten,
+   Export-Links, JSON-Detail-Buttons. */
+.btn-secondary {
+  display: inline-block;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  padding: var(--xs) var(--sm);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn-secondary:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.views,
+.export-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sm);
+  margin-top: var(--md);
+}
+
+/* JSON-Detail eines Records: monospaced, umbruch-erhaltend, auto-escaped. */
+.json-detail {
+  font-family: var(--mono);
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid #f0f0f0;
+  border-radius: var(--radius);
+  padding: var(--sm);
+  margin-top: var(--xs);
+}

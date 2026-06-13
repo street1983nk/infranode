@@ -1,0 +1,21 @@
+{
+  "name": "infranode-docs",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "postbuild": "pagefind --site dist",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "3.7.3",
+    "astro": "6.4.5",
+    "pagefind": "1.5.2",
+    "yaml": "2.9.0"
+  }
+}

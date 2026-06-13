@@ -1,0 +1,31 @@
+# InfraNode Doku, robots.txt
+# Allgemein: alles erlaubt.
+User-agent: *
+Allow: /
+
+# KI- und Antwort-Bots ausdruecklich erlaubt (GEO).
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+Sitemap: https://infranode.dev/sitemap-index.xml

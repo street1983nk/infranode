@@ -1,0 +1,106 @@
+---
+// English quickstart. Mirrors the German page: base URL, first call, envelope.
+import Docs from "../../layouts/Docs.astro";
+import CodeTabs from "../../components/CodeTabs.astro";
+import { API_BASE } from "../../lib/codegen";
+
+const exampleUrl = `${API_BASE}/api/v1/cities/hamburg/weather`;
+const curl = `curl "${exampleUrl}"`;
+const js = [
+  `const res = await fetch("${exampleUrl}");`,
+  `const data = await res.json();`,
+  `console.log(data);`,
+].join("\n");
+const py = [
+  `import httpx`,
+  ``,
+  `res = httpx.get("${exampleUrl}")`,
+  `res.raise_for_status()`,
+  `print(res.json())`,
+].join("\n");
+---
+
+<Docs
+  title="Quickstart"
+  description="Your first InfraNode call in three steps: base URL, one request, the JSON envelope explained."
+  current="quickstart"
+  lang="en"
+  altLangPath="/quickstart/"
+>
+  <h1>Quickstart</h1>
+  <p>
+    InfraNode serves normalised open data for German cities behind a single REST
+    API. Every endpoint is publicly readable; your first call needs no key. Three
+    steps and you are in.
+  </p>
+
+  <h2>Step 1, base URL</h2>
+  <p>
+    All endpoints live under the versioned base URL. Paths follow the pattern
+    <code>/api/v1/cities/&lbrace;slug&rbrace;/&lbrace;resource&rbrace;</code>.
+  </p>
+  <p><code>{API_BASE}/api/v1</code></p>
+
+  <h2>Step 2, first call</h2>
+  <p>Fetch the weather for Hamburg. No header, no setup, one GET is enough.</p>
+  <CodeTabs curl={curl} js={js} py={py} id="codetabs-quickstart-en" lang="en" />
+
+  <h2>Step 3, read the response</h2>
+  <p>
+    Every response follows the same canonical envelope. At the top level you
+    always read the same two blocks, no matter which resource you query:
+  </p>
+  <table class="params">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Content</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>data</code></td>
+        <td>The actual payload, typed per endpoint (here the weather values).</td>
+      </tr>
+      <tr>
+        <td><code>data[].attribution</code></td>
+        <td>
+          Not a separate top-level block: each data record carries an embedded
+          <code>attribution</code> field with <code>text</code>,
+          <code>license_url</code> and <code>modified</code>, that is licence and
+          origin of the respective data.
+        </td>
+      </tr>
+      <tr>
+        <td><code>meta</code></td>
+        <td>
+          Context about the request: city slug, timestamp, queried source, the
+          <code>source_status</code> (<code>ok</code>, <code>no_data</code> or
+          <code>disabled</code>) plus <code>correlation_id</code> and
+          <code>cache_status</code>.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    If a source returns nothing for a city, the status code stays
+    <code>200</code> and <code>source_status</code> is set to
+    <code>no_data</code>. That cleanly separates "no data" from a real error.
+  </p>
+
+  <h2>Rate limits</h2>
+  <p>
+    The API is open and needs no API key. Calls are limited per IP (abuse
+    protection). Every response carries the standard headers
+    <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code> and
+    <code>RateLimit-Reset</code>. On overrun the API answers with status
+    <code>429</code>.
+  </p>
+
+  <h2>Next steps</h2>
+  <p>
+    The left navigation lists every operation, with parameters, code samples in
+    curl, JavaScript and Python, and a live console for the callable endpoints.
+    The reference content is in German, the code samples are universal.
+  </p>
+</Docs>

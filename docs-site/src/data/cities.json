@@ -1,0 +1,590 @@
+[
+ {
+  "slug": "aachen",
+  "name": "Aachen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 252769
+ },
+ {
+  "slug": "augsburg",
+  "name": "Augsburg",
+  "state": "BY",
+  "coverage": "auto",
+  "population": 303150
+ },
+ {
+  "slug": "bergisch-gladbach",
+  "name": "Bergisch Gladbach",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 112660
+ },
+ {
+  "slug": "berlin",
+  "name": "Berlin",
+  "state": "BE",
+  "coverage": "full",
+  "population": 3782202
+ },
+ {
+  "slug": "bielefeld",
+  "name": "Bielefeld",
+  "state": "NW",
+  "coverage": "full",
+  "population": 338410
+ },
+ {
+  "slug": "bochum",
+  "name": "Bochum",
+  "state": "NW",
+  "coverage": "full",
+  "population": 366385
+ },
+ {
+  "slug": "bonn",
+  "name": "Bonn",
+  "state": "NW",
+  "coverage": "full",
+  "population": 335789
+ },
+ {
+  "slug": "bottrop",
+  "name": "Bottrop",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 118705
+ },
+ {
+  "slug": "braunschweig",
+  "name": "Braunschweig",
+  "state": "NI",
+  "coverage": "auto",
+  "population": 252066
+ },
+ {
+  "slug": "bremen",
+  "name": "Bremen",
+  "state": "HB",
+  "coverage": "full",
+  "population": 577026
+ },
+ {
+  "slug": "bremerhaven",
+  "name": "Bremerhaven",
+  "state": "HB",
+  "coverage": "auto",
+  "population": 114677
+ },
+ {
+  "slug": "chemnitz",
+  "name": "Chemnitz",
+  "state": "SN",
+  "coverage": "auto",
+  "population": 250681
+ },
+ {
+  "slug": "cottbus",
+  "name": "Cottbus",
+  "state": "BB",
+  "coverage": "auto",
+  "population": 100010
+ },
+ {
+  "slug": "darmstadt",
+  "name": "Darmstadt",
+  "state": "HE",
+  "coverage": "auto",
+  "population": 164792
+ },
+ {
+  "slug": "dortmund",
+  "name": "Dortmund",
+  "state": "NW",
+  "coverage": "full",
+  "population": 595471
+ },
+ {
+  "slug": "dresden",
+  "name": "Dresden",
+  "state": "SN",
+  "coverage": "full",
+  "population": 566222
+ },
+ {
+  "slug": "duisburg",
+  "name": "Duisburg",
+  "state": "NW",
+  "coverage": "full",
+  "population": 503707
+ },
+ {
+  "slug": "duesseldorf",
+  "name": "Düsseldorf",
+  "state": "NW",
+  "coverage": "full",
+  "population": 631217
+ },
+ {
+  "slug": "erfurt",
+  "name": "Erfurt",
+  "state": "TH",
+  "coverage": "full",
+  "population": 215199
+ },
+ {
+  "slug": "erlangen",
+  "name": "Erlangen",
+  "state": "BY",
+  "coverage": "auto",
+  "population": 117806
+ },
+ {
+  "slug": "essen",
+  "name": "Essen",
+  "state": "NW",
+  "coverage": "full",
+  "population": 586608
+ },
+ {
+  "slug": "frankfurt-am-main",
+  "name": "Frankfurt am Main",
+  "state": "HE",
+  "coverage": "full",
+  "population": 775790
+ },
+ {
+  "slug": "freiburg-im-breisgau",
+  "name": "Freiburg im Breisgau",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 237244
+ },
+ {
+  "slug": "fuerth",
+  "name": "Fürth",
+  "state": "BY",
+  "coverage": "auto",
+  "population": 132032
+ },
+ {
+  "slug": "gelsenkirchen",
+  "name": "Gelsenkirchen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 265885
+ },
+ {
+  "slug": "goettingen",
+  "name": "Göttingen",
+  "state": "NI",
+  "coverage": "auto",
+  "population": 120261
+ },
+ {
+  "slug": "guetersloh",
+  "name": "Gütersloh",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 102464
+ },
+ {
+  "slug": "hagen",
+  "name": "Hagen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 190490
+ },
+ {
+  "slug": "halle-saale",
+  "name": "Halle (Saale)",
+  "state": "ST",
+  "coverage": "auto",
+  "population": 242172
+ },
+ {
+  "slug": "hamburg",
+  "name": "Hamburg",
+  "state": "HH",
+  "coverage": "full",
+  "population": 1910160
+ },
+ {
+  "slug": "hamm",
+  "name": "Hamm",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 180761
+ },
+ {
+  "slug": "hanau",
+  "name": "Hanau",
+  "state": "HE",
+  "coverage": "auto",
+  "population": 103184
+ },
+ {
+  "slug": "hannover",
+  "name": "Hannover",
+  "state": "NI",
+  "coverage": "full",
+  "population": 548186
+ },
+ {
+  "slug": "heidelberg",
+  "name": "Heidelberg",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 162960
+ },
+ {
+  "slug": "heilbronn",
+  "name": "Heilbronn",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 130093
+ },
+ {
+  "slug": "herne",
+  "name": "Herne",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 157896
+ },
+ {
+  "slug": "hildesheim",
+  "name": "Hildesheim",
+  "state": "NI",
+  "coverage": "auto",
+  "population": 102325
+ },
+ {
+  "slug": "ingolstadt",
+  "name": "Ingolstadt",
+  "state": "BY",
+  "coverage": "auto",
+  "population": 142308
+ },
+ {
+  "slug": "jena",
+  "name": "Jena",
+  "state": "TH",
+  "coverage": "auto",
+  "population": 109353
+ },
+ {
+  "slug": "kaiserslautern",
+  "name": "Kaiserslautern",
+  "state": "RP",
+  "coverage": "auto",
+  "population": 101486
+ },
+ {
+  "slug": "karlsruhe",
+  "name": "Karlsruhe",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 309964
+ },
+ {
+  "slug": "kassel",
+  "name": "Kassel",
+  "state": "HE",
+  "coverage": "auto",
+  "population": 204687
+ },
+ {
+  "slug": "kiel",
+  "name": "Kiel",
+  "state": "SH",
+  "coverage": "full",
+  "population": 248873
+ },
+ {
+  "slug": "koblenz",
+  "name": "Koblenz",
+  "state": "RP",
+  "coverage": "auto",
+  "population": 115298
+ },
+ {
+  "slug": "krefeld",
+  "name": "Krefeld",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 228550
+ },
+ {
+  "slug": "koeln",
+  "name": "Köln",
+  "state": "NW",
+  "coverage": "full",
+  "population": 1087353
+ },
+ {
+  "slug": "leipzig",
+  "name": "Leipzig",
+  "state": "SN",
+  "coverage": "full",
+  "population": 619879
+ },
+ {
+  "slug": "leverkusen",
+  "name": "Leverkusen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 175300
+ },
+ {
+  "slug": "ludwigshafen-am-rhein",
+  "name": "Ludwigshafen am Rhein",
+  "state": "RP",
+  "coverage": "auto",
+  "population": 176110
+ },
+ {
+  "slug": "luebeck",
+  "name": "Lübeck",
+  "state": "SH",
+  "coverage": "auto",
+  "population": 219044
+ },
+ {
+  "slug": "magdeburg",
+  "name": "Magdeburg",
+  "state": "ST",
+  "coverage": "full",
+  "population": 240114
+ },
+ {
+  "slug": "mainz",
+  "name": "Mainz",
+  "state": "RP",
+  "coverage": "full",
+  "population": 222889
+ },
+ {
+  "slug": "mannheim",
+  "name": "Mannheim",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 316877
+ },
+ {
+  "slug": "moers",
+  "name": "Moers",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 105606
+ },
+ {
+  "slug": "moenchengladbach",
+  "name": "Mönchengladbach",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 268943
+ },
+ {
+  "slug": "muelheim-an-der-ruhr",
+  "name": "Mülheim an der Ruhr",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 173255
+ },
+ {
+  "slug": "muenchen",
+  "name": "München",
+  "state": "BY",
+  "coverage": "full",
+  "population": 1510378
+ },
+ {
+  "slug": "muenster",
+  "name": "Münster",
+  "state": "NW",
+  "coverage": "full",
+  "population": 322904
+ },
+ {
+  "slug": "neuss",
+  "name": "Neuss",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 155163
+ },
+ {
+  "slug": "nuernberg",
+  "name": "Nürnberg",
+  "state": "BY",
+  "coverage": "full",
+  "population": 526091
+ },
+ {
+  "slug": "oberhausen",
+  "name": "Oberhausen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 211099
+ },
+ {
+  "slug": "offenbach-am-main",
+  "name": "Offenbach am Main",
+  "state": "HE",
+  "coverage": "auto",
+  "population": 135490
+ },
+ {
+  "slug": "oldenburg",
+  "name": "Oldenburg",
+  "state": "NI",
+  "coverage": "auto",
+  "population": 174629
+ },
+ {
+  "slug": "osnabrueck",
+  "name": "Osnabrück",
+  "state": "NI",
+  "coverage": "auto",
+  "population": 166960
+ },
+ {
+  "slug": "paderborn",
+  "name": "Paderborn",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 155749
+ },
+ {
+  "slug": "pforzheim",
+  "name": "Pforzheim",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 128992
+ },
+ {
+  "slug": "potsdam",
+  "name": "Potsdam",
+  "state": "BB",
+  "coverage": "full",
+  "population": 187119
+ },
+ {
+  "slug": "recklinghausen",
+  "name": "Recklinghausen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 111693
+ },
+ {
+  "slug": "regensburg",
+  "name": "Regensburg",
+  "state": "BY",
+  "coverage": "auto",
+  "population": 159465
+ },
+ {
+  "slug": "remscheid",
+  "name": "Remscheid",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 112970
+ },
+ {
+  "slug": "reutlingen",
+  "name": "Reutlingen",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 118528
+ },
+ {
+  "slug": "rostock",
+  "name": "Rostock",
+  "state": "MV",
+  "coverage": "auto",
+  "population": 210795
+ },
+ {
+  "slug": "saarbruecken",
+  "name": "Saarbrücken",
+  "state": "SL",
+  "coverage": "full",
+  "population": 183509
+ },
+ {
+  "slug": "salzgitter",
+  "name": "Salzgitter",
+  "state": "NI",
+  "coverage": "auto",
+  "population": 105039
+ },
+ {
+  "slug": "schwerin",
+  "name": "Schwerin",
+  "state": "MV",
+  "coverage": "full",
+  "population": 98733
+ },
+ {
+  "slug": "siegen",
+  "name": "Siegen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 102114
+ },
+ {
+  "slug": "solingen",
+  "name": "Solingen",
+  "state": "NW",
+  "coverage": "auto",
+  "population": 161545
+ },
+ {
+  "slug": "stuttgart",
+  "name": "Stuttgart",
+  "state": "BW",
+  "coverage": "full",
+  "population": 633484
+ },
+ {
+  "slug": "trier",
+  "name": "Trier",
+  "state": "RP",
+  "coverage": "auto",
+  "population": 112737
+ },
+ {
+  "slug": "ulm",
+  "name": "Ulm",
+  "state": "BW",
+  "coverage": "auto",
+  "population": 129942
+ },
+ {
+  "slug": "wiesbaden",
+  "name": "Wiesbaden",
+  "state": "HE",
+  "coverage": "full",
+  "population": 285522
+ },
+ {
+  "slug": "wolfsburg",
+  "name": "Wolfsburg",
+  "state": "NI",
+  "coverage": "auto",
+  "population": 127256
+ },
+ {
+  "slug": "wuppertal",
+  "name": "Wuppertal",
+  "state": "NW",
+  "coverage": "full",
+  "population": 358938
+ },
+ {
+  "slug": "wuerzburg",
+  "name": "Würzburg",
+  "state": "BY",
+  "coverage": "auto",
+  "population": 132215
+ }
+]

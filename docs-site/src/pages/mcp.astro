@@ -1,0 +1,205 @@
+---
+// MCP-Server-Seite (/mcp): erklaert kurz MCP fuer Devs, zeigt die Einrichtung
+// in Claude Code und Claude Desktop (CodeTabs) und listet die 21 Tools nach
+// Thema gruppiert. Quelle der Einrichtungs-Snippets ist docs/mcp-install.md.
+import Docs from "../layouts/Docs.astro";
+import CodeTabs from "../components/CodeTabs.astro";
+import JsonLd from "../components/JsonLd.astro";
+
+// Einrichtungs-Snippets. Der Server ist oeffentlich gehostet (Remote, Streamable
+// HTTP) unter https://mcp.infranode.dev/mcp. Tab 1: Claude Code (Remote, ein
+// Befehl), Tab 2: URL-Connector-Config (Claude Desktop/ChatGPT u.a.), Tab 3:
+// lokale Selfhost-Variante (stdio, braucht Repo-Zugang).
+const MCP_URL = "https://mcp.infranode.dev/mcp";
+
+const claudeCodeRemote = `claude mcp add --transport http infranode ${MCP_URL}`;
+
+const connectorConfig = [
+  `{`,
+  `  "mcpServers": {`,
+  `    "infranode": {`,
+  `      "url": "${MCP_URL}"`,
+  `    }`,
+  `  }`,
+  `}`,
+].join("\n");
+
+const claudeCodeLocal = `claude mcp add infranode -- uv run --group mcp python -m infranode.mcp`;
+
+// Die 21 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
+const toolGroups = [
+  {
+    title: "Stammdaten und Geo",
+    tools: [
+      ["get_city", "Stammdaten einer Stadt"],
+      ["geo", "Geodaten"],
+      ["demographics", "Demografie"],
+    ],
+  },
+  {
+    title: "Umwelt und Wetter",
+    tools: [
+      ["air_quality", "Luftqualität"],
+      ["air_quality_live", "Luftqualität, Live-Messwerte"],
+      ["weather", "Wetter"],
+      ["pollen_uv", "Pollen- und UV-Index"],
+    ],
+  },
+  {
+    title: "Mobilität und Verkehr",
+    tools: [
+      ["traffic", "Verkehrslage"],
+      ["transit", "ÖPNV"],
+      ["charging", "Ladesäulen"],
+      ["road_events", "Straßen- und Baustellenmeldungen"],
+    ],
+  },
+  {
+    title: "Wasser und Lage",
+    tools: [
+      ["water_level", "Pegelstände"],
+      ["flood", "Hochwasserlage"],
+    ],
+  },
+  {
+    title: "Gesundheit und Energie",
+    tools: [
+      ["health", "Gesundheitsdaten"],
+      ["icu_live", "Intensivbetten, Live"],
+      ["energy", "Energie"],
+    ],
+  },
+  {
+    title: "Stadtleben und Politik",
+    tools: [
+      ["pois", "Points of Interest (Pflichtparameter type, z.B. hospital)"],
+      ["events", "Veranstaltungen"],
+      ["webcams", "Webcams"],
+      ["election", "Wahlergebnisse"],
+      ["holidays", "Feiertage"],
+    ],
+  },
+];
+---
+
+<Docs
+  title="MCP-Server"
+  description="Gehosteter InfraNode-MCP-Server unter mcp.infranode.dev: 21 Stadtdaten-Tools für KI-Agenten, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel. Connector für Claude und ChatGPT."
+  current="mcp"
+  lang="de"
+  altLangPath="/en/mcp/"
+>
+  <JsonLd
+    slot="jsonld"
+    type="WebAPI"
+    name="InfraNode MCP-Server"
+    description="MCP-Server mit 21 Tools für offene Stadtdaten deutscher Großstädte."
+  />
+
+  <h1>MCP-Server</h1>
+  <p>
+    InfraNode bringt einen offiziellen MCP-Server mit. Er stellt die offenen
+    Stadtdaten als Werkzeuge bereit, die ein KI-Agent direkt aufrufen kann, ohne
+    dass du HTTP-Aufrufe von Hand schreibst.
+  </p>
+
+  <div class="tldr">
+    <p class="tldr__title">Sofort verbinden</p>
+    <p>
+      Der Server ist öffentlich gehostet unter
+      <code>https://mcp.infranode.dev/mcp</code> (Streamable HTTP). Keine
+      Installation, kein API-Schlüssel: in Claude, ChatGPT oder einem anderen
+      MCP-Client als Connector mit dieser URL hinzufügen, fertig.
+    </p>
+  </div>
+
+  <h2>Was ist MCP</h2>
+  <p>
+    Das Model Context Protocol (MCP) ist ein offener Standard, über den
+    KI-Agenten externe Werkzeuge und Datenquellen einbinden. Ein MCP-Server
+    meldet seine Tools beim Client an, der Agent ruft sie bei Bedarf mit
+    typisierten Argumenten auf und bekommt strukturiertes JSON zurück. Für dich
+    als Entwickler heißt das: Statt eine API-Integration zu bauen, verbindest du
+    den Server einmal, und dein Agent kann die Daten unmittelbar nutzen. Der
+    InfraNode-Server ist remote über Streamable HTTP erreichbar und braucht
+    keinen lokalen Prozess; alternativ läuft er lokal über stdio.
+  </p>
+
+  <h2>Verbinden (Remote, empfohlen)</h2>
+  <p>
+    Der schnellste Weg: den gehosteten Endpunkt
+    <code>https://mcp.infranode.dev/mcp</code> als Connector einbinden. In Claude
+    Code genügt ein Befehl (erster Tab). Clients mit URL-Connector-Konfiguration
+    (Claude Desktop, ChatGPT und andere) nutzen die JSON-Form im zweiten Tab oder
+    tragen die URL direkt in der Connector-Oberfläche ein.
+  </p>
+  <CodeTabs
+    curl={claudeCodeRemote}
+    js={connectorConfig}
+    py={claudeCodeLocal}
+    id="codetabs-mcp-setup"
+    labels={["Claude Code (Remote)", "Connector per URL", "Lokal (stdio)"]}
+  />
+  <p>
+    Nach dem Hinzufügen stehen die 21 InfraNode-Tools im Agenten zur Verfügung.
+    Der Zugriff ist lesend und ohne Schlüssel.
+  </p>
+
+  <h2>Lokal betreiben (optional)</h2>
+  <p>
+    Wer den Server lieber selbst hostet, startet ihn lokal über stdio (dritter
+    Tab). Das setzt Repo-Zugang voraus; die Quellcode-Veröffentlichung ist in
+    Vorbereitung. Per Umgebungsvariable <code>INFRANODE_MCP_API_BASE</code> lässt
+    sich die angesprochene API-Basis setzen (Default
+    <code>https://infranode.dev/api/v1</code>).
+  </p>
+
+  <h2>Wogegen der Server läuft</h2>
+  <p>
+    Der MCP-Server ist ein dünner Wrapper um die InfraNode-Live-API. Jedes Tool
+    ruft die REST-API auf und reicht deren normalisiertes JSON unverändert
+    weiter. Es gibt keine eigene Mapping-Logik im Server und keinen API-Schlüssel
+    für den lesenden Zugriff.
+  </p>
+
+  <h2>Tool-Übersicht</h2>
+  <p>
+    Der Server registriert je Stadtdaten-Ressource ein Tool, insgesamt 21. Jedes
+    Tool erwartet einen Stadt-Slug (zum Beispiel <code>berlin</code> oder
+    <code>hamburg</code>); <code>pois</code> verlangt zusätzlich den
+    Pflichtparameter <code>type</code> (z.B. <code>hospital</code>,
+    <code>school</code>, <code>pharmacy</code>).
+  </p>
+  {
+    toolGroups.map((group) => (
+      <>
+        <h3>{group.title}</h3>
+        <table class="params">
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>Beschreibung</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.tools.map(([name, desc]) => (
+              <tr>
+                <td>
+                  <code>{name}</code>
+                </td>
+                <td>{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </>
+    ))
+  }
+
+  <h2>Beispiel-Aufruf</h2>
+  <p>
+    Ein Agent holt die Stammdaten für Berlin. Das Ergebnis ist das
+    normalisierte JSON der Live-API, unverändert weitergereicht.
+  </p>
+  <pre class="codetabs__pre"><code>get_city(slug="berlin")</code></pre>
+</Docs>

@@ -1,0 +1,62 @@
+# Secrets / Env
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+
+# Dev-Server-Logs (Hot-Reload-Ausgabe, kein Repo-Artefakt)
+.api-dev.log
+docs-site/.docs-dev.log
+
+# Data / Cache (large upstream dumps, GTFS, Parquet archives)
+# Hinweis: NICHT data/ pauschal ignorieren, sondern nur die schweren
+# Unterordner. So koennen die committeten Seeds (data/seeds/) versioniert
+# bleiben, ohne dass eine Re-Include-Regel an einem ignorierten Elternordner
+# scheitert (Git kann Dateien in einem ignorierten Verzeichnis nicht re-includen).
+data/archive/
+data/mastr/
+data/delfi/
+data/bkg/
+data/bundeswahl/
+data/divi/
+data/cache/
+# Collector-Laufzeitausgabe (volume-persistent auf der Box, Pitfall 2): runs.db
+# (WAL inkl. -wal/-shm) + Roh-Snapshots. Nie committen.
+data/ops/
+data/snapshots/
+*.gtfs
+*.zip
+*.parquet
+.cache/
+
+# Ausnahme: Mini-GTFS-Test-Fixture (Phase 19, programmatisch via build_fixtures.py
+# erzeugt, wenige Zeilen, NIE der echte 68-MB-Feed). Muss committet sein (Wave 0).
+!tests/fixtures/gtfs_static/mini_delfi.zip
+
+# Docs-Site (Astro) build + deps
+docs-site/dist/
+docs-site/node_modules/
+
+# Claude Code / harness
+.claude-active
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

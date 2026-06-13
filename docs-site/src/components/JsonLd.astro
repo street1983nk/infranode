@@ -1,0 +1,60 @@
+---
+// JSON-LD strukturierte Daten (DX-03, schema.org). type="WebAPI" auf der
+// Startseite, type="APIReference" je Endpunkt-Seite. Das schema.org-Objekt
+// wird mit JSON.stringify serialisiert (gueltiges, escaptes JSON; kein
+// manuelles String-Bauen, T-12-SEO-INJECT). Felder konservativ nach
+// schema.org gehalten (T-12-SEO-INVALID: invalid schema waere schlechter
+// als keins, daher nur Kernfelder).
+interface Props {
+  type: "WebAPI" | "APIReference";
+  // APIReference
+  name?: string;
+  abstract?: string;
+  url?: string;
+  // WebAPI
+  description?: string;
+  documentation?: string;
+}
+
+const { type, name, abstract, url, description, documentation } = Astro.props;
+
+const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
+
+let data: Record<string, unknown>;
+
+if (type === "WebAPI") {
+  data = {
+    "@context": "https://schema.org",
+    "@type": "WebAPI",
+    name: name ?? "InfraNode API",
+    description:
+      description ??
+      "Kostenlose, öffentliche Open-Data-REST-API für normalisierte offene Daten deutscher Großstädte.",
+    documentation: documentation ?? `${site}/quickstart/`,
+    provider: {
+      "@type": "Organization",
+      name: "InfraNode",
+    },
+    termsOfService: `${site}/`,
+  };
+} else {
+  data = {
+    "@context": "https://schema.org",
+    "@type": "APIReference",
+    name: name ?? "",
+    abstract: abstract ?? "",
+    url: url ?? "",
+    programmingModel: "REST",
+    targetPlatform: "HTTP",
+    isPartOf: {
+      "@type": "WebAPI",
+      name: "InfraNode API",
+      url: `${site}/`,
+    },
+  };
+}
+
+const json = JSON.stringify(data);
+---
+
+<script type="application/ld+json" set:html={json} />

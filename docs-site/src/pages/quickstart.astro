@@ -1,0 +1,110 @@
+---
+// Quick-Start (D-02): in drei Schritten zum ersten Call. Basis-URL, ein
+// Beispiel-Aufruf mit Envelope-Erklaerung (Feld-Tabelle), naechste Schritte.
+// Statisch, keine Build-Time-Calls der Live-API.
+import Docs from "../layouts/Docs.astro";
+import CodeTabs from "../components/CodeTabs.astro";
+import { API_BASE } from "../lib/codegen";
+
+// Ein konkreter Beispiel-Call (Wetter fuer Hamburg) als Einstieg.
+const exampleUrl = `${API_BASE}/api/v1/cities/hamburg/weather`;
+const curl = `curl "${exampleUrl}"`;
+const js = [
+  `const res = await fetch("${exampleUrl}");`,
+  `const data = await res.json();`,
+  `console.log(data);`,
+].join("\n");
+const py = [
+  `import httpx`,
+  ``,
+  `res = httpx.get("${exampleUrl}")`,
+  `res.raise_for_status()`,
+  `print(res.json())`,
+].join("\n");
+---
+
+<Docs
+  title="Quick-Start"
+  description="In drei Schritten zum ersten InfraNode-Call: Basis-URL, ein Aufruf, der JSON-Envelope erklärt."
+  current="quickstart"
+>
+  <h1>Quick-Start</h1>
+  <p>
+    InfraNode liefert normalisierte offene Daten deutscher Großstädte hinter
+    einer einheitlichen REST-API. Alle Endpunkte sind öffentlich lesbar; der
+    erste Aufruf braucht keinen Schlüssel. In drei Schritten bist du drin.
+  </p>
+
+  <h2>Schritt 1, Basis-URL</h2>
+  <p>
+    Alle Endpunkte liegen unter der versionierten Basis-URL. Pfade folgen dem
+    Muster <code>/api/v1/cities/&lbrace;slug&rbrace;/&lbrace;ressource&rbrace;</code>.
+  </p>
+  <p><code>{API_BASE}/api/v1</code></p>
+
+  <h2>Schritt 2, erster Aufruf</h2>
+  <p>
+    Hole das Wetter für Hamburg. Kein Header, kein Setup, ein GET genügt.
+  </p>
+  <CodeTabs curl={curl} js={js} py={py} id="codetabs-quickstart" />
+
+  <h2>Schritt 3, die Antwort lesen</h2>
+  <p>
+    Jede Antwort folgt demselben kanonischen Envelope. Auf Top-Level liest du
+    immer dieselben zwei Blöcke, egal welche Ressource du abfragst:
+  </p>
+  <table class="params">
+    <thead>
+      <tr>
+        <th>Feld</th>
+        <th>Inhalt</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>data</code></td>
+        <td>Die eigentliche Nutzlast, je Endpunkt typisiert (hier die Wetterwerte).</td>
+      </tr>
+      <tr>
+        <td><code>data[].attribution</code></td>
+        <td>
+          Kein eigener Top-Level-Block: Jeder data-Record trägt ein eingebettetes
+          <code>attribution</code>-Feld mit <code>text</code>,
+          <code>license_url</code> und <code>modified</code>, also Lizenz und
+          Herkunft der jeweiligen Daten.
+        </td>
+      </tr>
+      <tr>
+        <td><code>meta</code></td>
+        <td>
+          Kontext zum Abruf: Stadt-Slug, Zeitstempel, abgefragte Quelle, der
+          <code>source_status</code> (<code>ok</code>, <code>no_data</code> oder
+          <code>disabled</code>) sowie <code>correlation_id</code> und
+          <code>cache_status</code>.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Liefert eine Quelle für eine Stadt nichts, bleibt der Status-Code
+    <code>200</code> und <code>source_status</code> steht auf
+    <code>no_data</code>. So unterscheidest du "keine Daten" sauber von einem
+    echten Fehler.
+  </p>
+
+  <h2>Rate-Limits</h2>
+  <p>
+    Die API ist offen und braucht keinen API-Key. Aufrufe sind pro IP begrenzt
+    (Schutz vor Missbrauch). Jede Antwort trägt die Standard-Header
+    <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code> und
+    <code>RateLimit-Reset</code>. Wird das Limit überschritten, antwortet die
+    API mit Status <code>429</code>.
+  </p>
+
+  <h2>Nächste Schritte</h2>
+  <p>
+    In der linken Navigation findest du jede Operation einzeln, mit Parametern,
+    Code-Beispielen in curl, JavaScript und Python sowie einer Live-Konsole für
+    die aufrufbaren Endpunkte.
+  </p>
+</Docs>

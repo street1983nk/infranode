@@ -1,0 +1,146 @@
+---
+// Client-seitige "Try it"-Konsole (D-03/Blocker 2). Parametergetrieben: die
+// Komponente bekommt die OpenAPI-Parameter des Endpunkts als Prop und rendert
+// je benoetigtem Parameter ein Eingabefeld (slug Default hamburg, weitere
+// Pfad-/Pflicht-Query-Parameter mit sinnvollen Defaults). Operationen ohne
+// {slug} bekommen kein slug-Feld. Die API ist keylos/offen, kein Key-Feld. Der Senden-Button baut die
+// URL aus den Feldern (method-aware analog codegen), macht fetch gegen die
+// Live-API und rendert die JSON-Antwort via textContent in ein <pre> (NIE
+// innerHTML, T-12-XSS). Die Live-API-Basis-URL kommt aus codegen.API_BASE.
+import { API_BASE } from "../lib/codegen";
+
+interface OpenApiParameter {
+  name?: string;
+  in?: string;
+  required?: boolean;
+  example?: unknown;
+  schema?: { type?: string; enum?: unknown[]; default?: unknown; example?: unknown };
+}
+
+interface Props {
+  path: string;
+  method: string;
+  parameters: unknown[];
+  // Sprache der Seite (de Standard). Steuert die UI-Texte der Konsole.
+  lang?: "de" | "en";
+}
+
+const { path, method, parameters, lang = "de" } = Astro.props;
+const isEn = lang === "en";
+const t = {
+  send: isEn ? "Send" : "Senden",
+  sending: isEn ? "Sending request..." : "Sende Anfrage...",
+  networkError: isEn ? "Network error" : "Netzwerkfehler",
+};
+
+const SLUG_EXAMPLE = "hamburg";
+
+function asParam(value: unknown): OpenApiParameter {
+  return value != null && typeof value === "object" ? (value as OpenApiParameter) : {};
+}
+
+function defaultFor(param: OpenApiParameter): string {
+  if (param.name === "slug") return SLUG_EXAMPLE;
+  const schema = param.schema ?? {};
+  if (typeof param.example === "string" || typeof param.example === "number") {
+    return String(param.example);
+  }
+  if (typeof schema.example === "string" || typeof schema.example === "number") {
+    return String(schema.example);
+  }
+  if (typeof schema.default === "string" || typeof schema.default === "number") {
+    return String(schema.default);
+  }
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) return String(schema.enum[0]);
+  if (schema.type === "integer" || schema.type === "number") return "1";
+  return "";
+}
+
+// Felder: alle Pfad-Parameter + alle required Query-Parameter. Header- und
+// optionale Query-Parameter werden nicht als Pflichtfeld gerendert.
+const fields = parameters
+  .map(asParam)
+  .filter((p) => typeof p.name === "string" && (p.in === "path" || (p.in === "query" && p.required === true)))
+  .map((p) => ({
+    name: p.name as string,
+    location: p.in as string,
+    value: defaultFor(p),
+  }));
+
+const methodUpper = method.toUpperCase();
+---
+
+<div
+  class="tryit"
+  data-tryit
+  data-path={path}
+  data-method={methodUpper}
+  data-api-base={API_BASE}
+  data-sending={t.sending}
+  data-network-error={t.networkError}
+>
+  {
+    fields.map((field) => (
+      <div class="tryit__field">
+        <label for={`tryit-${field.name}`}>{field.name} ({field.location})</label>
+        <input
+          id={`tryit-${field.name}`}
+          type="text"
+          data-param={field.name}
+          data-in={field.location}
+          value={field.value}
+        />
+      </div>
+    ))
+  }
+  <button type="button" class="tryit__btn" data-tryit-send>{t.send}</button>
+  <pre class="tryit__out" data-tryit-out aria-live="polite"></pre>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>("[data-tryit]")) {
+    const sendBtn = root.querySelector<HTMLButtonElement>("[data-tryit-send]")!;
+    const out = root.querySelector<HTMLElement>("[data-tryit-out]")!;
+    const apiBase = root.dataset.apiBase ?? "";
+    const method = (root.dataset.method ?? "GET").toUpperCase();
+    const pathTemplate = root.dataset.path ?? "";
+    const sendingText = root.dataset.sending ?? "Sende Anfrage...";
+    const networkErrorText = root.dataset.networkError ?? "Netzwerkfehler";
+
+    function buildUrl(): string {
+      let path = pathTemplate;
+      const query: string[] = [];
+      for (const input of root.querySelectorAll<HTMLInputElement>("[data-param]")) {
+        const name = input.dataset.param!;
+        const where = input.dataset.in;
+        const value = input.value.trim();
+        if (where === "path") {
+          path = path.replace(`{${name}}`, encodeURIComponent(value));
+        } else if (where === "query" && value !== "") {
+          query.push(`${name}=${encodeURIComponent(value)}`);
+        }
+      }
+      const qs = query.length > 0 ? `?${query.join("&")}` : "";
+      return `${apiBase}${path}${qs}`;
+    }
+
+    sendBtn.addEventListener("click", async () => {
+      const url = buildUrl();
+      out.textContent = sendingText;
+      try {
+        const res = await fetch(url, { method });
+        const text = await res.text();
+        let body = text;
+        try {
+          body = JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          // kein JSON, Rohtext anzeigen
+        }
+        // textContent (kein innerHTML), T-12-XSS.
+        out.textContent = `${res.status} ${res.statusText}\n\n${body}`;
+      } catch (err) {
+        out.textContent = `${networkErrorText}: ${err instanceof Error ? err.message : String(err)}`;
+      }
+    });
+  }
+</script>

@@ -1,0 +1,340 @@
+---
+// Abdeckung & Status (/abdeckung): Dev-Seite, die ehrlich zeigt, welche Endpunkte
+// fuer welche Staedte Daten liefern, und wo Devs ueber Stoerungen informiert
+// werden. Datenquelle der Teilabdeckung: src/data/coverage.json (driftfrei aus
+// der API-Single-Source infranode.registry.coverage.PARTIAL_COVERAGE).
+//
+// coverage.json regenerieren:
+//   uv run python scripts/export-coverage.py
+import Docs from "../layouts/Docs.astro";
+import coverage from "../data/coverage.json";
+import { API_BASE } from "../lib/codegen";
+
+// Oeffentliche Uptime-Kuma-Status-Page (Stoerungsinfo fuer Devs).
+const STATUS_URL = "https://status.infranode.dev";
+
+// Anzeige-Metadaten der teilabgedeckten Endpunkte (Reihenfolge = Anzeige).
+// covered-Slugs kommen aus coverage.json (Single Source), hier nur Label/Pfad/Link.
+const PARTIAL = [
+  {
+    key: "flood",
+    label: "Hochwasser",
+    path: "/api/v1/cities/{slug}/flood",
+    op: "getCityFlood",
+    reason: "kuratierte Pegel je Stadt",
+    note: "",
+  },
+  {
+    key: "road-events",
+    label: "Innerstädtische Baustellen",
+    path: "/api/v1/cities/{slug}/road-events",
+    op: "getCityRoadEvents",
+    reason: "kuratierte Pro-Stadt-Connectoren",
+    note: "",
+  },
+  {
+    key: "traffic",
+    label: "Autobahn-Verkehr",
+    path: "/api/v1/cities/{slug}/traffic",
+    op: "getCityTraffic",
+    reason: "kuratierte Autobahnen je Stadt",
+    note: "",
+  },
+  {
+    key: "webcams",
+    label: "Autobahn-Webcams",
+    path: "/api/v1/cities/{slug}/webcams",
+    op: "getCityWebcams",
+    reason: "kuratierte Autobahnen je Stadt",
+    note: "Quelle aktuell ohne Daten",
+  },
+];
+
+const total = coverage.total_cities;
+const partialMap: Record<string, string[]> = coverage.partial;
+---
+
+<Docs
+  title="Abdeckung & Status"
+  description="Welche InfraNode-Endpunkte für welche Städte Daten liefern: flächendeckende Endpunkte, teilabgedeckte Endpunkte mit Städteliste, geo- und live-basierte Sonderfälle, source_status-Werte und die Live-Status-Page für Störungen."
+  current="abdeckung"
+  lang="de"
+  altLangPath="/en/coverage/"
+>
+  <h1>Abdeckung & Status</h1>
+
+  <p>
+    InfraNode deckt {total} deutsche Großstädte ab. Die meisten Endpunkte liefern
+    für alle {total} Städte Daten. Einige wenige sind <strong>teilabgedeckt</strong>:
+    sie bedienen nur kuratierte Städte. Diese Seite zeigt ehrlich, welcher Endpunkt
+    welche Städte bedient, und wo du über Störungen informiert wirst.
+  </p>
+
+  <div class="status-card">
+    <div>
+      <p class="status-card__title">Live-Status & Störungen</p>
+      <p class="status-card__text">
+        Aktuelle Verfügbarkeit aller Quellen und gemeldete Störungen findest du auf
+        der Status-Page. Dort kannst du dich auch für Benachrichtigungen eintragen.
+      </p>
+    </div>
+    <a class="status-card__btn" href={STATUS_URL} rel="noopener" target="_blank">
+      Status-Page öffnen
+    </a>
+  </div>
+
+  <h2>Flächendeckend (alle {total} Städte)</h2>
+  <p>
+    Alle Stadt- und Live-Endpunkte sind flächendeckend, mit Ausnahme der unten
+    gelisteten teilabgedeckten und geo-/live-basierten Endpunkte. Dazu gehören
+    unter anderem Stammdaten, Wetter, Luftqualität (UBA), Demografie, Pollen/UV,
+    POIs, Ladesäulen, Verwaltungsgrenzen und ÖPNV-Haltestellen. Eine Stadt, für
+    die eine Quelle gerade nichts liefert, antwortet ehrlich mit
+    <code>no_data</code> statt einem Fehler.
+  </p>
+
+  <h2>Teilabgedeckte Endpunkte</h2>
+  <p>
+    Diese Endpunkte beziehen ihre Daten aus handkuratierten Pro-Stadt-Quellen und
+    liefern nur für die gelisteten Städte Daten. Für jede andere registrierte
+    Stadt antwortet die API mit <code>200</code> und
+    <code>source_status:&nbsp;"not_covered"</code>, <code>data:&nbsp;null</code>
+    sowie <code>meta.covered_cities</code> (genau die hier gelisteten Slugs). Das
+    ist klar unterscheidbar von <code>no_data</code> (Stadt abgedeckt, aber gerade
+    keine Daten) und von <code>404</code> (Stadt unbekannt).
+  </p>
+
+  <table class="cov">
+    <thead>
+      <tr>
+        <th scope="col">Endpunkt</th>
+        <th scope="col">Pfad</th>
+        <th scope="col">Abgedeckte Städte</th>
+        <th scope="col">Grund</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        PARTIAL.map((ep) => {
+          const slugs = partialMap[ep.key] ?? [];
+          return (
+            <tr>
+              <td data-label="Endpunkt">
+                <a href={`/api/${ep.op}/`}>{ep.label}</a>
+                {ep.note && <span class="cov__note">{ep.note}</span>}
+              </td>
+              <td data-label="Pfad"><code>{ep.path}</code></td>
+              <td data-label="Abgedeckte Städte">
+                <span class="cov__count">{slugs.length} von {total}</span>
+                <span class="cov__slugs">
+                  {slugs.map((s) => (
+                    <code class="cov__slug">{s}</code>
+                  ))}
+                </span>
+              </td>
+              <td class="cov__reason" data-label="Grund">{ep.reason}</td>
+            </tr>
+          );
+        })
+      }
+    </tbody>
+  </table>
+
+  <h2>Geo- und Live-Sonderfälle</h2>
+  <ul>
+    <li>
+      <a href="/api/getCityWaterLevel/"><strong>Pegelstände</strong></a>
+      (<code>/api/v1/cities/{"{slug}"}/water-level</code>): geobasiert,
+      deutschlandweit an Bundeswasserstraßen. Es gibt keine feste Städteliste; ist
+      keine Pegelstation in der Nähe, antwortet die API mit <code>no_data</code>.
+    </li>
+    <li>
+      <a href="/api/getLiveTransitDepartures/"><strong>ÖPNV-Echtzeit</strong></a>
+      (<code>/api/v1/live/{"{city}"}/transit/…</code>): speist sich aus dem
+      bundesweiten GTFS-RT-Feed, ohne strukturelle Städtegrenze. Liegen für eine
+      Stadt gerade keine Echtzeit-Fahrten vor, kommt <code>no_data</code>.
+    </li>
+    <li>
+      <a href="/api/getLiveHamburgDepartures/"><strong>HVV-Abfahrten (Hamburg)</strong></a>
+      (<code>/api/v1/live/hamburg/departures</code>): Echtzeit-Abfahrtstafel je
+      HVV-Station aus der Geofox-GTI-API, inklusive Verspätung und
+      Linien-Störungshinweisen. Nur Hamburg (Geofox deckt den HVV-Raum ab),
+      Stationsname über <code>?station=</code>. Tier C live-only.
+    </li>
+  </ul>
+
+  <h2>source_status verstehen</h2>
+  <p>Jede Antwort trägt im <code>meta</code>-Block einen ehrlichen Status:</p>
+  <table class="cov cov--legend">
+    <thead>
+      <tr>
+        <th scope="col">Wert</th>
+        <th scope="col">Bedeutung</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td data-label="Wert"><code>ok</code></td><td data-label="Bedeutung">Daten vorhanden.</td></tr>
+      <tr><td data-label="Wert"><code>no_data</code></td><td data-label="Bedeutung">Quelle erreichbar bzw. Stadt abgedeckt, aber gerade keine Daten.</td></tr>
+      <tr><td data-label="Wert"><code>not_covered</code></td><td data-label="Bedeutung">Stadt ist für diesen teilabgedeckten Endpunkt strukturell nicht abgedeckt. <code>data: null</code>, abgedeckte Städte in <code>meta.covered_cities</code>.</td></tr>
+      <tr><td data-label="Wert"><code>disabled</code></td><td data-label="Bedeutung">Quelle per Konfiguration deaktiviert.</td></tr>
+      <tr><td data-label="Wert"><code>not_ingested</code></td><td data-label="Bedeutung">Quelle aktiv, aber noch kein vorverarbeiteter Snapshot vorhanden.</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Eine unbekannte Stadt liefert dagegen <code>404</code>. Die maschinenlesbare
+    Städteliste gibt es über
+    <a href="/api/getCities/"><code>GET /api/v1/cities</code></a>:
+  </p>
+  <pre><code>curl {API_BASE}/api/v1/cities/dortmund/flood</code></pre>
+</Docs>
+
+<style>
+  .status-card {
+    display: flex;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding: 1.1rem 1.3rem;
+    margin: 1.5rem 0;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+  }
+  .status-card__title {
+    margin: 0 0 0.25rem;
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--color-accent-strong);
+  }
+  .status-card__title::before {
+    content: "// ";
+    color: var(--border-strong);
+  }
+  .status-card__text {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--fg-muted);
+    max-width: 44rem;
+  }
+  .status-card__btn {
+    display: inline-block;
+    white-space: nowrap;
+    font-weight: 600;
+    text-decoration: none;
+    padding: 0.55rem 1.1rem;
+    border-radius: 6px;
+    background: var(--color-accent);
+    color: #fff;
+  }
+  .status-card__btn:hover {
+    background: var(--color-accent-strong);
+  }
+  table.cov {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.92rem;
+  }
+  table.cov th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--fg-muted);
+    padding: 0.5rem 0.7rem;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  table.cov td {
+    padding: 0.6rem 0.7rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .cov__count {
+    display: inline-block;
+    font-family: var(--mono);
+    font-weight: 600;
+    margin-right: 0.6rem;
+    color: var(--color-primary);
+    font-variant-numeric: tabular-nums;
+  }
+  .cov__slugs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .cov__slug {
+    font-size: 0.78rem;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-strong);
+    border-radius: 3px;
+    padding: 0.05rem 0.35rem;
+  }
+  .cov__reason {
+    color: var(--fg-muted);
+    font-size: 0.88rem;
+  }
+  table.cov--legend td:first-child {
+    white-space: nowrap;
+  }
+  .cov__note {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: #9a5b00;
+    background: #fbf3e2;
+    border: 1px solid #ecd9b0;
+    border-radius: 3px;
+    padding: 0.05rem 0.4rem;
+    vertical-align: middle;
+  }
+
+  /* Mobil: Tabellen brechen in gestapelte Bloecke um (kein Rechts-Scroll).
+     thead aus, jede Zeile wird eine berandete Karte, Zellen tragen ihr Label
+     ueber data-label. */
+  @media (max-width: 640px) {
+    table.cov thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+    }
+    table.cov tr {
+      display: block;
+      border: 1px solid var(--border-strong);
+      border-radius: 6px;
+      margin-bottom: 0.7rem;
+      padding: 0.3rem 0.2rem;
+    }
+    table.cov td {
+      display: block;
+      border: none;
+      padding: 0.4rem 0.8rem;
+    }
+    table.cov td::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 0.15rem;
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--fg-muted);
+    }
+    .cov__count {
+      margin-right: 0;
+    }
+    .cov__slugs {
+      margin-top: 0.3rem;
+    }
+  }
+</style>

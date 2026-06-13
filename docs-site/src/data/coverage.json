@@ -1,0 +1,40 @@
+{
+ "total_cities": 84,
+ "partial": {
+  "flood": [
+   "berlin",
+   "bonn",
+   "dresden",
+   "duesseldorf",
+   "duisburg",
+   "erfurt",
+   "essen",
+   "frankfurt-am-main",
+   "hamburg",
+   "koeln",
+   "leipzig",
+   "mainz",
+   "muenchen",
+   "nuernberg"
+  ],
+  "road-events": [
+   "berlin",
+   "hamburg",
+   "koeln",
+   "muenchen",
+   "stuttgart"
+  ],
+  "traffic": [
+   "berlin",
+   "hamburg",
+   "koeln",
+   "muenchen"
+  ],
+  "webcams": [
+   "berlin",
+   "hamburg",
+   "koeln",
+   "muenchen"
+  ]
+ }
+}

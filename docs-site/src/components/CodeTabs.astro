@@ -1,0 +1,111 @@
+---
+// Umschaltbare Code-Tabs (curl / JS / Python). Bekommt die drei fertigen
+// Snippets als Props (aus ../lib/codegen.ts). Rendert drei Tab-Buttons plus
+// drei <pre>-Bloecke; ein kleines inline-Script schaltet sichtbar (kein
+// Framework, winzige Insel fuer gute Core Web Vitals). Code als textContent
+// im Astro-Template (kein innerHTML), HTML-Escaping uebernimmt Astro selbst.
+interface Props {
+  curl: string;
+  js: string;
+  py: string;
+  id?: string;
+  // Optionale Tab-Beschriftungen (Standard curl/JavaScript/Python). Erlaubt es,
+  // CodeTabs auch fuer Nicht-Sprach-Snippets zu nutzen (z.B. Claude Code /
+  // Claude Desktop fuer die MCP-Einrichtung).
+  labels?: [string, string, string];
+  // Sprache der Seite (de Standard). Steuert die UI-Texte (Copy-Button, ARIA).
+  lang?: "de" | "en";
+}
+const { curl, js, py, id = "codetabs", labels, lang = "de" } = Astro.props;
+const isEn = lang === "en";
+const t = {
+  examples: isEn ? "Code examples" : "Code-Beispiele",
+  copyAria: isEn ? "Copy code" : "Code kopieren",
+  copy: isEn ? "Copy" : "Kopieren",
+  copied: isEn ? "Copied" : "Kopiert",
+};
+
+const [labelCurl, labelJs, labelPy] = labels ?? ["curl", "JavaScript", "Python"];
+
+const tabs = [
+  { key: "curl", label: labelCurl, code: curl },
+  { key: "js", label: labelJs, code: js },
+  { key: "py", label: labelPy, code: py },
+];
+---
+
+<div class="codetabs" data-codetabs id={id}>
+  <div class="codetabs__bar">
+    <div class="codetabs__buttons" role="tablist" aria-label={t.examples}>
+      {
+        tabs.map((tab, index) => (
+          <button
+            type="button"
+            role="tab"
+            class="codetabs__btn"
+            data-tab={tab.key}
+            aria-selected={index === 0 ? "true" : "false"}
+          >
+            {tab.label}
+          </button>
+        ))
+      }
+    </div>
+    <button type="button" class="codetabs__copy" data-copy aria-label={t.copyAria} data-copied-label={t.copied}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
+      <span data-copy-label>{t.copy}</span>
+    </button>
+  </div>
+  {
+    tabs.map((tab, index) => (
+      <pre
+        class="codetabs__pre"
+        data-panel={tab.key}
+        hidden={index !== 0}
+      ><code>{tab.code}</code></pre>
+    ))
+  }
+</div>
+
+<script>
+  // Schaltet je Tab-Gruppe den sichtbaren Panel. Mehrere Gruppen pro Seite
+  // moeglich (jede ist ein eigenes [data-codetabs]).
+  for (const group of document.querySelectorAll<HTMLElement>("[data-codetabs]")) {
+    const buttons = group.querySelectorAll<HTMLButtonElement>(".codetabs__btn");
+    const panels = group.querySelectorAll<HTMLElement>(".codetabs__pre");
+    for (const button of buttons) {
+      button.addEventListener("click", () => {
+        const key = button.dataset.tab;
+        for (const other of buttons) {
+          other.setAttribute("aria-selected", other === button ? "true" : "false");
+        }
+        for (const panel of panels) {
+          panel.hidden = panel.dataset.panel !== key;
+        }
+      });
+    }
+
+    // Copy-Button: kopiert das aktuell sichtbare Panel in die Zwischenablage.
+    const copyBtn = group.querySelector<HTMLButtonElement>("[data-copy]");
+    const copyLabel = group.querySelector<HTMLElement>("[data-copy-label]");
+    if (copyBtn) {
+      const copiedLabel = copyBtn.getAttribute("data-copied-label") ?? "Kopiert";
+      copyBtn.addEventListener("click", async () => {
+        const active = group.querySelector<HTMLElement>(".codetabs__pre:not([hidden])");
+        const text = active?.textContent ?? "";
+        try {
+          await navigator.clipboard.writeText(text);
+          if (copyLabel) {
+            const prev = copyLabel.textContent;
+            copyLabel.textContent = copiedLabel;
+            window.setTimeout(() => {
+              copyLabel.textContent = prev;
+            }, 1500);
+          }
+        } catch {
+          /* Clipboard nicht verfuegbar, still ignorieren. */
+        }
+      });
+    }
+  }
+</script>

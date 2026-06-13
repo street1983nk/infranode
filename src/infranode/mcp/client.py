@@ -1,0 +1,173 @@
+"""httpx-Wrapper um die lokale InfraNode-Live-FastAPI (DX-05).
+
+Die MCP-Tools rufen ihre Daten ueber diesen Wrapper, nie direkt bei Upstreams.
+Die Funktion ``get_resource`` baut die URL ausschliesslich aus der konfigurierten
+Base-URL plus einem festen ``/cities/{slug}/{resource}``-Schema und gibt das
+geparste JSON unveraendert zurueck (keine Mapping-/Lizenz-Logik, D-07/D-08).
+
+Sicherheit:
+
+- T-12-MCP-SSRF: Die Base-URL stammt ausschliesslich aus der Env
+  ``INFRANODE_MCP_API_BASE`` (Default ``http://localhost:8000/api/v1``). Ihr Host
+  wird gegen eine Allowlist geprueft; ein nicht-allowlisteter Host wird mit
+  ``ValueError`` abgelehnt, bevor ein Request rausgeht. Eine arbitrary URL aus
+  Tool-Argumenten ist nicht moeglich.
+- T-12-MCP-INJECT: ``resource`` wird gegen die Konstante ``ALLOWED_RESOURCES``
+  validiert und ``slug`` als reiner Pfadbestandteil url-gequotet, bevor die URL
+  gebaut wird. Ein unbekannter ``resource`` oder ein Slug mit Pfad-/Host-Anteilen
+  loest einen ``ValueError`` aus, bevor ein Request rausgeht.
+"""
+
+from __future__ import annotations
+
+import os
+from urllib.parse import quote, urlsplit
+
+import httpx
+
+# Default-Base-URL der lokalen Live-API (Loopback). Aus der Env ueberschreibbar,
+# aber nur auf einen allowlisteten Host (siehe ALLOWED_HOSTS).
+_DEFAULT_BASE_URL = "http://localhost:8000/api/v1"
+
+# T-12-MCP-SSRF: Host-Allowlist. Die Liste ist bewusst eng gehalten; ein
+# nicht-allowlisteter Host wird abgelehnt, bevor ein Request rausgeht.
+# - localhost/127.0.0.1/::1: lokaler Subprozess (stdio) gegen eine lokale API.
+# - api: der interne Compose-Service-Name. Im Remote-Betrieb (Phase 2) ruft der
+#   MCP-Container die API ueber das Compose-Netz (http://api:8000/api/v1), NICHT
+#   die oeffentliche URL (sonst teilen sich alle Nutzer eine IP -> Rate-Limit).
+ALLOWED_HOSTS: frozenset[str] = frozenset(
+    {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "api",
+    }
+)
+
+# Header, mit dem der MCP-Server seine internen API-Aufrufe markiert. Die API-
+# MetricsMiddleware erkennt ihn und macht MCP-Aktionen im Dashboard sichtbar +
+# loest einen ntfy-Push aus (Owner-Wunsch: MCP-Aktionen verfolgen). Best-effort-
+# Kennung, kein Auth-Mechanismus.
+_MCP_SOURCE_HEADER = "X-Infranode-Mcp"
+
+# T-12-MCP-INJECT: erlaubte Ressourcen-Namen, exakt die City-Sub-Ressourcen aus
+# docs/openapi.yaml (GET /api/v1/cities/{slug}/<resource>). Roher Tool-Input wird
+# gegen diese Konstante geprueft, bevor er in die URL gelangt.
+ALLOWED_RESOURCES: frozenset[str] = frozenset(
+    {
+        "base",
+        "air",
+        "air-uba",
+        "weather",
+        "pois",
+        "traffic",
+        "transit",
+        "charging",
+        "water-level",
+        "flood",
+        "pollen-uv",
+        "demographics",
+        "energy",
+        "geo",
+        "election",
+        "holidays",
+        "health",
+        "icu-live",
+        "road-events",
+        "events",
+        "webcams",
+    }
+)
+
+# Timeout fuer den loopback-Call. Grosszuegig, da einige Upstreams hinter der
+# Live-API langsam sein koennen, aber endlich (kein haengender Agent).
+_TIMEOUT_SECONDS = 30.0
+
+
+def _base_url() -> str:
+    """Liest die Base-URL aus der Env und prueft den Host gegen die Allowlist.
+
+    Gibt die validierte Base-URL ohne abschliessenden Schraegstrich zurueck.
+    Loest ``ValueError`` aus, wenn das Schema nicht http/https ist oder der Host
+    nicht in ``ALLOWED_HOSTS`` liegt (T-12-MCP-SSRF).
+    """
+    # Basis-URL aus INFRANODE_MCP_API_BASE, sonst Default. So
+    # funktioniert die nach aussen dokumentierte Variable, ohne den bestehenden
+    # Env-Vertrag zu brechen.
+    raw = os.environ.get("INFRANODE_MCP_API_BASE", _DEFAULT_BASE_URL)
+    parts = urlsplit(raw)
+    if parts.scheme not in ("http", "https"):
+        raise ValueError(
+            f"Ungueltiges Schema fuer INFRANODE_MCP_API_BASE: "
+            f"{parts.scheme!r}. Erlaubt sind nur http/https."
+        )
+    if parts.hostname not in ALLOWED_HOSTS:
+        raise ValueError(
+            f"Host {parts.hostname!r} ist nicht allowlistet (T-12-MCP-SSRF). "
+            f"Erlaubt: {', '.join(sorted(ALLOWED_HOSTS))}."
+        )
+    return raw.rstrip("/")
+
+
+def _validate_slug(slug: str) -> str:
+    """Validiert und quotet den Slug als reinen Pfadbestandteil (T-12-MCP-INJECT).
+
+    Ein Slug darf keine Pfad-Trenner oder Host-Anteile (``/``, ``@``, ``:``,
+    Whitespace) enthalten; solche Eingaben koennten die URL umlenken. Gibt den
+    url-gequoteten Slug zurueck oder loest ``ValueError`` aus.
+    """
+    if not slug or not isinstance(slug, str):
+        raise ValueError("Slug muss ein nicht-leerer String sein.")
+    # Reiner Pfadbestandteil: kein Slash/At/Doppelpunkt/Whitespace. Diese Zeichen
+    # koennten Host/Userinfo/Pfad umlenken (z.B. "hamburg@evil.example/internal").
+    forbidden = set("/@:\\ \t\n\r?#")
+    if any(ch in forbidden for ch in slug):
+        raise ValueError(
+            f"Ungueltiger Slug {slug!r}: enthaelt unzulaessige Zeichen "
+            "(Pfad-/Host-Trenner)."
+        )
+    return quote(slug, safe="")
+
+
+async def get_resource(
+    slug: str,
+    resource: str,
+    params: dict[str, str] | None = None,
+) -> dict:
+    """Ruft eine Stadt-Ressource der lokalen Live-API und gibt das JSON zurueck.
+
+    Baut die URL ausschliesslich aus der allowlisteten Base-URL plus dem festen
+    ``/cities/{slug}/{resource}``-Schema. ``resource`` wird gegen
+    ``ALLOWED_RESOURCES`` geprueft, ``slug`` als reiner Pfadbestandteil gequotet
+    und der Host der Base-URL gegen ``ALLOWED_HOSTS`` validiert, bevor ein Request
+    rausgeht. Das Ergebnis (kanonischer ``{data, meta}``-Envelope der API) wird
+    unveraendert zurueckgegeben, ohne jede Mapping-/Lizenz-Logik.
+
+    Args:
+        slug: Stadt-Slug (reiner Pfadbestandteil, z.B. ``"hamburg"``).
+        resource: Ressourcen-Name aus ``ALLOWED_RESOURCES`` (z.B. ``"base"``).
+        params: Optionale Query-Parameter (z.B. ``{"type": "hospital"}``).
+
+    Raises:
+        ValueError: Bei nicht-allowlistetem Host (T-12-MCP-SSRF) oder unbekanntem
+            ``resource``/ungueltigem ``slug`` (T-12-MCP-INJECT), jeweils BEVOR ein
+            Request rausgeht.
+    """
+    if resource not in ALLOWED_RESOURCES:
+        raise ValueError(
+            f"Unbekannte Ressource {resource!r} (T-12-MCP-INJECT). "
+            f"Erlaubt: {', '.join(sorted(ALLOWED_RESOURCES))}."
+        )
+    safe_slug = _validate_slug(slug)
+    base = _base_url()
+    url = f"{base}/cities/{safe_slug}/{resource}"
+
+    # MCP-Kennung mitschicken, damit die API MCP-Aktionen im Dashboard + per ntfy
+    # sichtbar macht. Der Ressourcen-Name (bereits gegen ALLOWED_RESOURCES
+    # validiert) faehrt mit, damit klar ist, welche Daten geholt wurden.
+    headers = {_MCP_SOURCE_HEADER: resource}
+
+    async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
+        response = await client.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        return response.json()

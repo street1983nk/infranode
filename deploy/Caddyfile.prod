@@ -1,0 +1,122 @@
+# deploy/Caddyfile.prod - Produktions-Ingress mit Domain + DNS-01-Auto-HTTPS (DEP-01)
+# Quelle: caddy-dns/cloudflare README + caddyserver.com/docs/caddyfile/directives/tls [CITED]
+# Pitfall: Hinter dem Cloudflare-Proxy (orange cloud) scheitern HTTP-01/TLS-ALPN-Challenges.
+# Nur die DNS-01-Challenge (ueber die Cloudflare-API) provisioniert ein public-trusted
+# Origin-Cert sauber, sodass Cloudflare auf "Full (strict)" gestellt werden kann.
+# Caddy bleibt der EINZIGE Ingress; die api ist nur intern via expose:8000 erreichbar.
+
+# Site-Block-Adresse aus der Umgebung (Caddy-Env-Substitution). Wird zur Validierungs-
+# UND Laufzeit aufgeloest, daher beim `caddy validate` INFRANODE_PUBLIC_DOMAIN setzen.
+{$INFRANODE_PUBLIC_DOMAIN} {
+	encode zstd gzip
+
+	tls {
+		# DNS-01-Challenge via Cloudflare-API-Token (Zone.Zone:Read + Zone.DNS:Edit).
+		# Token kommt aus der Umgebung (env_file), NIE im Caddyfile hartkodiert.
+		dns cloudflare {env.INFRANODE_CF_DNS_TOKEN}
+		resolvers 1.1.1.1
+	}
+
+	# /admin ist ueber die OEFFENTLICHE Domain NIE erreichbar (Audit HIGH-1,
+	# 2026-06-10): das Dashboard laeuft ausschliesslich uebers Tailnet
+	# (tailscale serve -> 127.0.0.1:8001, s. docs/DEPLOYMENT.md Abschnitt 10).
+	@admin path /admin /admin/*
+	handle @admin {
+		respond "Not Found" 404
+	}
+
+	# /api/v1: 1:1-Proxy auf den internen api-Service. Header fuer die reine
+	# JSON-API (bewusst KEINE CSP: keine HTML/JS-Auslieferung auf diesem Pfad).
+	@api path /api/v1 /api/v1/*
+	handle @api {
+		header {
+			Strict-Transport-Security "max-age=31536000"
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "no-referrer"
+		}
+		reverse_proxy api:8000 {
+			# Correlation-ID durchreichen, damit asgi-correlation-id sie in
+			# FastAPI uebernehmen kann (FND-03).
+			header_up X-Request-ID {http.request.header.X-Request-ID}
+			# Client-gesendetes X-Forwarded-For strippen (Audit HIGH-2): Cloudflare
+			# reicht das Angreifer-XFF durch; die App vertraut sonst dessen erstem
+			# Element als Rate-Limit-IP. CF-Connecting-IP setzt Cloudflare selbst
+			# verbindlich; zusammen mit der CF-only-Firewall (Runbook Pflichtschritt)
+			# ist die IP-Quelle damit vertrauenswuerdig.
+			header_up -X-Forwarded-For
+		}
+	}
+
+	# PUBLIC LAUNCH (Owner-Entscheid 2026-06-12 abends): statische Doku-Site
+	# (Astro-Build, per rsync nach /srv/docs auf dem Host, read-only in den
+	# Container gemountet). Ersetzt das fruehere BETA-GATE (404 auf alles
+	# ausserhalb /api/v1). Astro liefert eine eigene 404.html; file_server
+	# nutzt sie automatisch bei fehlenden Pfaden.
+	handle {
+		header {
+			Strict-Transport-Security "max-age=31536000"
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "no-referrer"
+			X-Frame-Options "DENY"
+			# CSP fuer die statische Astro-Site: keine externen Quellen (alles
+			# self-hosted, DSGVO-Versprechen "kein Tracking"). 'unsafe-inline'
+			# fuer script/style ist noetig, weil Astro Inline-Module emittiert;
+			# default-src 'none' + frame-ancestors 'none' bleiben die harte Linie.
+			Content-Security-Policy "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'"
+			Permissions-Policy "geolocation=(), camera=(), microphone=()"
+		}
+		root * /srv/docs
+		file_server
+	}
+
+	# Astro-eigene 404-Seite fuer fehlende Pfade (nur Status 404; Proxy-Fehler
+	# wie 502 bleiben unveraendert). handle_errors ist Site-Block-Direktive.
+	handle_errors 404 {
+		root * /srv/docs
+		rewrite * /404.html
+		file_server
+	}
+}
+
+# Uptime-Kuma Status-Page (Owner 2026-06-13): oeffentliche Stoerungs-/Status-Seite
+# fuer Devs, prominent verlinkt von /abdeckung. Eigener Subdomain-Block, damit Kuma
+# auf Root laeuft (Status-Pages + Socket.io/WebSocket, von reverse_proxy automatisch
+# durchgereicht). Cert via DNS-01 (Cloudflare) wie der Hauptblock. Kuma ist nur
+# intern via kuma:3001 erreichbar; Caddy bleibt der EINZIGE Ingress (Gateway-
+# Invariante). Das Kuma-Dashboard unter /dashboard ist Login-geschuetzt (starkes
+# Admin-Passwort, secrets/SERVER.md); oeffentlich ist nur die Status-Page.
+status.{$INFRANODE_PUBLIC_DOMAIN} {
+	encode zstd gzip
+
+	tls {
+		dns cloudflare {env.INFRANODE_CF_DNS_TOKEN}
+		resolvers 1.1.1.1
+	}
+
+	reverse_proxy kuma:3001
+}
+
+# Remote-MCP-Server (Owner 2026-06-13, full public): oeffentlicher Streamable-
+# HTTP-Endpunkt unter mcp.<domain>, keylos wie die API. Eigener Subdomain-Block;
+# Endpunkt-Pfad ist /mcp. Der mcp-Service ist nur intern via mcp:8081 erreichbar,
+# Caddy bleibt der EINZIGE Ingress (Gateway-Invariante). Cert via DNS-01 wie die
+# anderen Bloecke. MCP nutzt JSON-RPC ueber HTTP + SSE; reverse_proxy reicht den
+# SSE-Stream automatisch durch (der Server sendet x-accel-buffering:no, was auch
+# Cloudflare das Buffern abschaltet).
+mcp.{$INFRANODE_PUBLIC_DOMAIN} {
+	encode zstd gzip
+
+	tls {
+		dns cloudflare {env.INFRANODE_CF_DNS_TOKEN}
+		resolvers 1.1.1.1
+	}
+
+	# Reine Maschinen-Schnittstelle (JSON-RPC/SSE), keine HTML-Auslieferung -> keine CSP.
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+	}
+
+	reverse_proxy mcp:8081
+}

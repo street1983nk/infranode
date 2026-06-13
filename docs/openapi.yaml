@@ -1,0 +1,3040 @@
+openapi: 3.1.0
+info:
+  title: InfraNode API
+  version: 0.1.0
+  description: >-
+    Open-Source-Proxy-REST-API für normalisierte offene Daten deutscher
+    Großstädte. Bekannt sind 84 Städte über 100.000 Einwohner, davon 28
+    Kern-Städte mit voller Quellen-Abdeckung; weitere Städte werden über
+    AGS- und geobasierte Quellen bedient. Jede Antwort folgt demselben
+    kanonischen Envelope (data/meta/attribution) mit Lizenz-Tag und ehrlichem
+    source_status (ok/no_data/disabled/not_covered). Teilabgedeckte Endpunkte
+    (flood, webcams, traffic, road-events) liefern für eine nicht-abgedeckte
+    Stadt 200 source_status="not_covered" + meta.covered_cities statt eines
+    leeren "ok"; die Abdeckung listet die Seite /abdeckung. Pfade tragen den vollen
+    /api/v1-Prefix, damit die ausgelieferte Spec driftfrei zu den live
+    registrierten Routen bleibt.
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+servers:
+  - url: http://localhost
+    description: Lokaler Caddy-Ingress (Docker Compose)
+tags:
+  - name: meta
+    description: Meta- und Diagnose-Routen (Health, Ping, Source-Status, Spec)
+  - name: cities
+    description: Stadt-Register und normalisierte Stadt-Stammdaten
+  - name: compare
+    description: Multi-City-Vergleich einer Ressource über mehrere Städte
+  - name: Live
+    description: >-
+      Getrennte Live-Kategorie unter /api/v1/live. Minutenfrische bzw.
+      quasi-live Quellen mit eigenem Envelope-Kennzeichen: meta.as_of
+      (Datenstand) und meta.refresh_seconds (Kadenz). Re-exponiert zusätzlich
+      bestehende Live-Endpunkte (air, air-uba, water-level, traffic, webcams,
+      flood); deren Altpfade unter /api/v1/cities bleiben als Deprecation-Alias
+      erhalten (kein Breaking Change).
+paths:
+  /api/v1/health:
+    get:
+      tags: [meta]
+      summary: Liveness und Readiness der App prüfen
+      x-summary-en: Check app liveness and readiness
+      description: >-
+        Liefert den App-Status und die Redis-Erreichbarkeit. Gedacht für
+        Uptime-Monitore und Load-Balancer-Probes: antwortet mit 200, sobald die
+        App bereit ist, sonst mit einem Fehlerstatus.
+      x-description-en: >-
+        Returns the app status and Redis reachability. Designed for uptime
+        monitors and load-balancer probes: responds with 200 once the app is
+        ready, otherwise with an error status.
+      operationId: getHealth
+      responses:
+        "200":
+          description: App läuft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /api/v1/ping:
+    get:
+      tags: [meta]
+      summary: Einfacher Ping mit Correlation-ID
+      x-summary-en: Simple ping with correlation ID
+      description: >-
+        Gibt eine Pong-Antwort inklusive correlation_id zurück und schreibt eine
+        strukturierte JSON-Log-Zeile mit request_id. Nützlich, um die
+        Request-Verkettung im Logging zu prüfen.
+      x-description-en: >-
+        Returns a pong response including a correlation_id and writes a
+        structured JSON log line with a request_id. Useful for verifying request
+        tracing in the logs.
+      operationId: getPing
+      responses:
+        "200":
+          description: Pong
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ping"
+          headers:
+            X-Request-ID:
+              description: Pro Request generierte/durchgereichte Correlation-ID
+              schema:
+                type: string
+  /api/v1/echo:
+    get:
+      tags: [meta]
+      summary: Integer-Query zurückgeben (Validierungs-Demo)
+      x-summary-en: Echo an integer query (validation demo)
+      description: >-
+        Gibt den übergebenen Integer-Query-Parameter zurück. Ein nicht-ganzzahliger
+        Wert löst den einheitlichen 400-Fehler-Envelope aus und zeigt so die
+        Eingabevalidierung.
+      x-description-en: >-
+        Returns the integer query parameter you pass in. A non-integer value
+        triggers the unified 400 error envelope, demonstrating input validation.
+      operationId: getEcho
+      parameters:
+        - name: n
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Echo
+          content:
+            application/json:
+              schema:
+                type: object
+        "400":
+          description: Ungültiger Query-Parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/_boom:
+    get:
+      tags: [meta]
+      summary: Erzwungener Upstream-Fehler (Demo)
+      x-summary-en: Forced upstream failure (demo)
+      description: >-
+        Existiert nur zum Testen des zentralen Fehler-Mappings. Liefert immer
+        einen 503-Fehler-Envelope.
+      x-description-en: >-
+        Exists only to test the central error mapping. Always returns a 503
+        error envelope.
+      operationId: getBoom
+      responses:
+        "503":
+          description: Simulierter Upstream-Ausfall
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/sources:
+    get:
+      tags: [meta]
+      summary: Status aller Upstream-Quellen
+      x-summary-en: Status of all upstream sources
+      description: >-
+        Listet je bekannter Quelle den enabled-Zustand (aus den Settings) und
+        den Circuit-Breaker-Zustand (CLOSED/OPEN/HALF_OPEN). So ist auf einen
+        Blick sichtbar, welche Quelle gerade liefert und welche pausiert ist.
+      x-description-en: >-
+        Lists each known source with its enabled state (from settings) and its
+        circuit-breaker state (CLOSED/OPEN/HALF_OPEN). Shows at a glance which
+        source is currently serving and which is paused.
+      operationId: getSources
+      responses:
+        "200":
+          description: Liste der Quellen-Status
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SourceStatus"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "304":
+          $ref: "#/components/responses/NotModified"
+      parameters:
+        - in: header
+          name: If-None-Match
+          required: false
+          schema: { type: string }
+          description: >-
+            Conditional GET. Stimmt der Wert mit dem aktuellen ETag überein,
+            antwortet der Server mit 304 Not Modified ohne Body.
+          x-description-en: >-
+            Conditional GET. If the value matches the current ETag, the server
+            responds with 304 Not Modified and no body.
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, default: 50 }
+          description: >-
+            Seitengröße. Wird auf MAX_LIMIT (200) gedeckelt: zu große Werte
+            liefern eine 200er-Seite mit 200 Einträgen statt eines Fehlers.
+          x-description-en: >-
+            Page size. Capped at MAX_LIMIT (200): larger values return a 200 page
+            of 200 items instead of an error.
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+          description: Ein zu großer Offset liefert eine leere Seite (200), nie 500.
+          x-description-en: An offset past the end returns an empty page (200), never 500.
+        - in: query
+          name: sort
+          schema: { type: string, enum: [source, enabled, license] }
+          description: >-
+            Nur die gelisteten Felder sind erlaubt; ein unbekanntes Feld wird mit
+            400 (invalid_request) abgewiesen, bevor es ausgewertet wird.
+          x-description-en: >-
+            Only the listed fields are allowed; an unknown field is rejected with
+            400 (invalid_request) before it is evaluated.
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc], default: asc }
+  /api/v1/compare:
+    get:
+      tags: [compare]
+      summary: Eine Ressource über mehrere Städte vergleichen
+      x-summary-en: Compare one resource across multiple cities
+      description: >-
+        Vergleicht EINE Ressource (resource) über mehrere Städte (cities,
+        kommasepariert) in einer einzigen Antwort. Jede Stadt trägt einen eigenen
+        source_status (ok/disabled/no_data/error/not_found); eine fehlende oder
+        tote Stadt-Quelle führt nicht zu einem Gesamt-5xx, sondern wird pro Stadt
+        ehrlich ausgewiesen. resource wird gegen eine feste Liste geprüft
+        (unbekannt -> 400). Das Ergebnis ist paginierbar (page/limit/offset/sort).
+      x-description-en: >-
+        Compares ONE resource across multiple cities (comma-separated) in a
+        single response. Each city carries its own source_status
+        (ok/disabled/no_data/error/not_found); a missing or dead city source does
+        not cause an overall 5xx but is reported honestly per city. resource is
+        checked against a fixed list (unknown -> 400). The result is paginated
+        (page/limit/offset/sort).
+      operationId: compareCities
+      parameters:
+        - in: query
+          name: cities
+          required: true
+          schema: { type: string }
+          example: berlin,koeln,hamburg
+          description: Kommaseparierte Stadt-Slugs (auf MAX_CITIES begrenzt).
+          x-description-en: Comma-separated city slugs (limited to MAX_CITIES).
+        - in: query
+          name: resource
+          required: true
+          schema: { type: string, enum: [weather, air] }
+          description: >-
+            Zu vergleichende Ressource (aus der festen Liste); unbekannt -> 400
+            invalid_request.
+          x-description-en: >-
+            Resource to compare (from the fixed list); unknown -> 400
+            invalid_request.
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [city, source_status] }
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc], default: asc }
+        - in: header
+          name: If-None-Match
+          required: false
+          schema: { type: string }
+          description: >-
+            Conditional GET; If-None-Match == ETag -> 304 Not Modified ohne Body.
+          x-description-en: >-
+            Conditional GET; If-None-Match == ETag -> 304 Not Modified with no body.
+      responses:
+        "200":
+          description: Vergleichsliste mit per-Stadt source_status
+          headers:
+            ETag:
+              $ref: "#/components/headers/ETag"
+            Cache-Control:
+              $ref: "#/components/headers/CacheControl"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [city, source_status]
+                      properties:
+                        city: { type: string }
+                        data: { type: object, nullable: true }
+                        source_status:
+                          type: string
+                          enum: [ok, disabled, no_data, error, not_found]
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "304":
+          $ref: "#/components/responses/NotModified"
+        "400":
+          description: Unbekannte resource oder leeres cities (invalid_request)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/openapi.yaml:
+    get:
+      tags: [meta]
+      summary: Diese OpenAPI-Spec als YAML
+      x-summary-en: This OpenAPI spec as YAML
+      description: >-
+        Liefert die handgepflegte Spec als application/yaml. FastAPI serviert
+        intern nur /openapi.json; diese Route stellt die stabile YAML-Variante
+        bereit.
+      x-description-en: >-
+        Returns the hand-maintained spec as application/yaml. FastAPI internally
+        serves only /openapi.json; this route provides the stable YAML variant.
+      operationId: getOpenapiYaml
+      responses:
+        "200":
+          description: Die Spec als YAML
+          content:
+            application/yaml:
+              schema:
+                type: string
+  /api/v1/cities:
+    get:
+      tags: [cities]
+      summary: Alle bekannten Städte auflisten
+      x-summary-en: List all known cities
+      description: >-
+        Listet die Einträge des Stadt-Registers: 84 deutsche Großstädte über
+        100.000 Einwohner, davon 28 Kern-Städte mit voller Quellen-Abdeckung.
+        Jeder Eintrag trägt den Slug, den du als {slug}-Pfadparameter in allen
+        weiteren Endpunkten verwendest.
+      x-description-en: >-
+        Lists the entries of the city register: 84 German cities with more than
+        100,000 inhabitants, 28 of them core cities with full source coverage.
+        Each entry carries the slug you use as the {slug} path parameter in all
+        other endpoints.
+      operationId: getCities
+      responses:
+        "200":
+          description: Stadt-Liste
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+  /api/v1/cities/{slug}:
+    get:
+      tags: [cities]
+      summary: Eine Stadt aus dem Register holen
+      x-summary-en: Get a single city from the register
+      description: >-
+        Liefert den Register-Eintrag zur Stadt mit dem angegebenen {slug}. Ein
+        unbekannter Slug löst den 404-Fehler-Envelope aus, dessen Hint auf die
+        Stadt-Liste verweist.
+      x-description-en: >-
+        Returns the register entry for the city with the given {slug}. An unknown
+        slug triggers the 404 error envelope whose hint points to the city list.
+      operationId: getCity
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stadt-Eintrag
+          content:
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/base:
+    get:
+      tags: [cities]
+      summary: Stadt-Stammdaten aus Wikidata
+      x-summary-en: City master data from Wikidata
+      description: >-
+        Liefert Einwohnerzahl, Fläche und Geo-Koordinaten einer Stadt aus
+        Wikidata im kanonischen Envelope mit Attribution und Lizenz-Tag. Ist die
+        Quelle deaktiviert, antwortet die Route mit 200, data=null und
+        meta.source_status="disabled" (nie 5xx). Ist der Upstream tot und liegt
+        kein zwischengespeicherter Wert vor, kommt 503 mit einem Hint auf
+        GET /api/v1/health.
+      x-description-en: >-
+        Returns a city's population, area and geo coordinates from Wikidata in
+        the canonical envelope with attribution and license tag. If the source
+        is disabled, the route responds with 200, data=null and
+        meta.source_status="disabled" (never 5xx). If the upstream is down and no
+        cached value exists, it returns 503 with a hint pointing to
+        GET /api/v1/health.
+      operationId: getCityBase
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >-
+            Stammdaten-Envelope. data ist der CanonicalRecord oder null, wenn die
+            Quelle deaktiviert ist (meta.source_status="disabled").
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    allOf:
+                      - $ref: "#/components/schemas/Meta"
+                    description: >-
+                      meta trägt zusätzlich source_status ("ok"|"disabled") und
+                      auf dem ok-Pfad cache_status (HIT/MISS/STALE/STALE-ON-ERROR).
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/air:
+    get:
+      tags: [cities]
+      summary: Luftqualität je Stadt (OpenAQ)
+      x-summary-en: Air quality per city (OpenAQ)
+      description: >-
+        Aktuelle Luftqualitäts-Messwerte einer Stadt aus OpenAQ im kanonischen
+        Envelope. Die Schadstoff-Messwerte stehen in data, Quelle und
+        source_status in meta. Werte sind live (kein Zwischenbestand).
+        Sonderfälle: deaktivierte Quelle liefert 200 mit data=null und
+        source_status="disabled"; toter Upstream ohne Cache liefert 503 mit Hint
+        auf GET /api/v1/health.
+      x-description-en: >-
+        Current air-quality readings for a city from OpenAQ in the canonical
+        envelope. The pollutant readings are in data, source and source_status in
+        meta. Values are live (no intermediate store). Special cases: a disabled
+        source returns 200 with data=null and source_status="disabled"; a dead
+        upstream with no cache returns 503 with a hint to GET /api/v1/health.
+      operationId: getCityAir
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Luftqualitäts-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/weather:
+    get:
+      tags: [cities]
+      summary: Wetter je Stadt (DWD über Bright Sky)
+      x-summary-en: Weather per city (DWD via Bright Sky)
+      description: >-
+        Aktuelle Wetter-Messwerte einer Stadt vom Deutschen Wetterdienst (über
+        Bright Sky) im kanonischen Envelope. data trägt die Messwerte,
+        attribution den GeoNutzV-Bearbeitungshinweis (modified=true).
+        Sonderfälle: deaktivierte Quelle liefert 200 mit
+        source_status="disabled"; toter Upstream ohne Cache liefert 503 mit Hint
+        auf GET /api/v1/health.
+      x-description-en: >-
+        Current weather readings for a city from the German Weather Service (DWD,
+        via Bright Sky) in the canonical envelope. data holds the readings,
+        attribution carries the GeoNutzV modification notice (modified=true).
+        Special cases: a disabled source returns 200 with
+        source_status="disabled"; a dead upstream with no cache returns 503 with
+        a hint to GET /api/v1/health.
+      operationId: getCityWeather
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Wetter-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/pois:
+    get:
+      tags: [cities]
+      summary: POIs je Stadt, nach Typ gefiltert (OSM/Overpass, Tier B)
+      x-summary-en: POIs per city, filtered by type (OSM/Overpass, Tier B)
+      description: >-
+        Liefert POIs einer Stadt aus OpenStreetMap (über Overpass) im
+        kanonischen Envelope, gefiltert nach dem Query-Parameter type. Der Typ
+        wird gegen eine feste Liste geprüft; ein unbekannter Typ löst 422 aus
+        (kein roher Input in die Overpass-Query). Tier B (copyleft).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Returns a city's POIs from OpenStreetMap (via Overpass) in the canonical
+        envelope, filtered by the type query parameter. The type is checked
+        against a fixed list; an unknown type triggers 422 (no raw input reaches
+        the Overpass query). Tier B (copyleft). Disabled -> 200
+        source_status="disabled".
+      operationId: getCityPois
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: true
+          description: POI-Typ aus der erlaubten Liste (z.B. hospital, school, pharmacy).
+          x-description-en: POI type from the allowed list (e.g. hospital, school, pharmacy).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: POI-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Unbekannter POI-Typ (nicht in der Whitelist)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/traffic:
+    get:
+      tags: [cities]
+      summary: Baustellen und Verkehrsmeldungen je Stadt (Autobahn-API)
+      x-summary-en: Roadworks and traffic warnings per city (Autobahn API)
+      description: >-
+        Baustellen (roadworks) und Verkehrswarnungen (warnings) im Umfeld einer
+        Stadt aus der Autobahn-API im kanonischen Envelope. Die Meldungen werden
+        per Bounding-Box um die Stadt-Koordinaten gefiltert, data enthält die
+        passenden Einträge. Teilabdeckung (kuratierte Autobahnen je Stadt): nur
+        berlin, hamburg, koeln, muenchen liefern Daten. Andere registrierte Städte
+        antworten ehrlich mit 200 source_status="not_covered", data=null und
+        meta.covered_cities (Liste der abgedeckten Städte), klar unterscheidbar
+        von no_data (abgedeckt, aber gerade keine Meldung). Weitere Sonderfälle:
+        deaktivierte Quelle liefert 200 mit source_status="disabled"; toter
+        Upstream ohne Cache liefert 503 mit Hint auf GET /api/v1/health.
+      x-description-en: >-
+        Roadworks and traffic warnings around a city from the Autobahn API in the
+        canonical envelope. Items are filtered by a bounding box around the
+        city's coordinates; data contains the matching entries. Partial coverage
+        (curated motorways per city): only berlin, hamburg, koeln, muenchen return
+        data. Other registered cities honestly respond with 200
+        source_status="not_covered", data=null and meta.covered_cities (the list
+        of covered cities), clearly distinct from no_data (covered, but currently
+        no message). Other special cases: a disabled source returns 200 with
+        source_status="disabled"; a dead upstream with no cache returns 503 with a
+        hint to GET /api/v1/health.
+      operationId: getCityTraffic
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verkehrs-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/transit:
+    get:
+      tags: [cities]
+      summary: ÖPNV-Haltestellen je Stadt (DELFI und HVV GTFS)
+      x-summary-en: Public-transit stops per city (DELFI and HVV GTFS)
+      description: >-
+        Normalisierte ÖPNV-Haltestellen einer Stadt aus dem bundesweiten
+        DELFI-GTFS-Feed bzw. dem HVV-Feed im kanonischen Envelope. Die Daten
+        werden offline aufbereitet und als Snapshot je Stadt gehalten, sodass der
+        Abruf schnell antwortet, ohne den Feed pro Request zu parsen.
+        Sonderfälle: sind beide Quellen deaktiviert, kommt 200 mit
+        source_status="disabled"; liegt noch kein Snapshot vor, kommt 200 mit
+        source_status="not_ingested" und leeren data, nie ein 5xx.
+      x-description-en: >-
+        Normalized public-transit stops for a city from the nationwide DELFI GTFS
+        feed or the HVV feed in the canonical envelope. The data is prepared
+        offline and kept as a per-city snapshot, so the request responds quickly
+        without parsing the feed per request. Special cases: if both sources are
+        disabled it returns 200 with source_status="disabled"; if no snapshot
+        exists yet it returns 200 with source_status="not_ingested" and empty
+        data, never a 5xx.
+      operationId: getCityTransit
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >-
+            Transit-Envelope. data ist eine Liste von CanonicalRecord
+            (TransitStopPayload) oder null/leer, je nach source_status
+            ("ok"|"disabled"|"not_ingested").
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - type: array
+                        items:
+                          $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/charging:
+    get:
+      tags: [cities]
+      summary: E-Ladesäulen-Standorte je Stadt (BNetzA, Tier A)
+      x-summary-en: EV charging-station locations per city (BNetzA, Tier A)
+      description: >-
+        Liefert die E-Ladesäulen-Standorte einer Stadt (nur Stammdaten, KEINE
+        Belegung) aus dem BNetzA-Ladesäulenregister im kanonischen Envelope. Die
+        Daten stammen aus dem CSV-Bulk-Download der BNetzA
+        (data.bundesnetzagentur.de) und werden periodisch aktualisiert; die Route
+        liefert den jüngsten aufbereiteten Stand, keinen Live-Abruf.
+        Deaktiviert -> 200 source_status="disabled"; kein Snapshot -> 200
+        source_status="not_ingested".
+      x-description-en: >-
+        Returns a city's EV charging-station locations (master data only, NO
+        occupancy) from the BNetzA charging-station register in the canonical
+        envelope. The data comes from the BNetzA CSV bulk download
+        (data.bundesnetzagentur.de) and is refreshed periodically; the route
+        serves the most recent prepared state, not a live fetch.
+        Disabled -> 200 source_status="disabled"; no snapshot -> 200
+        source_status="not_ingested".
+      operationId: getCityCharging
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ladesäulen-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/air-uba:
+    get:
+      tags: [cities]
+      summary: Luftqualität je Stadt (Umweltbundesamt)
+      x-summary-en: Air quality per city (Federal Environment Agency)
+      description: >-
+        Luftqualitäts-Messwerte einer Stadt aus der Luftdaten-API des
+        Umweltbundesamts im kanonischen Envelope. Amtlicher Pfad, klar getrennt
+        vom OpenAQ-Endpunkt (/air): wähle diesen für behördlich validierte Werte.
+        Sonderfälle: deaktivierte Quelle liefert 200 mit
+        source_status="disabled"; toter Upstream ohne Cache liefert 503 mit Hint
+        auf GET /api/v1/health.
+      x-description-en: >-
+        Air-quality readings for a city from the German Federal Environment
+        Agency (UBA) air-data API in the canonical envelope. The official path,
+        clearly separated from the OpenAQ endpoint (/air): use this one for
+        authority-validated values. Special cases: a disabled source returns 200
+        with source_status="disabled"; a dead upstream with no cache returns 503
+        with a hint to GET /api/v1/health.
+      operationId: getCityAirUba
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Luftqualitäts-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/water-level:
+    get:
+      tags: [cities]
+      summary: Pegelstand je Stadt (PEGELONLINE, Tier A, Teilabdeckung)
+      x-summary-en: Water level per city (PEGELONLINE, Tier A, partial coverage)
+      description: >-
+        Liefert den aktuellen Pegelstand der nächstgelegenen Station einer Stadt
+        aus PEGELONLINE im kanonischen Envelope. Teilabdeckung: nur Städte an
+        Bundeswasserstraßen haben eine Station, sonst kommt 200 mit
+        source_status="no_data" (kein 5xx). Tier A. Deaktiviert -> 200
+        source_status="disabled".
+      x-description-en: >-
+        Returns the current water level of the nearest station to a city from
+        PEGELONLINE in the canonical envelope. Partial coverage: only cities on
+        federal waterways have a station, otherwise it returns 200 with
+        source_status="no_data" (no 5xx). Tier A. Disabled -> 200
+        source_status="disabled".
+      operationId: getCityWaterLevel
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pegelstand-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/flood:
+    get:
+      tags: [cities]
+      summary: Hochwasser-Warnstufen je Stadt (LHP, Tier A)
+      x-summary-en: Flood warning levels per city (LHP, Tier A)
+      description: >-
+        Liefert die aktuellen Hochwasser-Warnstufen der kuratierten Pegel einer
+        Stadt aus dem Länderübergreifenden Hochwasserportal (LHP) im kanonischen
+        Envelope. Die Attribution trägt den "Stand:"-Zeitstempel (Pflicht).
+        Tier A. Teilabdeckung (kuratierte Pegel je Stadt): nur berlin, bonn,
+        dresden, duesseldorf, duisburg, erfurt, essen, frankfurt-am-main, hamburg,
+        koeln, leipzig, mainz, muenchen, nuernberg liefern Daten. Andere
+        registrierte Städte antworten ehrlich mit 200 source_status="not_covered",
+        data=null und meta.covered_cities (Liste der abgedeckten Städte). Weitere
+        Sonderfälle: deaktiviert -> 200 source_status="disabled"; toter Upstream
+        ohne Cache -> 503 mit Hint.
+      x-description-en: >-
+        Returns the current flood warning levels of a city's curated gauges from
+        the German cross-state flood portal (LHP) in the canonical envelope. The
+        attribution carries the mandatory "Stand:" timestamp. Tier A. Partial
+        coverage (curated gauges per city): only berlin, bonn, dresden,
+        duesseldorf, duisburg, erfurt, essen, frankfurt-am-main, hamburg, koeln,
+        leipzig, mainz, muenchen, nuernberg return data. Other registered cities
+        honestly respond with 200 source_status="not_covered", data=null and
+        meta.covered_cities (the list of covered cities). Other special cases:
+        disabled -> 200 source_status="disabled"; dead upstream with no cache ->
+        503 with a hint.
+      operationId: getCityFlood
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Hochwasser-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/pollen-uv:
+    get:
+      tags: [cities]
+      summary: Pollenflug und UV-Index je Stadt (DWD opendata, Tier A)
+      x-summary-en: Pollen and UV index per city (DWD opendata, Tier A)
+      description: >-
+        Liefert Pollenflug-Gefahrenindex und UV-Index für die Großregion einer
+        Stadt aus DWD opendata im kanonischen Envelope. Die Daten sind nach
+        DWD-Großregionen gegliedert, NICHT stadtgenau (region_name im Payload).
+        Attribution mit modified=true (GeoNutzV). Tier A. Deaktiviert -> 200
+        source_status="disabled".
+      x-description-en: >-
+        Returns the pollen hazard index and UV index for a city's macro-region
+        from DWD opendata in the canonical envelope. The data is organized by
+        DWD macro-regions, NOT city-precise (region_name in the payload).
+        Attribution with modified=true (GeoNutzV). Tier A. Disabled -> 200
+        source_status="disabled".
+      operationId: getCityPollenUv
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pollen-/UV-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/demographics:
+    get:
+      tags: [cities]
+      summary: Demografie-Zeitreihen je Stadt (GENESIS/Regionalstatistik, Tier A)
+      x-summary-en: Demographic time series per city (GENESIS/Regionalstatistik, Tier A)
+      description: >-
+        Liefert Demografie-Stammwerte und Zeitreihen einer Stadt aus der
+        POST-API der GENESIS-/Regionalstatistik im kanonischen Envelope. Der
+        Zugang ist account-gebunden: ohne hinterlegte Zugangsdaten oder bei
+        deaktivierter Quelle antwortet der Endpunkt mit 200
+        source_status="disabled". Tier A. Toter Upstream ohne Cache -> 503 mit
+        Hint.
+      x-description-en: >-
+        Returns a city's demographic base values and time series from the
+        GENESIS/Regionalstatistik POST API in the canonical envelope. Access is
+        account-bound: without stored credentials or with the source disabled the
+        endpoint responds with 200 source_status="disabled". Tier A. Dead
+        upstream with no cache -> 503 with a hint.
+      operationId: getCityDemographics
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Demografie-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/energy:
+    get:
+      tags: [cities]
+      summary: Energie-Anlagen je Stadt (MaStR, Tier A)
+      x-summary-en: Energy installations per city (MaStR, Tier A)
+      description: >-
+        Liefert die Energie-Anlagen (PV/Wind/Speicher/Biogas) einer Stadt aus dem
+        offline aufbereiteten MaStR-SQLite-Store im kanonischen Envelope. Kein
+        Upstream im Request-Pfad, der Abruf liest nur den vorbereiteten Bestand.
+        Deaktiviert -> 200 source_status="disabled". Batch noch nicht gelaufen ->
+        200 source_status="not_ingested" (nie 5xx).
+      x-description-en: >-
+        Returns a city's energy installations (PV/wind/storage/biogas) from the
+        offline-prepared MaStR SQLite store in the canonical envelope. No
+        upstream in the request path; the request only reads the prepared store.
+        Disabled -> 200 source_status="disabled". Batch not yet run -> 200
+        source_status="not_ingested" (never 5xx).
+      operationId: getCityEnergy
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >-
+            Energie-Envelope. data ist eine Liste von CanonicalRecord
+            (EnergyAssetPayload) oder null/leer, je nach source_status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - type: array
+                        items:
+                          $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/geo:
+    get:
+      tags: [cities]
+      summary: Verwaltungsgrenze je Stadt (BKG VG250, Tier A)
+      x-summary-en: Administrative boundary per city (BKG VG250, Tier A)
+      description: >-
+        Liefert die Attributdaten der Verwaltungsgrenze (AGS, Gemeindename,
+        Fläche) einer Stadt aus dem offline aufbereiteten BKG-VG250-Snapshot im
+        kanonischen Envelope. Attribution wortgenau "(c) GeoBasis-DE / BKG".
+        Deaktiviert -> 200 source_status="disabled". Snapshot noch nicht gebaut ->
+        200 source_status="not_ingested".
+      x-description-en: >-
+        Returns the attribute data of a city's administrative boundary (AGS,
+        municipality name, area) from the offline-prepared BKG VG250 snapshot in
+        the canonical envelope. Attribution verbatim "(c) GeoBasis-DE / BKG".
+        Disabled -> 200 source_status="disabled". Snapshot not yet built -> 200
+        source_status="not_ingested".
+      operationId: getCityGeo
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Geo-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/election:
+    get:
+      tags: [cities]
+      summary: Wahlergebnis je Stadt (Bundeswahlleiterin, Tier A)
+      x-summary-en: Election result per city (Federal Returning Officer, Tier A)
+      description: >-
+        Liefert das Wahlergebnis je Wahlkreis/Kreis einer Stadt aus dem offline
+        aufbereiteten Bundeswahl-Snapshot im kanonischen Envelope. Die
+        Granularität wird ehrlich als "teilweise" ausgewiesen. Deaktiviert -> 200
+        source_status="disabled". Batch noch nicht gelaufen -> 200
+        source_status="not_ingested".
+      x-description-en: >-
+        Returns a city's election result per constituency/district from the
+        offline-prepared federal-election snapshot in the canonical envelope. The
+        granularity is honestly reported as "partial". Disabled -> 200
+        source_status="disabled". Batch not yet run -> 200
+        source_status="not_ingested".
+      operationId: getCityElection
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Wahl-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/holidays:
+    get:
+      tags: [cities]
+      summary: Feiertage und Schulferien je Stadt (Seed, gemeinfrei)
+      x-summary-en: Public holidays and school vacations per city (seed, public domain)
+      description: >-
+        Liefert Feiertage und Schulferien je Bundesland (über entry.state
+        aufgelöst) aus den eingebetteten Seed-Daten (data/seeds/) im kanonischen
+        Envelope. Kein Upstream, gemeinfrei. Deaktiviert -> 200
+        source_status="disabled". Kein Seed für das Bundesland -> 200
+        source_status="no_data".
+      x-description-en: >-
+        Returns public holidays and school vacations per federal state (resolved
+        via entry.state) from the embedded seed data (data/seeds/) in the
+        canonical envelope. No upstream, public domain. Disabled -> 200
+        source_status="disabled". No seed for the state -> 200
+        source_status="no_data".
+      operationId: getCityHolidays
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Feiertags-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/health:
+    get:
+      tags: [cities]
+      summary: Krankenhaus-Stammdaten je Stadt (Destatis-Verzeichnis, Tier A)
+      x-summary-en: Hospital master data per city (Destatis directory, Tier A)
+      description: >-
+        Liefert die Krankenhaus-Stammdaten einer Stadt aus dem
+        Destatis-Krankenhausverzeichnis (über GENESIS) im kanonischen Envelope.
+        Die Attribution trägt den exakten Destatis-Wortlaut (nicht pauschal
+        DL-DE/BY). Tier A. Deaktiviert -> 200 source_status="disabled". Toter
+        Upstream ohne Cache -> 503 mit Hint.
+      x-description-en: >-
+        Returns a city's hospital master data from the Destatis hospital
+        directory (via GENESIS) in the canonical envelope. The attribution
+        carries the exact Destatis wording (not a generic DL-DE/BY). Tier A.
+        Disabled -> 200 source_status="disabled". Dead upstream with no cache ->
+        503 with a hint.
+      operationId: getCityHealth
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Krankenhaus-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/icu-live:
+    get:
+      tags: [cities]
+      summary: Intensivbetten-Belegung live je Stadt (DIVI, Tier C)
+      x-summary-en: Live ICU bed occupancy per city (DIVI, Tier C)
+      description: >-
+        Liefert die klinikscharfe Intensivbetten-Belegung im Kreis einer Stadt
+        aus dem DIVI-Intensivregister (RKI) im kanonischen Envelope. Tier C, nur
+        live (Datenbank-Schutzrecht, kein Zwischenbestand). Deaktiviert -> 200
+        source_status="disabled". Toter Upstream ohne Cache -> 503 mit Hint.
+      x-description-en: >-
+        Returns the per-clinic ICU bed occupancy in a city's district from the
+        DIVI intensive-care register (RKI) in the canonical envelope. Tier C,
+        live only (database protection right, no intermediate store).
+        Disabled -> 200 source_status="disabled". Dead upstream with no cache ->
+        503 with a hint.
+      operationId: getCityIcuLive
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ICU-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/road-events:
+    get:
+      tags: [cities]
+      summary: Innerstädtische Baustellen und Sperrungen je Stadt (Tier A)
+      x-summary-en: Inner-city roadworks and closures per city (Tier A)
+      description: >-
+        Liefert innerstädtische Baustellen und Sperrungen einer Stadt aus den
+        schlüssellosen Pro-Stadt-Quellen (Berlin VIZ, Hamburg, Köln, München,
+        MobiData BW) im kanonischen Envelope. Teilabdeckung (kuratierte
+        Connectoren): nur berlin, hamburg, koeln, muenchen, stuttgart liefern
+        Daten. Eine Stadt ohne Connector antwortet ehrlich mit 200
+        source_status="not_covered", data=null und meta.covered_cities (Liste der
+        abgedeckten Städte), klar unterscheidbar von no_data (Connector vorhanden,
+        aber gerade keine Ereignisse). Tier A. Deaktiviert -> 200
+        source_status="disabled". Toter Upstream ohne Cache -> 503 mit Hint.
+      x-description-en: >-
+        Returns a city's inner-city roadworks and closures from the keyless
+        per-city sources (Berlin VIZ, Hamburg, Cologne, Munich, MobiData BW) in
+        the canonical envelope. Partial coverage (curated connectors): only
+        berlin, hamburg, koeln, muenchen, stuttgart return data. A city without a
+        connector honestly responds with 200 source_status="not_covered",
+        data=null and meta.covered_cities (the list of covered cities), clearly
+        distinct from no_data (connector present, but currently no events).
+        Tier A. Disabled -> 200 source_status="disabled". Dead upstream with no
+        cache -> 503 with a hint.
+      operationId: getCityRoadEvents
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Road-Event-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/events:
+    get:
+      tags: [cities]
+      summary: Veranstaltungen je Stadt (destination.one)
+      x-summary-en: Events per city (destination.one)
+      description: >-
+        Aktuelle und kommende Veranstaltungen einer Stadt aus der
+        account-gebundenen Quelle destination.one/eT4.META im kanonischen
+        Envelope. Die Lizenz wird je Datensatz aus dem Lizenzfeld abgeleitet
+        (CC0/CC-BY, CC-BY-SA, sonst unbekannt) und in attribution gespiegelt.
+        Vergangene Termine werden herausgefiltert. Sonderfälle: ist die Quelle
+        aus oder fehlt der licensekey, kommt 200 mit source_status="disabled";
+        liefert die Quelle nichts Aktuelles, kommt 200 mit
+        source_status="no_data"; toter Upstream ohne Cache liefert 503 mit Hint.
+      x-description-en: >-
+        Current and upcoming events for a city from the account-bound source
+        destination.one/eT4.META in the canonical envelope. The license is
+        derived per record from the license field (CC0/CC-BY, CC-BY-SA, otherwise
+        unknown) and mirrored in attribution. Past dates are filtered out.
+        Special cases: if the source is off or the licensekey is missing it
+        returns 200 with source_status="disabled"; if the source has nothing
+        current it returns 200 with source_status="no_data"; a dead upstream with
+        no cache returns 503 with a hint.
+      operationId: getCityEvents
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/webcams:
+    get:
+      tags: [cities]
+      summary: Autobahn-Webcams je Stadt (Autobahn-API, Tier A)
+      x-summary-en: Autobahn webcams per city (Autobahn API, Tier A)
+      description: >-
+        Liefert Autobahn-Webcams (Koordinaten und Bild-URLs) im Umfeld einer
+        Stadt aus dem schlüssellosen Autobahn-Webcam-Service. Die Webcams werden
+        per Bounding-Box um die Stadt gefiltert. Tier A. Teilabdeckung (kuratierte
+        Autobahnen je Stadt): nur berlin, hamburg, koeln, muenchen liefern Daten.
+        Andere registrierte Städte antworten ehrlich mit 200
+        source_status="not_covered", data=null und meta.covered_cities (Liste der
+        abgedeckten Städte), klar unterscheidbar von no_data (abgedeckt, aber
+        gerade keine Webcam). Weitere Sonderfälle: deaktiviert -> 200
+        source_status="disabled"; toter Upstream ohne Cache -> 503 mit Hint.
+        Hinweis: Die Autobahn-Webcam-Quelle liefert aktuell bundesweit keine
+        Webcams, daher antwortet der Endpunkt derzeit durchgehend mit no_data.
+      x-description-en: >-
+        Returns Autobahn webcams (coordinates and image URLs) around a city from
+        the keyless Autobahn webcam service. The webcams are filtered by a
+        bounding box around the city. Tier A. Partial coverage (curated motorways
+        per city): only berlin, hamburg, koeln, muenchen return data. Other
+        registered cities honestly respond with 200 source_status="not_covered",
+        data=null and meta.covered_cities (the list of covered cities), clearly
+        distinct from no_data (covered, but currently no webcam). Other special
+        cases: disabled -> 200 source_status="disabled"; dead upstream with no
+        cache -> 503 with a hint. Note: the Autobahn webcam source currently
+        returns no webcams nationwide, so this endpoint currently always responds
+        with no_data.
+      operationId: getCityWebcams
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Webcam-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{city}/traffic-flow:
+    get:
+      tags: [Live]
+      summary: Live-Verkehrslage je Stadt (Mobilithek DATEX-II)
+      x-summary-en: Live traffic flow per city (Mobilithek DATEX-II)
+      description: >-
+        Liefert die minutenfrische Verkehrslage einer Stadt aus der Mobilithek
+        (DATEX-II) im Live-Envelope. Der meta-Block trägt zusätzlich as_of
+        (Datenstand) und refresh_seconds (Aktualisierungstakt). Solange
+        Zertifikat und Abo noch nicht gesetzt sind -> 200
+        source_status="disabled" (nie 5xx); kein Datenpaket -> 200
+        source_status="no_data".
+      x-description-en: >-
+        Returns a city's minute-fresh traffic flow from the Mobilithek (DATEX-II)
+        in the live envelope. The meta block additionally carries as_of (data
+        timestamp) and refresh_seconds (update cadence). As long as the
+        certificate and subscription are not set up -> 200
+        source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data".
+      operationId: getLiveTrafficFlow
+      parameters:
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live-Verkehrslage-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{city}/baustellen:
+    get:
+      tags: [Live]
+      summary: Live-Baustellen je Stadt (Mobilithek DATEX-II)
+      x-summary-en: Live roadworks per city (Mobilithek DATEX-II)
+      description: >-
+        Liefert die Baustellen einer Stadt aus der Mobilithek (DATEX-II
+        SituationPublication) im Live-Envelope. Der meta-Block trägt zusätzlich
+        as_of (Datenstand) und refresh_seconds (Aktualisierungstakt). Solange
+        Zertifikat und Abo nicht gesetzt sind -> 200 source_status="disabled"
+        (nie 5xx); kein Datenpaket -> 200 source_status="no_data". Reine
+        Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns a city's roadworks from the Mobilithek (DATEX-II
+        SituationPublication) in the live envelope. The meta block additionally
+        carries as_of (data timestamp) and refresh_seconds (update cadence). As
+        long as the certificate and subscription are not set up -> 200
+        source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data". Live data only, kept in the Redis cache.
+      operationId: getLiveBaustellen
+      parameters:
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live-Baustellen-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{city}/ereignisse:
+    get:
+      tags: [Live]
+      summary: Live-Verkehrsereignisse je Stadt (Mobilithek DATEX-II)
+      x-summary-en: Live traffic events per city (Mobilithek DATEX-II)
+      description: >-
+        Liefert die Verkehrsereignisse einer Stadt aus der Mobilithek (DATEX-II
+        SituationPublication) im Live-Envelope. Der meta-Block trägt zusätzlich
+        as_of (Datenstand) und refresh_seconds (Aktualisierungstakt). Solange
+        Zertifikat und Abo nicht gesetzt sind -> 200 source_status="disabled"
+        (nie 5xx); kein Datenpaket -> 200 source_status="no_data". Reine
+        Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns a city's traffic events from the Mobilithek (DATEX-II
+        SituationPublication) in the live envelope. The meta block additionally
+        carries as_of (data timestamp) and refresh_seconds (update cadence). As
+        long as the certificate and subscription are not set up -> 200
+        source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data". Live data only, kept in the Redis cache.
+      operationId: getLiveEreignisse
+      parameters:
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live-Ereignisse-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/berlin/verkehrsmeldungen:
+    get:
+      tags: [Live]
+      summary: Live-Verkehrsmeldungen Berlin (Mobilithek DATEX-II)
+      x-summary-en: Live traffic messages for Berlin (Mobilithek DATEX-II)
+      description: >-
+        Liefert die Berlin-Verkehrsmeldungen (SenMVKU, DATEX-II
+        SituationPublication) im Live-Envelope. Der meta-Block trägt zusätzlich
+        as_of (Datenstand) und refresh_seconds (Aktualisierungstakt). Solange
+        Zertifikat und Abo nicht gesetzt sind -> 200 source_status="disabled"
+        (nie 5xx); kein Datenpaket -> 200 source_status="no_data". Reine
+        Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns Berlin traffic messages (SenMVKU, DATEX-II SituationPublication)
+        in the live envelope. The meta block additionally carries as_of (data
+        timestamp) and refresh_seconds (update cadence). As long as the
+        certificate and subscription are not set up -> 200
+        source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data". Live data only, kept in the Redis cache.
+      operationId: getLiveBerlinVerkehrsmeldungen
+      responses:
+        "200":
+          description: Live-Verkehrsmeldungen-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/koeln/umweltzone:
+    get:
+      tags: [Live]
+      summary: Live-Umweltzone Köln (Mobilithek DATEX-II)
+      x-summary-en: Live low-emission zone for Cologne (Mobilithek DATEX-II)
+      description: >-
+        Liefert die Köln-Umweltzone (LowEmissionZone, MoCKiii, DATEX-II
+        SituationPublication) im Live-Envelope. Der meta-Block trägt zusätzlich
+        as_of (Datenstand) und refresh_seconds (Aktualisierungstakt). Solange
+        Zertifikat und Abo nicht gesetzt sind -> 200 source_status="disabled"
+        (nie 5xx); kein Datenpaket -> 200 source_status="no_data". Reine
+        Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns the Cologne low-emission zone (MoCKiii, DATEX-II
+        SituationPublication) in the live envelope. The meta block additionally
+        carries as_of (data timestamp) and refresh_seconds (update cadence). As
+        long as the certificate and subscription are not set up -> 200
+        source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data". Live data only, kept in the Redis cache.
+      operationId: getLiveKoelnUmweltzone
+      responses:
+        "200":
+          description: Live-Umweltzone-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/dortmund/parking:
+    get:
+      tags: [Live]
+      summary: Live-Parkbelegung Dortmund (Mobilithek DATEX-II)
+      x-summary-en: Live parking occupancy for Dortmund (Mobilithek DATEX-II)
+      description: >-
+        Liefert die Dortmund-Parkbelegung (dynamisches Parkleitsystem, DATEX-II
+        ParkingStatusPublication) im Live-Envelope. Der meta-Block trägt
+        zusätzlich as_of (Datenstand) und refresh_seconds (Aktualisierungstakt).
+        Solange Zertifikat und Abo nicht gesetzt sind -> 200
+        source_status="disabled" (nie 5xx); kein Datenpaket -> 200
+        source_status="no_data". Reine Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns Dortmund parking occupancy (dynamic parking guidance system,
+        DATEX-II ParkingStatusPublication) in the live envelope. The meta block
+        additionally carries as_of (data timestamp) and refresh_seconds (update
+        cadence). As long as the certificate and subscription are not set up ->
+        200 source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data". Live data only, kept in the Redis cache.
+      operationId: getLiveDortmundParking
+      responses:
+        "200":
+          description: Live-Parkbelegung-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/kiel/zaehlstellen:
+    get:
+      tags: [Live]
+      summary: Live-Zähldaten Kiel, Kfz- und Radzählstellen (Mobilithek DATEX-II)
+      x-summary-en: Live count data for Kiel, vehicle and bicycle counters (Mobilithek DATEX-II)
+      description: >-
+        Liefert die Kiel-Zähldaten (Kfz-Dauerzählstellen und Radzähler, DATEX-II
+        MeasuredDataPublication) im Live-Envelope. Der meta-Block trägt
+        zusätzlich as_of (Datenstand) und refresh_seconds (Aktualisierungstakt).
+        Solange Zertifikat und Abo nicht gesetzt sind -> 200
+        source_status="disabled" (nie 5xx); kein Datenpaket -> 200
+        source_status="no_data". Reine Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns Kiel count data (permanent motor-vehicle counters and bicycle
+        counters, DATEX-II MeasuredDataPublication) in the live envelope. The
+        meta block additionally carries as_of (data timestamp) and
+        refresh_seconds (update cadence). As long as the certificate and
+        subscription are not set up -> 200 source_status="disabled" (never 5xx);
+        no data packet -> 200 source_status="no_data". Live data only, kept in
+        the Redis cache.
+      operationId: getLiveKielZaehlstellen
+      responses:
+        "200":
+          description: Live-Zähldaten-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/eround/charging:
+    get:
+      tags: [Live]
+      summary: Live-Ladesäulen-Belegung eRound (Mobilithek DATEX-II V3)
+      x-summary-en: Live EV charging-station occupancy via eRound (Mobilithek DATEX-II V3)
+      description: >-
+        Liefert die eRound-Ladesäulen-Belegung (AFIR-Recharging, DATEX-II V3
+        EnergyInfrastructureStatusPublication, JSON-Syntax) im Live-Envelope.
+        Bislang die einzige V3-Quelle; sie liefert die Echtzeit-Belegung der
+        Ladesäulen. Der meta-Block trägt zusätzlich as_of (Datenstand) und
+        refresh_seconds (Aktualisierungstakt). Lizenz Creative Commons CC Zero
+        (Tier A). Solange Zertifikat und Abo nicht gesetzt sind -> 200
+        source_status="disabled" (nie 5xx); kein Datenpaket -> 200
+        source_status="no_data". Reine Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns eRound EV charging-station occupancy (AFIR recharging, DATEX-II
+        V3 EnergyInfrastructureStatusPublication, JSON syntax) in the live
+        envelope. So far the only V3 source; it provides real-time occupancy of
+        the charging stations. The meta block additionally carries as_of (data
+        timestamp) and refresh_seconds (update cadence). License Creative Commons
+        CC Zero (Tier A). As long as the certificate and subscription are not set
+        up -> 200 source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data". Live data only, kept in the Redis cache.
+      operationId: getLiveEroundCharging
+      responses:
+        "200":
+          description: Live-Ladesäulen-Belegung-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/hamburg/departures:
+    get:
+      tags: [Live]
+      summary: Live-ÖPNV-Abfahrten Hamburg je Station (HVV-Geofox-GTI)
+      x-summary-en: Live public-transit departures for Hamburg per station (HVV Geofox GTI)
+      description: >-
+        Liefert die Echtzeit-Abfahrtstafel einer HVV-Station aus der
+        HVV-Geofox-GTI-API: je Abfahrt Linie, Richtung, Soll-Offset in Minuten,
+        Verspätung in Sekunden und Linien-Störungshinweise. Stadt fix hamburg
+        (Geofox deckt nur den HVV-Raum ab). Der Query-Parameter station ist ein
+        Stationsname (Default Hauptbahnhof), der intern via checkName auf die
+        Geofox-Station-ID aufgelöst wird. Der meta-Block trägt zusätzlich as_of
+        und refresh_seconds (60). Tier C live-only: die Geofox-Lizenz ist nicht
+        offen (source_status der Quelle = unknown), reine Live-Daten, nur
+        kurzlebig im Redis-Cache gehalten. Toggle aus oder fehlende Credentials -> 200
+        source_status="disabled"; unbekannte Station oder keine Abfahrten -> 200
+        source_status="no_data"; toter Upstream ohne Cache -> 503 mit Hint.
+      x-description-en: >-
+        Returns the real-time departure board of an HVV station from the HVV
+        Geofox GTI API: per departure the line, direction, scheduled offset in
+        minutes, delay in seconds and per-line service alerts. City fixed to
+        hamburg (Geofox only covers the HVV area). The station query parameter is
+        a station name (default Hauptbahnhof), resolved internally via checkName
+        to the Geofox station id. The meta block additionally carries as_of and
+        refresh_seconds (60). Tier C live-only: the Geofox license is not open
+        (source license = unknown), live data only, kept only briefly in the
+        Redis cache. Disabled or
+        missing credentials -> 200 source_status="disabled"; unknown station or no
+        departures -> 200 source_status="no_data"; dead upstream with no cache ->
+        503 with a hint.
+      operationId: getLiveHamburgDepartures
+      parameters:
+        - name: station
+          in: query
+          required: false
+          description: HVV-Stationsname (Default "Hamburg Hauptbahnhof").
+          schema: { type: string, default: Hamburg Hauptbahnhof }
+      responses:
+        "200":
+          description: Live-Abfahrten-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "400":
+          description: Ungültiger oder fehlender station-Parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{city}/transit/departures:
+    get:
+      tags: [Live]
+      summary: Live-ÖPNV-Abfahrten je Halt mit Verspätung (GTFS-RT, Tier B)
+      x-summary-en: Live public-transit departures per stop with delay (GTFS-RT, Tier B)
+      description: >-
+        Liefert die Live-Abfahrten eines Halts mit aktueller Verspätung aus dem
+        GTFS-RT-Feed (gtfs.de bzw. Mobilithek-DELFI, CC-BY-SA = Tier B) im
+        Live-Envelope (meta mit as_of und refresh_seconds=45, dem Poller-Takt).
+        Der Request-Pfad liest NUR aus Redis: ein Hintergrund-Poller parst den
+        Feed einmal je Takt, sodass nicht bei jedem Request ein 68-MB-Feed
+        geparst wird. Toggle aus -> 200 source_status="disabled"; kein Update in
+        Redis -> 200 source_status="no_data"; ungültige stop_id -> 400.
+        Reine Live-Daten, nur im Redis-Cache gehalten (Tier B).
+      x-description-en: >-
+        Returns a stop's live departures with current delay from the GTFS-RT feed
+        (gtfs.de or Mobilithek-DELFI, CC-BY-SA = Tier B) in the live envelope
+        (meta with as_of and refresh_seconds=45, the poller cadence). The request
+        path reads ONLY from Redis: a background poller parses the feed once per
+        cadence, so no 68 MB feed is parsed per request. Toggle off -> 200
+        source_status="disabled"; no update in Redis -> 200
+        source_status="no_data"; invalid stop_id -> 400. Live data only, kept in
+        the Redis cache (Tier B).
+      operationId: getLiveTransitDepartures
+      parameters:
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: stop_id
+          in: query
+          required: true
+          description: DELFI-Halt-ID im Muster de:<AGS>:<id> (gegen eine Allowlist geprüft).
+          x-description-en: DELFI stop ID in the pattern de:<AGS>:<id> (checked against an allowlist).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live-Abfahrten-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "400":
+          description: Ungültige oder fehlende stop_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{city}/transit/trips/{trip_id}:
+    get:
+      tags: [Live]
+      summary: Live-ÖPNV-Fahrt-Detail inkl. geschätzter Position (GTFS-RT, Tier B)
+      x-summary-en: Live public-transit trip detail incl. estimated position (GTFS-RT, Tier B)
+      description: >-
+        Liefert das Fahrt-Detail (Verspätung, Halt-Updates) inklusive linear
+        interpolierter Position (als estimated=true gekennzeichnet) aus dem
+        GTFS-RT-Feed (Tier B) im Live-Envelope (refresh_seconds=45). Der
+        Request-Pfad liest NUR aus Redis. Lässt sich die Fahrt nicht gegen das
+        statische GTFS auflösen, trägt der Payload unresolved=true (ehrlich statt
+        500). Toggle aus -> disabled; kein Update -> no_data. Reine Live-Daten,
+        nur im Redis-Cache gehalten (Tier B).
+      x-description-en: >-
+        Returns the trip detail (delay, stop updates) including a
+        linearly-interpolated position (flagged as estimated=true) from the
+        GTFS-RT feed (Tier B) in the live envelope (refresh_seconds=45). The
+        request path reads ONLY from Redis. If the trip cannot be resolved
+        against the static GTFS, the payload carries unresolved=true (honest
+        instead of 500). Toggle off -> disabled; no update -> no_data. Live data
+        only, kept in the Redis cache (Tier B).
+      operationId: getLiveTransitTrip
+      parameters:
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: trip_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live-Fahrt-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "400":
+          description: Ungültige trip_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{city}/transit/routes/{route_id}/status:
+    get:
+      tags: [Live]
+      summary: Live-ÖPNV-Verspätungslage einer Linie (GTFS-RT, Tier B)
+      x-summary-en: Live public-transit delay overview for a route (GTFS-RT, Tier B)
+      description: >-
+        Aggregiert die aktiven Fahrten einer Linie aus dem GTFS-RT-Feed (Tier B):
+        active_trips (Anzahl), avg_delay_s und max_delay_s, im Live-Envelope
+        (refresh_seconds=45). Der Request-Pfad liest NUR aus Redis. Toggle aus ->
+        disabled; keine aktiven Fahrten -> no_data. Reine Live-Daten, nur im
+        Redis-Cache gehalten (Tier B).
+      x-description-en: >-
+        Aggregates a route's active trips from the GTFS-RT feed (Tier B):
+        active_trips (count), avg_delay_s and max_delay_s, in the live envelope
+        (refresh_seconds=45). The request path reads ONLY from Redis. Toggle
+        off -> disabled; no active trips -> no_data. Live data only, kept in the
+        Redis cache (Tier B).
+      operationId: getLiveTransitRouteStatus
+      parameters:
+        - name: city
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: route_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Live-Linienstatus-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "400":
+          description: Ungültige route_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{slug}/air:
+    get:
+      tags: [Live]
+      summary: Live-Alias für Luftqualität OpenAQ
+      x-summary-en: Live alias for OpenAQ air quality
+      description: >-
+        Spiegelt den bestehenden OpenAQ-Luft-Endpunkt unter der Live-Kategorie.
+        Gleicher Envelope-Kontrakt wie /api/v1/cities/{slug}/air, derselbe
+        Handler. Der alte Pfad bleibt als Alias erhalten und ist als veraltet
+        markiert (Deprecation-Header und deprecated=true).
+      x-description-en: >-
+        Mirrors the existing OpenAQ air endpoint under the live category. Same
+        envelope contract as /api/v1/cities/{slug}/air, same handler. The old
+        path remains as an alias and is marked deprecated (Deprecation header and
+        deprecated=true).
+      operationId: getLiveAir
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Luft-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{slug}/air-uba:
+    get:
+      tags: [Live]
+      summary: Live-Alias für Luftqualität UBA
+      x-summary-en: Live alias for UBA air quality
+      description: >-
+        Spiegelt den bestehenden UBA-Luft-Endpunkt unter der Live-Kategorie.
+        Gleicher Envelope-Kontrakt wie /api/v1/cities/{slug}/air-uba, derselbe
+        Handler. Der alte Pfad bleibt als Alias erhalten und ist als veraltet
+        markiert.
+      x-description-en: >-
+        Mirrors the existing UBA air endpoint under the live category. Same
+        envelope contract as /api/v1/cities/{slug}/air-uba, same handler. The old
+        path remains as an alias and is marked deprecated.
+      operationId: getLiveAirUba
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Luft-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{slug}/water-level:
+    get:
+      tags: [Live]
+      summary: Live-Alias für Pegelstand PEGELONLINE
+      x-summary-en: Live alias for PEGELONLINE water level
+      description: >-
+        Spiegelt den bestehenden PEGELONLINE-Endpunkt unter der Live-Kategorie.
+        Gleicher Envelope-Kontrakt wie /api/v1/cities/{slug}/water-level,
+        derselbe Handler. Der alte Pfad bleibt als Alias erhalten und ist als
+        veraltet markiert.
+      x-description-en: >-
+        Mirrors the existing PEGELONLINE endpoint under the live category. Same
+        envelope contract as /api/v1/cities/{slug}/water-level, same handler. The
+        old path remains as an alias and is marked deprecated.
+      operationId: getLiveWaterLevel
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pegelstand-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{slug}/traffic:
+    get:
+      tags: [Live]
+      summary: Live-Alias für Verkehr und Baustellen Autobahn
+      x-summary-en: Live alias for Autobahn traffic and roadworks
+      description: >-
+        Spiegelt den bestehenden Autobahn-Verkehrs-Endpunkt unter der
+        Live-Kategorie. Gleicher Envelope-Kontrakt wie
+        /api/v1/cities/{slug}/traffic, derselbe Handler. Der alte Pfad bleibt als
+        Alias erhalten und ist als veraltet markiert.
+      x-description-en: >-
+        Mirrors the existing Autobahn traffic endpoint under the live category.
+        Same envelope contract as /api/v1/cities/{slug}/traffic, same handler.
+        The old path remains as an alias and is marked deprecated.
+      operationId: getLiveTraffic
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verkehrs-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{slug}/webcams:
+    get:
+      tags: [Live]
+      summary: Live-Alias für Autobahn-Webcams
+      x-summary-en: Live alias for Autobahn webcams
+      description: >-
+        Spiegelt den bestehenden Autobahn-Webcam-Endpunkt unter der
+        Live-Kategorie. Gleicher Envelope-Kontrakt wie
+        /api/v1/cities/{slug}/webcams, derselbe Handler. Der alte Pfad bleibt als
+        Alias erhalten und ist als veraltet markiert.
+      x-description-en: >-
+        Mirrors the existing Autobahn webcam endpoint under the live category.
+        Same envelope contract as /api/v1/cities/{slug}/webcams, same handler.
+        The old path remains as an alias and is marked deprecated.
+      operationId: getLiveWebcams
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Webcam-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/{slug}/flood:
+    get:
+      tags: [Live]
+      summary: Live-Alias für Hochwasser-Warnstufen LHP
+      x-summary-en: Live alias for LHP flood warning levels
+      description: >-
+        Spiegelt den bestehenden LHP-Hochwasser-Endpunkt unter der
+        Live-Kategorie. Gleicher Envelope-Kontrakt wie
+        /api/v1/cities/{slug}/flood, derselbe Handler. Der alte Pfad bleibt als
+        Alias erhalten und ist als veraltet markiert.
+      x-description-en: >-
+        Mirrors the existing LHP flood endpoint under the live category. Same
+        envelope contract as /api/v1/cities/{slug}/flood, same handler. The old
+        path remains as an alias and is marked deprecated.
+      operationId: getLiveFlood
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Hochwasser-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+components:
+  headers:
+    ETag:
+      description: >-
+        Stabiler Entity-Tag des Response-Bodys (sha256-basiert). Nur auf
+        erfolgreichen GET-Reads (200) gesetzt, nie auf Fehler-Envelopes/503.
+      schema: { type: string }
+    CacheControl:
+      description: >-
+        Cache-Control je Ressource ("public, max-age=<ttl>"). TTL aus der
+        serverseitigen CACHE_TTL-Map (z.B. wikidata 86400 s, dwd 1800 s, uba
+        600 s, default 300 s).
+      schema: { type: string }
+    RateLimitLimit:
+      description: Erlaubte Requests im aktuellen Fenster (IETF RateLimit-Header).
+      schema: { type: integer }
+    RateLimitRemaining:
+      description: Verbleibende Requests im aktuellen Fenster.
+      schema: { type: integer }
+    RateLimitReset:
+      description: Sekunden bis zum Reset des Fensters.
+      schema: { type: integer }
+  responses:
+    NotModified:
+      description: >-
+        Not Modified. If-None-Match stimmte mit dem aktuellen ETag überein;
+        es wird kein Body geliefert (ETag + Cache-Control bleiben erhalten).
+      headers:
+        ETag:
+          $ref: "#/components/headers/ETag"
+        Cache-Control:
+          $ref: "#/components/headers/CacheControl"
+  schemas:
+    Meta:
+      type: object
+      properties:
+        correlation_id:
+          type: string
+          nullable: true
+        source_status:
+          type: string
+          description: >-
+            Ehrlicher Quellen-Status der Antwort. "ok" (Daten vorhanden),
+            "no_data" (Quelle erreichbar/abgedeckt, aber gerade keine Daten),
+            "disabled" (Quelle per Toggle aus), "not_ingested" (kein Snapshot),
+            "not_covered" (Stadt ist für diesen teilabgedeckten Endpunkt
+            strukturell nicht abgedeckt; data=null, siehe covered_cities). Klar
+            unterscheidbar vom 404 (Stadt unbekannt).
+          enum: [ok, no_data, disabled, not_ingested, not_covered]
+        cache_status:
+          type: string
+          nullable: true
+          description: Cache-Herkunft (hit/miss/stale), sofern die Route cacht.
+        covered_cities:
+          type: array
+          items:
+            type: string
+          description: >-
+            Nur bei source_status="not_covered": die Stadt-Slugs, die dieser
+            teilabgedeckte Endpunkt tatsächlich bedient (z. B. flood, webcams,
+            traffic, road-events).
+    Health:
+      type: object
+      required: [status, version, redis]
+      properties:
+        status:
+          type: string
+          example: ok
+        version:
+          type: string
+          example: "0.1.0"
+        redis:
+          type: boolean
+          description: true wenn Redis erreichbar (Ping erfolgreich)
+    Ping:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [pong]
+          properties:
+            pong:
+              type: boolean
+              example: true
+        meta:
+          $ref: "#/components/schemas/Meta"
+    SourceStatus:
+      type: object
+      required: [source, enabled, breaker_state]
+      properties:
+        source:
+          type: string
+          example: wikidata
+        enabled:
+          type: boolean
+        breaker_state:
+          type: string
+          enum: [CLOSED, OPEN, HALF_OPEN]
+    Attribution:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          example: Wikidata
+        license_url:
+          type: string
+          nullable: true
+        modified:
+          type: boolean
+          default: false
+    CityBaseDataPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [city_base]
+          default: city_base
+        population:
+          type: integer
+          nullable: true
+        area_km2:
+          type: number
+          nullable: true
+    AirQualityPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [air_quality]
+          default: air_quality
+        station_id:
+          type: string
+          nullable: true
+        pm10:
+          type: number
+          nullable: true
+        no2:
+          type: number
+          nullable: true
+        pm25:
+          type: number
+          nullable: true
+        o3:
+          type: number
+          nullable: true
+        so2:
+          type: number
+          nullable: true
+    WeatherPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [weather]
+          default: weather
+        station_id:
+          type: string
+          nullable: true
+        temperature_c:
+          type: number
+          nullable: true
+        humidity:
+          type: number
+          nullable: true
+        wind_speed:
+          type: number
+          nullable: true
+        condition:
+          type: string
+          nullable: true
+    PoiPayload:
+      type: object
+      required: [kind, poi_type, count]
+      properties:
+        kind:
+          type: string
+          enum: [poi]
+          default: poi
+        poi_type:
+          type: string
+        count:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+    TrafficEventPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [traffic_event]
+          default: traffic_event
+        station_id:
+          type: string
+          nullable: true
+        roadworks:
+          type: array
+          items:
+            type: object
+        warnings:
+          type: array
+          items:
+            type: object
+    RoadEventPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [road_event]
+          default: road_event
+        city_source:
+          type: string
+          nullable: true
+        events:
+          type: array
+          items:
+            type: object
+    WebcamPayload:
+      type: object
+      required: [kind, count]
+      properties:
+        kind:
+          type: string
+          enum: [webcam]
+          default: webcam
+        count:
+          type: integer
+        webcams:
+          type: array
+          items:
+            type: object
+    TransitStopPayload:
+      type: object
+      required: [kind, stop_id, stop_name]
+      properties:
+        kind:
+          type: string
+          enum: [transit_stop]
+          default: transit_stop
+        stop_id:
+          type: string
+        stop_name:
+          type: string
+        location_type:
+          type: integer
+          nullable: true
+        parent_station:
+          type: string
+          nullable: true
+        platform_code:
+          type: string
+          nullable: true
+        wheelchair_boarding:
+          type: integer
+          nullable: true
+    ChargingStationPayload:
+      type: object
+      required: [kind, count]
+      properties:
+        kind:
+          type: string
+          enum: [charging_station]
+          default: charging_station
+        count:
+          type: integer
+        stations:
+          type: array
+          items:
+            type: object
+    WaterLevelPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [water_level]
+          default: water_level
+        station:
+          type: string
+          nullable: true
+        water:
+          type: string
+          nullable: true
+        value:
+          type: number
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+    FloodWarningPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [flood_warning]
+          default: flood_warning
+        warnings:
+          type: array
+          items:
+            type: object
+        stand:
+          type: string
+          nullable: true
+    PollenUvPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [pollen_uv]
+          default: pollen_uv
+        region_id:
+          type: integer
+          nullable: true
+        region_name:
+          type: string
+          nullable: true
+        pollen:
+          type: object
+        uv_index:
+          type: number
+          nullable: true
+    DemographicsPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [demographics]
+          default: demographics
+        population:
+          type: integer
+          nullable: true
+        households:
+          type: integer
+          nullable: true
+        buildings:
+          type: integer
+          nullable: true
+        rent_avg:
+          type: number
+          nullable: true
+        reference_year:
+          type: integer
+          nullable: true
+        series:
+          type: array
+          items:
+            type: object
+    EnergyAssetPayload:
+      type: object
+      required: [kind, count]
+      properties:
+        kind:
+          type: string
+          enum: [energy_asset]
+          default: energy_asset
+        count:
+          type: integer
+        by_type:
+          type: object
+        assets:
+          type: array
+          items:
+            type: object
+    AdminBoundaryPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [admin_boundary]
+          default: admin_boundary
+        ags:
+          type: string
+          nullable: true
+        gen_name:
+          type: string
+          nullable: true
+        area_km2:
+          type: number
+          nullable: true
+        reference_year:
+          type: integer
+          nullable: true
+    ElectionResultPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [election_result]
+          default: election_result
+        election:
+          type: string
+          nullable: true
+        granularity:
+          type: string
+          default: teilweise
+        area_name:
+          type: string
+          nullable: true
+        turnout:
+          type: string
+          nullable: true
+          description: >-
+            Wahlbeteiligung in Prozent als String mit Dezimal-Komma (kerg2,
+            Zeile Gruppenname "Wählende", Spalte Prozent), z.B. "82,5122".
+        results:
+          type: array
+          items:
+            type: object
+    HolidayPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [holiday]
+          default: holiday
+        state:
+          type: string
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        holidays:
+          type: array
+          items:
+            type: object
+        school_holidays:
+          type: array
+          items:
+            type: object
+    HospitalPayload:
+      type: object
+      required: [kind, count]
+      properties:
+        kind:
+          type: string
+          enum: [hospital]
+          default: hospital
+        count:
+          type: integer
+        hospitals:
+          type: array
+          items:
+            type: object
+        reference_date:
+          type: string
+          nullable: true
+    IcuCapacityPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [icu_capacity]
+          default: icu_capacity
+        kreis_id:
+          type: string
+          nullable: true
+        kreis_name:
+          type: string
+          nullable: true
+        beds_free:
+          type: integer
+          nullable: true
+        beds_occupied:
+          type: integer
+          nullable: true
+        hospitals:
+          type: array
+          description: >-
+            Klinikscharfe Live-Status-Einschätzungen (DIVI, Tier C) je
+            Krankenhaus-Standort (bezeichnung, ort, letzte_meldung,
+            status_high_care, status_ecmo). Die Live-API liefert keine
+            numerische Belegung mehr (beds_free/beds_occupied bleiben null
+            und tragen nur das Tier-A-Kreis-Aggregat).
+          items:
+            type: object
+        datum:
+          type: string
+          nullable: true
+    CanonicalRecord:
+      type: object
+      required: [city_slug, retrieved_at, source, license_id, license_tier, schema_version, record_id, content_hash, attribution, payload]
+      properties:
+        city_slug:
+          type: string
+        schema_version:
+          type: integer
+          default: 1
+        record_id:
+          type: string
+          description: Deterministischer Primärschlüssel (computed, immer im Dump).
+        content_hash:
+          type: string
+          description: Deterministischer Dedup-Hash der Nutzdaten (computed, immer im Dump).
+        ags:
+          type: string
+          nullable: true
+          description: Amtlicher Gemeindeschlüssel als Join-Key (kein Pfadsegment).
+        wikidata_qid:
+          type: string
+          nullable: true
+          description: Wikidata-QID als Join-Key.
+        geo:
+          nullable: true
+          type: object
+          properties:
+            lat:
+              type: number
+            lon:
+              type: number
+        observed_at:
+          type: string
+          format: date-time
+          nullable: true
+        retrieved_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [wikidata, openaq, dwd, osm, autobahn, bnetza, uba, delfi, hvv, pegelonline, hochwasser, dwd_pollen, genesis, zensus, mastr, bkg, bundeswahl, divi, feiertage, berlin_viz, hamburg_baustellen, koeln_verkehr, muenchen_baustellen, mobidata_bw]
+        license_id:
+          type: string
+          enum: [cc0, cc_by_4_0, dl_de_by_2_0, dl_de_zero_2_0, geonutzv, odbl, cc_by_sa_4_0, unknown]
+        license_tier:
+          type: string
+          enum: [A, B, C]
+        attribution:
+          $ref: "#/components/schemas/Attribution"
+        payload:
+          oneOf:
+            - $ref: "#/components/schemas/CityBaseDataPayload"
+            - $ref: "#/components/schemas/AirQualityPayload"
+            - $ref: "#/components/schemas/WeatherPayload"
+            - $ref: "#/components/schemas/PoiPayload"
+            - $ref: "#/components/schemas/TrafficEventPayload"
+            - $ref: "#/components/schemas/TransitStopPayload"
+            - $ref: "#/components/schemas/ChargingStationPayload"
+            - $ref: "#/components/schemas/WaterLevelPayload"
+            - $ref: "#/components/schemas/FloodWarningPayload"
+            - $ref: "#/components/schemas/PollenUvPayload"
+            - $ref: "#/components/schemas/DemographicsPayload"
+            - $ref: "#/components/schemas/EnergyAssetPayload"
+            - $ref: "#/components/schemas/AdminBoundaryPayload"
+            - $ref: "#/components/schemas/ElectionResultPayload"
+            - $ref: "#/components/schemas/HolidayPayload"
+            - $ref: "#/components/schemas/HospitalPayload"
+            - $ref: "#/components/schemas/IcuCapacityPayload"
+            - $ref: "#/components/schemas/RoadEventPayload"
+            - $ref: "#/components/schemas/WebcamPayload"
+          discriminator:
+            propertyName: kind
+    ErrorDetail:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: upstream_unavailable
+        message:
+          type: string
+          example: Simulated upstream failure
+        hint:
+          type: string
+          nullable: true
+    ErrorEnvelope:
+      type: object
+      required: [error, meta]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+        meta:
+          type: object
+          properties:
+            correlation_id:
+              type: string
+              nullable: true
+            generated_at:
+              type: string
+              format: date-time

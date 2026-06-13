@@ -1,0 +1,13 @@
+# deploy/Caddyfile - lokal: HTTP-only, kein Auto-HTTPS noetig (Produktions-Domain erst Phase 10).
+# Quelle: Caddy reverse_proxy Docs (https://caddyserver.com/docs/caddyfile/directives/reverse_proxy) [CITED]
+# Caddy ist der EINZIGE Ingress (Gateway-Prinzip, REST-Regel 1); die api ist nur intern erreichbar.
+:80 {
+	encode gzip
+
+	# 1:1-Proxy auf den internen api-Service; Correlation-ID durchreichen,
+	# damit asgi-correlation-id sie in FastAPI uebernehmen kann (FND-03).
+	reverse_proxy api:8000 {
+		header_up X-Request-ID {http.request.header.X-Request-ID}
+	}
+}
+# Produktion (Phase 10): Domain statt :80 -> Caddy provisioniert Auto-HTTPS automatisch.

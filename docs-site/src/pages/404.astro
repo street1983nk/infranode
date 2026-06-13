@@ -1,0 +1,32 @@
+---
+// 404-Seite: wird von Caddy (handle_errors 404) für unbekannte Pfade
+// ausgeliefert. Schlank, mit Wegweisern zu den wichtigsten Einstiegen.
+import Docs from "../layouts/Docs.astro";
+---
+
+<Docs
+  title="Seite nicht gefunden"
+  description="Die angeforderte Seite existiert nicht. Zur InfraNode-Dokumentation."
+  current=""
+  lang="de"
+  noindex={true}
+>
+  <h1>404, diese Seite gibt es nicht</h1>
+
+  <p>
+    Die angeforderte Adresse existiert nicht oder wurde verschoben.
+    Vielleicht hilft einer dieser Einstiege:
+  </p>
+
+  <ul>
+    <li><a href="/">Startseite und Überblick</a></li>
+    <li><a href="/quickstart/">Quickstart: erster API-Aufruf in einer Minute</a></li>
+    <li><a href="/staedte/">Alle 84 Städte</a></li>
+    <li><a href="/api/v1/health">API-Status (live)</a></li>
+  </ul>
+
+  <p>
+    API-Pfade beginnen immer mit <code>/api/v1/</code>, zum Beispiel
+    <code>/api/v1/cities/hamburg/weather</code>.
+  </p>
+</Docs>

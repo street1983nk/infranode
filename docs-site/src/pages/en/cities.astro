@@ -1,0 +1,217 @@
+---
+// English cities overview (/en/cities): full, searchable list of all 84 covered
+// cities. Data source: src/data/cities.json (slug, name, state, coverage,
+// population). German /staedte page is the counterpart.
+//
+// cities.json is exported from the single source CITY_REGISTRY. Regenerate:
+//   uv run python scripts/export-cities.py
+import Docs from "../../layouts/Docs.astro";
+import cities from "../../data/cities.json";
+import { API_BASE } from "../../lib/codegen";
+
+// State code -> full German state name (proper umlauts; states stay German).
+const STATES: Record<string, string> = {
+  BW: "Baden-Württemberg",
+  BY: "Bayern",
+  BE: "Berlin",
+  BB: "Brandenburg",
+  HB: "Bremen",
+  HH: "Hamburg",
+  HE: "Hessen",
+  MV: "Mecklenburg-Vorpommern",
+  NI: "Niedersachsen",
+  NW: "Nordrhein-Westfalen",
+  RP: "Rheinland-Pfalz",
+  SL: "Saarland",
+  SN: "Sachsen",
+  ST: "Sachsen-Anhalt",
+  SH: "Schleswig-Holstein",
+  TH: "Thüringen",
+};
+
+const fmt = new Intl.NumberFormat("de-DE");
+const sorted = [...cities].sort((a, b) => a.name.localeCompare(b.name, "de"));
+const total = sorted.length;
+const coreCount = sorted.filter((c) => c.coverage === "full").length;
+---
+
+<Docs
+  title="Cities"
+  description="All 84 German cities over 100,000 inhabitants covered by InfraNode: name, slug, state, population and coverage. Searchable."
+  current="cities"
+  lang="en"
+  altLangPath="/staedte/"
+>
+  <h1>Cities</h1>
+
+  <p>
+    InfraNode covers {total} German cities with more than 100,000 inhabitants.
+    Of these, {coreCount} are core cities with curated, hand-verified source
+    coverage (badge <span class="city-badge city-badge--core">Core</span>). The
+    remaining cities (badge <span class="city-badge city-badge--auto">Auto</span>)
+    are served via AGS- and geo-based sources; where a hand-curated source
+    returns nothing for them, the API answers honestly with <code>no_data</code>
+    instead of an error.
+  </p>
+
+  <p>
+    The machine-readable list of all cities is available via
+    <a href="/api/getCities/"><code>GET /api/v1/cities</code></a>:
+  </p>
+  <pre><code>curl {API_BASE}/api/v1/cities</code></pre>
+
+  <h2>One slug, every endpoint</h2>
+  <p>
+    The 23 city endpoints work per city through the same slug. Just drop the
+    slug from the table into the path, for example for Berlin. On top of these
+    there are live endpoints, some of them city-specific (for example Cologne
+    traffic conditions, Berlin traffic messages) plus public-transit real-time
+    for all cities:
+  </p>
+  <ul>
+    <li><code>/api/v1/cities/berlin/weather</code></li>
+    <li><code>/api/v1/cities/berlin/air-uba</code></li>
+    <li><code>/api/v1/cities/berlin/transit</code></li>
+    <li><code>/api/v1/cities/berlin/events</code></li>
+  </ul>
+  <p>
+    The full list of endpoints is in the
+    <a href="/api/getCityWeather/">API reference</a> in the left navigation.
+  </p>
+
+  <h2>All {total} cities</h2>
+  <p>
+    <label class="city-search">
+      <span class="city-search__label">Search</span>
+      <input
+        type="search"
+        id="city-search"
+        class="city-search__input"
+        placeholder="Filter by name, slug or state..."
+        autocomplete="off"
+        aria-label="Filter cities by name, slug or state"
+      />
+    </label>
+  </p>
+
+  <table class="cities" id="cities-table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Slug</th>
+        <th scope="col">State</th>
+        <th scope="col">Population</th>
+        <th scope="col">Coverage</th>
+        <th scope="col">Example</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        sorted.map((city) => {
+          const stateName = STATES[city.state] ?? city.state;
+          const example = `/api/v1/cities/${city.slug}/weather`;
+          return (
+            <tr
+              data-name={city.name.toLowerCase()}
+              data-slug={city.slug.toLowerCase()}
+              data-state={stateName.toLowerCase()}
+            >
+              <td>{city.name}</td>
+              <td><code>{city.slug}</code></td>
+              <td>{stateName}</td>
+              <td class="cities__num">{city.population != null ? fmt.format(city.population) : "-"}</td>
+              <td>
+                {city.coverage === "full" ? (
+                  <span class="city-badge city-badge--core">Core</span>
+                ) : (
+                  <span class="city-badge city-badge--auto">Auto</span>
+                )}
+              </td>
+              <td>
+                <a href="/api/getCityWeather/">Weather</a>{" "}
+                <code>{example}</code>
+              </td>
+            </tr>
+          );
+        })
+      }
+    </tbody>
+  </table>
+  <p class="city-search__empty" id="cities-empty" hidden>No city found.</p>
+</Docs>
+
+<style>
+  .city-search {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+    max-width: 28rem;
+  }
+  .city-search__label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+  }
+  .city-search__input {
+    font: inherit;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  .city-search__input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+  table.cities td.cities__num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .city-badge {
+    display: inline-block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 0.12rem 0.5rem;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+  }
+  .city-badge--core {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+  .city-badge--auto {
+    background: var(--bg-soft);
+    color: var(--fg-muted);
+    border: 1px solid var(--border-strong);
+  }
+</style>
+
+<script is:inline>
+  // Instant search: filters table rows by name/slug/state (client-side, no deps).
+  (function () {
+    var input = document.getElementById("city-search");
+    var table = document.getElementById("cities-table");
+    var empty = document.getElementById("cities-empty");
+    if (!input || !table) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      var visible = 0;
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var hay =
+          (r.getAttribute("data-name") || "") +
+          " " +
+          (r.getAttribute("data-slug") || "") +
+          " " +
+          (r.getAttribute("data-state") || "");
+        var match = q === "" || hay.indexOf(q) !== -1;
+        r.hidden = !match;
+        if (match) visible++;
+      }
+      if (empty) empty.hidden = visible !== 0;
+    });
+  })();
+</script>

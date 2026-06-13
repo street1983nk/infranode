@@ -1,0 +1,901 @@
+/* InfraNode Doku, Premium-Design (D-01). Drei-Spalten-Layout, ruhiger
+   Whitespace, dunkle Code-Bloecke, Method-Badges, sticky Sidebar. Kein
+   Framework. Farben aus dem Logo gesampelt: Petrol + Gruen. */
+
+:root {
+  /* Markenfarben, aus public/logo-infranode.png gesampelt.
+     Petrol-Familie #004050/#105050, Gruen-Familie #80b030/#90b030.
+     Fuer WCAG-AA-Kontrast auf Weiss leicht justiert. */
+  --color-primary: #1d4e5c; /* Petrol, Links/Buttons/aktive Nav */
+  --color-primary-strong: #163c47; /* Petrol dunkler, Hover */
+  --color-primary-soft: #e7f0f2; /* Petrol sehr hell, aktive Flaechen */
+  --color-accent: #5f9e2f; /* Gruen, Badges/CTAs (AA auf Weiss) */
+  --color-accent-strong: #4e8526; /* Gruen dunkler, Hover */
+  --color-accent-soft: #eef6e4; /* Gruen sehr hell */
+
+  --bg: #ffffff;
+  --bg-soft: #f6f8f9;
+  --fg: #14242a;
+  --fg-muted: #56656c;
+  --border: #eef1f2;
+  --border-strong: #dde4e6;
+  --accent: var(--color-primary);
+  --accent-soft: var(--color-primary-soft);
+  --code-bg: #0d2a33; /* dunkler Petrol fuer Code-Bloecke */
+  --code-fg: #e8f0f1;
+  --code-border: #1d4e5c;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 8px 28px rgba(13, 42, 51, 0.1);
+  --radius: 8px;
+  --maxw: 1320px;
+  --nav-w: 260px;
+  --toc-w: 220px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font);
+  color: var(--fg);
+  background: var(--bg);
+  line-height: 1.6;
+  font-size: 16px;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.9em;
+}
+
+/* Topbar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.7rem 1.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(150%) blur(8px);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.topbar__brand {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.topbar__brand:hover {
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.topbar__wordmark {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+.topbar__wordmark-tld {
+  color: var(--color-accent);
+}
+.topbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.topbar__logo {
+  height: 64px;
+  width: auto;
+  display: block;
+}
+@media (max-width: 640px) {
+  .topbar__logo {
+    height: 52px;
+  }
+}
+
+/* Layout-Grid */
+.layout {
+  display: grid;
+  grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--toc-w);
+  gap: 2rem;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 4rem;
+}
+
+/* Linke Navigation */
+.nav {
+  position: sticky;
+  top: 4rem;
+  align-self: start;
+  max-height: calc(100vh - 5rem);
+  overflow-y: auto;
+}
+
+/* Aufklappbares Navigationsmenue. Auf Desktop ist die Liste immer offen und der
+   Umschalt-Button ausgeblendet; das <details> traegt dort das open-Attribut.
+   Auf Mobil (Breakpoint unten) wird der Button sichtbar und die Liste klappt
+   per Default ein, damit der Inhalt zuerst sichtbar ist. */
+.nav__toggle {
+  display: none;
+}
+
+.nav__group {
+  margin-bottom: 1.25rem;
+}
+
+.nav__title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+  margin: 0 0 0.4rem;
+}
+
+.nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav__link {
+  display: block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+}
+
+.nav__link:hover {
+  background: var(--bg-soft);
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.nav__link[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Mittiger Content */
+.content {
+  min-width: 0;
+}
+
+.content h1 {
+  font-size: 2rem;
+  margin: 0 0 0.5rem;
+}
+
+.content h2 {
+  font-size: 1.35rem;
+  margin: 2rem 0 0.75rem;
+}
+
+.content p {
+  color: var(--fg);
+}
+
+/* Rechtes On-this-page */
+.toc {
+  position: sticky;
+  top: 4rem;
+  align-self: start;
+  font-size: 0.85rem;
+}
+
+.toc__title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+  margin: 0 0 0.5rem;
+}
+
+.toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.toc__link {
+  display: block;
+  padding: 0.2rem 0;
+  color: var(--fg-muted);
+}
+
+/* Karten: flach, klar berandet, kein Schatten (developer-nativ). */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+
+/* Methode-Badge */
+.method {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.18rem 0.55rem;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: var(--color-primary);
+  vertical-align: middle;
+}
+
+.method--get {
+  background: var(--color-accent);
+}
+
+.method--post {
+  background: #b4690e;
+}
+
+.method--put,
+.method--patch {
+  background: #8a5a12;
+}
+
+.method--delete {
+  background: #b23b3b;
+}
+
+.path {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--fg);
+}
+
+/* Parameter-Tabelle */
+.params {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.params th,
+.params td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.params th {
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.params code {
+  background: var(--bg-soft);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+/* Code-Tabs */
+.codetabs__bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.codetabs__buttons {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: -1px;
+}
+
+.codetabs__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  margin-bottom: 0.3rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+
+.codetabs__copy:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.codetabs__copy svg {
+  flex: none;
+}
+
+.codetabs__btn {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--fg-muted);
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+}
+
+.codetabs__btn[aria-selected="true"] {
+  color: var(--code-fg);
+  background: var(--code-bg);
+}
+
+.codetabs__pre {
+  margin: 0;
+  padding: 1rem;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid var(--code-border);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.codetabs__pre code {
+  font-size: inherit;
+}
+
+/* Try it */
+.tryit {
+  background: var(--bg-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.tryit__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.tryit__field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.tryit__field input {
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.tryit__btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.tryit__btn:hover {
+  background: var(--color-primary-strong);
+}
+
+.tryit__out {
+  margin: 1rem 0 0;
+  padding: 1rem;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  min-height: 2rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tryit__hint {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+}
+
+/* Suche */
+.search {
+  position: relative;
+  flex: 1;
+  max-width: 420px;
+}
+
+.search__field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-soft);
+}
+
+.search__field svg {
+  flex: none;
+  color: var(--fg-muted);
+}
+
+.search__input {
+  font: inherit;
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+}
+
+.search__results {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0.4rem;
+}
+
+.search__results:empty {
+  display: none;
+}
+
+.search__result {
+  display: block;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  color: var(--fg);
+}
+
+.search__result:hover {
+  background: var(--bg-soft);
+  text-decoration: none;
+}
+
+.search__result-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.search__result-excerpt {
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+}
+
+.search__result-excerpt mark {
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 0 0.1rem;
+}
+
+/* Responsive: einspaltig auf kleinen Viewports */
+@media (max-width: 1080px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .nav,
+  .toc {
+    position: static;
+    max-height: none;
+  }
+  /* Funktionsliste in ein aufklappbares Menue: Button sichtbar, Liste startet
+     eingeklappt (JS entfernt das open-Attribut), damit der Inhalt zuerst kommt. */
+  .nav__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    cursor: pointer;
+    list-style: none;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg-soft);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .nav__toggle::-webkit-details-marker {
+    display: none;
+  }
+  .nav__toggle::after {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+  }
+  .nav__disclosure[open] .nav__toggle::after {
+    transform: rotate(-135deg);
+  }
+  /* Sichtbarkeit explizit ueber das open-Attribut steuern (nicht ueber den
+     nativen <details>-Mechanismus, der mit gesetztem display kollidiert). */
+  .nav__inner {
+    display: none;
+  }
+  .nav__disclosure[open] .nav__inner {
+    display: block;
+    margin-top: 1rem;
+  }
+}
+
+/* Landing */
+.hero__inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem 3rem;
+}
+
+.hero__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.8rem;
+  flex-wrap: wrap;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-block;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-strong);
+  text-decoration: none;
+}
+
+.btn-accent {
+  display: inline-block;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.btn-accent:hover {
+  background: var(--color-accent-strong);
+  text-decoration: none;
+}
+
+.btn-secondary {
+  background: var(--bg-soft);
+  color: var(--fg);
+  border: 1px solid var(--border-strong);
+}
+
+.btn-secondary:hover {
+  text-decoration: none;
+  border-color: var(--color-primary);
+}
+
+/* Hero (Startseite): flach mit dezentem Blueprint-Hairline-Raster statt
+   weichem Pastell-Radial-Gradient. Technische Datenblatt-Anmutung. */
+.hero {
+  border-bottom: 1px solid var(--border-strong);
+  background:
+    linear-gradient(to right, var(--border) 1px, transparent 1px) -1px 0 / 72px 100%,
+    var(--bg);
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-accent-strong);
+  margin: 0 0 1rem;
+}
+.hero__eyebrow::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--color-accent);
+  border-radius: 1px;
+}
+
+.hero h1 {
+  font-size: 2.8rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.9rem;
+  color: var(--fg);
+}
+
+.hero__lede {
+  font-size: 1.18rem;
+  color: var(--fg-muted);
+  max-width: 44rem;
+}
+
+/* Zahlen-Badges */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 1.6rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  font-size: 0.9rem;
+  color: var(--fg-muted);
+}
+
+.stat a {
+  color: inherit;
+}
+
+.stat strong {
+  font-family: var(--mono);
+  font-size: 1.02rem;
+  color: var(--color-primary);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Feature-Raster: zusammenhaengendes Datenblatt statt schwebender Karten.
+   Kein Schatten, keine Pastell-Card; flache Flaechen, Hairline-Trenner,
+   Mono-Index als technischer Akzent. Hover schaltet die Flaeche um. */
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1px;
+  margin: 1.6rem 0;
+  padding: 0;
+  list-style: none;
+  background: var(--border-strong);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  overflow: hidden;
+  counter-reset: feat;
+}
+
+.feature {
+  background: var(--bg);
+  padding: 1.35rem 1.45rem 1.45rem;
+  transition: background 0.18s ease;
+}
+
+.feature:hover {
+  background: var(--bg-soft);
+}
+
+.feature h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+}
+
+.feature h3::before {
+  counter-increment: feat;
+  content: counter(feat, decimal-leading-zero);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-accent-strong);
+  padding-top: 0.1rem;
+}
+
+.feature h3 svg {
+  flex: none;
+  color: var(--color-primary);
+}
+
+.feature p {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--fg-muted);
+}
+
+/* Inline-Code im Fliesstext */
+.content :not(pre) > code {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-strong);
+  padding: 0.1rem 0.35rem;
+  border-radius: 5px;
+  font-size: 0.86em;
+}
+
+/* Sprach-Switcher in der Topbar (dezent, DE | EN) */
+.langswitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 0.9rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+.langswitch__link {
+  color: var(--fg-muted);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.langswitch__link[aria-current="true"] {
+  color: var(--color-primary);
+}
+.langswitch__link:hover {
+  color: var(--color-primary-strong);
+}
+.langswitch__sep {
+  color: var(--border-strong);
+}
+
+/* Hinweis unter dem API-Reference-Nav-Eintrag (EN) */
+.nav__hint {
+  margin: 0.2rem 0 0;
+  padding: 0 0.2rem;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--border);
+  background: var(--bg-soft);
+  margin-top: 3rem;
+}
+.footer__inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 1.6rem 1.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.2rem;
+}
+.footer__brand {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+.footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+.footer__link {
+  color: var(--fg-muted);
+  font-size: 0.88rem;
+}
+.footer__link:hover {
+  color: var(--color-primary-strong);
+}
+.footer__meta {
+  margin: 0;
+  flex-basis: 100%;
+  color: var(--fg-muted);
+  font-size: 0.82rem;
+}
+
+/* TL;DR-Direktantwort-Block (Landing, GEO). Voller Rahmen + getoente Flaeche
+   statt farbiger Seiten-Leiste; Mono-Label als technischer Marker. */
+.tldr {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-soft);
+  border-radius: 6px;
+  padding: 1.1rem 1.3rem;
+  margin: 1.4rem 0 2rem;
+}
+.tldr__title {
+  margin: 0 0 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--color-accent-strong);
+}
+.tldr__title::before {
+  content: "// ";
+  color: var(--border-strong);
+}
+.tldr p {
+  margin: 0 0 0.6rem;
+}
+.tldr ul {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+/* FAQ als border-getrennte Liste statt schwebender Karten (editorial, flach). */
+.faq {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border-strong);
+}
+.faq__item {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border-strong);
+}
+.faq__q {
+  margin: 0 0 0.3rem;
+  font-size: 1rem;
+  color: var(--fg);
+  letter-spacing: -0.005em;
+}
+.faq__a {
+  margin: 0;
+  color: var(--fg-muted);
+  max-width: 70ch;
+}
+
+/* Definitionsliste fuer Impressum/Kontakt-Bloecke */
+.legal dt {
+  font-weight: 600;
+  margin-top: 0.7rem;
+}
+.legal dd {
+  margin: 0 0 0.2rem;
+}

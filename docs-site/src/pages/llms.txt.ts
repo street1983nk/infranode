@@ -1,0 +1,96 @@
+// llms.txt an der Build-Wurzel (DX-04, GEO). Format strikt nach llmstxt.org:
+// H1 (Projektname) -> Blockquote-Summary -> H2-Sektionen je tag mit
+// Markdown-Linklisten ("- [METHOD path](<url>): summary"). Single Source ist
+// loadEndpoints() (openapi.yaml). Astro-Endpoint: export GET -> Response
+// (text/plain). Defensiv gegen fehlende Felder (Pitfall 5). ASCII in Code/URLs,
+// Umlaute nur in Prosa, keine Em-Dashes, keine Emojis.
+import type { APIRoute } from "astro";
+import { getCollection } from "astro:content";
+import type { Endpoint } from "../lib/openapi";
+
+// Datenquelle ist die endpoints-Collection (gespeist aus loadEndpoints() in
+// content.config.ts, Single Source openapi.yaml). Die Collection wird im
+// Astro-Build-Kontext geladen, daher robust gegen das Cwd-/Bundle-Pfadproblem
+// eines direkten loadEndpoints()-Aufrufs in der prerenderten Route.
+
+// Absolute Doku-Domain. Astro.site stammt aus astro.config.mjs (Env
+// INFRANODE_DOCS_SITE), Fallback ist die oeffentliche Domain infranode.dev.
+function siteBase(site: URL | undefined): string {
+  return (site?.toString() ?? "https://infranode.dev").replace(/\/$/, "");
+}
+
+export const GET: APIRoute = async ({ site }) => {
+  const base = siteBase(site);
+  const collection = await getCollection("endpoints");
+  const endpoints: Endpoint[] = collection.map((entry) => entry.data as Endpoint);
+
+  // Nach tag gruppieren, je Gruppe nach id sortieren (stabile Reihenfolge).
+  const groups = new Map<string, typeof endpoints>();
+  for (const endpoint of endpoints) {
+    const tag = endpoint.tag || "meta";
+    if (!groups.has(tag)) groups.set(tag, []);
+    groups.get(tag)!.push(endpoint);
+  }
+  for (const list of groups.values()) {
+    list.sort((a, b) => a.id.localeCompare(b.id));
+  }
+  const sortedTags = [...groups.keys()].sort();
+
+  const lines: string[] = [];
+  lines.push("# InfraNode API");
+  lines.push("");
+  lines.push(
+    "> Eine kostenlose, öffentliche Open-Data-Proxy-REST-API, die fragmentierte " +
+      "offene Daten deutscher Großstädte (84 Städte über 100.000 Einwohner, davon " +
+      "28 Kern-Städte voll abgedeckt) hinter einer einheitlichen, " +
+      "normalisierten JSON-Schnittstelle bündelt (Stammdaten, Luftqualität, " +
+      "Wetter, POIs, ÖPNV, Verkehr). Jede Antwort folgt dem kanonischen " +
+      "Envelope mit data und meta auf Top-Level (source_status, correlation_id " +
+      "und cache_status liegen in meta); jeder data-Record trägt zusätzlich ein " +
+      "attribution-Feld mit Lizenz und Herkunft.",
+  );
+  lines.push("");
+  lines.push(
+    "Diese Datei listet alle Endpunkte mit Links zu ihrer Doku im Markdown-" +
+      "Format. Je Endpunkt-Seite existiert eine .md-Variante unter " +
+      `${base}/api/<operationId>.md für den direkten Maschinen-Konsum.`,
+  );
+  lines.push("");
+
+  // Kern-Seiten (Doku, MCP, Ueber) zuerst, damit Agenten Einstieg und Kontext
+  // finden, gefolgt von der englischen Fassung der Kernseiten.
+  lines.push("## Seiten");
+  lines.push("");
+  lines.push(`- [Quick-Start](${base}/quickstart/): In drei Schritten zum ersten Aufruf, ohne Schlüssel.`);
+  lines.push(`- [Städte](${base}/staedte/): Durchsuchbare Liste aller 84 abgedeckten Großstädte mit Slug, Bundesland, Einwohnern und Abdeckung.`);
+  lines.push(`- [Abdeckung & Status](${base}/abdeckung/): Welche Endpunkte für welche Städte Daten liefern (flächendeckend vs. teilabgedeckt: flood, webcams, traffic, road-events), source_status-Werte inkl. not_covered, Live-Status-Page für Störungen.`);
+  lines.push(`- [MCP-Server](${base}/mcp/): Gehosteter MCP-Server unter https://mcp.infranode.dev/mcp (Remote, Streamable HTTP, keylos) mit 21 Stadtdaten-Tools. Als Connector in Claude/ChatGPT verbinden, keine Installation.`);
+  lines.push(`- [Über](${base}/ueber/): Hintergrund zum Projekt, kostenlose Open-Data-API (Quellcode-Veröffentlichung in Vorbereitung), Betrieb in Deutschland, Kontakt.`);
+  lines.push(`- [Impressum](${base}/impressum/): Anbieterangaben nach DDG.`);
+  lines.push(`- [Datenschutz](${base}/datenschutz/): Keine Cookies, kein Tracking, DSGVO-Rechte.`);
+  lines.push("");
+  lines.push("## English");
+  lines.push("");
+  lines.push(`- [Home](${base}/en/): Free, public open-data API for German cities.`);
+  lines.push(`- [Quickstart](${base}/en/quickstart/): Your first call in three steps, no key.`);
+  lines.push(`- [Cities](${base}/en/cities/): Searchable list of all 84 covered cities with slug, state, population and coverage.`);
+  lines.push(`- [Coverage & status](${base}/en/coverage/): Which endpoints serve which cities (fully vs. partially covered: flood, webcams, traffic, road-events), source_status values incl. not_covered, live status page for outages.`);
+  lines.push(`- [MCP server](${base}/en/mcp/): Hosted MCP server at https://mcp.infranode.dev/mcp (remote, Streamable HTTP, key-free) with 21 city-data tools. Add as a connector in Claude/ChatGPT, no install.`);
+  lines.push(`- [About](${base}/en/about/): Background, free open-data API (source code release in preparation), contact.`);
+  lines.push("");
+
+  for (const tag of sortedTags) {
+    lines.push(`## ${tag}`);
+    lines.push("");
+    for (const endpoint of groups.get(tag)!) {
+      const summary = endpoint.summary || endpoint.description || endpoint.id;
+      const url = `${base}/api/${endpoint.id}.md`;
+      lines.push(`- [${endpoint.method} ${endpoint.path}](${url}): ${summary}`);
+    }
+    lines.push("");
+  }
+
+  return new Response(lines.join("\n"), {
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+};

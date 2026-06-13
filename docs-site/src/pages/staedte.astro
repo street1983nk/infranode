@@ -1,0 +1,221 @@
+---
+// Staedte-Uebersicht (/staedte): vollstaendige, durchsuchbare Liste aller 84
+// abgedeckten Grossstaedte. Datenquelle: src/data/cities.json (slug, name,
+// state, coverage, population).
+//
+// cities.json wird aus der Single Source CITY_REGISTRY exportiert. Regenerieren:
+//   uv run python scripts/export-cities.py
+// (Einzeiler-Aequivalent steht im Kopf von scripts/export-cities.py.)
+import Docs from "../layouts/Docs.astro";
+import cities from "../data/cities.json";
+import { API_BASE } from "../lib/codegen";
+
+// Bundesland-Kuerzel -> ausgeschriebener Name (echte Umlaute).
+const STATES: Record<string, string> = {
+  BW: "Baden-Württemberg",
+  BY: "Bayern",
+  BE: "Berlin",
+  BB: "Brandenburg",
+  HB: "Bremen",
+  HH: "Hamburg",
+  HE: "Hessen",
+  MV: "Mecklenburg-Vorpommern",
+  NI: "Niedersachsen",
+  NW: "Nordrhein-Westfalen",
+  RP: "Rheinland-Pfalz",
+  SL: "Saarland",
+  SN: "Sachsen",
+  ST: "Sachsen-Anhalt",
+  SH: "Schleswig-Holstein",
+  TH: "Thüringen",
+};
+
+const fmt = new Intl.NumberFormat("de-DE");
+const sorted = [...cities].sort((a, b) => a.name.localeCompare(b.name, "de"));
+const total = sorted.length;
+const coreCount = sorted.filter((c) => c.coverage === "full").length;
+---
+
+<Docs
+  title="Städte"
+  description="Alle 84 von InfraNode abgedeckten deutschen Großstädte über 100.000 Einwohner: Name, Slug, Bundesland, Einwohner und Abdeckung. Durchsuchbar."
+  current="staedte"
+  lang="de"
+  altLangPath="/en/cities/"
+>
+  <h1>Städte</h1>
+
+  <p>
+    InfraNode deckt {total} deutsche Großstädte über 100.000 Einwohner ab. Davon
+    sind {coreCount} Kern-Städte mit gepflegter, handverifizierter Quellen-Abdeckung
+    (Badge <span class="city-badge city-badge--core">Kern</span>). Die übrigen
+    Städte (Badge <span class="city-badge city-badge--auto">Auto</span>) werden
+    über AGS- und geobasierte Quellen bedient; wo eine handkuratierte Quelle für
+    sie nichts liefert, antwortet die API ehrlich mit <code>no_data</code> statt
+    einem Fehler.
+  </p>
+
+  <p>
+    Die maschinenlesbare Liste aller Städte gibt es über
+    <a href="/api/getCities/"><code>GET /api/v1/cities</code></a>:
+  </p>
+  <pre><code>curl {API_BASE}/api/v1/cities</code></pre>
+
+  <h2>Ein Slug, alle Endpunkte</h2>
+  <p>
+    Die 23 Stadt-Endpunkte funktionieren je Stadt über denselben Slug. Setze
+    einfach den Slug aus der Tabelle in den Pfad ein, zum Beispiel für Berlin.
+    Dazu kommen Live-Endpunkte, die teils stadtspezifisch sind (zum Beispiel
+    Köln Verkehrslage, Berlin Verkehrsmeldungen) und die ÖPNV-Echtzeit für alle
+    Städte:
+  </p>
+  <ul>
+    <li><code>/api/v1/cities/berlin/weather</code></li>
+    <li><code>/api/v1/cities/berlin/air-uba</code></li>
+    <li><code>/api/v1/cities/berlin/transit</code></li>
+    <li><code>/api/v1/cities/berlin/events</code></li>
+  </ul>
+  <p>
+    Die vollständige Liste aller Endpunkte findest du in der
+    <a href="/api/getCityWeather/">API-Referenz</a> in der linken Navigation.
+  </p>
+
+  <h2>Alle {total} Städte</h2>
+  <p>
+    <label class="city-search">
+      <span class="city-search__label">Suche</span>
+      <input
+        type="search"
+        id="city-search"
+        class="city-search__input"
+        placeholder="Name, Slug oder Bundesland filtern..."
+        autocomplete="off"
+        aria-label="Städte nach Name, Slug oder Bundesland filtern"
+      />
+    </label>
+  </p>
+
+  <table class="cities" id="cities-table">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Slug</th>
+        <th scope="col">Bundesland</th>
+        <th scope="col">Einwohner</th>
+        <th scope="col">Abdeckung</th>
+        <th scope="col">Beispiel</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        sorted.map((city) => {
+          const stateName = STATES[city.state] ?? city.state;
+          const example = `/api/v1/cities/${city.slug}/weather`;
+          return (
+            <tr
+              data-name={city.name.toLowerCase()}
+              data-slug={city.slug.toLowerCase()}
+              data-state={stateName.toLowerCase()}
+            >
+              <td>{city.name}</td>
+              <td><code>{city.slug}</code></td>
+              <td>{stateName}</td>
+              <td class="cities__num">{city.population != null ? fmt.format(city.population) : "-"}</td>
+              <td>
+                {city.coverage === "full" ? (
+                  <span class="city-badge city-badge--core">Kern</span>
+                ) : (
+                  <span class="city-badge city-badge--auto">Auto</span>
+                )}
+              </td>
+              <td>
+                <a href="/api/getCityWeather/">Wetter</a>{" "}
+                <code>{example}</code>
+              </td>
+            </tr>
+          );
+        })
+      }
+    </tbody>
+  </table>
+  <p class="city-search__empty" id="cities-empty" hidden>
+    Keine Stadt gefunden.
+  </p>
+</Docs>
+
+<style>
+  .city-search {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+    max-width: 28rem;
+  }
+  .city-search__label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--fg-muted);
+  }
+  .city-search__input {
+    font: inherit;
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--fg);
+  }
+  .city-search__input:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+  table.cities td.cities__num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .city-badge {
+    display: inline-block;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 0.12rem 0.5rem;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+  }
+  .city-badge--core {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-strong);
+  }
+  .city-badge--auto {
+    background: var(--bg-soft);
+    color: var(--fg-muted);
+    border: 1px solid var(--border-strong);
+  }
+</style>
+
+<script is:inline>
+  // Sofort-Suche: filtert Tabellenzeilen nach Name/Slug/Bundesland (clientseitig,
+  // keine Abhaengigkeiten). data-*-Attribute tragen die kleingeschriebenen Werte.
+  (function () {
+    var input = document.getElementById("city-search");
+    var table = document.getElementById("cities-table");
+    var empty = document.getElementById("cities-empty");
+    if (!input || !table) return;
+    var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      var visible = 0;
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var hay =
+          (r.getAttribute("data-name") || "") +
+          " " +
+          (r.getAttribute("data-slug") || "") +
+          " " +
+          (r.getAttribute("data-state") || "");
+        var match = q === "" || hay.indexOf(q) !== -1;
+        r.hidden = !match;
+        if (match) visible++;
+      }
+      if (empty) empty.hidden = visible !== 0;
+    });
+  })();
+</script>

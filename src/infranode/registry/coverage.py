@@ -1,0 +1,73 @@
+"""Oeffentliche Per-City-Coverage-Karte der teilabgedeckten Endpunkte.
+
+Ehrlichkeit statt leerer Versprechen (Owner-Entscheidung 2026-06-13): einige
+Endpunkte decken nur kuratierte Staedte ab. Frueher lieferten sie fuer eine
+nicht-abgedeckte Stadt ein leeres ``source_status="ok"`` (sieht aus wie "kein
+Ereignis"), was die fehlende Abdeckung verschleiert. Stattdessen weisen die
+Routen jetzt ``source_status="not_covered"`` aus (200, ``data: null``) und
+nennen im meta-Block die abgedeckten Staedte (``covered_cities``). ``not_covered``
+ist klar unterscheidbar von ``no_data`` (Stadt abgedeckt, aktuell aber keine
+Daten) und vom 404 (Stadt unbekannt).
+
+Dieses Modul ist die EINZIGE Quelle der Wahrheit der Abdeckung und wird aus den
+kuratierten Adapter-Stadt-Maps ABGELEITET (kein Duplizieren der Slug-Listen):
+- ``flood``    -> ``adapters.lhp._CITY_PEGEL`` (kuratierte Pegel je Stadt)
+- ``webcams``  -> ``adapters.autobahn._CITY_ROADS`` (kuratierte Autobahnen)
+- ``traffic``  -> ``adapters.autobahn._CITY_ROADS`` (dieselbe Map wie webcams)
+- ``road-events`` -> ``api.v1.cities.CONNECTOR_MAP`` (kuratierte Stadt-Connectoren)
+
+Da ``CONNECTOR_MAP`` in ``cities.py`` lebt (mit fetch_fn/mapper-Tupeln) und
+``cities.py`` dieses Modul importiert, wird die road-events-Liste hier gespiegelt
+statt importiert (Zirkelimport-Vermeidung). Eine Modul-Assertion in ``cities.py``
+sichert die Gleichheit beider Listen ab und faengt Drift beim Import hart ab.
+
+NICHT teilabgedeckt (bewusst NICHT in dieser Karte):
+- ``water-level``: Geo-Proximity ohne kuratierte Stadt-Map; liefert bei fehlender
+  naher Station bereits ehrlich ``no_data`` (dynamisch, deutschlandweit an
+  Bundeswasserstrassen).
+- ``live/transit/*``: bundesweiter GTFS-RT-Feed ohne strukturelle Stadt-Grenze;
+  ``no_data`` bei leerem Redis bleibt das ehrliche Verdict.
+Alle uebrigen city-/live-Endpunkte sind flaechendeckend (84/84).
+"""
+
+from __future__ import annotations
+
+from infranode.adapters.autobahn import _CITY_ROADS
+from infranode.adapters.lhp import _CITY_PEGEL
+
+# road-events: gespiegelt aus ``api.v1.cities.CONNECTOR_MAP`` (siehe Modul-Docstring).
+# Die Assertion in cities.py haelt diese Liste mit der CONNECTOR_MAP synchron.
+_ROAD_EVENTS_CITIES: frozenset[str] = frozenset(
+    {"berlin", "koeln", "hamburg", "muenchen", "stuttgart"}
+)
+
+# Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
+# Die Kennung entspricht dem letzten Pfadsegment der Route (``/cities/{slug}/<key>``).
+PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
+    "flood": frozenset(_CITY_PEGEL),
+    "webcams": frozenset(_CITY_ROADS),
+    "traffic": frozenset(_CITY_ROADS),
+    "road-events": _ROAD_EVENTS_CITIES,
+}
+
+
+def is_covered(endpoint: str, slug: str) -> bool:
+    """True, wenn ``slug`` fuer ``endpoint`` abgedeckt ist.
+
+    Ein unbekannter ``endpoint`` (nicht teilabgedeckt -> flaechendeckend) gilt
+    immer als abgedeckt (fail-open fuer die fully-covered-Endpunkte, die diese
+    Karte nie befragen).
+    """
+    covered = PARTIAL_COVERAGE.get(endpoint)
+    if covered is None:
+        return True
+    return slug in covered
+
+
+def covered_cities(endpoint: str) -> list[str]:
+    """Sortierte Liste der fuer ``endpoint`` abgedeckten Stadt-Slugs.
+
+    Fuer die meta.covered_cities-Ausweisung der ``not_covered``-Antwort. Leer fuer
+    einen unbekannten (= flaechendeckenden) Endpunkt.
+    """
+    return sorted(PARTIAL_COVERAGE.get(endpoint, frozenset()))

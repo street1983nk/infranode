@@ -1,0 +1,49 @@
+# Build-Context schlank halten + Secrets/Datenmuell vom Image fernhalten (T-02-03).
+# .env wird zur Laufzeit via env_file injiziert, NIE ins Image kopiert.
+
+# Virtuelle Umgebungen (werden im Builder neu erstellt)
+.venv/
+venv/
+
+# Git-Metadaten
+.git/
+.gitignore
+
+# Secrets / Env (NIE ins Image)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+
+# Tests + Planungsartefakte (Laufzeit irrelevant)
+tests/
+.planning/
+
+# Python-Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Grosse Upstream-Dumps / Cache
+data/
+# Ausnahme: committete Seeds braucht der Image-Build (Dockerfile COPY data/seeds)
+!data/seeds/
+!data/seeds/**
+*.gtfs
+*.zip
+*.parquet
+.cache/
+
+# Claude Code / Harness
+.claude-active
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

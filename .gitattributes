@@ -1,0 +1,4 @@
+# YAML-Workflows und Shell-Skripte muessen LF behalten (eingebettete Heredocs
+# brechen sonst bei Ausfuehrung auf Linux-Runnern/der Box).
+/.github/workflows/*.yml text eol=lf
+*.sh text eol=lf
