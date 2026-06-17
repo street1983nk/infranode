@@ -8,8 +8,8 @@
 # Multi-Stage analog zum bestehenden Dockerfile (Builder kompiliert, Final-Stage
 # kopiert nur das fertige Binary in ein schlankes Laufzeit-Image).
 #
-# arm64-Hinweis: caddy:builder und caddy:2 sind multi-arch und auf der Hetzner-CAX
-# (ARM/aarch64) nativ baubar; alternativ `buildx --platform linux/arm64`.
+# Arch-Hinweis: caddy:builder und caddy:2 sind multi-arch; die Prod-Box ist
+# AMD EPYC-Genoa (x86_64), die Images laufen als linux/amd64.
 
 # --- Builder-Stage: caddy mit dem Cloudflare-DNS-Modul bauen ------------------
 FROM caddy:builder AS builder

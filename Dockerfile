@@ -1,7 +1,8 @@
 # InfraNode API - Multi-Stage uv-Build (FND-01)
 # Quelle: uv Docker Guide (https://docs.astral.sh/uv/guides/integration/docker/) [CITED: STACK.md]
-# Basis: python:3.13-slim-bookworm (multi-arch, arm64-tauglich fuer Hetzner CAX11);
-# bewusst slim-bookworm statt musl-basierter Images (musl-Wheel-Recompiles, langsam/OOM auf arm64).
+# Basis: python:3.13-slim-bookworm (multi-arch; laeuft auf der Prod-Box als
+# linux/amd64, AMD EPYC-Genoa/x86_64); bewusst slim-bookworm statt musl-basierter
+# Images (musl-Wheel-Recompiles, langsam/OOM).
 
 # --- Builder-Stage: Deps + Projekt installieren -----------------------------
 FROM python:3.13-slim-bookworm AS builder
