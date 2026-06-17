@@ -238,8 +238,10 @@ Agent: In Berlin sind es aktuell 19,4 Grad, trocken (Quelle: DWD).
 ```
 
 Fehlerfall, unbekannte Stadt. Die Live-API antwortet mit HTTP 404 und einem
-strukturierten Fehler-Envelope; der Client sieht eine klare Meldung statt eines
-stillen Fehlers:
+strukturierten Fehler-Envelope. Der MCP-Server gibt diesen nicht als rohen
+Traceback weiter, sondern reicht `message` und `hint` als lesbare
+Tool-Fehlermeldung durch, sodass das Modell sich selbst korrigieren kann (z.B.
+`list_cities` aufrufen):
 
 ```
 Agent -> Tool: get_city(slug="atlantis")

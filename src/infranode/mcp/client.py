@@ -120,6 +120,40 @@ ALLOWED_COLLECTIONS: frozenset[str] = frozenset(
 _TIMEOUT_SECONDS = 30.0
 
 
+class UpstreamError(RuntimeError):
+    """Lesbarer Fehler aus dem Antwort-Envelope der Live-API.
+
+    Wird bei einem 4xx/5xx-Status geworfen, statt einen rohen
+    ``httpx.HTTPStatusError``-Traceback an den Agenten zu geben. FastMCP wandelt
+    eine geworfene Exception in einen Tool-Fehler um, dessen Text das Modell
+    sieht; mit dieser Klasse traegt der Text die strukturierte API-Meldung inkl.
+    ``hint``, sodass sich das Modell selbst korrigieren kann (z.B. ``list_cities``
+    bei unbekanntem Slug aufrufen).
+    """
+
+
+def _build_upstream_error(response: httpx.Response) -> UpstreamError:
+    """Formt aus einer Fehler-Response eine lesbare ``UpstreamError``.
+
+    Bevorzugt den kanonischen API-Fehler-Envelope ``{"error": {"message",
+    "hint", "code"}}``; faellt auf den (gekuerzten) Rohtext bzw. den HTTP-Grund
+    zurueck, falls die Antwort kein erwartetes JSON ist.
+    """
+    detail = ""
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    if isinstance(body, dict) and isinstance(body.get("error"), dict):
+        err = body["error"]
+        detail = " ".join(
+            str(part) for part in (err.get("message"), err.get("hint")) if part
+        )
+    if not detail:
+        detail = response.text[:200].strip() or response.reason_phrase
+    return UpstreamError(f"InfraNode-API {response.status_code}: {detail}")
+
+
 def _base_url() -> str:
     """Liest die Base-URL aus der Env und prueft den Host gegen die Allowlist.
 
@@ -268,5 +302,9 @@ async def _request(
 
     async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
         response = await client.get(url, params=params, headers=headers)
-        response.raise_for_status()
+        # Bei 4xx/5xx den strukturierten API-Fehler-Envelope als lesbare
+        # UpstreamError durchreichen, statt einen rohen Traceback an den Agenten
+        # zu geben (das Modell sieht so message + hint und kann sich korrigieren).
+        if response.is_error:
+            raise _build_upstream_error(response)
         return response.json()
