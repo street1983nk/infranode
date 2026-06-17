@@ -23,6 +23,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.staticfiles import StaticFiles
 
+from infranode import __version__
 from infranode.api.responses import OrjsonResponse
 
 from .api.errors import register_exception_handlers
@@ -377,7 +378,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="InfraNode API",
-        version="1.0.0",
+        version=__version__,
         default_response_class=OrjsonResponse,
         lifespan=lifespan,
     )

@@ -13,6 +13,8 @@ import structlog
 from asgi_correlation_id import correlation_id
 from fastapi import APIRouter, Request
 
+from infranode import __version__
+
 from ..errors import UpstreamError
 
 router = APIRouter()
@@ -28,7 +30,7 @@ async def health(request: Request) -> dict:
         redis_ok = True
     except Exception:
         redis_ok = False
-    return {"status": "ok", "version": "1.0.0", "redis": redis_ok}
+    return {"status": "ok", "version": __version__, "redis": redis_ok}
 
 
 @router.get("/ping")

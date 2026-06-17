@@ -13,9 +13,14 @@ from __future__ import annotations
 
 import httpx
 
-#: Descriptive User-Agent auf JEDEM Upstream-Request (RES-05, T-03-04).
+from infranode import __version__
+
+#: Descriptive User-Agent auf JEDEM Upstream-Request (RES-05, T-03-04). Die Version
+#: stammt aus der einzigen Quelle ``infranode.__version__`` (kein hartkodierter
+#: Versionsstring, der mit Releases driftet).
 USER_AGENT = (
-    "InfraNodeAPI/0.1 (+https://github.com/street1983nk/infranode-api; open data proxy)"
+    f"InfraNodeAPI/{__version__} "
+    "(+https://github.com/street1983nk/infranode-api; open data proxy)"
 )
 
 #: Prozessweiter Pool-Singleton. ``create_http_client`` gibt fuer denselben
