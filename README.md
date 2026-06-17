@@ -15,7 +15,7 @@ In Betrieb. Die versionierte FastAPI-Anwendung läuft unter `/api/v1/...` mit st
 
 ## MCP-Server
 
-InfraNode ist auch als Model-Context-Protocol-Server nutzbar: 37 read-only Tools über alle Stadtdaten, keylos. Der schnellste Weg ist der öffentliche Remote-Endpunkt (kein Build, keine lokale API):
+InfraNode ist auch als Model-Context-Protocol-Server nutzbar: 38 read-only Tools über alle Stadtdaten, keylos. Der schnellste Weg ist der öffentliche Remote-Endpunkt (kein Build, keine lokale API):
 
 ```bash
 claude mcp add --transport http infranode https://mcp.infranode.dev/mcp

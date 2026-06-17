@@ -107,11 +107,14 @@ ALLOWED_LIVE_RESOURCES: frozenset[str] = frozenset(
     }
 )
 
-# T-12-MCP-INJECT: erlaubte slug-lose Collection-Endpunkte (GET /api/v1/<name>).
+# T-12-MCP-INJECT: erlaubte slug-lose Top-Level-Endpunkte (GET /api/v1/<name>),
+# optional mit Query-Parametern. "compare" faechert eine Ressource ueber mehrere
+# Staedte (cities/resource als Query, kein roher Input im Pfad).
 ALLOWED_COLLECTIONS: frozenset[str] = frozenset(
     {
         "cities",
         "sources",
+        "compare",
     }
 )
 

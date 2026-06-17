@@ -229,3 +229,21 @@ async def sources() -> dict:
     Ohne Argumente. Zeigt, welche Quellen InfraNode buendelt und ob sie aktiv sind.
     """
     return await client.get_collection("sources")
+
+
+async def compare(resource: str, cities: str) -> dict:
+    """Vergleicht EINE Ressource ueber mehrere Staedte in EINER Antwort.
+
+    Faechert die Ressource ueber alle genannten Staedte und liefert je Stadt einen
+    eigenen ``source_status`` (ok/disabled/no_data/error/not_found). Eine fehlende
+    oder tote Stadt-Quelle verdirbt die Antwort nicht (Per-Stadt-Degradation).
+
+    Args:
+        resource: Zu vergleichende Ressource. Aktuell unterstuetzt: ``"weather"``
+            (DWD) oder ``"air"`` (UBA-Luftqualitaet).
+        cities: Kommaseparierte Stadt-Slug-Liste, z.B. ``"berlin,koeln,hamburg"``
+            (max. 28 Staedte).
+    """
+    return await client.get_collection(
+        "compare", params={"resource": resource, "cities": cities}
+    )

@@ -14,7 +14,7 @@ InfraNode-Live-API. Jedes Tool ruft einen festen API-Endpunkt auf und gibt
 dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
-deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie und mehr) als 37
+deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie und mehr) als 38
 MCP-Tools.
 
 ## Berechtigungen und Sicherheitsmodell
@@ -120,7 +120,7 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-37 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+38 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
@@ -162,6 +162,7 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `transit_departures` | `slug`, `stop_id?` | Live-ÖPNV-Abfahrten je Halt | GTFS-RT/HVV/VGN |
 | `list_cities` | keine | Liste aller abgedeckten Städte | InfraNode |
 | `sources` | keine | Übersicht aller Quellen mit Lizenz/Status | InfraNode |
+| `compare` | `resource`, `cities` | Eine Ressource (`weather`/`air`) über mehrere Städte vergleichen | InfraNode |
 
 Das `pois`-Tool nimmt zusätzlich `type` aus der API-Whitelist (z.B. `hospital`,
 `school`, `pharmacy`, `restaurant`, `police`, `kindergarten`).

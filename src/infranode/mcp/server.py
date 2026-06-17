@@ -75,6 +75,8 @@ mcp.tool()(tools.station_arrivals)
 mcp.tool()(tools.transit_departures)
 mcp.tool()(tools.list_cities)
 mcp.tool()(tools.sources)
+# API-05/D-06: Multi-City-Compare einer Ressource (weather/air) in einer Antwort.
+mcp.tool()(tools.compare)
 
 
 def run() -> None:
