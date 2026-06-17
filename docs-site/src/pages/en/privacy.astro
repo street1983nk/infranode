@@ -29,8 +29,48 @@ import Docs from "../../layouts/Docs.astro";
     When the pages and the API are accessed, the hosting produces technically
     necessary server logs (for example IP address, time of the request, requested
     resource, user agent). This data serves secure and stable operation and the
-    prevention of abuse. Operation takes place on a server in Germany. This data
-    is not combined with other data sources.
+    prevention of abuse. This data is not combined with other data sources.
+  </p>
+
+  <h2>Hosting</h2>
+  <p>
+    Operation takes place on a server in Germany (Nuremberg) at Hetzner Online
+    GmbH, Industriestr. 25, 91710 Gunzenhausen, Germany. A data processing
+    agreement under Art. 28 GDPR is in place with the provider.
+  </p>
+
+  <h2>Content delivery network (Cloudflare)</h2>
+  <p>
+    For secure and performant delivery and to mitigate attacks, I use the CDN of
+    Cloudflare, Inc. (101 Townsend St, San Francisco, CA 94107, USA). Cloudflare
+    processes the IP address of the request. Transfer to the USA is safeguarded
+    by the EU Standard Contractual Clauses. Cloudflare is certified under the
+    EU-US Data Privacy Framework.
+  </p>
+
+  <h2>Reach measurement (technical, no cookies)</h2>
+  <p>
+    To detect active API users and to prevent abuse, hourly counts are kept on
+    the server (IP address, user agent and the most recently requested path).
+    This data is held in a volatile store (Redis) and automatically deleted
+    after at most three hours. No cookies are set and no cross-device profiles
+    are built. This measurement only concerns API requests, not visits to these
+    documentation pages.
+  </p>
+
+  <h2>Operational notifications (ntfy)</h2>
+  <p>
+    To monitor API operation I send technical event notifications (including the
+    requesting IP address, the user agent and the requested path) to the push
+    notification service ntfy.sh. This too only concerns API requests, not
+    visits to these documentation pages.
+  </p>
+
+  <h2>Legal basis</h2>
+  <p>
+    The legal basis for the processing described above is Art. 6(1)(f) GDPR
+    (legitimate interest in the secure, stable and abuse-free operation of the
+    service). For contact by email the legal basis is Art. 6(1)(b) and (f) GDPR.
   </p>
 
   <h2>Contact</h2>

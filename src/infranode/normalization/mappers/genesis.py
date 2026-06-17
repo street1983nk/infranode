@@ -25,6 +25,7 @@ from infranode.normalization import (
     DemographicsPayload,
     LicenseId,
     LicenseTier,
+    RegionalStatPayload,
     SourceId,
 )
 
@@ -75,6 +76,47 @@ def map_demographics(
             rent_avg=raw.get("rent_avg"),
             reference_year=raw.get("reference_year"),
             series=raw.get("series", []),
+        ),
+    )
+
+
+def map_regional_stat(
+    slug: str,
+    raw: dict,
+    *,
+    dataset: str,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet eine GENESIS-Regionalstatistik-Kennzahl auf einen ``CanonicalRecord`` ab.
+
+    ``raw`` ist das vom Adapter (``fetch_genesis_table``) gelieferte dict
+    (``reference_year``/``region_name``/``values``). ``dataset`` benennt den
+    Datensatz (unemployment/tourism/construction). Rein: kein HTTP, kein
+    ``datetime.now()`` (injiziert). GOV-02/03: ``source=GENESIS``,
+    ``license_id=DL_DE_BY_2_0``, Tier A, Destatis-/Regionalstatistik-Attribution.
+    ``observed_at``/``geo`` bleiben ``None`` (Jahreswert je Kreis, kein Punkt-Geo).
+    """
+    return CanonicalRecord(
+        city_slug=slug,
+        geo=None,
+        observed_at=None,
+        retrieved_at=retrieved_at,
+        source=SourceId.GENESIS,
+        license_id=LicenseId.DL_DE_BY_2_0,
+        license_tier=LicenseTier.A,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        attribution=Attribution(
+            text="Statistisches Bundesamt (Destatis) / Regionalstatistik",
+            license_url=_DL_DE_BY_URL,
+        ),
+        payload=RegionalStatPayload(
+            dataset=dataset,
+            reference_year=raw.get("reference_year"),
+            region_name=raw.get("region_name"),
+            values=raw.get("values", {}),
         ),
     )
 

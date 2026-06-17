@@ -19,9 +19,18 @@ interface Props {
   // Pfad der jeweils anderen Sprachfassung (fuer Switcher + hreflang). Leer,
   // wenn es kein Pendant gibt.
   altLangPath?: string;
+  // An SeoHead durchgereicht: robots noindex (z.B. 404-Seite).
+  noindex?: boolean;
 }
 
-const { title, description = "", current = "", lang = "de", altLangPath = "" } = Astro.props;
+const {
+  title,
+  description = "",
+  current = "",
+  lang = "de",
+  altLangPath = "",
+  noindex = false,
+} = Astro.props;
 const isEn = lang === "en";
 
 // Nicht-Endpunkt-Seiten (Start, Quick-Start, MCP, Impressum, Datenschutz,
@@ -72,7 +81,7 @@ const sortedTags = [...groups.keys()].sort();
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <SeoHead title={title} description={description} lang={lang} altLangPath={altLangPath} />
+    <SeoHead title={title} description={description} lang={lang} altLangPath={altLangPath} noindex={noindex} />
     <slot name="jsonld" />
   </head>
   <body>
@@ -106,6 +115,20 @@ const sortedTags = [...groups.keys()].sort();
         >
       </nav>
     </header>
+
+    {
+      current !== "mcp" && (
+        <a class="mcphint" href={isEn ? "/en/mcp/" : "/mcp/"}>
+          <span class="mcphint__badge">MCP</span>
+          <span class="mcphint__text">
+            {isEn
+              ? "InfraNode is also available as an MCP server for AI assistants like Claude and ChatGPT."
+              : "InfraNode gibt es auch als MCP-Server für KI-Assistenten wie Claude und ChatGPT."}
+          </span>
+          <span class="mcphint__arrow" aria-hidden="true">→</span>
+        </a>
+      )
+    }
 
     <div class="layout">
       <nav class="nav" aria-label={isEn ? "Documentation navigation" : "Doku-Navigation"}>

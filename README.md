@@ -3,7 +3,7 @@
 [![CI](https://github.com/street1983nk/infranode-api/actions/workflows/ci.yml/badge.svg)](https://github.com/street1983nk/infranode-api/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
-InfraNode ist eine öffentliche, quelloffene Proxy-REST-API, die fragmentierte offene Daten zu deutschen Städten hinter einer einheitlichen, normalisierten Schnittstelle bündelt. Entwickler erhalten ein konsistentes JSON-Format für Stammdaten, Luftqualität, Wetter, POIs, ÖPNV, Baustellen und Verkehr von 28 deutschen Städten (den 20 größten plus allen 16 Landeshauptstädten), statt sich mit Dutzenden unterschiedlicher Behörden- und Open-Data-APIs (verschiedene Formate, Felder, Sprachen) auseinandersetzen zu müssen.
+InfraNode ist eine öffentliche, quelloffene Proxy-REST-API, die fragmentierte offene Daten zu deutschen Städten hinter einer einheitlichen, normalisierten Schnittstelle bündelt. Entwickler erhalten ein konsistentes JSON-Format für Stammdaten, Luftqualität, Wetter, POIs, ÖPNV, Baustellen und Verkehr von 84 deutschen Städten (28 Kern-Städte: die 20 größten plus alle 16 Landeshauptstädte, sowie weitere Großstädte), statt sich mit Dutzenden unterschiedlicher Behörden- und Open-Data-APIs (verschiedene Formate, Felder, Sprachen) auseinandersetzen zu müssen.
 
 ## Core Value
 
@@ -11,7 +11,17 @@ Ein einziger, konsistenter und zuverlässig gecachter Endpunkt-Satz, der heterog
 
 ## Status
 
-Frühe Entwicklung. Aktuell existiert das Walking-Skeleton der API: eine versionierte FastAPI-Anwendung unter `/api/v1/...` mit strukturiertem JSON-Logging, Correlation-IDs und zentralem Fehler-Mapping. Datenquellen (Wikidata, OpenAQ, DWD, OpenStreetMap/Overpass, DELFI/HVV, Autobahn) folgen in späteren Phasen.
+In Betrieb. Die versionierte FastAPI-Anwendung läuft unter `/api/v1/...` mit strukturiertem JSON-Logging, Correlation-IDs, zentralem Fehler-Mapping und Resilienz (Circuit-Breaker, Graceful Degradation). Es sind reale Datenquellen angebunden (u.a. Wikidata, UBA, OpenAQ, DWD, OpenStreetMap/Overpass, DELFI/HVV, Autobahn, SMARD, KBA, DIVI). Die Daten der 84 Städte sind zusätzlich als MCP-Server verfügbar.
+
+## MCP-Server
+
+InfraNode ist auch als Model-Context-Protocol-Server nutzbar: 37 read-only Tools über alle Stadtdaten, keylos. Der schnellste Weg ist der öffentliche Remote-Endpunkt (kein Build, keine lokale API):
+
+```bash
+claude mcp add --transport http infranode https://mcp.infranode.dev/mcp
+```
+
+Vollständige Installationsanleitung, das komplette Tool-Manifest mit Beispiel-Ausgaben, das Berechtigungsmodell und ein Beispiel-Transkript stehen in [docs/mcp-install.md](./docs/mcp-install.md). Das Registry-Manifest ist [server.json](./server.json).
 
 ## Quick Start
 

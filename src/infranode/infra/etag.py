@@ -23,6 +23,17 @@ CACHE_TTL = {
     "default": 300,
 }
 
+# Ressourcen, die NIE am CDN/Browser zwischengespeichert werden duerfen ->
+# "no-store". Echtzeit-Endpunkte unter /api/v1/live/* (Resource-Segment "live":
+# HVV-Abfahrten, GTFS-RT-Transit, Dortmund-Parken, Koeln/Berlin-Live u.a.)
+# liefern minuetlich wechselnde Daten. Ohne no-store cached Cloudflare die
+# Antwort bis zu seiner Browser-Cache-TTL (beobachtet: 4 h Override trotz
+# origin max-age=300) und serviert Live-Daten massiv stale; ein transienter
+# no_data-Zustand bliebe stundenlang eingefroren. no-store haelt /live/
+# cache-frei (Origin-Last bleibt klein, da der resiliente Redis-Cache davor
+# liegt). Clients steuern ihren Poll-Takt ueber meta.refresh_seconds.
+NO_STORE_RESOURCES = frozenset({"live"})
+
 
 def compute_etag(body: bytes) -> str:
     """ETag aus dem serialisierten Body: gequoteter sha256[:32]-Hex.
@@ -39,6 +50,12 @@ def cache_control_for(resource: str | None = None) -> str:
     Waehlt die passende max-age-TTL ("public, max-age=<ttl>"); faellt auf
     ``default`` (300 s) zurueck, wenn keine spezifische Ressource passt. Der
     Wert ist additiv erweiterbar, ohne die Middleware-Logik zu aendern.
+
+    Ressourcen in ``NO_STORE_RESOURCES`` (Echtzeit-Endpunkte /api/v1/live/*)
+    liefern stattdessen ``no-store``, damit Cloudflare/Browser sie nicht
+    zwischenspeichern (sonst werden Live-Daten bis zur CDN-Browser-TTL stale).
     """
+    if resource in NO_STORE_RESOURCES:
+        return "no-store"
     ttl = CACHE_TTL.get(resource or "default", CACHE_TTL["default"])
     return f"public, max-age={ttl}"

@@ -27,15 +27,15 @@ from infranode.api.responses import OrjsonResponse
 
 from .api.errors import register_exception_handlers
 from .api.v1 import api_v1
-from .api.v1.ratelimit import limiter
+from .api.v1.ratelimit import limiter, real_client_ip
 from .config import get_settings
 from .infra.etag import cache_control_for, compute_etag
 from .infra.http import close_http_client, create_http_client
-from .infra.metrics import incr_request, push_log
+from .infra.metrics import incr_request, push_log, record_consumer
 from .infra.mobilithek import close_mobilithek_client, create_mobilithek_client
 from .infra.redis import close_redis_pool, create_redis_pool
 from .logging import configure_logging
-from .resilience.breaker import BreakerRegistry
+from .resilience.breaker_redis import RedisBreakerRegistry
 from .resilience.client import ResilientSourceClient
 from .transit.poller import maybe_start_gtfs_rt_poller
 
@@ -71,10 +71,13 @@ async def lifespan(app: FastAPI):
         app.state.mobilithek_http = None
     # Prozessweites Task-Set fuer SWR-Background-Refresh (Pitfall 3, Plan 03/04).
     app.state.bg_tasks = set()
-    # Prozessweite Breaker-Registry: Breaker-State MUSS request-uebergreifend
-    # leben (eine in Request A getrippte Quelle bleibt fuer Request B offen,
-    # RES-04). Daher an app.state, nicht pro Request neu (Plan 03-04).
-    app.state.breakers = BreakerRegistry()
+    # Prozessweite, Redis-persistente Breaker-Registry: Breaker-State MUSS
+    # request-uebergreifend leben (eine in Request A getrippte Quelle bleibt fuer
+    # Request B offen, RES-04) UND Deploys/Worker-Grenzen ueberleben (C-2026). Die
+    # RedisBreakerRegistry spiegelt den State write-through nach Redis und nutzt
+    # Wall-Clock-Zeit (prozessuebergreifend gueltiger opened_at). Faellt Redis aus,
+    # degradiert sie still zum reinen in-memory-Verhalten (BreakerRegistry-Basis).
+    app.state.breakers = RedisBreakerRegistry(redis=app.state.redis)
 
     def _schedule(coro):
         """Plant eine SWR-Refresh-Coroutine als langlebigen Task (Pitfall 3).
@@ -245,6 +248,21 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                 endpoint=f"mcp:{endpoint}" if mcp_resource else endpoint,
                 status_code=response.status_code,
             )
+            # Aktive-Consumer-Tracking (nur echte Datenabrufe unter /api/v1/, ohne
+            # Health/OpenAPI): je Stunde Anzahl + letzte Meta je Client-IP bzw.
+            # "mcp" fuer interne MCP-Aufrufe. Speist den stuendlichen ntfy-Digest.
+            p = request.url.path
+            if p.startswith("/api/v1/") and not p.startswith(
+                ("/api/v1/health", "/api/v1/openapi")
+            ):
+                ident = "mcp" if mcp_resource else real_client_ip(request)
+                await record_consumer(
+                    redis,
+                    ident=ident,
+                    user_agent=request.headers.get("user-agent", ""),
+                    path=request.url.path,
+                    now=datetime.now(UTC),
+                )
         except Exception as exc:  # noqa: BLE001 - Metrik-Verlust crasht nie den Request
             # Graceful Degradation: ein Metrik-/Redis-Fehler darf den Request-Pfad
             # nie crashen; nur als Debug protokollieren (vermeidet S110 bare pass).

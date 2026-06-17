@@ -44,8 +44,8 @@ const faqJsonLd = JSON.stringify({
 ---
 
 <Docs
-  title="InfraNode API"
-  description="Free, public open-data REST API for normalised open data of German cities: one consistent JSON envelope instead of dozens of government APIs."
+  title="Open city data Germany, free REST API and MCP server"
+  description="Free, key-less open-data REST API and MCP server for 84 major German cities: weather, air quality, live transit, traffic, energy and power market, car stock, unemployment, tourism and road accidents, permissively licensed (Tier A, free for commercial use)."
   current="home"
   lang="en"
   altLangPath="/"
@@ -78,7 +78,7 @@ const faqJsonLd = JSON.stringify({
       API key.
     </p>
     <ul>
-      <li>84 large cities, 48 endpoints, one unified envelope.</li>
+      <li>84 large cities, 63 endpoints, one unified envelope.</li>
       <li>No key required, free and ad-free.</li>
       <li>Hosted on a server in Germany, with an honest source status.</li>
     </ul>
@@ -86,7 +86,7 @@ const faqJsonLd = JSON.stringify({
 
   <ul class="stats">
     <li class="stat"><a href="/en/cities/"><strong>84</strong> cities</a></li>
-    <li class="stat"><strong>48</strong> endpoints</li>
+    <li class="stat"><strong>63</strong> endpoints</li>
     <li class="stat"><strong>35+</strong> official sources</li>
     <li class="stat"><strong>Licence tag</strong> in every response</li>
   </ul>
@@ -95,6 +95,34 @@ const faqJsonLd = JSON.stringify({
     <a class="btn-primary" href="/en/quickstart/">Quickstart</a>
     <a class="btn-secondary" href="/api/getCities/">View endpoints</a>
   </div>
+
+  <h2>What data is available</h2>
+  <p>
+    Over 50 endpoints per city, all permissively licensed (Tier A: DL-DE/BY,
+    CC-BY, free for commercial use):
+  </p>
+  <ul>
+    <li>
+      <strong>Environment and weather:</strong> air quality (PM10, live
+      readings), weather, official DWD weather warnings, pollen and UV index.
+    </li>
+    <li>
+      <strong>Mobility and traffic:</strong> public transit stops and live
+      departures with delays, traffic situation, roadworks, charging stations,
+      car stock and electric vehicle share (KBA), road accidents (accident atlas).
+    </li>
+    <li>
+      <strong>Energy and statistics:</strong> energy installations (market
+      master data register), electricity consumption and wholesale price
+      (SMARD), unemployment rate, tourism overnight stays, building permits,
+      demographics.
+    </li>
+    <li>
+      <strong>Water, health, city life:</strong> water levels and flooding,
+      hospitals and ICU beds, POIs, events, election results, public holidays,
+      administrative boundaries.
+    </li>
+  </ul>
 
   <h2>What sets the API apart</h2>
   <p>
@@ -112,8 +140,12 @@ const faqJsonLd = JSON.stringify({
   <p>
     Under <code>/api/v1/live/*</code> InfraNode serves current readings: traffic
     conditions, roadworks, parking, charging and public transit. Some live
-    sources are city-specific (for example Cologne traffic conditions, Berlin
-    traffic messages). New is the public-transit real-time feed with delays per
+    sources are city-specific (for example Hamburg HVV departures via
+    <code>/api/v1/live/hamburg/departures</code>, Dortmund parking occupancy
+    via <code>/api/v1/live/dortmund/parking</code> key-less from the City of
+    Dortmund's open data, or Nuremberg public-transit real-time departures via
+    <code>/api/v1/live/nuernberg/departures</code> key-less from the open VGN/VAG
+    Puls API under CC-BY 4.0). New is the public-transit real-time feed with delays per
     stop, trip and route plus a position estimate under
     <code>/api/v1/live/&lbrace;city&rbrace;/transit/departures</code>,
     <code>trips/&lbrace;id&rbrace;</code> and

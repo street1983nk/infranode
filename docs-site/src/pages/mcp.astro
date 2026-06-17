@@ -1,6 +1,6 @@
 ---
 // MCP-Server-Seite (/mcp): erklaert kurz MCP fuer Devs, zeigt die Einrichtung
-// in Claude Code und Claude Desktop (CodeTabs) und listet die 21 Tools nach
+// in Claude Code und Claude Desktop (CodeTabs) und listet die 37 Tools nach
 // Thema gruppiert. Quelle der Einrichtungs-Snippets ist docs/mcp-install.md.
 import Docs from "../layouts/Docs.astro";
 import CodeTabs from "../components/CodeTabs.astro";
@@ -26,7 +26,20 @@ const connectorConfig = [
 
 const claudeCodeLocal = `claude mcp add infranode -- uv run --group mcp python -m infranode.mcp`;
 
-// Die 21 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
+// Fallback fuer Clients, die nur lokale stdio-Server koennen (keine Remote-URL):
+// die Standard-Bridge mcp-remote leitet stdio per npx an den gehosteten Endpunkt.
+const mcpRemoteConfig = [
+  `{`,
+  `  "mcpServers": {`,
+  `    "infranode": {`,
+  `      "command": "npx",`,
+  `      "args": ["-y", "mcp-remote", "${MCP_URL}"]`,
+  `    }`,
+  `  }`,
+  `}`,
+].join("\n");
+
+// Die 37 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
 const toolGroups = [
   {
     title: "Stammdaten und Geo",
@@ -42,6 +55,7 @@ const toolGroups = [
       ["air_quality", "Luftqualität"],
       ["air_quality_live", "Luftqualität, Live-Messwerte"],
       ["weather", "Wetter"],
+      ["weather_warnings", "Amtliche DWD-Wetterwarnungen (Unwetter, Warnstufe)"],
       ["pollen_uv", "Pollen- und UV-Index"],
     ],
   },
@@ -49,9 +63,16 @@ const toolGroups = [
     title: "Mobilität und Verkehr",
     tools: [
       ["traffic", "Verkehrslage"],
-      ["transit", "ÖPNV"],
+      ["transit", "ÖPNV-Haltestellen"],
+      ["transit_departures", "ÖPNV-Echtzeit-Abfahrten mit Verspätung (Param stop_id)"],
       ["charging", "Ladesäulen"],
       ["road_events", "Straßen- und Baustellenmeldungen"],
+      ["vehicle_registrations", "Pkw-Bestand und Elektroauto-Anteil (KBA)"],
+      ["accidents", "Verkehrsunfälle je Kreis (Unfallatlas)"],
+      ["fuel_prices", "Spritpreise je Stadt, aggregiert (Tankerkönig)"],
+      ["sharing", "Bike- und Scooter-Sharing je Stadt, aggregiert (GBFS/Nextbike)"],
+      ["station_departures", "Live-Abfahrten am Fernverkehrs-Hbf mit Verspätung (DB Timetables)"],
+      ["station_arrivals", "Live-Ankünfte am Fernverkehrs-Hbf mit Verspätung (DB Timetables)"],
     ],
   },
   {
@@ -66,7 +87,18 @@ const toolGroups = [
     tools: [
       ["health", "Gesundheitsdaten"],
       ["icu_live", "Intensivbetten, Live"],
-      ["energy", "Energie"],
+      ["energy", "Energieanlagen (Marktstammdatenregister)"],
+      ["power_load", "Stromverbrauch / Netzlast je Regelzone (SMARD)"],
+      ["power_price", "Börsenstrompreis Day-ahead (SMARD)"],
+    ],
+  },
+  {
+    title: "Wirtschaft und Statistik",
+    tools: [
+      ["unemployment", "Arbeitslose und Arbeitslosenquote je Kreis"],
+      ["tourism", "Gästeübernachtungen und Ankünfte (Tourismus)"],
+      ["construction", "Baugenehmigungen (Wohngebäude und Wohnungen)"],
+      ["indicators", "Sozialökonomische Indikatoren je Kreis (INKAR/BBSR, ~70 Kennzahlen)"],
     ],
   },
   {
@@ -79,28 +111,63 @@ const toolGroups = [
       ["holidays", "Feiertage"],
     ],
   },
+  {
+    title: "Übersicht und Meta",
+    tools: [
+      ["list_cities", "Liste aller abgedeckten Städte (Slugs, Abdeckung)"],
+      ["sources", "Alle Datenquellen mit Lizenz und Verfügbarkeit"],
+    ],
+  },
+];
+
+// FAQ fuer FAQPage-JSON-LD (GEO: direkt von KI-Antwortmaschinen + Google
+// zitierbar). Reiner Text, wird in JsonLd.astro sicher serialisiert.
+const faq = [
+  {
+    q: "Wie verbinde ich den InfraNode-MCP-Server mit Claude oder ChatGPT?",
+    a: "Den gehosteten Endpunkt https://mcp.infranode.dev/mcp als Connector hinzufügen. In Claude Code genügt: claude mcp add --transport http infranode https://mcp.infranode.dev/mcp. Keine Installation nötig.",
+  },
+  {
+    q: "Braucht der InfraNode-MCP-Server einen API-Schlüssel?",
+    a: "Nein. Der Zugriff ist lesend, keylos und kostenlos; es gilt nur ein faires Limit pro IP.",
+  },
+  {
+    q: "Welche Daten liefert der InfraNode-MCP-Server?",
+    a: "37 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bike- und Scooter-Sharing, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, plus Städte- und Quellenübersicht.",
+  },
+  {
+    q: "Mein MCP-Client unterstützt nur lokale stdio-Server. Wie verbinde ich InfraNode?",
+    a: "Über die Standard-Bridge mcp-remote: als command npx mit den args -y mcp-remote https://mcp.infranode.dev/mcp. Sie leitet stdio an den gehosteten Endpunkt weiter, ohne Repo und ohne Schlüssel. Ein eigenes Paket über pip, uvx oder npx infranode gibt es nicht.",
+  },
+  {
+    q: "Kann ich den InfraNode-MCP-Server selbst hosten?",
+    a: "Ja, lokal über stdio. Das setzt Repo-Zugang voraus; die Quellcode-Veröffentlichung ist in Vorbereitung.",
+  },
 ];
 ---
 
 <Docs
   title="MCP-Server"
-  description="Gehosteter InfraNode-MCP-Server unter mcp.infranode.dev: 21 Stadtdaten-Tools für KI-Agenten, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel. Connector für Claude und ChatGPT."
+  description="Gehosteter InfraNode-MCP-Server unter mcp.infranode.dev: 37 Tools für KI-Agenten, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel. Connector für Claude und ChatGPT."
   current="mcp"
   lang="de"
   altLangPath="/en/mcp/"
 >
   <JsonLd
     slot="jsonld"
-    type="WebAPI"
+    type="SoftwareApplication"
     name="InfraNode MCP-Server"
-    description="MCP-Server mit 21 Tools für offene Stadtdaten deutscher Großstädte."
+    description="Gehosteter MCP-Server mit 37 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
   />
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
   <h1>MCP-Server</h1>
   <p>
-    InfraNode bringt einen offiziellen MCP-Server mit. Er stellt die offenen
-    Stadtdaten als Werkzeuge bereit, die ein KI-Agent direkt aufrufen kann, ohne
-    dass du HTTP-Aufrufe von Hand schreibst.
+    Der InfraNode-MCP-Server ist ein kostenloser, gehosteter
+    Model-Context-Protocol-Server, der KI-Agenten über 37 Tools Zugriff auf
+    offene Daten von 84 deutschen Großstädten gibt, ohne API-Schlüssel. Er stellt
+    die Stadtdaten als Werkzeuge bereit, die ein Agent direkt aufruft, ohne dass
+    du HTTP-Aufrufe von Hand schreibst.
   </p>
 
   <div class="tldr">
@@ -141,8 +208,24 @@ const toolGroups = [
     labels={["Claude Code (Remote)", "Connector per URL", "Lokal (stdio)"]}
   />
   <p>
-    Nach dem Hinzufügen stehen die 21 InfraNode-Tools im Agenten zur Verfügung.
+    Nach dem Hinzufügen stehen die 37 InfraNode-Tools im Agenten zur Verfügung.
     Der Zugriff ist lesend und ohne Schlüssel.
+  </p>
+
+  <h2>stdio-Clients verbinden (npx mcp-remote)</h2>
+  <p>
+    Manche MCP-Clients unterstützen nur lokale stdio-Server, keine Remote-URL.
+    Für sie überbrückt das Standard-Tool <code>mcp-remote</code> die Lücke: Es
+    läuft lokal über <code>npx</code> und leitet stdio an den gehosteten Endpunkt
+    weiter. Kein Repo, kein Schlüssel, keine eigene InfraNode-Installation nötig.
+  </p>
+  <pre class="codetabs__pre"><code>{mcpRemoteConfig}</code></pre>
+  <p>
+    Beherrscht dein Client Remote-Connectoren per URL (Claude, ChatGPT), ist der
+    direkte Weg oben einfacher. <code>mcp-remote</code> ist nur der Fallback für
+    rein lokale stdio-Clients. Hinweis: ein eigenes Paket über
+    <code>pip</code>, <code>uvx</code> oder <code>npx infranode</code> gibt es
+    bewusst nicht, der gehostete Endpunkt ist der vorgesehene Weg.
   </p>
 
   <h2>Lokal betreiben (optional)</h2>
@@ -164,11 +247,12 @@ const toolGroups = [
 
   <h2>Tool-Übersicht</h2>
   <p>
-    Der Server registriert je Stadtdaten-Ressource ein Tool, insgesamt 21. Jedes
-    Tool erwartet einen Stadt-Slug (zum Beispiel <code>berlin</code> oder
-    <code>hamburg</code>); <code>pois</code> verlangt zusätzlich den
-    Pflichtparameter <code>type</code> (z.B. <code>hospital</code>,
-    <code>school</code>, <code>pharmacy</code>).
+    Der Server stellt insgesamt 37 Tools bereit. Die meisten erwarten einen
+    Stadt-Slug (zum Beispiel <code>berlin</code> oder <code>hamburg</code>);
+    <code>pois</code> verlangt zusätzlich den Pflichtparameter <code>type</code>
+    (z.B. <code>hospital</code>, <code>school</code>, <code>pharmacy</code>),
+    <code>transit_departures</code> akzeptiert optional eine <code>stop_id</code>.
+    <code>list_cities</code> und <code>sources</code> brauchen kein Argument.
   </p>
   {
     toolGroups.map((group) => (

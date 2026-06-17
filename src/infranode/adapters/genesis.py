@@ -131,3 +131,122 @@ async def fetch_demographics(
         "rent_avg": None,  # [ASSUMED]: kein Mietwert in dieser Tabelle.
         "reference_year": _to_int(row.get("jahr")),
     }
+
+
+def _num_de(value: str | None) -> float | int | None:
+    """Parst einen deutschen datencsv-Zahlwert (Dezimalkomma) zu int/float/None.
+
+    GENESIS-datencsv nutzt das Dezimalkomma OHNE Tausenderpunkt (z.B. ``218315``
+    oder ``10,3``). Fehlwerte sind ``""``/``-``/``.`` -> ``None``. Ganzzahlige
+    Werte werden als ``int`` zurueckgegeben, sonst ``float``.
+    """
+    if value is None:
+        return None
+    s = value.strip()
+    if s in ("", "-", ".", "...", "/", "x"):
+        return None
+    s = s.replace(",", ".")
+    try:
+        f = float(s)
+    except ValueError:
+        return None
+    return int(f) if f.is_integer() else f
+
+
+def _parse_datencsv_latest(
+    content: str, ags5: str, col_specs: dict[str, int]
+) -> dict | None:
+    """Liest aus einer GENESIS-datencsv die juengste Datenzeile EINES Kreises.
+
+    Eine Datenzeile hat die Form ``JAHR;AGS5;Name;werte...`` (Semikolon-getrennt,
+    Header-/Fusszeilen ignoriert). Gesucht wird die Zeile mit ``ags5`` und dem
+    hoechsten Jahr. ``col_specs`` mappt Kennzahl-Namen auf den 0-basierten
+    Spaltenindex der ``;``-Zerlegung (0=Jahr, 1=AGS, 2=Name, ab 3 die Werte).
+    Gibt ``None``, wenn keine passende Zeile existiert (graceful no_data).
+    """
+    best_year = -1
+    best: list[str] | None = None
+    for line in content.splitlines():
+        parts = line.split(";")
+        if len(parts) < 3:
+            continue
+        year_str = parts[0].strip()
+        if not (year_str.isdigit() and len(year_str) == 4):
+            continue
+        if parts[1].strip() != ags5:
+            continue
+        year = int(year_str)
+        if year > best_year:
+            best_year = year
+            best = parts
+    if best is None:
+        return None
+    values = {
+        name: (_num_de(best[idx]) if idx < len(best) else None)
+        for name, idx in col_specs.items()
+    }
+    return {
+        "reference_year": best_year,
+        "region_name": best[2].strip() if len(best) > 2 else None,
+        "values": values,
+    }
+
+
+async def fetch_genesis_table(
+    http: httpx.AsyncClient,
+    *,
+    table: str,
+    ags5: str,
+    username: str,
+    password: SecretStr,
+    col_specs: dict[str, int],
+    base_url: str = _BASE,
+) -> dict:
+    """Holt eine GENESIS-Regionalstatistik-Tabelle je Kreis (POST, Header-Auth).
+
+    Seit dem GENESIS-Update 27.11.2025 gehoeren die Credentials in die HTTP-Header
+    (``username``/``password``), NICHT in den Body (sonst Code 15 "nicht
+    berechtigt"). Der Regionalfilter nutzt ``regionalvariable=KREISE`` +
+    ``regionalkey=<5-stelliger AGS>``. Der Host ist hartkodiert (SSRF-Guard,
+    ``base_url`` MUSS in ``_ALLOWED_HOSTS`` liegen).
+
+    Die Antwort ist ein JSON-Wrapper mit der Tabelle als datencsv-Text in
+    ``Object.Content``; die juengste Zeile des Kreises wird ueber ``col_specs``
+    extrahiert. Credentials erscheinen NIE im Rueckgabe-dict (T-08-CRED). Gibt
+    immer ein dict zurueck (``values`` leer = kein Treffer -> die Route meldet
+    no_data); ein 5xx schlaegt via ``raise_for_status`` als ``httpx.HTTPError``
+    durch (STALE-ON-ERROR).
+    """
+    if base_url not in _ALLOWED_HOSTS:
+        raise ValueError(f"base_url nicht in der GENESIS-Allowlist: {base_url!r}")
+
+    # GENESIS generiert die Tabelle on-demand und ist sehr traege (~25 s je
+    # Abruf); der konservative Pool-Default (read=5 s) wuerde IMMER timeouten.
+    # Daher ein grosszuegiger per-Request-Timeout. Der taegliche Akkrual-Timer
+    # haelt den Cache warm, sodass Clients selten den kalten Abruf treffen.
+    resp = await http.post(
+        f"{base_url}/data/table",
+        headers={"username": username, "password": password.get_secret_value()},
+        data={
+            "name": table,
+            "area": "all",
+            "regionalvariable": "KREISE",
+            "regionalkey": ags5,
+            "format": "ffcsv",
+            "language": "de",
+        },
+        timeout=httpx.Timeout(connect=5.0, read=60.0, write=10.0, pool=5.0),
+    )
+    resp.raise_for_status()
+
+    body = resp.json()
+    obj = body.get("Object") if isinstance(body, dict) else None
+    content = obj.get("Content") if isinstance(obj, dict) else None
+    parsed = (
+        _parse_datencsv_latest(content, ags5, col_specs)
+        if isinstance(content, str)
+        else None
+    )
+    if parsed is None:
+        return {"reference_year": None, "region_name": None, "values": {}}
+    return parsed

@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     admin_session_secret: SecretStr | None = None
     admin_log_max: int = 200
     admin_cookie_https_only: bool = True
+    # Defense-in-Depth fuer /admin (T-18-15): Code-seitiger Netzwerk-Guard.
+    # Betrieblich ist /admin bereits Tailnet-only (Caddy gibt oeffentlich 404,
+    # ``tailscale serve`` laeuft ohne Funnel, ufw oeffnet 80/443 nur fuer
+    # Cloudflare). Dieser Guard blockt zusaetzlich JEDE Anfrage mit oeffentlich-
+    # routbarer Client-IP (real_client_ip) mit 404, falls die Caddy-404-Regel je
+    # entfaellt. Loopback/private/Tailnet-CGNAT (100.64.0.0/10) sind als nicht-
+    # global routbar immer erlaubt; admin_trusted_networks erlaubt optional
+    # zusaetzliche (auch global routbare) CIDR (leer = nur die nicht-globale Regel).
+    admin_trusted_networks: list[str] = []
 
     # Per-Source-Toggles. Quellen kommen ab Phase 4; hier schon definiert.
     enable_wikidata: bool = True
@@ -86,9 +95,38 @@ class Settings(BaseSettings):
     # die klinikscharfe DIVI-Live-Quelle (Tier C, optional). Keylose Bulk-/Seed-
     # Quellen Default True (Toggle steuert nur die Route, nicht den Offline-Ingest).
     enable_genesis: bool = False
+    # GENESIS-Regionalstatistik-Trio (Arbeitslosenquote/Tourismus/Bautaetigkeit je
+    # Kreis, DATA-28). Eigener Toggle, damit das Trio mit dem korrekten Header-Auth-
+    # Adapter live gehen kann, ohne den (separaten) Demografie-Pfad zu beruehren.
+    # Braucht dieselben genesis_username/genesis_password-Credentials.
+    enable_genesis_regio: bool = True
     enable_zensus: bool = False
     enable_divi: bool = False
     enable_mastr: bool = True
+    # SMARD-Strommarktdaten (Verbrauch/Netzlast + Day-ahead-Preis), keylos CC BY 4.0.
+    enable_smard: bool = True
+    # DWD-Wetterwarnungen (amtliche Warnungen, WarnApp-JSON), keylos GeoNutzV.
+    enable_dwd_warnings: bool = True
+    # KBA Pkw-Bestand + Elektro-Anteil je Zulassungsbezirk (Bulk, keylos DL-DE/BY).
+    enable_kba: bool = True
+    # Unfallatlas (Strassenverkehrsunfaelle je Kreis, Bulk-CSV, keylos DL-DE/BY).
+    enable_unfallatlas: bool = True
+    # INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Bulk, keylos DL-DE/BY).
+    enable_inkar: bool = True
+    # Tankerkoenig Spritpreise (MTS-K, CC BY 4.0). KEYED Live-Quelle: Toggle Default
+    # True, aber ohne tankerkoenig_api_key liefert die Route 200 disabled (analog
+    # hvv_geofox). Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    enable_tankerkoenig: bool = True
+    # DATA-33: GBFS-Bike-/Scooter-Sharing (Live, aggregiert, Primaer Nextbike CC0).
+    # Keylos -> Default True analog der uebrigen keylosen Live-Quellen. Pro System
+    # wird die Lizenz fail-closed gegen die Tier-A-Allowlist geprueft. Toggle-Name
+    # == SourceId-Wert (gbfs) == _KNOWN_SOURCES-Eintrag.
+    enable_gbfs: bool = True
+    # DATA-34: DB Timetables (Bahnhof-Abfahrten Metropolen-Hbf inkl. Fernverkehr).
+    # KEYED Live-Quelle: Toggle Default True, aber ohne db_client_id/db_api_key
+    # liefert die Route 200 disabled (analog tankerkoenig/hvv_geofox). Toggle-Name
+    # == SourceId-Wert (db_timetables) == _KNOWN_SOURCES-Eintrag.
+    enable_db_timetables: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True
@@ -126,9 +164,17 @@ class Settings(BaseSettings):
     enable_koeln_ereignisse_live: bool = False
     enable_koeln_lez_live: bool = False
     enable_berlin_verkehrsmeldungen: bool = False
-    enable_dortmund_parking: bool = False
+    # dortmund_parking ist seit 2026-06-13 KEYLOS (direkter Opendatasoft-Feed der
+    # Stadt, kein Cert/Abo mehr) -> Default True analog der uebrigen keylosen
+    # Quellen. dortmund_parking_abo_id wird nicht mehr benoetigt (bleibt fuer die
+    # SSRF-Allowlist-Konsistenz erhalten, ist aber ungenutzt).
+    enable_dortmund_parking: bool = True
     enable_kiel_zaehlstellen: bool = False
     enable_eround_charging: bool = False
+    # DATA-31: Bremen Baustellen (Mobilithek DATEX II Situation, DL-DE/BY 2.0).
+    # Toggle-Name == SourceId-Wert (bremen_baustellen) == _KNOWN_SOURCES. Default
+    # False; aktiv erst wenn Toggle AN und bremen_baustellen_abo_id gesetzt.
+    enable_bremen_baustellen: bool = False
     # Abo-ID je Live-Quelle als Settings-Allowlist gegen SSRF (RESEARCH Pitfall 7):
     # die aboId im Mobilithek-Pull-URL stammt NIE aus User-Input, nur aus diesen
     # Feldern. None = Quelle nicht aufloesbar (Graceful Degradation). Abo-IDs aus
@@ -141,6 +187,7 @@ class Settings(BaseSettings):
     dortmund_parking_abo_id: str | None = None
     kiel_zaehlstellen_abo_id: str | None = None
     eround_charging_abo_id: str | None = None
+    bremen_baustellen_abo_id: str | None = None
 
     # Phase 19: GTFS-Realtime Trip Updates (Live-ÖPNV-Verspätungen). Toggle-Name
     # == SourceId-Wert == _KNOWN_SOURCES-Eintrag (getattr(settings, f"enable_gtfs_rt")).
@@ -177,6 +224,29 @@ class Settings(BaseSettings):
     # Toggle-Name == SourceId-Wert (hvv_geofox) == _KNOWN_SOURCES-Eintrag. Default
     # False; aktiv erst wenn Toggle AN und beide Credentials gesetzt sind.
     enable_hvv_geofox: bool = False
+    # DATA-25: VGN/VAG-Nuernberg Live-Abfahrten. KEYLOS (offene Puls-API
+    # start.vag.de, CC-BY 4.0) -> Default True analog der uebrigen keylosen
+    # Quellen. Toggle-Name == SourceId-Wert (vgn) == _KNOWN_SOURCES-Eintrag.
+    enable_vgn: bool = True
+    # DATA-26: Hamburg-Verkehrslage (Echtzeit-Verkehrsfluss). KEYLOS (OAF/GeoJSON
+    # api.hamburg.de, DL-DE/BY 2.0) -> Default True analog der uebrigen keylosen
+    # Quellen. Toggle-Name == SourceId-Wert (hamburg_verkehrslage) ==
+    # _KNOWN_SOURCES-Eintrag.
+    enable_hamburg_verkehrslage: bool = True
+    # DATA-30: Tankerkoenig-API-Key (SecretStr, nie im Klartext geloggt/serialisiert).
+    # Geht NUR in den Query-Parameter ``apikey`` des Tankerkoenig-Requests, NIE in
+    # Cache-Key/Response/Log. None = Quelle disabled (Graceful Degradation), die
+    # Route liefert dann 200 source_status="disabled" (analog hvv_api_key). Per
+    # INFRANODE_TANKERKOENIG_KEY in der gitignored .env gesetzt (Feldname
+    # tankerkoenig_key -> Env INFRANODE_TANKERKOENIG_KEY ueber den env_prefix).
+    tankerkoenig_key: SecretStr | None = None
+    # DATA-34: DB-Timetables-Credentials (DB API Marketplace, Produkt "Timetables").
+    # Beide SecretStr (nie im Klartext geloggt/serialisiert), gehen NUR in die
+    # Request-Header DB-Client-Id/DB-Api-Key, NIE in Cache-Key/Response/Log. None ->
+    # Route liefert 200 source_status="disabled". Per INFRANODE_DB_CLIENT_ID /
+    # INFRANODE_DB_API_KEY in der gitignored .env gesetzt.
+    db_client_id: SecretStr | None = None
+    db_api_key: SecretStr | None = None
     # Lokale Pfade zu den vorverarbeiteten GTFS-ZIPs fuer den Batch-Ingest
     # (DATA-05). None = Batch nicht lauffaehig (kein Default-Pfad, damit der
     # CLI sauber mit Exit 2 abbricht). Per INFRANODE_DELFI_GTFS_PATH /
@@ -202,6 +272,19 @@ class Settings(BaseSettings):
     bkg_path: str | None = None
     bundeswahl_csv_path: str | None = None
     divi_csv_path: str | None = None
+    # KBA-Bulk-Ingest (DATA-27): optionaler Pfad zu einer lokal vorgehaltenen
+    # JSON-Datei im KBA-FeatureServer-Format ({"features":[{"attributes":{...}}]}).
+    # None = der Batch holt den Datensatz direkt keylos vom KBA-Statistikportal.
+    # Per INFRANODE_KBA_SOURCE_PATH ueberschreibbar. NICHT im Request-Pfad.
+    kba_source_path: str | None = None
+    # Unfallatlas-Bulk-Ingest (DATA-29): optionaler Pfad zu einer lokal
+    # vorgehaltenen CSV-ZIP (Unfallorte<JAHR>_EPSG25832_CSV.zip). None = der Batch
+    # holt das juengste Jahr keylos von opengeodata.nrw.de. NICHT im Request-Pfad.
+    unfallatlas_source_path: str | None = None
+    # INKAR-Bulk-Ingest (DATA-32): optionaler Pfad zu einer lokal vorgehaltenen
+    # JSON-Datei (vorab geholte Indikator-Zeilenliste). None = der Batch holt die
+    # Indikatoren live von www.inkar.de. NICHT im Request-Pfad.
+    inkar_source_path: str | None = None
 
     # Optionaler Override des Upstream-User-Agents (RES-05). None = die
     # USER_AGENT-Konstante aus infra/http.py greift; per INFRANODE_HTTP_USER_AGENT
@@ -242,6 +325,16 @@ class Settings(BaseSettings):
     # jedes erfolgreichen Laufs. Die URL traegt eine UUID und ist wie ein Secret zu
     # behandeln (nur via .env/systemd-Drop-in, nie ins Repo).
     healthchecks_url: str | None = None
+
+    # Self-Heal-Reprobe (A, 2026-06-14): opt-in-Liste hart deaktivierter Quellen,
+    # deren Upstream der Watchdog periodisch direkt anprobt, um beim Wiederaufleben
+    # genau einen "X ist wieder reaktivierbar"-ntfy zu schicken. Format (komma-
+    # separiert): ``source=https://probe.url,source2=https://probe.url2``. Nur fuer
+    # Quellen, die man bei einer Stoerung BEWUSST per enable_*-Toggle abgeschaltet
+    # hat (z.B. hamburg_verkehrslage); enabled gelassene Quellen heilen ohnehin ueber
+    # den persistenten Breaker (Per-Source-Cooldown). Die Probe-URLs sind Owner-
+    # kontrolliert (kein User-Input -> kein SSRF). Leer = Feature aus.
+    selfheal_probes: str = ""
 
 
 @lru_cache

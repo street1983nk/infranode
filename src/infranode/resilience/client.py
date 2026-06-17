@@ -80,6 +80,11 @@ _SOURCE_TTL: dict[str, tuple[float, float]] = {
     # POIs (OSM/Overpass) aendern sich praktisch nie -> sehr lange TTL, damit das
     # stark rate-limitierte oeffentliche Overpass nur selten abgefragt wird.
     "overpass": (86400.0, 604800.0),
+    # GENESIS-Regionalstatistik liefert JAHRESWERTE und ist sehr traege (~25s je
+    # Abruf). Sehr lange TTL (24h frisch / 30d stale), damit der taegliche
+    # Akkrual-Timer den Cache dauerhaft warm haelt und Clients praktisch nie den
+    # kalten Abruf treffen (sonst "sende Anfrage..." sekundenlang).
+    "genesis": (86400.0, 2592000.0),
 }
 
 
@@ -126,6 +131,14 @@ class ResilientSourceClient:
             ``CacheStatus``-String (HIT/MISS/STALE/STALE-ON-ERROR).
         """
         breaker = self._breakers.get(source)
+        # Optionale Redis-Persistenz des Breaker-States (RedisBreakerRegistry, C-2026):
+        # hydrate ZIEHT den prozessuebergreifenden State vor der Entscheidung, persist
+        # SCHREIBT ihn nach jedem record_*. Duck-Typing -> die schlanke in-memory
+        # BreakerRegistry (Tests/Fallback) bleibt voellig unveraendert (keine Methoden).
+        hydrate = getattr(self._breakers, "hydrate", None)
+        persist = getattr(self._breakers, "persist", None)
+        if hydrate is not None:
+            await hydrate(source, breaker)
 
         async def refresh():
             # Breaker pro Quelle, aber EIN geteilter Pool (RES-01/04).
@@ -135,8 +148,12 @@ class ResilientSourceClient:
                 result = await fetch_fn()
             except Exception:
                 breaker.record_failure()
+                if persist is not None:
+                    await persist(source, breaker)
                 raise
             breaker.record_success()
+            if persist is not None:
+                await persist(source, breaker)
             return result
 
         try:

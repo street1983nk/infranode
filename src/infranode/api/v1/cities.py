@@ -24,26 +24,42 @@ from fastapi import APIRouter, Request, Response
 
 from infranode.adapters.autobahn import fetch_traffic, fetch_webcams
 from infranode.adapters.berlin_viz import fetch_berlin_road_events
+from infranode.adapters.db_timetables import (
+    fetch_station_arrivals,
+    fetch_station_departures,
+)
 from infranode.adapters.destination_one import fetch_events
 from infranode.adapters.divi_live import fetch_icu_live
 from infranode.adapters.dwd import fetch_weather
 from infranode.adapters.dwd_pollen import fetch_pollen_uv
-from infranode.adapters.genesis import fetch_demographics
+from infranode.adapters.dwd_warnings import (
+    extract_warncell,
+    fetch_dwd_warnings_all,
+    warncell_for_ags,
+)
+from infranode.adapters.gbfs import fetch_sharing
+from infranode.adapters.genesis import fetch_demographics, fetch_genesis_table
 from infranode.adapters.hamburg_transparenz import fetch_hamburg_road_events
 from infranode.adapters.koeln_arcgis import fetch_koeln_road_events
 from infranode.adapters.koeln_events import fetch_events as fetch_koeln_events
 from infranode.adapters.lhp import fetch_flood
 from infranode.adapters.mobidata_bw import fetch_mobidata_road_events
+from infranode.adapters.mobilithek_datex2 import fetch_datex2
 from infranode.adapters.muenchen_opendata import fetch_muenchen_road_events
 from infranode.adapters.openaq import fetch_air
 from infranode.adapters.overpass import _ALLOWED_TYPES, fetch_pois
 from infranode.adapters.pegelonline import fetch_water_level
+from infranode.adapters.smard import fetch_smard
+from infranode.adapters.tankerkoenig import fetch_fuel_prices
 from infranode.adapters.uba import fetch_air_uba
 from infranode.adapters.wikidata import fetch_city_base
 from infranode.api.errors import UnprocessableError, UpstreamError
+from infranode.archive.inkar_db import read_indicators
+from infranode.archive.kba_db import read_vehicle_registrations
 from infranode.archive.mastr_db import read_energy
 from infranode.archive.store import append_record, read_records
 from infranode.archive.transit_store import read_stops
+from infranode.archive.unfallatlas_db import read_accidents
 from infranode.config import Settings
 from infranode.infra.cache import build_cache_key
 from infranode.normalization.mappers.autobahn import (
@@ -51,29 +67,42 @@ from infranode.normalization.mappers.autobahn import (
     map_autobahn_webcams,
 )
 from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
+from infranode.normalization.mappers.db_timetables import (
+    map_station_arrivals,
+    map_station_departures,
+)
 from infranode.normalization.mappers.destination_one import (
     map_destination_one_events,
 )
 from infranode.normalization.mappers.dwd import map_weather
 from infranode.normalization.mappers.dwd_pollen import map_pollen_uv
+from infranode.normalization.mappers.dwd_warnings import map_dwd_warnings
+from infranode.normalization.mappers.gbfs import map_sharing
 from infranode.normalization.mappers.genesis import (
     map_demographics,
     map_population_demographics,
+    map_regional_stat,
 )
 from infranode.normalization.mappers.hamburg_transparenz import map_hamburg_road_events
 from infranode.normalization.mappers.holidays import load_holidays, map_holidays
 from infranode.normalization.mappers.hospital import map_hospital
 from infranode.normalization.mappers.icu_live import map_icu_live
+from infranode.normalization.mappers.inkar import map_indicators
+from infranode.normalization.mappers.kba import map_vehicle_registrations
 from infranode.normalization.mappers.koeln_arcgis import map_koeln_road_events
 from infranode.normalization.mappers.koeln_events import map_koeln_events
 from infranode.normalization.mappers.lhp import map_flood
 from infranode.normalization.mappers.mastr import map_mastr_assets
 from infranode.normalization.mappers.mobidata_bw import map_mobidata_road_events
+from infranode.normalization.mappers.mobilithek_bremen import map_bremen_road_events
 from infranode.normalization.mappers.muenchen_opendata import map_muenchen_road_events
 from infranode.normalization.mappers.openaq import map_openaq_air
 from infranode.normalization.mappers.overpass import map_overpass_pois
 from infranode.normalization.mappers.pegelonline import map_water_level
+from infranode.normalization.mappers.smard import map_smard
+from infranode.normalization.mappers.tankerkoenig import map_fuel_prices
 from infranode.normalization.mappers.uba import map_air_uba
+from infranode.normalization.mappers.unfallatlas import map_accidents
 from infranode.normalization.mappers.wikidata import map_wikidata_city
 from infranode.registry import get_city, list_cities
 from infranode.registry.coverage import PARTIAL_COVERAGE, covered_cities, is_covered
@@ -146,6 +175,12 @@ CONNECTOR_MAP: dict[str, tuple] = {
         fetch_mobidata_road_events,
         map_mobidata_road_events,
     ),
+    # DATA-31: Bremen kommt NICHT keylos, sondern ueber den Mobilithek-mTLS-Pull
+    # (VMZ Bremen, DATEX II Situation). fetch_fn=None signalisiert dem
+    # city_road_events-Handler den mTLS-Sonderpfad (_bremen_road_events); der
+    # generische keylose Pfad wird fuer Bremen NICHT betreten. Eintrag haelt die
+    # Coverage-Karte (PARTIAL_COVERAGE["road-events"]) drift-synchron.
+    "bremen": ("bremen_baustellen", None, map_bremen_road_events),
 }
 
 # Drift-Schutz (verbindlich): die road-events-Abdeckung in der oeffentlichen
@@ -157,6 +192,101 @@ if set(CONNECTOR_MAP) != set(PARTIAL_COVERAGE["road-events"]):
     raise RuntimeError(
         "CONNECTOR_MAP und PARTIAL_COVERAGE['road-events'] sind divergiert: "
         f"{set(CONNECTOR_MAP) ^ set(PARTIAL_COVERAGE['road-events'])}"
+    )
+
+# GBFS-Sharing-Registry (DATA-33): Stadt-Slug -> kuratierte Nextbike-GBFS-System-
+# IDs (NIE User-Input -> kein SSRF). Mehrere Staedte koennen sich ein regionales
+# System teilen (z.B. VRNnextbike "nextbike_vn" fuer Mannheim/Heidelberg/Ludwigs-
+# hafen); der BBox-Filter im Adapter trennt sie wieder. Pro System prueft der
+# Adapter die GBFS-``license_id`` fail-closed gegen die Tier-A-Allowlist
+# (GOV-02/04). Kein Eintrag fuer einen Slug -> ehrliches not_covered.
+GBFS_SYSTEMS: dict[str, tuple[str, ...]] = {
+    "berlin": ("nextbike_bn",),
+    "muenchen": ("nextbike_ml",),
+    "koeln": ("nextbike_kg",),
+    "frankfurt-am-main": ("nextbike_ff",),
+    "duesseldorf": ("nextbike_dd",),
+    "dresden": ("nextbike_dx",),
+    "leipzig": ("nextbike_le",),
+    "hannover": ("nextbike_dh",),
+    "nuernberg": ("nextbike_dv",),
+    "bremen": ("nextbike_bq",),
+    "braunschweig": ("nextbike_dn",),
+    "freiburg-im-breisgau": ("nextbike_df",),
+    "karlsruhe": ("nextbike_fg",),
+    "aachen": ("nextbike_an",),
+    "kassel": ("nextbike_dk",),
+    "wiesbaden": ("nextbike_wn",),
+    "oldenburg": ("nextbike_wo",),
+    "potsdam": ("nextbike_dc",),
+    "bielefeld": ("nextbike_dg",),
+    "moenchengladbach": ("nextbike_sn",),
+    "mannheim": ("nextbike_vn",),
+    "heidelberg": ("nextbike_vn",),
+    "ludwigshafen-am-rhein": ("nextbike_vn",),
+    "hanau": ("nextbike_hg",),
+    "leverkusen": ("nextbike_dw",),
+}
+
+# Drift-Schutz (verbindlich, wie CONNECTOR_MAP): die sharing-Abdeckung in der
+# oeffentlichen Coverage-Karte MUSS exakt den GBFS_SYSTEMS-Staedten entsprechen.
+# Echtes raise (kein assert): greift auch unter `python -O`.
+if set(GBFS_SYSTEMS) != set(PARTIAL_COVERAGE["sharing"]):
+    raise RuntimeError(
+        "GBFS_SYSTEMS und PARTIAL_COVERAGE['sharing'] sind divergiert: "
+        f"{set(GBFS_SYSTEMS) ^ set(PARTIAL_COVERAGE['sharing'])}"
+    )
+
+# DB-Timetables-Registry (DATA-34): Stadt-Slug -> kuratierte Bahnhofs-EVA-Nummern
+# (NIE User-Input -> kein SSRF). Metropolen fuehren NICHT nur den Hbf, sondern alle
+# grossen Fernverkehrs-Bahnhoefe (Owner-Wunsch: Hamburg Dammtor/Harburg/Altona,
+# Berlin Suedkreuz/Gesundbrunnen/Spandau/Ostbf, FFM Sued/Flughafen-Fernbf, Muenchen
+# Ost/Pasing, Koeln Messe-Deutz, Dresden Neustadt, ...). Berlin Hbf hat zwei Ebenen
+# mit eigenen EVAs. Der Adapter aggregiert + dedupliziert ueber alle EVAs und fuehrt
+# je Abfahrt/Ankunft den Bahnhofsnamen (``station``). Alle EVAs gegen die
+# DB-Timetables-API live verifiziert. Kein Eintrag -> ehrliches not_covered.
+STATION_EVAS: dict[str, tuple[str, ...]] = {
+    # Berlin: Hbf (Nord-Sued 8098160 + Ost-West 8089021) + Suedkreuz + Gesundbrunnen
+    # + Spandau + Ostbahnhof.
+    "berlin": ("8098160", "8089021", "8011113", "8011102", "8010404", "8010255"),
+    # Hamburg: Hbf + Dammtor + Harburg + Altona.
+    "hamburg": ("8002549", "8002548", "8000147", "8002553"),
+    # Muenchen: Hbf + Ost + Pasing.
+    "muenchen": ("8000261", "8000262", "8004158"),
+    # Koeln: Hbf + Messe/Deutz.
+    "koeln": ("8000207", "8003368"),
+    # Frankfurt: Hbf + Sued + Flughafen Fernbahnhof.
+    "frankfurt-am-main": ("8000105", "8002041", "8070003"),
+    "stuttgart": ("8000096",),
+    "duesseldorf": ("8000085",),
+    "hannover": ("8000152",),
+    "nuernberg": ("8000284",),
+    "leipzig": ("8010205",),
+    # Dresden: Hbf + Neustadt.
+    "dresden": ("8010085", "8010089"),
+    "bremen": ("8000050",),
+    "dortmund": ("8000080",),
+    "essen": ("8000098",),
+    "karlsruhe": ("8000191",),
+    "mannheim": ("8000244",),
+    "muenster": ("8000263",),
+    "mainz": ("8000240",),
+    "freiburg-im-breisgau": ("8000107",),
+    "bonn": ("8000044",),
+    "augsburg": ("8000013",),
+}
+
+# Drift-Schutz (verbindlich, wie CONNECTOR_MAP/GBFS_SYSTEMS): echtes raise.
+if set(STATION_EVAS) != set(PARTIAL_COVERAGE["station-departures"]):
+    raise RuntimeError(
+        "STATION_EVAS und PARTIAL_COVERAGE['station-departures'] sind divergiert: "
+        f"{set(STATION_EVAS) ^ set(PARTIAL_COVERAGE['station-departures'])}"
+    )
+# station-arrivals nutzt dieselbe STATION_EVAS-Map -> dieselbe Abdeckung.
+if set(STATION_EVAS) != set(PARTIAL_COVERAGE["station-arrivals"]):
+    raise RuntimeError(
+        "STATION_EVAS und PARTIAL_COVERAGE['station-arrivals'] sind divergiert: "
+        f"{set(STATION_EVAS) ^ set(PARTIAL_COVERAGE['station-arrivals'])}"
     )
 
 # [ASSUMED] EVAS-23111-Tabellen-Code des Krankenhausverzeichnisses (RESEARCH
@@ -1017,6 +1147,64 @@ async def city_traffic(slug: str, request: Request, response: Response) -> dict:
     }
 
 
+async def _bremen_road_events(entry, request: Request) -> dict:
+    """Archivierter Bremen-road-events-Pfad ueber den Mobilithek-mTLS-Pull (DATA-31).
+
+    Anders als die keylosen road-events-Staedte kommt Bremen ueber den
+    Mobilithek-mTLS-Pull (VMZ Bremen, DATEX II SituationPublication). Wird aber wie
+    die anderen archiviert (``append_record`` -> Analyst-Speisung). Graceful
+    Degradation: Toggle aus ODER kein Cert (mTLS-Client) ODER keine Abo-ID -> 200
+    ``source_status="disabled"``; keine Ereignisse -> 200 ``no_data`` OHNE
+    ``append_record``; toter Upstream ohne Cache -> 503 mit Hint.
+    """
+    settings = Settings()
+    cid = correlation_id.get()
+    mobilithek_http = getattr(request.app.state, "mobilithek_http", None)
+    abo_id = settings.bremen_baustellen_abo_id
+    if not settings.enable_bremen_baustellen or mobilithek_http is None or not abo_id:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("bremen_baustellen", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_datex2(
+            mobilithek_http,
+            abo_id=abo_id,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+            publication="situation",
+        )
+
+    raw, status = await client.fetch("bremen_baustellen", key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'bremen_baustellen' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+    if not raw.get("events"):
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "no_data"},
+        }
+    record = map_bremen_road_events(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="bremen_baustellen")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
 @router.get("/cities/{slug}/road-events")
 async def city_road_events(slug: str, request: Request) -> dict:
     """Liefert innerstaedtische Baustellen/Sperrungen im kanonischen Envelope (DATA-15).
@@ -1049,6 +1237,11 @@ async def city_road_events(slug: str, request: Request) -> dict:
     connector = CONNECTOR_MAP.get(entry.slug)
     if connector is None:
         return _not_covered("road-events")
+
+    # DATA-31: Bremen ueber den Mobilithek-mTLS-Pull (eigener Pfad), aber wie die
+    # anderen archiviert (append_record -> Analyst). fetch_fn ist None (Marker).
+    if entry.slug == "bremen":
+        return await _bremen_road_events(entry, request)
 
     source, fetch_road_events, map_road_events = connector
 
@@ -1653,6 +1846,760 @@ async def city_energy(slug: str, request: Request) -> dict:
         "meta": {
             "correlation_id": correlation_id.get(),
             "source_status": "ok",
+        },
+    }
+
+
+@router.get("/cities/{slug}/vehicle-registrations")
+async def city_vehicle_registrations(slug: str, request: Request) -> dict:
+    """Liefert den KBA-Pkw-Bestand + Elektro-Anteil im kanonischen Envelope (DATA-27).
+
+    Ablauf (analog ``city_energy``, API-01, GOV-02/03): Register-Lookup
+    (unbekannter Slug -> 404 ueber den zentralen Handler), Quellen-Toggle-Pruefung
+    (deaktiviert -> 200 ``source_status=disabled``, nie 5xx), dann ein
+    parametrisierter Read ueber ``read_vehicle_registrations`` aus dem datierten
+    Bulk-Datensatz (juengster Snapshot via MAX(ingest_date)).
+
+    KRITISCH (kein Bulk-Upstream im Request-Pfad): Diese Route liest
+    AUSSCHLIESSLICH aus dem vorverarbeiteten Datensatz und ruft KEINEN
+    ``resilient_client`` auf. Der Datensatz wird offline aktualisiert.
+
+    Regionale Aufloesung ist der Zulassungsbezirk (= Kreis/kreisfreie Stadt); der
+    Payload weist ihn ueber ``district``/``district_key`` ehrlich aus. Drei
+    ``source_status``-Werte:
+    - ``disabled``: ``enable_kba`` per Env-Toggle aus -> data None
+    - ``not_ingested``: Quelle aktiv, aber kein Snapshot fuer den Kreis der Stadt
+      (DB/Tabelle/Zeile fehlt) -> data None, KEIN 5xx
+    - ``ok``: Daten vorhanden -> gemappter vehicle_registration-Payload
+    """
+    entry = get_city(slug)
+
+    # Quellen-Toggle frisch lesen (Settings() statt app.state.settings, damit der
+    # per-Test gesetzte Env-Override greift). DATA-06: aus -> 200 disabled.
+    s = Settings()
+    if not s.enable_kba:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    # Parametrisierter Read aus dem vorverarbeiteten Datensatz (NIE der Bulk-Pull).
+    # Fehlende DB/Tabelle/Zeile -> None -> not_ingested, kein 5xx.
+    row = read_vehicle_registrations(entry.slug, ags=entry.ags)
+
+    if row is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_vehicle_registrations(
+        entry.slug,
+        row,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    # Anders als die MaStR-Route schreibt KBA den gemappten Record zusaetzlich in
+    # die Tier-A-Tagespartition (wie SMARD): so waechst eine Tageszeitreihe, aus
+    # der der nachgelagerte Analyst den Pkw-Bestand/Elektro-Anteil je Stufe lesen
+    # kann. Die Per-Tag-Aggregation entdoppelt mehrfache Abrufe desselben Tages.
+    await append_record(record, source="kba")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
+@router.get("/cities/{slug}/accidents")
+async def city_accidents(slug: str, request: Request) -> dict:
+    """Liefert das Unfallatlas-Jahres-Aggregat je Stadt im Envelope (DATA-29).
+
+    Ablauf wie ``city_vehicle_registrations`` (Store-read, KEIN resilient_client):
+    Register-Lookup (unbekannt -> 404), Toggle-Pruefung (aus -> 200 disabled),
+    parametrisierter Read ueber ``read_accidents`` aus dem Bulk-Datensatz (je
+    5-stelligem Kreisschluessel). Regionale Aufloesung Kreis/kreisfreie Stadt
+    (district_key). Drei ``source_status``: disabled / not_ingested (kein Snapshot
+    fuer den Kreis) / ok. Der ok-Record wird zusaetzlich ins Tier-A-Archiv
+    geschrieben (Analyst-Speisung, wie KBA).
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_unfallatlas:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    row = read_accidents(entry.slug, ags=entry.ags)
+    if row is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_accidents(
+        entry.slug,
+        row,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    await append_record(record, source="unfallatlas")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
+@router.get("/cities/{slug}/indicators")
+async def city_indicators(slug: str, request: Request) -> dict:
+    """Liefert die kuratierten INKAR/BBSR-Indikatoren je Stadt im Envelope (DATA-32).
+
+    Ablauf wie ``city_vehicle_registrations``/``city_accidents`` (Store-read, KEIN
+    resilient_client): Register-Lookup (unbekannt -> 404), Toggle-Pruefung (aus ->
+    200 disabled), parametrisierter Read ueber ``read_indicators`` aus dem Bulk-
+    Datensatz (je 5-stelligem Kreisschluessel). Regionale Aufloesung Kreis/
+    kreisfreie Stadt. Drei ``source_status``:
+    - ``disabled``: ``enable_inkar`` per Env-Toggle aus -> data None
+    - ``not_ingested``: kein Snapshot fuer den Kreis der Stadt -> data None, kein 5xx
+    - ``ok``: gemappter indicators-Payload (Liste der Kennzahlen je Kategorie)
+
+    KRITISCH (kein Bulk-Upstream im Request-Pfad): liest AUSSCHLIESSLICH aus dem
+    vorverarbeiteten Datensatz; der INKAR-Wizard-Pull laeuft offline als Batch.
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_inkar:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    rows = read_indicators(entry.slug, ags=entry.ags)
+    if not rows:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_indicators(
+        entry.slug,
+        rows,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    await append_record(record, source="inkar")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
+# GENESIS-Regionalstatistik-Trio (DATA-28): je Datensatz der verifizierte
+# Tabellen-Code + die Spaltenindizes der datencsv-Datenzeile (0=Jahr, 1=AGS,
+# 2=Name, ab 3 die Werte). Live gegen regionalstatistik.de verifiziert
+# (2026-06-15). Alle Kreis-Ebene (regionalvariable=KREISE), Jahreswerte.
+_GENESIS_DATASETS: dict[str, dict] = {
+    "unemployment": {
+        # 13211-02-05-4 Arbeitslose + Arbeitslosenquoten, Jahresdurchschnitt.
+        "table": "13211-02-05-4",
+        # idx3 = Arbeitslose (Anzahl), idx11 = Arbeitslosenquote bez. alle zivilen
+        # Erwerbspersonen (Prozent, die gaengig zitierte Gesamtquote).
+        "cols": {"arbeitslose": 3, "arbeitslosenquote": 11},
+        "archive_source": "genesis_unemployment",
+    },
+    "tourism": {
+        # 45412-01-02-4 Beherbergung, Jahressumme.
+        "table": "45412-01-02-4",
+        # idx5 = Gaesteuebernachtungen, idx6 = Gaesteankuenfte.
+        "cols": {"uebernachtungen": 5, "ankuenfte": 6},
+        "archive_source": "genesis_tourism",
+    },
+    "construction": {
+        # 31111-01-02-4 Baugenehmigungen Wohngebaeude/Wohnungen, Jahressumme.
+        "table": "31111-01-02-4",
+        # idx3 = genehmigte Wohngebaeude (insg.), idx7 = genehmigte Wohnungen (insg.).
+        "cols": {"wohngebaeude": 3, "wohnungen": 7},
+        "archive_source": "genesis_construction",
+    },
+}
+
+
+async def _genesis_regio_envelope(slug: str, request: Request, *, dataset: str) -> dict:
+    """Gemeinsamer Pfad fuer das GENESIS-Trio (Toggle/Key-Guard, Fetch, Map, Archiv).
+
+    Account-gated wie city_demographics: Quelle aus ODER kein Credential -> 200
+    ``disabled`` (nie 5xx). Resilienter Fetch ueber die "genesis"-Fassade gegen die
+    keyabhaengige Regionalstatistik-API (Header-Auth, je Kreis), Mapping mit
+    DL-DE/BY-2.0-Attribution. Kein Treffer (leere values) -> ``no_data``; toter
+    Upstream ohne Cache -> 503 (DX-06). Der ok-Record wird je Datensatz in eine
+    eigene Tier-A-Partition geschrieben (Analyst-Speisung). Credentials gehen NUR
+    in die Header (T-08-CRED), nie in den Cache-Key (nur dataset+slug) oder die
+    Response.
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+
+    settings = Settings()
+    if (
+        not settings.enable_genesis_regio
+        or settings.genesis_username is None
+        or settings.genesis_password is None
+    ):
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+
+    spec = _GENESIS_DATASETS[dataset]
+    client = request.app.state.resilient_client
+    key = build_cache_key("genesis", city_slug=f"{dataset}-{entry.slug}")
+    ags5 = entry.ags[:5]
+    genesis_user = settings.genesis_username
+    genesis_password = settings.genesis_password
+    col_specs = spec["cols"]
+    table = spec["table"]
+
+    async def fetch_fn():
+        return await fetch_genesis_table(
+            request.app.state.http,
+            table=table,
+            ags5=ags5,
+            username=genesis_user,
+            password=genesis_password,
+            col_specs=col_specs,
+        )
+
+    raw, status = await client.fetch("genesis", key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'genesis' voruebergehend nicht erreichbar, kein gecachter Wert.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+    values = raw.get("values") or {}
+    if not any(v is not None for v in values.values()):
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "no_data"},
+        }
+
+    record = map_regional_stat(
+        entry.slug, raw, dataset=dataset, retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid,
+    )
+    await append_record(record, source=spec["archive_source"])
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/unemployment")
+async def city_unemployment(slug: str, request: Request) -> dict:
+    """Arbeitslose + Arbeitslosenquote je Kreis, Jahreswert (GENESIS, Tier A).
+
+    Quelle: Statistische Aemter des Bundes und der Laender / Regionalstatistik
+    (Arbeitsmarktstatistik der Bundesagentur fuer Arbeit). Regionale Aufloesung
+    Kreis/kreisfreie Stadt (region_name weist sie aus). values: arbeitslose
+    (Anzahl), arbeitslosenquote (Prozent, bez. alle zivilen Erwerbspersonen).
+    """
+    return await _genesis_regio_envelope(slug, request, dataset="unemployment")
+
+
+@router.get("/cities/{slug}/tourism")
+async def city_tourism(slug: str, request: Request) -> dict:
+    """Gaesteuebernachtungen + Ankuenfte je Kreis, Jahreswert (GENESIS, Tier A).
+
+    Quelle: Statistische Aemter des Bundes und der Laender / Regionalstatistik
+    (Monatserhebung im Tourismus, Jahressumme). values: uebernachtungen,
+    ankuenfte (jeweils Anzahl). Regionale Aufloesung Kreis/kreisfreie Stadt.
+    """
+    return await _genesis_regio_envelope(slug, request, dataset="tourism")
+
+
+@router.get("/cities/{slug}/construction")
+async def city_construction(slug: str, request: Request) -> dict:
+    """Baugenehmigungen (Wohngebaeude/Wohnungen) je Kreis, Jahreswert (GENESIS, Tier A).
+
+    Quelle: Statistische Aemter des Bundes und der Laender / Regionalstatistik
+    (Statistik der Baugenehmigungen, Jahressumme). values: wohngebaeude,
+    wohnungen (genehmigt, Anzahl). Regionale Aufloesung Kreis/kreisfreie Stadt.
+    """
+    return await _genesis_regio_envelope(slug, request, dataset="construction")
+
+
+# Bundesland -> Stromnetz-Regelzone (SMARD-Verbrauch liegt je Regelzone vor).
+# Naeherung nach Bundesland; Zonen folgen nicht exakt den Landesgrenzen, fuer eine
+# regionale Verbrauchs-Kennzahl je Stadt aber die etablierte Zuordnung.
+_SMARD_STATE_TO_ZONE = {
+    "BW": "TransnetBW",
+    "BY": "TenneT", "HB": "TenneT", "HE": "TenneT", "NI": "TenneT", "SH": "TenneT",
+    "BE": "50Hertz", "BB": "50Hertz", "HH": "50Hertz", "MV": "50Hertz",
+    "SN": "50Hertz", "ST": "50Hertz", "TH": "50Hertz",
+    "NW": "Amprion", "RP": "Amprion", "SL": "Amprion",
+}
+
+
+async def _smard_envelope(
+    slug: str,
+    request: Request,
+    *,
+    filter_id: str,
+    region: str,
+    measure: str,
+    unit: str,
+) -> dict:
+    """Gemeinsamer SMARD-Pfad fuer power-load/power-price (Toggle/Fetch/Map/Archiv)."""
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    if not Settings().enable_smard:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+    client = request.app.state.resilient_client
+    key = build_cache_key("smard", city_slug=f"{measure}-{region}")
+
+    async def fetch_fn():
+        return await fetch_smard(
+            request.app.state.http, filter_id=filter_id, region=region
+        )
+
+    raw, status = await client.fetch("smard", key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'smard' voruebergehend nicht erreichbar, kein gecachter Wert.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+    if raw.get("value") is None:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "no_data"},
+        }
+    record = map_smard(
+        entry.slug, raw, measure=measure, unit=unit, retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+    )
+    # Verbrauch und Preis in getrennte Archiv-Partitionen (smard_load/smard_price),
+    # damit die Per-Tag-Aggregation des Analysten beide Reihen sauber trennt.
+    await append_record(record, source=f"smard_{measure}")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/power-load")
+async def city_power_load(slug: str, request: Request) -> dict:
+    """Stromverbrauch (Netzlast) der Regelzone der Stadt, Tageswert (SMARD, Tier A).
+
+    SMARD liefert den realisierten Stromverbrauch je Regelzone (50Hertz/Amprion/
+    TenneT/TransnetBW); die Stadt wird ueber ihr Bundesland einer Zone zugeordnet
+    (regionale Kennzahl, nicht stadtgenau). Quelle: Bundesnetzagentur | SMARD.de.
+    """
+    region = _SMARD_STATE_TO_ZONE.get(get_city(slug).state, "DE")
+    return await _smard_envelope(
+        slug, request, filter_id="410", region=region, measure="load", unit="MWh"
+    )
+
+
+@router.get("/cities/{slug}/power-price")
+async def city_power_price(slug: str, request: Request) -> dict:
+    """Day-ahead-Boersenstrompreis (bundesweit DE/LU), Tageswert (SMARD, Tier A).
+
+    Der Grosshandelspreis gilt bundesweit (eine Gebotszone), ist also fuer alle
+    Staedte identisch. Quelle: Bundesnetzagentur | SMARD.de.
+    """
+    return await _smard_envelope(
+        slug, request, filter_id="4169", region="DE", measure="price", unit="EUR/MWh"
+    )
+
+
+@router.get("/cities/{slug}/weather-warnings")
+async def city_weather_warnings(slug: str, request: Request) -> dict:
+    """Amtliche DWD-Wetterwarnungen je Stadt (max_level 0-4, Tier A).
+
+    Holt die bundesweite DWD-WarnApp-JSON (einmal gecacht) und filtert die Stadt
+    ueber ihre Gemeinde-Warncell (= '1'+AGS). max_level 0 = keine Warnung. Quelle:
+    Deutscher Wetterdienst (GeoNutzV). Deaktiviert -> 200 source_status="disabled".
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    if not Settings().enable_dwd_warnings:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+    client = request.app.state.resilient_client
+    # Ein Fetch des bundesweiten Files reicht fuer alle Staedte -> globaler Cache-Key.
+    key = build_cache_key("dwd_warnings", city_slug="all")
+
+    async def fetch_fn():
+        return await fetch_dwd_warnings_all(request.app.state.http)
+
+    full, status = await client.fetch("dwd_warnings", key, fetch_fn)
+    if full is None:
+        raise UpstreamError(
+            "Quelle 'dwd_warnings' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+    raw = extract_warncell(full, warncell_for_ags(entry.ags))
+    record = map_dwd_warnings(
+        entry.slug, raw, retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+    )
+    await append_record(record, source="dwd_warnings")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/fuel-prices")
+async def city_fuel_prices(slug: str, request: Request) -> dict:
+    """Aktuelle Spritpreise je Stadt, aggregiert (Tankerkoenig/MTS-K, Tier A).
+
+    Aggregiert die Tankstellen im Umkreis der Stadtkoordinate zu Durchschnitts- und
+    Minimal-Preisen je Sorte (e5/e10/diesel). Quelle: Markttransparenzstelle fuer
+    Kraftstoffe (MTS-K) via Tankerkoenig (CC BY 4.0). Toggle aus ODER kein API-Key
+    -> 200 source_status="disabled" (nie 5xx); keine Tankstelle im Radius -> 200
+    source_status="no_data". Der Key gelangt NIE in Cache-Key/Response/Log.
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    settings = Settings()
+    key = settings.tankerkoenig_key
+    # disabled: Toggle aus ODER kein (leerer) Key (analog hvv_geofox). Ein leerer
+    # Env-String INFRANODE_TANKERKOENIG_KEY="" ist KEIN None -> ``get_secret_value``
+    # zusaetzlich pruefen, damit der Guard deterministisch greift.
+    if not settings.enable_tankerkoenig or key is None or not key.get_secret_value():
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+
+    client = request.app.state.resilient_client
+    # Cache-Key traegt NUR den Slug (T-08-CRED): nie den Key.
+    cache_key = build_cache_key("tankerkoenig", city_slug=entry.slug)
+    apikey = key.get_secret_value()
+
+    async def fetch_fn():
+        return await fetch_fuel_prices(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+            apikey=apikey,
+        )
+
+    raw, status = await client.fetch("tankerkoenig", cache_key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'tankerkoenig' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # Keine Tankstelle im Radius -> ehrliches no_data (200) OHNE Mapper/Archiv.
+    if not raw.get("station_count"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": cid,
+                "source_status": "no_data",
+                "cache_status": status,
+            },
+        }
+
+    record = map_fuel_prices(
+        raw, retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+    )
+    await append_record(record, source="tankerkoenig")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/sharing")
+async def city_sharing(slug: str, request: Request) -> dict:
+    """Bike-/Scooter-Sharing je Stadt, aggregiert (GBFS, Tier A, DATA-33).
+
+    Aggregiert die offenen GBFS-Feeds der kuratierten Tier-A-Anbieter (Primaer
+    Nextbike, CC0) im Stadtgebiet zu einer Live-Kennzahl (verfuegbare Fahrzeuge +
+    Stationen). Quelle: General Bikeshare Feed Specification; die Lizenz wird PRO
+    System aus ``system_information.license_id`` fail-closed gegen die Tier-A-
+    Allowlist geprueft (GOV-02/04). Vier ``source_status``-Werte:
+    - ``disabled``: ``enable_gbfs`` per Env-Toggle aus -> data None
+    - ``not_covered``: kein kuratiertes GBFS-System fuer diese Stadt (mit der Liste
+      der abgedeckten Staedte), klar unterscheidbar von no_data
+    - ``no_data``: System(e) erreichbar, aber kein akzeptierter Tier-A-Anbieter
+      bzw. keine Fahrzeuge -> data None
+    - ``ok``: gemappter sharing-Payload
+    Toggle aus -> 200 disabled (nie 5xx).
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    settings = Settings()
+    if not settings.enable_gbfs:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+
+    systems = GBFS_SYSTEMS.get(entry.slug)
+    if systems is None:
+        return _not_covered("sharing")
+
+    client = request.app.state.resilient_client
+    cache_key = build_cache_key("gbfs", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_sharing(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+            systems=systems,
+        )
+
+    raw, status = await client.fetch("gbfs", cache_key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'gbfs' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # Kein akzeptierter Tier-A-Anbieter (fail-closed verworfen) -> ehrliches no_data.
+    if not raw.get("providers"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": cid,
+                "source_status": "no_data",
+                "cache_status": status,
+            },
+        }
+
+    record = map_sharing(
+        raw, retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+    )
+    await append_record(record, source="gbfs")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/station-departures")
+async def city_station_departures(slug: str, request: Request) -> dict:
+    """Live-Abfahrtstafel des Metropolen-Hbf inkl. Fernverkehr (DB Timetables, DATA-34).
+
+    Naechste Zugabfahrten am Fernverkehrs-Hauptbahnhof der Stadt mit Echtzeit-
+    Verspaetung (Soll- + Aenderungsdaten gemerged). Quelle: DB Timetables (DB API
+    Marketplace, CC BY 4.0). Vier ``source_status``-Werte:
+    - ``disabled``: Toggle aus ODER kein DB-Client-Id/Api-Key -> data None
+    - ``not_covered``: kein kuratierter Fernverkehrs-Hbf fuer diese Stadt (mit
+      covered_cities), klar unterscheidbar von no_data
+    - ``no_data``: Bahnhof erreichbar, aber keine Abfahrt im Zeitfenster
+    - ``ok``: gemappter station_departures-Payload
+    Die Keys gelangen NIE in Cache-Key/Response/Log.
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    settings = Settings()
+    cid_secret = settings.db_client_id
+    key = settings.db_api_key
+    # disabled: Toggle aus ODER fehlende/leere Credentials (analog tankerkoenig).
+    if (
+        not settings.enable_db_timetables
+        or cid_secret is None
+        or key is None
+        or not cid_secret.get_secret_value()
+        or not key.get_secret_value()
+    ):
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+
+    evas = STATION_EVAS.get(entry.slug)
+    if evas is None:
+        return _not_covered("station-departures")
+
+    client = request.app.state.resilient_client
+    cache_key = build_cache_key("db_timetables", city_slug=entry.slug)
+    client_id = cid_secret.get_secret_value()
+    api_key = key.get_secret_value()
+
+    async def fetch_fn():
+        return await fetch_station_departures(
+            request.app.state.http,
+            slug=entry.slug,
+            evas=evas,
+            client_id=client_id,
+            api_key=api_key,
+            now=datetime.now(UTC),
+        )
+
+    raw, status = await client.fetch("db_timetables", cache_key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'db_timetables' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    if not raw.get("departures"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": cid,
+                "source_status": "no_data",
+                "cache_status": status,
+            },
+        }
+
+    record = map_station_departures(
+        raw, retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+    )
+    await append_record(record, source="db_timetables")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/station-arrivals")
+async def city_station_arrivals(slug: str, request: Request) -> dict:
+    """Live-Ankunftstafel des Metropolen-Hbf inkl. Fernverkehr (DB Timetables, DATA-34).
+
+    Spiegelbild zu ``city_station_departures``: ankommende Zuege mit Echtzeit-
+    Verspaetung (``origin`` = Startbahnhof). Gleiche Quelle/Lizenz/Abdeckung wie die
+    Abfahrtstafel. Vier ``source_status``: disabled / not_covered / no_data / ok.
+    Die Keys gelangen NIE in Cache-Key/Response/Log.
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    settings = Settings()
+    cid_secret = settings.db_client_id
+    key = settings.db_api_key
+    if (
+        not settings.enable_db_timetables
+        or cid_secret is None
+        or key is None
+        or not cid_secret.get_secret_value()
+        or not key.get_secret_value()
+    ):
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+
+    evas = STATION_EVAS.get(entry.slug)
+    if evas is None:
+        return _not_covered("station-arrivals")
+
+    client = request.app.state.resilient_client
+    cache_key = build_cache_key("db_timetables_arr", city_slug=entry.slug)
+    client_id = cid_secret.get_secret_value()
+    api_key = key.get_secret_value()
+
+    async def fetch_fn():
+        return await fetch_station_arrivals(
+            request.app.state.http,
+            slug=entry.slug,
+            evas=evas,
+            client_id=client_id,
+            api_key=api_key,
+            now=datetime.now(UTC),
+        )
+
+    raw, status = await client.fetch("db_timetables", cache_key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'db_timetables' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    if not raw.get("arrivals"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": cid,
+                "source_status": "no_data",
+                "cache_status": status,
+            },
+        }
+
+    record = map_station_arrivals(
+        raw, retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+    )
+    await append_record(record, source="db_timetables")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
         },
     }
 

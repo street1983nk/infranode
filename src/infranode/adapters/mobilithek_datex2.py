@@ -223,31 +223,61 @@ def parse_datex2_parking(
 
 
 def _extract_point(record) -> tuple[float, float] | None:
-    """Liest die erste ``pointCoordinates`` (latitude/longitude) eines Records.
+    """Liest eine repraesentative Koordinate (lat, lon) eines situationRecords.
 
-    NS-robust per ``_localname``. Liefert ``None``, wenn keine validen
-    Koordinaten gefunden werden (ein Datenfehler faellt damit aus dem Filter,
-    statt einen 500 auszuloesen).
+    Zwei Geo-Kodierungen kommen real vor (NS-robust per ``_localname``):
+    1. ``pointCoordinates`` (latitude/longitude) - Punkt-Locations (Koeln-Stil).
+    2. ``posList`` unter ``gmlLineString`` - lineare Locations (Berlin SenMVKU-Stil,
+       LIVE-08): WGS84-Koordinatenliste "lat lon lat lon ...". Als Repraesentant
+       dient das erste Koordinatenpaar (Anfang des Strassenabschnitts).
+    Punkt-Koordinaten haben Vorrang; nur wenn keine vorhanden sind, greift der
+    ``posList``-Fallback. Liefert ``None`` bei fehlenden/invaliden Koordinaten
+    (ein Datenfehler faellt aus dem Filter, statt einen 500 auszuloesen).
     """
+    pos_fallback: tuple[float, float] | None = None
     for node in record.iter():
-        if _localname(node.tag) != "pointCoordinates":
-            continue
-        lat_val: float | None = None
-        lon_val: float | None = None
-        for child in node:
-            local = _localname(child.tag)
-            text = (child.text or "").strip()
-            if not text:
-                continue
-            try:
-                if local == "latitude":
-                    lat_val = float(text)
-                elif local == "longitude":
-                    lon_val = float(text)
-            except ValueError:
-                return None
-        if lat_val is not None and lon_val is not None:
-            return lat_val, lon_val
+        local = _localname(node.tag)
+        if local == "pointCoordinates":
+            lat_val: float | None = None
+            lon_val: float | None = None
+            for child in node:
+                cl = _localname(child.tag)
+                text = (child.text or "").strip()
+                if not text:
+                    continue
+                try:
+                    if cl == "latitude":
+                        lat_val = float(text)
+                    elif cl == "longitude":
+                        lon_val = float(text)
+                except ValueError:
+                    return None
+            if lat_val is not None and lon_val is not None:
+                return lat_val, lon_val
+        elif local == "posList" and pos_fallback is None:
+            pos_fallback = _first_poslist_point(node.text)
+    return pos_fallback
+
+
+def _first_poslist_point(text: str | None) -> tuple[float, float] | None:
+    """Erstes (lat, lon)-Paar einer GML-``posList`` (WGS84, "lat lon lat lon ...").
+
+    Reiner Parse; gibt ``None`` bei fehlendem/unvollstaendigem/invalidem Text
+    zurueck. Plausibilisiert grob auf DE-Bereich (lat 47-56, lon 5-16), damit eine
+    vertauschte/exotische Achsenreihenfolge nicht stillschweigend Unsinn liefert.
+    """
+    if not text:
+        return None
+    parts = text.split()
+    if len(parts) < 2:
+        return None
+    try:
+        lat_val = float(parts[0])
+        lon_val = float(parts[1])
+    except ValueError:
+        return None
+    if 47.0 <= lat_val <= 56.0 and 5.0 <= lon_val <= 16.0:
+        return lat_val, lon_val
     return None
 
 

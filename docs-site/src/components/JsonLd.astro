@@ -1,22 +1,37 @@
 ---
 // JSON-LD strukturierte Daten (DX-03, schema.org). type="WebAPI" auf der
-// Startseite, type="APIReference" je Endpunkt-Seite. Das schema.org-Objekt
-// wird mit JSON.stringify serialisiert (gueltiges, escaptes JSON; kein
-// manuelles String-Bauen, T-12-SEO-INJECT). Felder konservativ nach
-// schema.org gehalten (T-12-SEO-INVALID: invalid schema waere schlechter
-// als keins, daher nur Kernfelder).
+// Startseite, type="APIReference" je Endpunkt-Seite, type="FAQPage" fuer Q&A-
+// Bloecke (GEO: KI-Antwortmaschinen + Google-Rich-Results) und
+// type="SoftwareApplication" fuer den MCP-Server. Das schema.org-Objekt wird mit
+// JSON.stringify serialisiert (gueltiges, escaptes JSON; kein manuelles
+// String-Bauen, T-12-SEO-INJECT). Felder konservativ nach schema.org gehalten
+// (T-12-SEO-INVALID: invalid schema waere schlechter als keins, daher nur
+// Kernfelder).
 interface Props {
-  type: "WebAPI" | "APIReference";
-  // APIReference
+  type: "WebAPI" | "APIReference" | "FAQPage" | "SoftwareApplication";
+  // APIReference / SoftwareApplication
   name?: string;
   abstract?: string;
   url?: string;
-  // WebAPI
+  // WebAPI / SoftwareApplication
   description?: string;
   documentation?: string;
+  // SoftwareApplication
+  applicationCategory?: string;
+  // FAQPage: Liste von Frage/Antwort-Paaren (q/a, reiner Text).
+  faq?: { q: string; a: string }[];
 }
 
-const { type, name, abstract, url, description, documentation } = Astro.props;
+const {
+  type,
+  name,
+  abstract,
+  url,
+  description,
+  documentation,
+  applicationCategory,
+  faq,
+} = Astro.props;
 
 const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
 
@@ -36,6 +51,40 @@ if (type === "WebAPI") {
       name: "InfraNode",
     },
     termsOfService: `${site}/`,
+  };
+} else if (type === "FAQPage") {
+  data = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: (faq ?? []).map(({ q, a }) => ({
+      "@type": "Question",
+      name: q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: a,
+      },
+    })),
+  };
+} else if (type === "SoftwareApplication") {
+  data = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: name ?? "InfraNode MCP-Server",
+    description:
+      description ??
+      "Gehosteter Model-Context-Protocol-Server mit Tools für offene Stadtdaten deutscher Großstädte.",
+    url: url ?? `${site}/mcp/`,
+    applicationCategory: applicationCategory ?? "DeveloperApplication",
+    operatingSystem: "Any",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "EUR",
+    },
+    provider: {
+      "@type": "Organization",
+      name: "InfraNode",
+    },
   };
 } else {
   data = {

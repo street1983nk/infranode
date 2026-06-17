@@ -118,6 +118,46 @@ code {
   }
 }
 
+/* Dezenter MCP-Hinweis (auf allen Seiten ausser der MCP-Seite selbst) */
+.mcphint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  font-size: 0.82rem;
+  line-height: 1.3;
+  color: var(--fg-muted);
+  background: var(--color-primary-soft);
+  border-bottom: 1px solid var(--border-strong);
+  text-decoration: none;
+  text-align: center;
+}
+.mcphint:hover {
+  color: var(--color-primary-strong);
+}
+.mcphint__badge {
+  flex: none;
+  font-weight: 700;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: var(--color-accent);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+.mcphint__arrow {
+  flex: none;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+@media (max-width: 640px) {
+  .mcphint {
+    font-size: 0.76rem;
+    padding: 0.35rem 0.7rem;
+  }
+}
+
 /* Layout-Grid */
 .layout {
   display: grid;

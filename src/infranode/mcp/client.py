@@ -76,6 +76,42 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "road-events",
         "events",
         "webcams",
+        # SMARD/DWD (frueher ergaenzt, in der MCP-Allowlist nachgezogen).
+        "power-load",
+        "power-price",
+        "weather-warnings",
+        # DATA-27/28/29: KBA + GENESIS-Trio + Unfallatlas (Tier A, Kreis-Jahreswerte).
+        "vehicle-registrations",
+        "unemployment",
+        "tourism",
+        "construction",
+        "accidents",
+        # DATA-30: Tankerkoenig Spritpreise (Tier A, aggregiert je Stadt).
+        "fuel-prices",
+        # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
+        "sharing",
+        # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
+        "indicators",
+        # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
+        "station-departures",
+        "station-arrivals",
+    }
+)
+
+# T-12-MCP-INJECT: erlaubte Live-Ressourcen-Pfade unter GET /api/v1/live/{slug}/...
+# Mehrsegmentige Pfade sind hier zulaessig, weil sie gegen DIESE Allowlist
+# geprueft werden (kein roher Tool-Input im Pfad ausser dem gequoteten slug).
+ALLOWED_LIVE_RESOURCES: frozenset[str] = frozenset(
+    {
+        "transit/departures",
+    }
+)
+
+# T-12-MCP-INJECT: erlaubte slug-lose Collection-Endpunkte (GET /api/v1/<name>).
+ALLOWED_COLLECTIONS: frozenset[str] = frozenset(
+    {
+        "cities",
+        "sources",
     }
 )
 
@@ -159,13 +195,76 @@ async def get_resource(
             f"Erlaubt: {', '.join(sorted(ALLOWED_RESOURCES))}."
         )
     safe_slug = _validate_slug(slug)
-    base = _base_url()
-    url = f"{base}/cities/{safe_slug}/{resource}"
+    # MCP-Kennung: der Ressourcen-Name (bereits gegen ALLOWED_RESOURCES validiert).
+    return await _request(f"/cities/{safe_slug}/{resource}", params, tag=resource)
 
-    # MCP-Kennung mitschicken, damit die API MCP-Aktionen im Dashboard + per ntfy
-    # sichtbar macht. Der Ressourcen-Name (bereits gegen ALLOWED_RESOURCES
-    # validiert) faehrt mit, damit klar ist, welche Daten geholt wurden.
-    headers = {_MCP_SOURCE_HEADER: resource}
+
+async def get_live(
+    slug: str,
+    live_resource: str,
+    params: dict[str, str] | None = None,
+) -> dict:
+    """Ruft eine Live-Ressource ``/live/{slug}/{live_resource}``; gibt JSON zurueck.
+
+    ``live_resource`` wird gegen ``ALLOWED_LIVE_RESOURCES`` geprueft, ``slug`` als
+    reiner Pfadbestandteil gequotet und der Base-Host gegen ``ALLOWED_HOSTS``
+    validiert, BEVOR ein Request rausgeht (T-12-MCP-SSRF/-INJECT). Envelope 1:1.
+
+    Args:
+        slug: Stadt-Slug (reiner Pfadbestandteil, z.B. ``"berlin"``).
+        live_resource: Pfad aus ``ALLOWED_LIVE_RESOURCES`` (z.B.
+            ``"transit/departures"``).
+        params: Optionale Query-Parameter (z.B. ``{"stop_id": "..."}``).
+    """
+    if live_resource not in ALLOWED_LIVE_RESOURCES:
+        raise ValueError(
+            f"Unbekannte Live-Ressource {live_resource!r} (T-12-MCP-INJECT). "
+            f"Erlaubt: {', '.join(sorted(ALLOWED_LIVE_RESOURCES))}."
+        )
+    safe_slug = _validate_slug(slug)
+    return await _request(
+        f"/live/{safe_slug}/{live_resource}", params, tag=f"live:{live_resource}"
+    )
+
+
+async def get_collection(
+    name: str,
+    params: dict[str, str] | None = None,
+) -> dict:
+    """Ruft einen slug-losen Collection-Endpunkt ``/{name}`` und gibt das JSON zurueck.
+
+    ``name`` wird gegen ``ALLOWED_COLLECTIONS`` geprueft und der Base-Host gegen
+    ``ALLOWED_HOSTS`` validiert, BEVOR ein Request rausgeht (T-12-MCP-SSRF/-INJECT).
+
+    Args:
+        name: Collection-Endpunkt aus ``ALLOWED_COLLECTIONS`` (``"cities"`` /
+            ``"sources"``).
+        params: Optionale Query-Parameter (z.B. Pagination).
+    """
+    if name not in ALLOWED_COLLECTIONS:
+        raise ValueError(
+            f"Unbekannter Collection-Endpunkt {name!r} (T-12-MCP-INJECT). "
+            f"Erlaubt: {', '.join(sorted(ALLOWED_COLLECTIONS))}."
+        )
+    return await _request(f"/{name}", params, tag=f"collection:{name}")
+
+
+async def _request(
+    path: str,
+    params: dict[str, str] | None,
+    *,
+    tag: str,
+) -> dict:
+    """Fuehrt den Loopback-GET gegen die allowlistete Base-URL aus (gemeinsamer Kern).
+
+    ``path`` wird ausschliesslich aus bereits validierten Bestandteilen gebaut
+    (gequoteter slug + allowlistete resource/collection); roher Tool-Input gelangt
+    nie ungeprueft hierher. Der Base-Host wird in ``_base_url`` gegen die Allowlist
+    geprueft. Die MCP-Kennung ``tag`` faehrt als Header mit (Dashboard/ntfy).
+    """
+    base = _base_url()
+    url = f"{base}{path}"
+    headers = {_MCP_SOURCE_HEADER: tag}
 
     async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
         response = await client.get(url, params=params, headers=headers)

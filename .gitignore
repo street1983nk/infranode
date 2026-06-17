@@ -5,6 +5,13 @@
 *.pem
 *.key
 *.crt
+# mTLS-Client-Zertifikate (Mobilithek, mobilithek_cert_path) und PKCS#12-Bundles:
+# duerfen NIE ins Repo. .p12/.pfx fehlten zuvor -> ergaenzt (Security-Hardening).
+*.p12
+*.pfx
+*.jks
+*.keystore
+certs/
 secrets/
 
 # Python

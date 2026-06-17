@@ -36,6 +36,11 @@ from infranode.normalization import (
 )
 
 _DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
+# Dortmund-Parken kommt seit 2026-06-13 aus dem direkten, keylosen Opendatasoft-
+# Feed der Stadt (adapters/dortmund_parking, statt Mobilithek). Dieser Datensatz
+# steht unter Datenlizenz Deutschland Zero 2.0 (am Datensatz-Meta verifiziert) ->
+# noch freier als DL-DE/BY, weiterhin Tier A. Kiel bleibt DL-DE/BY (Mobilithek).
+_DL_DE_ZERO_URL = "https://www.govdata.de/dl-de/zero-2-0"
 _DORTMUND_ATTRIBUTION = "Stadt Dortmund"
 _KIEL_ATTRIBUTION = "Landeshauptstadt Kiel"
 
@@ -65,10 +70,11 @@ def map_dortmund_parking(
     """Bildet die Dortmund-Parkbelegung (parking) auf einen ``CanonicalRecord`` ab.
 
     Die ``facilities`` (je Parkhaus facility_id + free/capacity/occupancy,
-    LIVE-09) wandern in den ``ParkingPayload``. ``observed_at`` aus der DATEX-II
-    ``publicationTime`` (``as_of``) falls vorhanden. ``retrieved_at`` injiziert
-    (keine Systemuhr im Mapper). Tier A, DL-DE/BY 2.0, Attribution
-    "Stadt Dortmund". Schliesst die DATA-09-Echtzeit-Parkbelegungsluecke.
+    LIVE-09) wandern in den ``ParkingPayload``. ``observed_at`` aus dem juengsten
+    ``zeitstempel`` (``as_of``) falls vorhanden. ``retrieved_at`` injiziert
+    (keine Systemuhr im Mapper). Tier A, DL-DE Zero 2.0 (direkter keyloser
+    Opendatasoft-Feed der Stadt Dortmund), Attribution "Stadt Dortmund".
+    Schliesst die DATA-09-Echtzeit-Parkbelegungsluecke.
     """
     return CanonicalRecord(
         city_slug=raw["slug"],
@@ -76,13 +82,13 @@ def map_dortmund_parking(
         observed_at=_parse_as_of(raw),
         retrieved_at=retrieved_at,
         source=SourceId.DORTMUND_PARKING,
-        license_id=LicenseId.DL_DE_BY_2_0,
+        license_id=LicenseId.DL_DE_ZERO_2_0,
         license_tier=LicenseTier.A,
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text=_DORTMUND_ATTRIBUTION,
-            license_url=_DL_DE_BY_URL,
+            license_url=_DL_DE_ZERO_URL,
         ),
         payload=ParkingPayload(
             facilities=raw.get("facilities", []),

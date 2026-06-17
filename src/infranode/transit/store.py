@@ -29,6 +29,10 @@ import orjson
 _TRIP_PREFIX = "transit_rt:v1:"
 _STOP_IDX_PREFIX = "transit_rt:idx:stop:"
 _ROUTE_IDX_PREFIX = "transit_rt:idx:route:"
+# Provenance des aktuell in Redis liegenden RT-Stands (DATA-34/Mobilithek-Switch):
+# welcher Feed hat die letzten Updates geliefert ("mobilithek_delfi" Primaer ODER
+# "gtfs_de" Backup-Fallback). Der Read-Pfad waehlt daraus die korrekte Attribution.
+_SOURCE_KEY = "transit_rt:source"
 
 
 def _trip_key(trip_id: str) -> str:
@@ -72,6 +76,19 @@ async def store_updates_indexed(redis, updates, *, ttl: int = 90) -> None:
             stop_key = _stop_idx_key(stop_id)
             await redis.sadd(stop_key, trip_id)
             await redis.expire(stop_key, ttl)
+
+
+async def store_rt_source(redis, source: str, *, ttl: int = 90) -> None:
+    """Merkt die Quelle des aktuellen RT-Stands (Provenance fuer die Attribution)."""
+    await redis.set(_SOURCE_KEY, source, ex=ttl)
+
+
+async def read_rt_source(redis) -> str | None:
+    """Liest die Provenance des aktuellen RT-Stands (oder ``None`` bei Miss)."""
+    raw = await redis.get(_SOURCE_KEY)
+    if raw is None:
+        return None
+    return raw.decode() if isinstance(raw, bytes) else str(raw)
 
 
 async def get_trip_update(redis, trip_id: str) -> dict | None:

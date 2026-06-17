@@ -69,9 +69,9 @@ async def fetch_pois(
     amenity = _ALLOWED_TYPES[poi_type]
     area_id = _AREA_OFFSET + osm_relation
 
-    # out center 200 cappt (nwr+center: auch way/relation-POIs) die Antwort (DoS-Schutz, Pitfall 2); timeout begrenzt
-    # die Server-Laufzeit. Nur die validierte area_id und das Whitelist-amenity
-    # werden interpoliert.
+    # out center 200 cappt (nwr+center: auch way/relation-POIs) die Antwort
+    # (DoS-Schutz, Pitfall 2); timeout begrenzt die Server-Laufzeit. Nur die
+    # validierte area_id und das Whitelist-amenity werden interpoliert.
     ql = (
         f"[out:json][timeout:25];"
         f"area({area_id})->.a;"

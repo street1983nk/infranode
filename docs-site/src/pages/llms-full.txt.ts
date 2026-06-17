@@ -87,8 +87,11 @@ export const GET: APIRoute = async () => {
   lines.push(
     "> Volltext aller Endpunkte der InfraNode API in einem Dokument. " +
       "Normalisierte Open-Data-Proxy-API für deutsche Großstädte (84 Städte, " +
-      "28 Kern-Städte voll abgedeckt; Stammdaten, Luftqualität, Wetter, POIs, " +
-      "ÖPNV, Verkehr). Kanonischer Envelope mit data und meta auf Top-Level " +
+      "28 Kern-Städte voll abgedeckt; Stammdaten, Luftqualität, Wetter und " +
+      "Wetterwarnungen, ÖPNV inkl. Echtzeit, Verkehr, Energie und Strommarkt, " +
+      "Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, " +
+      "Baugenehmigungen, Verkehrsunfälle, POIs). Kanonischer Envelope mit data " +
+      "und meta auf Top-Level " +
       "(source_status, correlation_id und cache_status in meta); jeder " +
       "data-Record trägt zusätzlich ein attribution-Feld mit Lizenz und Herkunft.",
   );

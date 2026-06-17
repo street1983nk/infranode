@@ -20,9 +20,40 @@ import asyncio
 import structlog
 
 from infranode.adapters.gtfs_rt import fetch_gtfs_rt_feed, parse_trip_updates
-from infranode.transit.store import store_updates_indexed
+from infranode.transit.store import store_rt_source, store_updates_indexed
 
 log = structlog.get_logger()
+
+
+async def _fetch_with_fallback(
+    app, *, source: str, abo_id: str | None
+) -> tuple[bytes | None, str | None]:
+    """Holt den RT-Feed und faellt von ``mobilithek_delfi`` auf ``gtfs_de`` zurueck.
+
+    Primaerquelle ``mobilithek_delfi`` (DELFI ueber Mobilithek-mTLS): liefert sie
+    keine Bytes (no_data/disabled) ODER scheitert sie (Upstream-Fehler), wird der
+    keylose gtfs.de-Backup-Feed gezogen ("schalte um und gtfs als backup"). Gibt
+    ``(body, used_source)`` zurueck, damit der Read-Pfad die korrekte Attribution
+    (DELFI e.V. vs gtfs.de) waehlen kann. Andere Quellen (gtfs_de) ohne Fallback.
+    """
+    http = app.state.http
+    mtls = getattr(app.state, "mobilithek_http", None)
+    if source == "mobilithek_delfi":
+        try:
+            feed = await fetch_gtfs_rt_feed(
+                http, mtls, source="mobilithek_delfi", abo_id=abo_id
+            )
+        except Exception as exc:  # noqa: BLE001 - DELFI-Fehler -> Backup, kein Crash
+            log.warning("gtfs_rt_delfi_failed_fallback_gtfs_de", error=str(exc))
+            feed = None
+        if feed is not None:
+            return feed, "mobilithek_delfi"
+        # Backup: keyloser gtfs.de-Feed (raise_for_status faengt die Aussenschleife).
+        feed = await fetch_gtfs_rt_feed(http, None, source="gtfs_de", abo_id=None)
+        return feed, "gtfs_de"
+
+    feed = await fetch_gtfs_rt_feed(http, mtls, source=source, abo_id=abo_id)
+    return feed, source
 
 
 async def gtfs_rt_poller(
@@ -62,15 +93,16 @@ async def gtfs_rt_poller(
             except Exception:
                 should_poll = True
             if should_poll:
-                feed = await fetch_gtfs_rt_feed(
-                    app.state.http,
-                    getattr(app.state, "mobilithek_http", None),
-                    source=source,
-                    abo_id=abo_id,
+                feed, used_source = await _fetch_with_fallback(
+                    app, source=source, abo_id=abo_id
                 )
                 if feed is not None:
                     updates = parse_trip_updates(feed)
                     await store_updates_indexed(app.state.redis, updates, ttl=90)
+                    # Provenance des Stands fuer die Read-Pfad-Attribution.
+                    await store_rt_source(
+                        app.state.redis, used_source or source, ttl=90
+                    )
         except asyncio.CancelledError:
             # Shutdown (Lifespan-finally cancelt die bg_tasks): sauber beenden.
             raise

@@ -116,7 +116,11 @@ async def fetch_gtfs_rt_feed(
     if source == "mobilithek_delfi":
         if mtls_client is None or not abo_id:
             return None  # Graceful Degradation -> disabled
-        result = await pull_subscription(mtls_client, build_pull_url(abo_id))
+        # Legacy-Datenmodell (Service Desk 2026-06-15): style="container"
+        # (/container/subscription?subscriptionID=...), NICHT der path-Zugriff
+        # (Kap. 6.2.1 -> 4xx fuer dieses Abo).
+        url = build_pull_url(abo_id, style="container")
+        result = await pull_subscription(mtls_client, url)
         return result["body"]  # None bei 422 = no_data
 
     resp = await http.get(_GTFS_DE_FEED_URL)

@@ -46,6 +46,18 @@ _DELFI_ATTRIBUTION = "DELFI e.V."
 _CC_BY_SA_URL = "https://creativecommons.org/licenses/by-sa/4.0/"
 
 
+def attribution_for_source(used_source: str | None) -> str:
+    """Waehlt den Attribution-Text aus der RT-Provenance (DELFI vs gtfs.de).
+
+    ``"mobilithek_delfi"`` -> "DELFI e.V.", sonst (gtfs.de-Backup/Default) "gtfs.de".
+    Beide bleiben CC-BY-SA 4.0 Tier B (CONTEXT LOCKED); nur die Namensnennung
+    folgt der tatsaechlich liefernden Quelle.
+    """
+    if used_source == "mobilithek_delfi":
+        return _DELFI_ATTRIBUTION
+    return _GTFS_DE_ATTRIBUTION
+
+
 def _observed_at(raw: dict) -> datetime | None:
     """Liest den RT-Feed-Timestamp (Unix-Epoch) als aware ``datetime`` oder None.
 

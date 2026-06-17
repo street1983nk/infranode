@@ -51,6 +51,30 @@ mcp.tool()(tools.icu_live)
 mcp.tool()(tools.road_events)
 mcp.tool()(tools.events)
 mcp.tool()(tools.webcams)
+# SMARD/DWD (frueher ergaenzte Endpunkte, jetzt als MCP-Tools nachgezogen).
+mcp.tool()(tools.power_load)
+mcp.tool()(tools.power_price)
+mcp.tool()(tools.weather_warnings)
+# DATA-27/28/29: KBA Pkw-Bestand + GENESIS-Trio + Unfallatlas (Tier A).
+mcp.tool()(tools.vehicle_registrations)
+mcp.tool()(tools.unemployment)
+mcp.tool()(tools.tourism)
+mcp.tool()(tools.construction)
+mcp.tool()(tools.accidents)
+# DATA-30: Tankerkoenig Spritpreise (Tier A, aggregiert je Stadt).
+mcp.tool()(tools.fuel_prices)
+# DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
+mcp.tool()(tools.sharing)
+# DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
+mcp.tool()(tools.indicators)
+# DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
+mcp.tool()(tools.station_departures)
+mcp.tool()(tools.station_arrivals)
+# DATA-26: Live-/Meta-Tools (echte neue Faehigkeiten, nicht slug-redundant):
+# Echtzeit-Abfahrten, Staedte-Liste, Quellen-Uebersicht.
+mcp.tool()(tools.transit_departures)
+mcp.tool()(tools.list_cities)
+mcp.tool()(tools.sources)
 
 
 def run() -> None:

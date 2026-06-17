@@ -137,19 +137,32 @@ class BreakerRegistry:
         cooldown: float = 30.0,
         *,
         now: Callable[[], float] = time.monotonic,
+        cooldowns: dict[str, float] | None = None,
     ) -> None:
         self.failure_threshold = failure_threshold
         self.cooldown = cooldown
         self._now = now
+        # Per-Source-Cooldown-Override (2026-06-14): fragile/langsam erholende
+        # Quellen (z.B. zeitweise gestoerte Behoerden-APIs) bekommen einen langen
+        # Cooldown, damit der OPEN-Breaker den kranken Upstream selten probt (wenig
+        # Fehler-Laerm), sich aber dennoch SELBST wieder schliesst, sobald der
+        # Upstream zurueck ist. So heilen solche Quellen automatisch, ohne dass man
+        # sie manuell per enable_*-Toggle abschalten muss. Fehlt ein Eintrag, gilt
+        # der globale Default-Cooldown.
+        self._cooldowns = cooldowns or {}
         self._breakers: dict[str, CircuitBreaker] = {}
 
     def get(self, source: str) -> CircuitBreaker:
-        """Liefert den Breaker der Quelle (legt ihn beim ersten Zugriff an)."""
+        """Liefert den Breaker der Quelle (legt ihn beim ersten Zugriff an).
+
+        Der Cooldown ist per Quelle ueberschreibbar (``cooldowns``-Map); ohne
+        Eintrag greift der globale Default.
+        """
         breaker = self._breakers.get(source)
         if breaker is None:
             breaker = CircuitBreaker(
                 failure_threshold=self.failure_threshold,
-                cooldown=self.cooldown,
+                cooldown=self._cooldowns.get(source, self.cooldown),
                 now=self._now,
             )
             self._breakers[source] = breaker

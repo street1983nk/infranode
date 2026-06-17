@@ -38,7 +38,71 @@ from infranode.adapters.lhp import _CITY_PEGEL
 # road-events: gespiegelt aus ``api.v1.cities.CONNECTOR_MAP`` (siehe Modul-Docstring).
 # Die Assertion in cities.py haelt diese Liste mit der CONNECTOR_MAP synchron.
 _ROAD_EVENTS_CITIES: frozenset[str] = frozenset(
-    {"berlin", "koeln", "hamburg", "muenchen", "stuttgart"}
+    {"berlin", "koeln", "hamburg", "muenchen", "stuttgart", "bremen"}
+)
+
+# sharing (DATA-33): gespiegelt aus ``api.v1.cities.GBFS_SYSTEMS`` (kuratierte
+# Nextbike-GBFS-Systeme je Stadt). Wie bei road-events lebt die Quell-Map in
+# cities.py (das dieses Modul importiert), daher wird die Slug-Menge hier
+# gespiegelt und per Modul-Assertion in cities.py drift-synchron gehalten.
+_SHARING_CITIES: frozenset[str] = frozenset(
+    {
+        "berlin",
+        "muenchen",
+        "koeln",
+        "frankfurt-am-main",
+        "duesseldorf",
+        "dresden",
+        "leipzig",
+        "hannover",
+        "nuernberg",
+        "bremen",
+        "braunschweig",
+        "freiburg-im-breisgau",
+        "karlsruhe",
+        "aachen",
+        "kassel",
+        "wiesbaden",
+        "oldenburg",
+        "potsdam",
+        "bielefeld",
+        "moenchengladbach",
+        "mannheim",
+        "heidelberg",
+        "ludwigshafen-am-rhein",
+        "hanau",
+        "leverkusen",
+    }
+)
+
+# station-departures (DATA-34): gespiegelt aus ``api.v1.cities.STATION_EVAS``
+# (kuratierte Metropolen-Hbf mit Fernverkehr). Wie bei road-events/sharing lebt die
+# Quell-Map in cities.py; die Slug-Menge wird hier gespiegelt und per Modul-
+# Assertion in cities.py drift-synchron gehalten.
+_STATION_CITIES: frozenset[str] = frozenset(
+    {
+        "berlin",
+        "hamburg",
+        "muenchen",
+        "koeln",
+        "frankfurt-am-main",
+        "stuttgart",
+        "duesseldorf",
+        "hannover",
+        "nuernberg",
+        "leipzig",
+        "dresden",
+        "bremen",
+        "dortmund",
+        "essen",
+        "karlsruhe",
+        "mannheim",
+        "muenster",
+        "mainz",
+        "freiburg-im-breisgau",
+        "bonn",
+        "augsburg",
+    }
 )
 
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
@@ -48,6 +112,10 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "webcams": frozenset(_CITY_ROADS),
     "traffic": frozenset(_CITY_ROADS),
     "road-events": _ROAD_EVENTS_CITIES,
+    "sharing": _SHARING_CITIES,
+    "station-departures": _STATION_CITIES,
+    # station-arrivals teilt dieselbe STATION_EVAS-Map (gleiche Bahnhoefe).
+    "station-arrivals": _STATION_CITIES,
 }
 
 

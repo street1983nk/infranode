@@ -65,6 +65,8 @@ class SourceId(StrEnum):
     GENESIS = "genesis"
     ZENSUS = "zensus"
     MASTR = "mastr"
+    SMARD = "smard"
+    DWD_WARNINGS = "dwd_warnings"
     BKG = "bkg"
     BUNDESWAHL = "bundeswahl"
     DIVI = "divi"
@@ -110,3 +112,47 @@ class SourceId(StrEnum):
     # (Geofox-Lizenz nicht offen). Eigene SourceId getrennt von HVV (= statische
     # GTFS-Stops). Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
     HVV_GEOFOX = "hvv_geofox"
+    # DATA-25: VGN/VAG-Nuernberg Live-Abfahrten (Puls-API start.vag.de), Tier A
+    # (CC-BY 4.0, offen, opendata.vag.de) -> sauber verwertbar, anders als HVV.
+    # Keylos, KEINE Mobilithek. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES.
+    VGN = "vgn"
+    # DATA-26: Hamburg-Verkehrslage (Echtzeit-Verkehrsfluss je Strassenabschnitt,
+    # OAF/GeoJSON api.hamburg.de), Tier A (DL-DE/BY 2.0, offen, keylos). Anders als
+    # HVV_GEOFOX (Tier C, nicht offen) sauber verwertbar. KEINE Mobilithek.
+    # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    HAMBURG_VERKEHRSLAGE = "hamburg_verkehrslage"
+    # DATA-27: KBA Pkw-Bestand + Elektro-Anteil je Zulassungsbezirk (keylose
+    # Bulk-Quelle, DL-DE/BY 2.0, Tier A). Read-only Store-Lesung im Request-Pfad
+    # (wie MASTR), kein resilient_client. Toggle-Name == SourceId-Wert ==
+    # _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    KBA = "kba"
+    # DATA-29: Unfallatlas (Strassenverkehrsunfaelle je Kreis, keylose Bulk-CSV,
+    # DL-DE/BY 2.0, Tier A). Read-only Store-Lesung (wie KBA/MASTR), kein
+    # resilient_client. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    UNFALLATLAS = "unfallatlas"
+    # DATA-30: Tankerkoenig Spritpreise (MTS-K), aggregiert je Stadt. Keyed Live-
+    # Quelle (resilient_client), CC-BY 4.0 = Tier A (offen, verwertbar). Toggle-
+    # Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag: getattr(settings,
+    # f"enable_{name}"); der Key ist ein eigenes SecretStr-Feld.
+    TANKERKOENIG = "tankerkoenig"
+    # DATA-31: Bremen Baustellen/Arbeitsstellen (Verkehrsmanagementzentrale Bremen,
+    # Mobilithek DATEX II V2 SituationPublication, DL-DE/BY 2.0, Tier A). Live-
+    # Quelle wie koeln_baustellen_live. Toggle-Name == SourceId-Wert ==
+    # _KNOWN_SOURCES-Eintrag.
+    BREMEN_BAUSTELLEN = "bremen_baustellen"
+    # DATA-33: GBFS-Bike-/Scooter-Sharing je Stadt (Live, aggregiert). Primaer
+    # Nextbike (CC0 = Tier A); je System wird die Lizenz aus GBFS
+    # ``system_information.license_id`` fail-closed gegen eine Tier-A-Allowlist
+    # geprueft (GOV-02/04). Keyed-los, resilient_client. Toggle-Name == SourceId-
+    # Wert == _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    GBFS = "gbfs"
+    # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (keylose Bulk-
+    # Quelle, DL-DE/BY 2.0, Tier A). Read-only Store-Lesung im Request-Pfad (wie
+    # KBA/UNFALLATLAS), kein resilient_client. Toggle-Name == SourceId-Wert ==
+    # _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    INKAR = "inkar"
+    # DATA-34: DB Timetables (Live-Abfahrtstafel Metropolen-Hbf inkl. Fernverkehr +
+    # Echtzeit-Verspaetung). Keyed Live-Quelle (resilient_client, Header-Auth),
+    # CC-BY 4.0 = Tier A. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag;
+    # die Keys sind eigene SecretStr-Felder (db_client_id/db_api_key).
+    DB_TIMETABLES = "db_timetables"

@@ -1098,6 +1098,239 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/vehicle-registrations:
+    get:
+      tags: [cities]
+      summary: Pkw-Bestand und Elektro-Anteil je Stadt (KBA, Tier A)
+      x-summary-en: Car stock and electric share per city (KBA, Tier A)
+      description: >-
+        Liefert den Pkw-Bestand und den Elektro-Anteil einer Stadt aus dem offline
+        aufbereiteten KBA-SQLite-Store im kanonischen Envelope. Die regionale
+        Aufloesung ist der Zulassungsbezirk (= Kreis bzw. kreisfreie Stadt) und
+        wird ueber district/district_key ehrlich ausgewiesen. Kein Upstream im
+        Request-Pfad, der Abruf liest nur den vorbereiteten Bestand. Deaktiviert ->
+        200 source_status="disabled". Batch noch nicht gelaufen -> 200
+        source_status="not_ingested" (nie 5xx).
+      x-description-en: >-
+        Returns a city's car stock and electric share from the offline-prepared
+        KBA SQLite store in the canonical envelope. The spatial resolution is the
+        registration district (= county or county-free city) and is honestly
+        reported via district/district_key. No upstream in the request path; the
+        request only reads the prepared store. Disabled -> 200
+        source_status="disabled". Batch not yet run -> 200
+        source_status="not_ingested" (never 5xx).
+      operationId: getCityVehicleRegistrations
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >-
+            Fahrzeug-Envelope. data ist ein CanonicalRecord
+            (VehicleRegistrationPayload) oder null, je nach source_status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/accidents:
+    get:
+      tags: [cities]
+      summary: Strassenverkehrsunfaelle je Stadt (Unfallatlas, Tier A)
+      x-summary-en: Road traffic accidents per city (accident atlas, Tier A)
+      description: >-
+        Liefert das jaehrliche Unfall-Aggregat einer Stadt aus dem offline
+        aufbereiteten Unfallatlas-SQLite-Store im kanonischen Envelope: Gesamtzahl
+        sowie Aufschluesselung nach Unfallkategorie (Getoetete/Schwer-/
+        Leichtverletzte) und beteiligter Verkehrsart (Rad/Fuss/Pkw/Krad).
+        Regionale Aufloesung Kreis/kreisfreie Stadt. Kein Upstream im Request-Pfad.
+        Deaktiviert -> 200 source_status="disabled". Batch noch nicht gelaufen ->
+        200 source_status="not_ingested" (nie 5xx).
+      x-description-en: >-
+        Returns a city's annual accident aggregate from the offline-prepared
+        accident-atlas SQLite store in the canonical envelope: total plus a
+        breakdown by accident category (fatal/serious/slight) and by participant
+        type (bicycle/pedestrian/car/motorcycle). Spatial resolution county/
+        county-free city. No upstream in the request path. Disabled -> 200
+        source_status="disabled". Batch not yet run -> 200
+        source_status="not_ingested" (never 5xx).
+      operationId: getCityAccidents
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Unfall-Envelope (CanonicalRecord mit AccidentPayload oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/unemployment:
+    get:
+      tags: [cities]
+      summary: Arbeitslose und Arbeitslosenquote je Stadt (GENESIS, Tier A)
+      x-summary-en: Unemployment count and rate per city (GENESIS, Tier A)
+      description: >-
+        Liefert Arbeitslose (Anzahl) und Arbeitslosenquote (Prozent) einer Stadt
+        aus der Regionalstatistik (Arbeitsmarktstatistik der Bundesagentur fuer
+        Arbeit, Jahresdurchschnitt) im kanonischen Envelope. Regionale Aufloesung
+        Kreis/kreisfreie Stadt (region_name). Quelle account-gated; deaktiviert ->
+        200 source_status="disabled". Kein Wert -> 200 source_status="no_data".
+      x-description-en: >-
+        Returns a city's unemployment count and rate from the regional statistics
+        (Federal Employment Agency, annual average) in the canonical envelope.
+        Spatial resolution county/county-free city. Account-gated; disabled -> 200
+        source_status="disabled". No value -> 200 source_status="no_data".
+      operationId: getCityUnemployment
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Regionalstatistik-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/tourism:
+    get:
+      tags: [cities]
+      summary: Gaesteuebernachtungen und Ankuenfte je Stadt (GENESIS, Tier A)
+      x-summary-en: Overnight stays and arrivals per city (GENESIS, Tier A)
+      description: >-
+        Liefert Gaesteuebernachtungen und Gaesteankuenfte einer Stadt aus der
+        Regionalstatistik (Monatserhebung im Tourismus, Jahressumme) im
+        kanonischen Envelope. Regionale Aufloesung Kreis/kreisfreie Stadt. Quelle
+        account-gated; deaktiviert -> 200 source_status="disabled". Kein Wert ->
+        200 source_status="no_data".
+      x-description-en: >-
+        Returns a city's overnight stays and guest arrivals from the regional
+        statistics (tourism survey, annual sum) in the canonical envelope. Spatial
+        resolution county/county-free city. Account-gated; disabled -> 200
+        source_status="disabled". No value -> 200 source_status="no_data".
+      operationId: getCityTourism
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Regionalstatistik-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/construction:
+    get:
+      tags: [cities]
+      summary: Baugenehmigungen je Stadt (GENESIS, Tier A)
+      x-summary-en: Building permits per city (GENESIS, Tier A)
+      description: >-
+        Liefert genehmigte Wohngebaeude und Wohnungen einer Stadt aus der
+        Regionalstatistik (Statistik der Baugenehmigungen, Jahressumme) im
+        kanonischen Envelope. Regionale Aufloesung Kreis/kreisfreie Stadt. Quelle
+        account-gated; deaktiviert -> 200 source_status="disabled". Kein Wert ->
+        200 source_status="no_data".
+      x-description-en: >-
+        Returns a city's permitted residential buildings and dwellings from the
+        regional statistics (building permit statistics, annual sum) in the
+        canonical envelope. Spatial resolution county/county-free city.
+        Account-gated; disabled -> 200 source_status="disabled". No value -> 200
+        source_status="no_data".
+      operationId: getCityConstruction
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Regionalstatistik-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/geo:
     get:
       tags: [cities]
@@ -1215,6 +1448,384 @@ paths:
       responses:
         "200":
           description: Feiertags-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/power-load:
+    get:
+      tags: [cities]
+      summary: Stromverbrauch (Netzlast) der Regelzone je Stadt (SMARD, Tier A)
+      x-summary-en: Electricity consumption (grid load) per city's control zone (SMARD, Tier A)
+      description: >-
+        Realisierter Stromverbrauch (Netzlast) der Regelzone, in der die Stadt
+        liegt (50Hertz/Amprion/TenneT/TransnetBW), als Tageswert in MWh. Regionale
+        Kennzahl, nicht stadtgenau. Quelle: Bundesnetzagentur | SMARD.de (CC BY
+        4.0). Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Realised electricity consumption (grid load) of the control zone the city
+        belongs to (50Hertz/Amprion/TenneT/TransnetBW) as a daily value in MWh.
+        Regional metric, not city-exact. Source: Bundesnetzagentur | SMARD.de.
+      operationId: getCityPowerLoad
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Power-Envelope (CanonicalRecord mit PowerPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/power-price:
+    get:
+      tags: [cities]
+      summary: Day-ahead-Boersenstrompreis bundesweit (SMARD, Tier A)
+      x-summary-en: Day-ahead wholesale electricity price, nationwide (SMARD, Tier A)
+      description: >-
+        Day-ahead-Grosshandelspreis der Gebotszone DE/LU als Tageswert in EUR/MWh
+        (bundesweit, fuer alle Staedte identisch). Quelle: Bundesnetzagentur |
+        SMARD.de (CC BY 4.0). Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Day-ahead wholesale electricity price of the DE/LU bidding zone as a daily
+        value in EUR/MWh (nationwide, identical for all cities). Source:
+        Bundesnetzagentur | SMARD.de.
+      operationId: getCityPowerPrice
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Power-Envelope (CanonicalRecord mit PowerPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/weather-warnings:
+    get:
+      tags: [cities]
+      summary: Amtliche DWD-Wetterwarnungen je Stadt (Tier A)
+      x-summary-en: Official DWD weather warnings per city (Tier A)
+      description: >-
+        Aktive amtliche Wetterwarnungen des Deutschen Wetterdienstes fuer die
+        Stadt (Filterung ueber die Gemeinde-Warncell = "1"+AGS). Liefert
+        max_level (0 = keine Warnung, 1-4 = DWD-Warnstufe), count und die
+        Einzelwarnungen. Quelle: Deutscher Wetterdienst (GeoNutzV). Deaktiviert
+        -> 200 source_status="disabled".
+      x-description-en: >-
+        Active official weather warnings from the German Weather Service (DWD)
+        for the city (filtered via the municipality warncell = "1"+AGS). Returns
+        max_level (0 = none, 1-4 = DWD level), count and the individual warnings.
+        Source: Deutscher Wetterdienst (GeoNutzV).
+      operationId: getCityWeatherWarnings
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Warnungen-Envelope (CanonicalRecord mit WeatherWarningPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/fuel-prices:
+    get:
+      tags: [cities]
+      summary: Aktuelle Spritpreise je Stadt, aggregiert (Tankerkönig/MTS-K, Tier A)
+      x-summary-en: Current fuel prices per city, aggregated (Tankerkönig/MTS-K, Tier A)
+      description: >-
+        Aktuelle Spritpreise im Umkreis der Stadtkoordinate, aggregiert zu einer
+        Stadt-Kennzahl: Durchschnitts- und Minimal-Preis je Sorte (e5/e10/diesel,
+        EUR/Liter) über die geöffneten Tankstellen, plus station_count/open_count
+        und die Einzel-Tankstellen. Quelle: Markttransparenzstelle für Kraftstoffe
+        (MTS-K) via Tankerkönig (CC BY 4.0). Ohne API-Key ODER Toggle aus -> 200
+        source_status="disabled"; keine Tankstelle im Radius -> 200
+        source_status="no_data".
+      x-description-en: >-
+        Current fuel prices around the city coordinate, aggregated into a
+        city-level metric: average and minimum price per fuel grade (e5/e10/diesel,
+        EUR/litre) across the open stations, plus station_count/open_count and the
+        individual stations. Source: German fuel price transparency unit (MTS-K)
+        via Tankerkönig (CC BY 4.0). Without an API key OR toggle off -> 200
+        source_status="disabled"; no station in radius -> 200 source_status="no_data".
+      operationId: getCityFuelPrices
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Spritpreis-Envelope (CanonicalRecord mit FuelPricePayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/station-departures:
+    get:
+      tags: [cities]
+      summary: Live-Abfahrtstafel Metropolen-Hbf inkl. Fernverkehr (DB Timetables, Tier A)
+      x-summary-en: Live departure board major station incl. long-distance (DB Timetables, Tier A)
+      description: >-
+        Naechste Zugabfahrten am Fernverkehrs-Hauptbahnhof der Stadt mit Echtzeit-
+        Verspaetung: Sollfahrplan (/plan) und aktuelle Abweichungen (/fchg) der
+        DB-Timetables-API, je Bahnhof zu einer nach Abfahrt sortierten Liste
+        zusammengefuehrt (line, category, destination, planned_time, platform,
+        delay_minutes, cancelled, long_distance). Quelle: Deutsche Bahn AG (CC BY
+        4.0). Ohne Zugangsdaten ODER Toggle aus -> 200 source_status="disabled";
+        Stadt ohne kuratierten Fernverkehrs-Hbf -> 200 source_status="not_covered"
+        (mit covered_cities); keine Abfahrt im Zeitfenster -> 200
+        source_status="no_data".
+      x-description-en: >-
+        Upcoming train departures at a city's long-distance main station with
+        real-time delays: scheduled timetable (/plan) and current changes (/fchg)
+        of the DB Timetables API, merged per station into a list sorted by
+        departure (line, category, destination, planned_time, platform,
+        delay_minutes, cancelled, long_distance). Source: Deutsche Bahn AG (CC BY
+        4.0). Without credentials OR toggle off -> 200 source_status="disabled";
+        city without a curated long-distance station -> 200
+        source_status="not_covered" (with covered_cities); no departure in the
+        window -> 200 source_status="no_data".
+      operationId: getCityStationDepartures
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Abfahrts-Envelope (CanonicalRecord mit StationDeparturesPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/station-arrivals:
+    get:
+      tags: [cities]
+      summary: Live-Ankunftstafel Metropolen-Hbf inkl. Fernverkehr (DB Timetables, Tier A)
+      x-summary-en: Live arrival board major station incl. long-distance (DB Timetables, Tier A)
+      description: >-
+        Spiegelbild zu station-departures: ankommende Zuege am Fernverkehrs-Hbf der
+        Stadt mit Echtzeit-Verspaetung (Soll /plan + Aenderungen /fchg gemerged),
+        je Eintrag mit origin (Startbahnhof), line, category, planned_time,
+        platform, delay_minutes, cancelled, long_distance. Quelle: Deutsche Bahn
+        AG (CC BY 4.0). Ohne Zugangsdaten ODER Toggle aus -> 200
+        source_status="disabled"; Stadt ohne kuratierten Fernverkehrs-Hbf -> 200
+        source_status="not_covered"; keine Ankunft im Zeitfenster -> 200
+        source_status="no_data".
+      x-description-en: >-
+        Mirror of station-departures: incoming trains at a city's long-distance
+        main station with real-time delays (scheduled /plan + changes /fchg
+        merged), each with origin (start station), line, category, planned_time,
+        platform, delay_minutes, cancelled, long_distance. Source: Deutsche Bahn AG
+        (CC BY 4.0). Without credentials OR toggle off -> 200
+        source_status="disabled"; city without a curated long-distance station ->
+        200 source_status="not_covered"; no arrival in the window -> 200
+        source_status="no_data".
+      operationId: getCityStationArrivals
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ankunfts-Envelope (CanonicalRecord mit StationArrivalsPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/indicators:
+    get:
+      tags: [cities]
+      summary: Sozialoekonomische Indikatoren je Stadt (INKAR/BBSR, Tier A)
+      x-summary-en: Socioeconomic indicators per city (INKAR/BBSR, Tier A)
+      description: >-
+        Kuratiertes, breites Set sozialoekonomischer Indikatoren je Kreis/
+        kreisfreie Stadt (Arbeitsmarkt, Wirtschaft, Einkommen, Demografie, Wohnen,
+        Erreichbarkeit, Verkehr, Bildung, Gesundheit, Fläche), aus der offenen
+        INKAR-Wizard-API des BBSR. Je Indikator der jüngste Jahreswert mit
+        Bezeichnung (inkl. Einheit), Wert, Jahr und Kategorie. Quelle: BBSR / INKAR
+        (DL-DE/BY 2.0). Toggle aus -> 200 source_status="disabled"; kein Snapshot
+        für den Kreis -> 200 source_status="not_ingested".
+      x-description-en: >-
+        A curated, broad set of socioeconomic indicators per district/independent
+        city (labour market, economy, income, demographics, housing,
+        accessibility, transport, education, health, land use), from the open
+        INKAR wizard API of the BBSR. Each indicator carries its latest annual
+        value with label (incl. unit), value, year and category. Source: BBSR /
+        INKAR (DL-DE/BY 2.0). Toggle off -> 200 source_status="disabled"; no
+        snapshot for the district -> 200 source_status="not_ingested".
+      operationId: getCityIndicators
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Indikatoren-Envelope (CanonicalRecord mit IndicatorsPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/sharing:
+    get:
+      tags: [cities]
+      summary: Bike-/Scooter-Sharing je Stadt, aggregiert (GBFS, Tier A)
+      x-summary-en: Bike/scooter sharing per city, aggregated (GBFS, Tier A)
+      description: >-
+        Live-Bike-/Scooter-Sharing je Stadt, aus offenen GBFS-Feeds der
+        kuratierten Tier-A-Anbieter (Primärquelle Nextbike, CC0) im Stadtgebiet zu
+        einer Kennzahl aggregiert: vehicles_available (frei abgestellt + an
+        Stationen), station_count und je Anbieter eine fail-closed verifizierte
+        Tier-A-license_id. Toggle aus -> 200 source_status="disabled"; Stadt ohne
+        kuratiertes GBFS-System -> 200 source_status="not_covered" (mit
+        covered_cities); kein akzeptierter Tier-A-Anbieter -> 200
+        source_status="no_data".
+      x-description-en: >-
+        Live bike/scooter sharing per city, aggregated from open GBFS feeds of the
+        curated Tier-A providers (primary source Nextbike, CC0) within the city
+        area: vehicles_available (free-floating + docked), station_count and a
+        fail-closed verified Tier-A license_id per provider. Toggle off -> 200
+        source_status="disabled"; city without a curated GBFS system -> 200
+        source_status="not_covered" (with covered_cities); no accepted Tier-A
+        provider -> 200 source_status="no_data".
+      operationId: getCitySharing
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sharing-Envelope (CanonicalRecord mit SharingPayload) oder null.
           content:
             application/json:
               schema:
@@ -1769,26 +2380,86 @@ paths:
   /api/v1/live/dortmund/parking:
     get:
       tags: [Live]
-      summary: Live-Parkbelegung Dortmund (Mobilithek DATEX-II)
-      x-summary-en: Live parking occupancy for Dortmund (Mobilithek DATEX-II)
+      summary: Live-Parkbelegung Dortmund (Stadt Dortmund Open Data, keylos)
+      x-summary-en: Live parking occupancy for Dortmund (City of Dortmund open data, key-less)
       description: >-
-        Liefert die Dortmund-Parkbelegung (dynamisches Parkleitsystem, DATEX-II
-        ParkingStatusPublication) im Live-Envelope. Der meta-Block trägt
-        zusätzlich as_of (Datenstand) und refresh_seconds (Aktualisierungstakt).
-        Solange Zertifikat und Abo nicht gesetzt sind -> 200
-        source_status="disabled" (nie 5xx); kein Datenpaket -> 200
-        source_status="no_data". Reine Live-Daten, nur im Redis-Cache gehalten.
+        Liefert die Dortmund-Parkbelegung (dynamisches Parkleitsystem, Parkhäuser
+        und Park&Ride) im Live-Envelope. Quelle ist der direkte, keylose offene
+        Datensatz der Stadt Dortmund (open-data.dortmund.de), nicht die
+        Mobilithek. Der meta-Block trägt zusätzlich as_of (Datenstand) und
+        refresh_seconds (Aktualisierungstakt). Quelle deaktiviert -> 200
+        source_status="disabled" (nie 5xx); keine Daten -> 200
+        source_status="no_data". Lizenz Datenlizenz Deutschland Zero 2.0.
+        Reine Live-Daten, nur im Redis-Cache gehalten.
       x-description-en: >-
         Returns Dortmund parking occupancy (dynamic parking guidance system,
-        DATEX-II ParkingStatusPublication) in the live envelope. The meta block
-        additionally carries as_of (data timestamp) and refresh_seconds (update
-        cadence). As long as the certificate and subscription are not set up ->
-        200 source_status="disabled" (never 5xx); no data packet -> 200
-        source_status="no_data". Live data only, kept in the Redis cache.
+        car parks and park&ride) in the live envelope. Source is the City of
+        Dortmund's direct, key-less open dataset (open-data.dortmund.de), not the
+        Mobilithek. The meta block additionally carries as_of (data timestamp)
+        and refresh_seconds (update cadence). Source disabled -> 200
+        source_status="disabled" (never 5xx); no data -> 200
+        source_status="no_data". Licence Data licence Germany Zero 2.0. Live data
+        only, kept in the Redis cache.
       operationId: getLiveDortmundParking
       responses:
         "200":
           description: Live-Parkbelegung-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/hamburg/verkehrslage:
+    get:
+      tags: [Live]
+      summary: Live-Verkehrslage Hamburg (Freie und Hansestadt Hamburg, keylos)
+      x-summary-en: Live traffic situation for Hamburg (City of Hamburg open data, key-less)
+      description: >-
+        Liefert die Hamburger Echtzeit-Verkehrslage im Live-Envelope: eine
+        Netz-Zusammenfassung (summary.total und by_state-Zählung je Zustandsklasse
+        fliessend/dicht/zäh/gestaut) sowie die priorisierte, gedeckelte Liste der
+        nicht-fliessenden Straßenabschnitte (measurements mit Zustand und
+        Mittelpunkt-Koordinate). Quelle ist der direkte, keylose offene Datensatz
+        der Freien und Hansestadt Hamburg (api.hamburg.de, OGC API Features), nicht
+        die Mobilithek. Der meta-Block trägt zusätzlich as_of (Datenstand) und
+        refresh_seconds (Aktualisierungstakt). Quelle deaktiviert -> 200
+        source_status="disabled" (nie 5xx); keine Daten -> 200
+        source_status="no_data". Lizenz Datenlizenz Deutschland Namensnennung 2.0.
+        Reine Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns Hamburg's real-time traffic situation in the live envelope: a
+        network summary (summary.total and by_state counts per state
+        free/dense/sluggish/jammed) plus the prioritised, capped list of
+        non-free-flowing road segments (measurements with state and midpoint
+        coordinate). Source is the City of Hamburg's direct, key-less open dataset
+        (api.hamburg.de, OGC API Features), not the Mobilithek. The meta block
+        additionally carries as_of (data timestamp) and refresh_seconds (update
+        cadence). Source disabled -> 200 source_status="disabled" (never 5xx); no
+        data -> 200 source_status="no_data". Licence Data licence Germany
+        Attribution 2.0. Live data only, kept in the Redis cache.
+      operationId: getLiveHamburgVerkehrslage
+      responses:
+        "200":
+          description: Live-Verkehrslage-Envelope (CanonicalRecord oder null)
           content:
             application/json:
               schema:
@@ -1966,6 +2637,67 @@ paths:
                     $ref: "#/components/schemas/Meta"
         "400":
           description: Ungültiger oder fehlender station-Parameter
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/nuernberg/departures:
+    get:
+      tags: [Live]
+      summary: Live-ÖPNV-Abfahrten Nürnberg je Halt (VGN/VAG, keylos, Tier A)
+      x-summary-en: Live public-transit departures for Nuremberg per stop (VGN/VAG, key-less, Tier A)
+      description: >-
+        Liefert die Echtzeit-Abfahrtstafel eines VGN-Halts aus der offenen,
+        keylosen VAG-Puls-API (start.vag.de): je Abfahrt Linie, Richtung,
+        Soll-Offset in Minuten, Verspätung in Sekunden und Produkt. Stadt fix
+        nuernberg (VGN-Raum). Der Query-Parameter stop_id ist die numerische
+        VGN-Halt-ID (VGNKennung, Default 510 = Nürnberg Hbf). Der meta-Block
+        trägt zusätzlich as_of und refresh_seconds (60). Tier A: offene Lizenz
+        Creative Commons Attribution 4.0 (opendata.vag.de), sauber verwertbar.
+        Reine Live-Daten, nur kurzlebig im Redis-Cache gehalten. Toggle aus -> 200
+        source_status="disabled"; ungültige stop_id -> 400; keine Abfahrten -> 200
+        source_status="no_data"; toter Upstream ohne Cache -> 503 mit Hint.
+      x-description-en: >-
+        Returns the real-time departure board of a VGN stop from the open,
+        key-less VAG Puls API (start.vag.de): per departure the line, direction,
+        scheduled offset in minutes, delay in seconds and product. City fixed to
+        nuernberg (VGN area). The stop_id query parameter is the numeric VGN stop
+        id (VGNKennung, default 510 = Nuremberg Hbf). The meta block additionally
+        carries as_of and refresh_seconds (60). Tier A: open licence Creative
+        Commons Attribution 4.0 (opendata.vag.de), freely reusable. Live data
+        only, kept only briefly in the Redis cache. Disabled -> 200
+        source_status="disabled"; invalid stop_id -> 400; no departures -> 200
+        source_status="no_data"; dead upstream with no cache -> 503 with a hint.
+      operationId: getLiveNuernbergDepartures
+      parameters:
+        - name: stop_id
+          in: query
+          required: false
+          description: Numerische VGN-Halt-ID (VGNKennung), Default "510" (Nürnberg Hbf).
+          schema: { type: string, default: "510" }
+      responses:
+        "200":
+          description: Live-Abfahrten-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "400":
+          description: Ungültige oder fehlende stop_id
           content:
             application/json:
               schema:

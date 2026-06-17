@@ -12,9 +12,20 @@ interface Props {
   // beide gesetzt, rendert SeoHead hreflang-Alternates (de/en/x-default).
   lang?: "de" | "en";
   altLangPath?: string;
+  // Wenn true, robots noindex,follow (z.B. 404-Seite): nicht indexieren, aber
+  // Links folgen. Unterdrueckt zugleich canonical/hreflang (kein Indexierungs-
+  // signal fuer eine nicht-indexierbare Seite).
+  noindex?: boolean;
 }
 
-const { title, description = "", canonical, lang = "de", altLangPath = "" } = Astro.props;
+const {
+  title,
+  description = "",
+  canonical,
+  lang = "de",
+  altLangPath = "",
+  noindex = false,
+} = Astro.props;
 
 const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
 const path = Astro.url.pathname;
@@ -23,7 +34,7 @@ const ogImage = `${site}/og-image.png`;
 
 // hreflang-Alternates nur, wenn ein Sprach-Pendant existiert. Das de-Dokument
 // ist jeweils x-default. self-Alternate + Pendant-Alternate decken de/en ab.
-const hasAlt = altLangPath !== "";
+const hasAlt = altLangPath !== "" && !noindex;
 const altUrl = `${site}${altLangPath.startsWith("/") ? altLangPath : "/" + altLangPath}`;
 const deUrl = lang === "de" ? canonicalUrl : altUrl;
 const enUrl = lang === "en" ? canonicalUrl : altUrl;
@@ -31,7 +42,8 @@ const enUrl = lang === "en" ? canonicalUrl : altUrl;
 
 <title>{title} | InfraNode</title>
 {description && <meta name="description" content={description} />}
-<link rel="canonical" href={canonicalUrl} />
+{noindex && <meta name="robots" content="noindex,follow" />}
+{!noindex && <link rel="canonical" href={canonicalUrl} />}
 {
   hasAlt && (
     <>

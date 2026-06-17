@@ -54,13 +54,20 @@ def build_pull_url(abo_id: str, *, style: str = "path") -> str:
     (T-20-SECLOG). Der Host bleibt in JEDER Variante hartkodiert
     (``_MOBILITHEK_BASE``), die SSRF-Invariante gilt unveraendert.
 
-    Zwei verifizierte Zugriffspunkt-Muster (Mobilithek-Portal 2026-06-12):
+    Drei verifizierte Zugriffspunkt-Muster (Mobilithek-Portal/Service Desk):
     - ``style="path"`` (Default, die V2-Stadt-Abos): mit
       ``/subscription/{aboId}/clientPullService?subscriptionID={aboId}``.
     - ``style="query"`` (das eRound-AFIR-Abo, LIVE-11): OHNE das
       ``/{aboId}/clientPullService``-Pfadsegment, nur
       ``/subscription?subscriptionID={aboId}``.
+    - ``style="container"`` (Legacy-Datenmodell, Techn. SST-Beschreibung
+      Kap. 7.3.2.2.1; vom Mobilithek-Service-Desk 2026-06-15 fuer das
+      DELFI-GTFS-RT-Abo bestaetigt): ``/container/subscription?subscriptionID=
+      {aboId}``. Der modernere ``path``-Zugriff (Kap. 6.2.1) gibt fuer dieses
+      Legacy-Abo einen 4xx-Fehler.
     """
+    if style == "container":
+        return f"{_MOBILITHEK_BASE}/container/subscription?subscriptionID={abo_id}"
     if style == "query":
         return f"{_MOBILITHEK_BASE}/subscription?subscriptionID={abo_id}"
     return (

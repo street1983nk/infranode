@@ -16,11 +16,15 @@ WORKDIR /app
 
 # Zweistufig fuer optimales Layer-Caching: erst nur Lockfiles -> Deps,
 # dann Projekt-Quellen -> Projekt-Install. Aenderungen am Code invalidieren nicht den Dep-Layer.
+# --group explorer zieht duckdb (sonst aus dem Live-Image ausgeschlossen) hinzu,
+# damit der Admin-Daten-Explorer funktioniert. duckdb bleibt NUR eine Gruppe, NIE
+# in [project] dependencies (T-17-IMG, test_explorer_not_in_live_path) und wird im
+# Code ausschliesslich lazy importiert. --no-dev laesst Test-/Lint-Gruppen weg.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --group explorer --no-install-project
 
 COPY src ./src
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --group explorer
 
 # --- Final-Stage: schlankes Laufzeit-Image, non-root --------------------------
 FROM python:3.13-slim-bookworm

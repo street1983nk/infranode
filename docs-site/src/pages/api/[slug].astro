@@ -45,9 +45,12 @@ const curl = curlFor(endpoint);
 const js = jsFor(endpoint);
 const py = pyFor(endpoint);
 
-// SEO: Title/Description aus dem Collection-Eintrag. APIReference-JSON-LD
-// nutzt name (Methode + Pfad), abstract (summary) und die absolute Seiten-URL.
-const seoTitle = `${endpoint.method} ${endpoint.path}`;
+// SEO: keyword-reicher Title aus der sprechenden Summary (statt nur METHOD /pfad),
+// damit die ~58 Longtail-Endpunktseiten suchrelevante Begriffe im Title tragen.
+// APIReference-JSON-LD nutzt name (Methode + Pfad), abstract (summary) und URL.
+const seoTitle = endpoint.summary
+  ? `${endpoint.summary} (${endpoint.method} ${endpoint.path})`
+  : `${endpoint.method} ${endpoint.path}`;
 const seoDescription = endpoint.summary || endpoint.description;
 const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
 const pageUrl = `${site}/api/${endpoint.id}/`;

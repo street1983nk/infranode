@@ -26,21 +26,29 @@ from datetime import UTC, datetime
 from asgi_correlation_id import correlation_id
 from fastapi import APIRouter, Request, Response
 
+from infranode.adapters.dortmund_parking import fetch_dortmund_parking
+from infranode.adapters.hamburg_verkehrslage import fetch_hamburg_verkehrslage
 from infranode.adapters.hvv_geofox import fetch_hvv_departures
 from infranode.adapters.mobilithek_afir import fetch_afir
 from infranode.adapters.mobilithek_datex2 import fetch_datex2
+from infranode.adapters.vgn import fetch_vgn_departures
 from infranode.api.errors import UpstreamError, ValidationFailedError
 from infranode.api.v1 import cities
 from infranode.config import Settings
 from infranode.infra.cache import build_cache_key
 from infranode.normalization.enums import SourceId
 from infranode.normalization.mappers.gtfs_rt import (
+    attribution_for_source,
     map_transit_departures,
     map_transit_route_status,
     map_transit_trip,
 )
+from infranode.normalization.mappers.hamburg_verkehrslage import (
+    map_hamburg_verkehrslage,
+)
 from infranode.normalization.mappers.hvv_geofox import map_hvv_departures
 from infranode.normalization.mappers.mobilithek_afir import map_eround_charging
+from infranode.normalization.mappers.mobilithek_bremen import map_bremen_road_events
 from infranode.normalization.mappers.mobilithek_koeln import (
     map_koeln_road_events,
     map_koeln_traffic_flow,
@@ -53,11 +61,13 @@ from infranode.normalization.mappers.mobilithek_stadt import (
     map_berlin_traffic_messages,
     map_koeln_lez,
 )
+from infranode.normalization.mappers.vgn import map_vgn_departures
 from infranode.registry import get_city
 from infranode.transit.interpolation import estimate_position
 from infranode.transit.resolver import stops_with_geo_for_trip
 from infranode.transit.store import (
     get_trip_update,
+    read_rt_source,
     trips_for_route,
     trips_for_stop,
 )
@@ -240,13 +250,26 @@ async def live_traffic_flow(city: str, request: Request) -> dict:
 
 @router.get("/{city}/baustellen")
 async def live_baustellen(city: str, request: Request) -> dict:
-    """Live-Baustellen je Stadt (Koeln SituationPublication, LIVE-07).
+    """Live-Baustellen je Stadt (SituationPublication, LIVE-07 / DATA-31).
 
-    Köln Baustellen (verifiziertes Abo, HTTP 200). SituationPublication ->
-    RoadEventPayload. Graceful Degradation + Live-Envelope ueber
-    ``_live_mobilithek``. KEIN Archiv (reine Live-Daten, T-20-ARCHIVE).
+    City-aware: Köln (verifiziertes Abo) und Bremen (VMZ Bremen, DATA-31) sind
+    verdrahtet; jede Stadt traegt ihre eigene Abo-ID + SourceId + ihren Mapper
+    (Attribution traegergenau). Eine nicht verdrahtete Stadt -> 200
+    ``source_status="disabled"`` (kein Abo). SituationPublication ->
+    RoadEventPayload. KEIN Archiv (reine Live-Daten, T-20-ARCHIVE).
     """
     settings = Settings()
+    if city == "bremen":
+        # DATA-31: Bremen Baustellen (VMZ Bremen). Eigener Mapper (Attribution
+        # "Freie Hansestadt Bremen"), eigene Abo-ID + SourceId/Toggle.
+        return await _live_mobilithek(
+            city=city,
+            request=request,
+            source=SourceId.BREMEN_BAUSTELLEN.value,
+            abo_id=settings.bremen_baustellen_abo_id,
+            publication="situation",
+            mapper=map_bremen_road_events,
+        )
     abo_id = settings.koeln_baustellen_live_abo_id or _KOELN_BAUSTELLEN_ABO_ID
     return await _live_mobilithek(
         city=city,
@@ -325,25 +348,73 @@ async def live_koeln_umweltzone(request: Request) -> dict:
 
 @router.get("/dortmund/parking")
 async def live_dortmund_parking(request: Request) -> dict:
-    """Live-Parkbelegung Dortmund (ParkingStatusPublication, LIVE-09).
+    """Live-Parkbelegung Dortmund (DATA-09, Tier A, DIREKT keylos).
 
-    Dortmund Parkleitsystem dynamisch ueber den additiven Parking-Parse-Zweig
-    (``fetch_datex2`` publication="parking") + den gemeinsamen
-    ``_live_mobilithek``-Helfer; nur der Mapper (``map_dortmund_parking``) ist
-    Dortmund-spezifisch. Stadt-Slug fix ``dortmund``. Schliesst die in DATA-09
-    dokumentierte Echtzeit-Parkbelegungsluecke (Parken). Abo-ID aus der
-    Settings-Allowlist (SSRF, T-20-SSRF). KEIN Archiv (reine Live-Daten,
-    T-20-ARCHIVE).
+    Direkter, keyloser Zugang zum offenen Parkleitsystem der Stadt Dortmund ueber
+    die Opendatasoft-Explore-API (``adapters/dortmund_parking``) statt
+    Mobilithek-mTLS: KEIN Cert, KEIN Abo noetig (Owner-Strategie 2026-06-13,
+    direkte Anbieter-API wie HVV-Geofox). Toggle ``enable_dortmund_parking`` aus
+    -> 200 ``source_status="disabled"`` (nie 5xx). Resilienter Fetch ueber die
+    Fassade; leerer Feed -> ``no_data``; toter Upstream ohne Cache -> 503 mit
+    selbst-korrigierendem Hint. Lizenz DL-DE Zero 2.0 (Tier A). Schliesst die
+    DATA-09-Echtzeit-Parkbelegungsluecke. KEIN Archiv (reine Live-Daten,
+    T-20-ARCHIVE) - nur Redis-Cache ueber die Fassade.
     """
+    entry = get_city("dortmund")
     settings = Settings()
-    return await _live_mobilithek(
-        city="dortmund",
-        request=request,
-        source=SourceId.DORTMUND_PARKING.value,
-        abo_id=settings.dortmund_parking_abo_id,
-        publication="parking",
-        mapper=map_dortmund_parking,
+    if not settings.enable_dortmund_parking:
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="disabled",
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("dortmund_parking", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_dortmund_parking(request.app.state.http)
+
+    raw, status = await client.fetch("dortmund_parking", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Live-Quelle 'dortmund_parking' voruebergehend nicht erreichbar, "
+            "kein gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
+        )
+
+    if not raw.get("facilities"):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="no_data",
+                cache_status=status,
+                as_of=raw.get("as_of"),
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    record = map_dortmund_parking(
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
     )
+    observed = (
+        record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
+    )
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": _live_meta(
+            source_status="ok",
+            cache_status=status,
+            as_of=observed,
+            refresh_seconds=_LIVE_REFRESH_SECONDS,
+        ),
+    }
 
 
 @router.get("/kiel/zaehlstellen")
@@ -643,6 +714,7 @@ async def live_transit_departures(
         city_slug=entry.slug,
         ags=entry.ags,
         wikidata_qid=entry.qid,
+        source_attribution=attribution_for_source(await read_rt_source(redis)),
     )
     # KEIN Archiv-Write fuer reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
     return {
@@ -698,11 +770,20 @@ async def live_transit_trip(city: str, trip_id: str, request: Request) -> dict:
     now_epoch = int(datetime.now(UTC).timestamp())
     estimated_position: dict | None = None
     unresolved = True
-    # RT-Aufloesung gegen die FEED-EIGENE Statik (gtfs.de, numerische IDs);
-    # Fallback delfi_gtfs_path nur fuer Tests/Mobilithek-Quelle mit DELFI-IDs.
-    gtfs_path = getattr(settings, "gtfs_rt_static_path", None) or getattr(
-        settings, "delfi_gtfs_path", None
-    )
+    # RT-Aufloesung gegen die zur PROVENANCE passende Statik (Feinschliff
+    # 2026-06-15): liefert aktuell der DELFI-Feed (mobilithek_delfi), werden die
+    # DELFI-IDs gegen den DELFI-Static (delfi_gtfs_path) aufgeloest; beim gtfs.de-
+    # Backup gegen die gtfs.de-Statik (gtfs_rt_static_path). So passen ID-Namensraum
+    # und Statik immer zusammen (sonst ehrlich unresolved statt falscher Position).
+    used_source = await read_rt_source(redis)
+    if used_source == "mobilithek_delfi":
+        gtfs_path = getattr(settings, "delfi_gtfs_path", None) or getattr(
+            settings, "gtfs_rt_static_path", None
+        )
+    else:
+        gtfs_path = getattr(settings, "gtfs_rt_static_path", None) or getattr(
+            settings, "delfi_gtfs_path", None
+        )
     if gtfs_path:
         try:
             stops = stops_with_geo_for_trip(
@@ -731,6 +812,7 @@ async def live_transit_trip(city: str, trip_id: str, request: Request) -> dict:
         city_slug=entry.slug,
         ags=entry.ags,
         wikidata_qid=entry.qid,
+        source_attribution=attribution_for_source(used_source),
     )
     # KEIN Archiv-Write fuer reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
     return {
@@ -803,6 +885,7 @@ async def live_transit_route_status(city: str, route_id: str, request: Request) 
         city_slug=entry.slug,
         ags=entry.ags,
         wikidata_qid=entry.qid,
+        source_attribution=attribution_for_source(await read_rt_source(redis)),
     )
     # KEIN Archiv-Write fuer reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
     return {
@@ -860,3 +943,164 @@ async def live_webcams(slug: str, request: Request) -> dict:
 async def live_flood(slug: str, request: Request) -> dict:
     """Live-Alias fuer den LHP-Hochwasser-Endpunkt (LIVE-03)."""
     return await cities.city_flood(slug, request, Response())
+
+
+# Kadenz der VGN-Live-Abfahrten (minutenfrisch).
+_VGN_REFRESH_SECONDS = 60
+
+
+@router.get("/nuernberg/departures")
+async def live_nuernberg_departures(request: Request, stop_id: str = "510") -> dict:
+    """Live-ÖPNV-Abfahrten Nürnberg je Halt (VGN/VAG Puls-API, DATA-25, Tier A).
+
+    Echtzeit-Abfahrtstafel inkl. Verspätung aus der offenen, keylosen VAG-Puls-API
+    (CC-BY 4.0, Tier A). Stadt fix ``nuernberg`` (VGN-Raum). Der Query-Parameter
+    ``stop_id`` ist die numerische VGN-Halt-ID (VGNKennung; Default 510 = Nürnberg
+    Hbf), abrufbar ueber ``/dm/api/haltestellen.json/vgn``.
+
+    Graceful Degradation: Toggle aus -> 200 ``source_status="disabled"`` (nie 5xx).
+    Ungültige stop_id -> 400. Keine Abfahrten -> 200 ``source_status="no_data"``.
+    Toter Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint. KEIN Archiv
+    (reine Live-Daten, T-20-ARCHIVE) - nur Redis-Cache ueber die Fassade.
+    """
+    entry = get_city("nuernberg")
+    settings = Settings()
+    if not settings.enable_vgn:
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="disabled",
+                refresh_seconds=_VGN_REFRESH_SECONDS,
+            ),
+        }
+
+    sid = (stop_id or "").strip()
+    if not sid.isdigit():
+        raise ValidationFailedError(
+            "Ungueltige oder fehlende stop_id.",
+            hint=(
+                "Erwartet wird die numerische VGN-Halt-ID (VGNKennung), z. B. "
+                "stop_id=510 (Nürnberg Hbf)."
+            ),
+        )
+
+    client = request.app.state.resilient_client
+    cache_key = build_cache_key("vgn", city_slug=entry.slug, params={"stop_id": sid})
+
+    async def fetch_fn():
+        return await fetch_vgn_departures(request.app.state.http, stop_id=sid)
+
+    raw, status = await client.fetch("vgn", cache_key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Live-Quelle 'vgn' voruebergehend nicht erreichbar, kein gecachter "
+            "Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
+        )
+
+    if not raw.get("departures"):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="no_data",
+                cache_status=status,
+                as_of=raw.get("as_of"),
+                refresh_seconds=_VGN_REFRESH_SECONDS,
+            ),
+        }
+
+    record = map_vgn_departures(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    observed = (
+        record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
+    )
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": _live_meta(
+            source_status="ok",
+            cache_status=status,
+            as_of=observed,
+            refresh_seconds=_VGN_REFRESH_SECONDS,
+        ),
+    }
+
+
+# Kadenz der Hamburg-Verkehrslage (5-Minuten-Schnappschuss der OAF-Quelle).
+_VERKEHRSLAGE_REFRESH_SECONDS = 300
+
+
+@router.get("/hamburg/verkehrslage")
+async def live_hamburg_verkehrslage(request: Request) -> dict:
+    """Live-Verkehrslage Hamburg (DATA-26, Tier A, DIREKT keylos).
+
+    Direkter, keyloser Zugang zur Echtzeit-Verkehrslage der Freien und Hansestadt
+    Hamburg ueber die OGC API Features (``adapters/hamburg_verkehrslage``) statt
+    Mobilithek-mTLS: KEIN Cert, KEIN Abo (Owner-Strategie, direkte Anbieter-API).
+    Die Antwort traegt eine Netz-Zusammenfassung (``summary.total`` +
+    ``by_state``-Zaehlung je Zustandsklasse) und die priorisierte, gedeckelte Liste
+    der nicht-fliessenden Strassenabschnitte (``measurements``). Stadt fix
+    ``hamburg`` (Quelle deckt nur den Stadtraum ab).
+
+    Graceful Degradation: Toggle ``enable_hamburg_verkehrslage`` aus -> 200
+    ``source_status="disabled"`` (nie 5xx). Resilienter Fetch ueber die Fassade;
+    leerer Feed (``summary.total`` == 0) -> ``no_data``; toter Upstream ohne Cache
+    -> 503 mit selbst-korrigierendem Hint. Lizenz DL-DE/BY 2.0 (Tier A). KEIN
+    Archiv (reine Live-Daten, T-26-ARCHIVE) - nur Redis-Cache ueber die Fassade.
+    """
+    entry = get_city("hamburg")
+    settings = Settings()
+    if not settings.enable_hamburg_verkehrslage:
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="disabled",
+                refresh_seconds=_VERKEHRSLAGE_REFRESH_SECONDS,
+            ),
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("hamburg_verkehrslage", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_hamburg_verkehrslage(request.app.state.http)
+
+    raw, status = await client.fetch("hamburg_verkehrslage", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Live-Quelle 'hamburg_verkehrslage' voruebergehend nicht erreichbar, "
+            "kein gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
+        )
+
+    # Leerer Feed -> ehrliches no_data. Eine voll-fliessende Lage (segments leer,
+    # summary aber gefuellt) ist KEIN no_data, sondern ein gueltiges "ok".
+    summary = raw.get("summary") or {}
+    if not summary.get("total"):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="no_data",
+                cache_status=status,
+                as_of=raw.get("as_of"),
+                refresh_seconds=_VERKEHRSLAGE_REFRESH_SECONDS,
+            ),
+        }
+
+    record = map_hamburg_verkehrslage(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    observed = (
+        record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
+    )
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": _live_meta(
+            source_status="ok",
+            cache_status=status,
+            as_of=observed,
+            refresh_seconds=_VERKEHRSLAGE_REFRESH_SECONDS,
+        ),
+    }

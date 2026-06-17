@@ -34,6 +34,14 @@ _REQ_COUNT_KEY = "metrics:req:count"
 _REQ_STATUS_KEY = "metrics:req:status"
 _REQ_ENDPOINT_KEY = "metrics:req:endpoint"
 
+# Aktive-Consumer-Tracking (OPS): je UTC-Stunde ein Hash ident->Request-Anzahl
+# plus ein Meta-Hash ident->"user-agent\tletzter-Pfad". ident = echte Client-IP
+# (oder "mcp" fuer interne MCP-Server-Aufrufe). Selbst-ablaufend (TTL), damit kein
+# unbegrenztes Wachstum. Das Filtern interner Monitoring-IPs macht die Auswerte-
+# Schicht (der Box-Digest kennt die eigene IP), nicht der heisse Request-Pfad.
+_CONSUMER_PREFIX = "metrics:consumers:"
+_CONSUMER_TTL = 10800  # 3 h: deckt die stuendliche Auswertung + Verzug sicher ab.
+
 # Die vier Cache-Status-Buckets (Quelle: CacheStatus StrEnum). Bucket-Name ist der
 # kleingeschriebene Status mit "-" -> "_" (STALE-ON-ERROR -> stale_on_error).
 _CACHE_BUCKETS = ("hit", "miss", "stale", "stale_on_error")
@@ -121,6 +129,66 @@ async def read_cache_counts(redis) -> dict[str, int]:
         b: int(v) if v is not None else 0
         for b, v in zip(_CACHE_BUCKETS, raw, strict=False)
     }
+
+
+def consumer_hour(now) -> str:
+    """UTC-Stunden-Bucket-Schluessel (z.B. ``2026-06-14T17``)."""
+    return now.strftime("%Y-%m-%dT%H")
+
+
+async def record_consumer(
+    redis, *, ident: str, user_agent: str, path: str, now
+) -> None:
+    """Zaehlt einen aktiven Consumer in den Stunden-Bucket (Anzahl + letzte Meta).
+
+    ``ident`` = echte Client-IP oder ``"mcp"`` (interner MCP-Server-Aufruf). Der
+    Meta-Hash haelt User-Agent + letzten Pfad (last-write-wins) zur App-Erkennung.
+    Beide Keys laufen nach ``_CONSUMER_TTL`` selbst ab. Graceful: jeder Redis-
+    Fehler degradiert still und crasht NIE den Request.
+    """
+    try:
+        hour = consumer_hour(now)
+        ckey = f"{_CONSUMER_PREFIX}{hour}"
+        mkey = f"{_CONSUMER_PREFIX}meta:{hour}"
+        meta = f"{(user_agent or '')[:200]}\t{path}"
+        pipe = redis.pipeline()
+        pipe.hincrby(ckey, ident, 1)
+        pipe.hset(mkey, ident, meta)
+        pipe.expire(ckey, _CONSUMER_TTL)
+        pipe.expire(mkey, _CONSUMER_TTL)
+        await pipe.execute()
+    except Exception as exc:
+        log.debug("record_consumer_failed", error=str(exc))
+
+
+async def read_consumers(redis, hour: str) -> list[dict]:
+    """Liest die aktiven Consumer eines Stunden-Buckets (Anzahl + User-Agent + Pfad).
+
+    Rueckgabe je Eintrag: ``{ident, count, user_agent, last_path}``, nach Anzahl
+    absteigend. Graceful: bei einem Redis-Fehler -> leere Liste.
+    """
+    try:
+        counts = await redis.hgetall(f"{_CONSUMER_PREFIX}{hour}")
+        meta = await redis.hgetall(f"{_CONSUMER_PREFIX}meta:{hour}")
+    except Exception:
+        return []
+    meta = {
+        _to_bytes(k).decode(): _to_bytes(v).decode() for k, v in (meta or {}).items()
+    }
+    out = []
+    for ident_raw, count_raw in (counts or {}).items():
+        ident = _to_bytes(ident_raw).decode()
+        ua, _, last_path = meta.get(ident, "\t").partition("\t")
+        out.append(
+            {
+                "ident": ident,
+                "count": int(count_raw),
+                "user_agent": ua,
+                "last_path": last_path,
+            }
+        )
+    out.sort(key=lambda c: c["count"], reverse=True)
+    return out
 
 
 def compute_hit_rate(counts: dict[str, int]) -> float:

@@ -49,8 +49,8 @@ const faqJsonLd = JSON.stringify({
 ---
 
 <Docs
-  title="InfraNode API"
-  description="Kostenlose, öffentliche Open-Data-REST-API für normalisierte offene Daten deutscher Großstädte: ein konsistenter JSON-Envelope statt Dutzender Behörden-APIs."
+  title="Offene Stadtdaten Deutschland, kostenlose REST-API und MCP-Server"
+  description="Kostenlose, keylose Open-Data-REST-API und MCP-Server für 84 deutsche Großstädte: Wetter, Luftqualität, ÖPNV-Echtzeit, Verkehr, Energie und Strommarkt, Pkw-Bestand, Arbeitslosenquote, Tourismus und Verkehrsunfälle, permissiv lizenziert (Tier A, kommerziell nutzbar)."
   current="home"
   lang="de"
   altLangPath="/en/"
@@ -84,7 +84,7 @@ const faqJsonLd = JSON.stringify({
       über einen konsistenten JSON-Envelope ab, ohne API-Schlüssel.
     </p>
     <ul>
-      <li>84 Großstädte, 48 Endpunkte, ein einheitlicher Envelope.</li>
+      <li>84 Großstädte, 63 Endpunkte, ein einheitlicher Envelope.</li>
       <li>Kein Schlüssel nötig, kostenlos und ohne Werbung.</li>
       <li>Betrieb auf einem Server in Deutschland, mit ehrlichem Quellen-Status.</li>
     </ul>
@@ -92,7 +92,7 @@ const faqJsonLd = JSON.stringify({
 
   <ul class="stats">
     <li class="stat"><a href="/staedte/"><strong>84</strong> Großstädte</a></li>
-    <li class="stat"><strong>48</strong> Endpunkte</li>
+    <li class="stat"><strong>63</strong> Endpunkte</li>
     <li class="stat"><strong>35+</strong> amtliche Datenquellen</li>
     <li class="stat"><strong>Lizenz-Tag</strong> in jeder Antwort</li>
   </ul>
@@ -111,6 +111,33 @@ const faqJsonLd = JSON.stringify({
     eine Stadt nichts liefert, sagt die API das ehrlich über
     <code>source_status</code>, statt einen Fehler vorzutäuschen.
   </p>
+
+  <h2>Welche Daten gibt es</h2>
+  <p>
+    Über 50 Endpunkte je Stadt, alle permissiv lizenziert (Tier A: DL-DE/BY,
+    CC-BY, kommerziell nutzbar):
+  </p>
+  <ul>
+    <li>
+      <strong>Umwelt und Wetter:</strong> Luftqualität (PM10, Live-Messwerte),
+      Wetter, amtliche DWD-Wetterwarnungen, Pollen- und UV-Index.
+    </li>
+    <li>
+      <strong>Mobilität und Verkehr:</strong> ÖPNV-Haltestellen und
+      Echtzeit-Abfahrten mit Verspätung, Verkehrslage, Baustellen, Ladesäulen,
+      Pkw-Bestand und Elektroauto-Anteil (KBA), Verkehrsunfälle (Unfallatlas).
+    </li>
+    <li>
+      <strong>Energie und Statistik:</strong> Energieanlagen
+      (Marktstammdatenregister), Stromverbrauch und Börsenstrompreis (SMARD),
+      Arbeitslosenquote, Tourismus-Übernachtungen, Baugenehmigungen, Demografie.
+    </li>
+    <li>
+      <strong>Wasser, Gesundheit, Stadtleben:</strong> Pegelstände und
+      Hochwasser, Krankenhäuser und Intensivbetten, POIs, Veranstaltungen,
+      Wahlergebnisse, Feiertage, Verwaltungsgrenzen.
+    </li>
+  </ul>
 
   <h2>Was die API ausmacht</h2>
   <ul class="features">
@@ -167,9 +194,12 @@ const faqJsonLd = JSON.stringify({
       <p>
         Unter <code>/api/v1/live/*</code> liefert InfraNode aktuelle Messwerte:
         Verkehrslage, Baustellen, Parken, Laden und ÖPNV. Einige Live-Quellen
-        sind stadtspezifisch (zum Beispiel Köln Verkehrslage, Berlin
-        Verkehrsmeldungen, Hamburg HVV-Abfahrten in Echtzeit über
-        <code>/api/v1/live/hamburg/departures</code>). Neu ist die ÖPNV-Echtzeit mit Verspätungen je Halt,
+        sind stadtspezifisch (zum Beispiel Hamburg HVV-Abfahrten in Echtzeit über
+        <code>/api/v1/live/hamburg/departures</code>, die Dortmunder
+        Parkbelegung über <code>/api/v1/live/dortmund/parking</code> keylos aus den
+        offenen Daten der Stadt Dortmund, oder die Nürnberger ÖPNV-Echtzeit-
+        Abfahrten über <code>/api/v1/live/nuernberg/departures</code> keylos aus
+        der offenen VGN/VAG-Puls-API unter CC-BY 4.0). Neu ist die ÖPNV-Echtzeit mit Verspätungen je Halt,
         Fahrt und Linie sowie Positionsschätzung unter
         <code>/api/v1/live/&lbrace;stadt&rbrace;/transit/departures</code>,
         <code>trips/&lbrace;id&rbrace;</code> und

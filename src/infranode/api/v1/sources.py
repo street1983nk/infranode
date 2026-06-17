@@ -49,6 +49,26 @@ _KNOWN_SOURCES = (
     "genesis",
     "zensus",
     "mastr",
+    "smard",
+    "dwd_warnings",
+    # DATA-27: KBA Pkw-Bestand + Elektro-Anteil je Zulassungsbezirk (Bulk, keylos
+    # DL-DE/BY 2.0). Name == enable_kba (config.py) == SourceId.KBA (enums.py).
+    "kba",
+    # DATA-29: Unfallatlas (Verkehrsunfaelle je Kreis, Bulk-CSV, DL-DE/BY 2.0).
+    # Name == enable_unfallatlas == SourceId.UNFALLATLAS.
+    "unfallatlas",
+    # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Bulk, keylos
+    # DL-DE/BY 2.0). Name == enable_inkar == SourceId.INKAR.
+    "inkar",
+    # DATA-30: Tankerkoenig Spritpreise (keyed Live, CC BY 4.0). Name ==
+    # enable_tankerkoenig (config.py) == SourceId.TANKERKOENIG (enums.py).
+    "tankerkoenig",
+    # DATA-33: GBFS-Bike-/Scooter-Sharing (Live, Primaer Nextbike CC0). Name ==
+    # enable_gbfs (config.py) == SourceId.GBFS (enums.py).
+    "gbfs",
+    # DATA-34: DB Timetables (Bahnhof-Abfahrten Metropolen-Hbf, keyed Live, CC BY
+    # 4.0). Name == enable_db_timetables == SourceId.DB_TIMETABLES.
+    "db_timetables",
     "bkg",
     "bundeswahl",
     "divi",
@@ -76,6 +96,9 @@ _KNOWN_SOURCES = (
     "dortmund_parking",
     "kiel_zaehlstellen",
     "eround_charging",
+    # DATA-31: Bremen Baustellen (Mobilithek DATEX II, DL-DE/BY 2.0). Name ==
+    # enable_bremen_baustellen == SourceId.BREMEN_BAUSTELLEN.
+    "bremen_baustellen",
     # Phase 19: GTFS-Realtime Trip Updates (Live-ÖPNV). Name MUSS exakt zum
     # enable_<name>-Toggle (config.py) UND zum SourceId-Wert (enums.py) passen:
     # getattr(settings, f"enable_gtfs_rt").
@@ -83,6 +106,12 @@ _KNOWN_SOURCES = (
     # DATA-24: HVV-Geofox-GTI Live-Abfahrten (Hamburg). Name == enable_hvv_geofox
     # (config.py) == SourceId.HVV_GEOFOX (enums.py).
     "hvv_geofox",
+    # DATA-25: VGN/VAG-Nuernberg Live-Abfahrten (keylos CC-BY 4.0, Tier A). Name
+    # == enable_vgn (config.py) == SourceId.VGN (enums.py).
+    "vgn",
+    # DATA-26: Hamburg-Verkehrslage (keylos OAF, DL-DE/BY 2.0, Tier A). Name ==
+    # enable_hamburg_verkehrslage (config.py) == SourceId.HAMBURG_VERKEHRSLAGE.
+    "hamburg_verkehrslage",
 )
 
 
@@ -158,6 +187,50 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
     "mastr": {
         "license_id": "dl_de_by_2_0",
         "attribution": "Bundesnetzagentur - Marktstammdatenregister",
+    },
+    "smard": {
+        "license_id": "cc_by_4_0",
+        "attribution": "Bundesnetzagentur | SMARD.de",
+    },
+    "dwd_warnings": {
+        "license_id": "geonutzv",
+        "attribution": "Datenbasis: Deutscher Wetterdienst",
+    },
+    "kba": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": "Kraftfahrt-Bundesamt (KBA)",
+    },
+    "unfallatlas": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": "Statistische Ämter des Bundes und der Länder, Unfallatlas",
+    },
+    # DATA-32: INKAR/BBSR Indikatoren. DL-DE/BY 2.0 = Tier A. Attribution wortgenau
+    # wie im Mapper (map_indicators) und in DATA-LICENSES.md (T-11-SRC-DRIFT).
+    "inkar": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": (
+            "Bundesinstitut für Bau-, Stadt- und Raumforschung (BBSR), INKAR"
+        ),
+    },
+    # DATA-30: Tankerkoenig Spritpreise (MTS-K). CC BY 4.0 = Tier A. Attribution
+    # wortgenau wie im Mapper (map_fuel_prices) und in DATA-LICENSES.md
+    # (T-11-SRC-DRIFT, Wortlaut-Gleichheits-Test).
+    "tankerkoenig": {
+        "license_id": "cc_by_4_0",
+        "attribution": "Tankerkoenig (creativecommons.tankerkoenig.de), MTS-K",
+    },
+    # DATA-33: GBFS-Sharing. Primaerquelle Nextbike CC0 = Tier A; je Anbieter wird
+    # die Lizenz fail-closed gegen die Tier-A-Allowlist geprueft. Attribution
+    # wortgenau wie im Mapper (map_sharing) und in DATA-LICENSES.md (T-11-SRC-DRIFT).
+    "gbfs": {
+        "license_id": "cc0",
+        "attribution": "nextbike GmbH / GBFS (CC0)",
+    },
+    # DATA-34: DB Timetables (Bahnhof-Abfahrten). CC BY 4.0 = Tier A. Attribution
+    # wortgenau wie im Mapper (map_station_departures) + DATA-LICENSES.md.
+    "db_timetables": {
+        "license_id": "cc_by_4_0",
+        "attribution": "Deutsche Bahn AG",
     },
     "bkg": {
         "license_id": "dl_de_by_2_0",
@@ -236,7 +309,7 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
         ),
     },
     "dortmund_parking": {
-        "license_id": "dl_de_by_2_0",
+        "license_id": "dl_de_zero_2_0",
         "attribution": "Stadt Dortmund",
     },
     "kiel_zaehlstellen": {
@@ -251,6 +324,13 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
     "eround_charging": {
         "license_id": "cc0",
         "attribution": "Hamburger Energienetze GmbH / eRound",
+    },
+    # DATA-31: Bremen Baustellen (Verkehrsmanagementzentrale Bremen). Offenes
+    # Mobilithek-Angebot "freie Nutzung/Open Data" = DL-DE/BY 2.0 (Tier A),
+    # Attribution wortgenau wie im Mapper (map_bremen_road_events).
+    "bremen_baustellen": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": "Freie Hansestadt Bremen",
     },
     # Phase 19: GTFS-Realtime Trip Updates. CC-BY-SA = Tier B (copyleft, strikt
     # vom Tier-A-Archiv getrennt, KEIN append_record). Die quellenweite Zeile
@@ -267,6 +347,20 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
     "hvv_geofox": {
         "license_id": "unknown",
         "attribution": "Hamburger Verkehrsverbund GmbH (HVV) / Geofox",
+    },
+    # DATA-25: VGN/VAG-Nuernberg Live-Abfahrten. Tier A: offene Echtzeit-API unter
+    # Creative Commons Attribution 4.0 (opendata.vag.de), keylos, sauber
+    # verwertbar (anders als HVV-Geofox).
+    "vgn": {
+        "license_id": "cc_by_4_0",
+        "attribution": "Verkehrs-Aktiengesellschaft Nürnberg (VAG) / VGN",
+    },
+    # DATA-26: Hamburg-Verkehrslage (Echtzeit-Verkehrsfluss, OAF api.hamburg.de).
+    # Tier A: offener Datensatz der Urban Data Platform unter DL-DE/BY 2.0,
+    # Attribution identisch zum hamburg_baustellen-Datensatz derselben Plattform.
+    "hamburg_verkehrslage": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": "Freie und Hansestadt Hamburg",
     },
 }
 

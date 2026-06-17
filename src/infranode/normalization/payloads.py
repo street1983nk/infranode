@@ -137,6 +137,37 @@ class WaterLevelPayload(BaseModel):
     unit: str | None = None
 
 
+class PowerPayload(BaseModel):
+    """Strommarkt-Tageswert (SMARD, Tier A): Verbrauch (Netzlast) oder Day-ahead-Preis.
+
+    Regionale Aufloesung: ``load`` liegt je Regelzone vor (``region`` =
+    50Hertz/Amprion/TenneT/TransnetBW), ``price`` bundesweit (``region`` = DE).
+    ``series_date`` ist der Tag des Werts (YYYY-MM-DD). Quelle ist die keylose
+    SMARD-API der Bundesnetzagentur.
+    """
+
+    kind: Literal["power"] = "power"
+    measure: Literal["load", "price"]
+    value: float | None = None
+    unit: str | None = None
+    region: str | None = None
+    series_date: str | None = None
+
+
+class WeatherWarningPayload(BaseModel):
+    """Amtliche DWD-Wetterwarnungen je Stadt (GeoNutzV, Tier A).
+
+    ``max_level`` ist die hoechste aktive Warnstufe (0 = keine Warnung, 1-4 = DWD-
+    Warnstufe); ``count`` die Anzahl aktiver Warnungen; ``warnings`` je Warnung ein
+    dict (event/level/headline/start/end).
+    """
+
+    kind: Literal["weather_warning"] = "weather_warning"
+    count: int = 0
+    max_level: int | None = None
+    warnings: list[dict] = Field(default_factory=list)
+
+
 class FloodWarningPayload(BaseModel):
     """Hochwasser-Warnungen je Stadt (LHP, Tier A, Event-Layer).
 
@@ -197,6 +228,76 @@ class EnergyAssetPayload(BaseModel):
     count: int
     by_type: dict = Field(default_factory=dict)
     assets: list[dict] = Field(default_factory=list)
+
+
+class AccidentPayload(BaseModel):
+    """Strassenverkehrsunfaelle je Kreis (Unfallatlas, Tier A, DATA-29).
+
+    Jahres-Aggregat der amtlichen Unfallstatistik mit Personenschaden je Kreis/
+    kreisfreie Stadt (``district_key`` = 5-stelliger Kreisschluessel). ``total``
+    = Unfaelle gesamt; ``fatal``/``serious``/``light`` = nach Unfallkategorie
+    (1=mit Getoeteten, 2=mit Schwerverletzten, 3=mit Leichtverletzten);
+    ``with_bicycle``/``with_pedestrian``/``with_car``/``with_motorcycle`` =
+    Anzahl Unfaelle mit Beteiligung der jeweiligen Verkehrsart. ``reference_year``
+    traegt das Berichtsjahr (Unfallatlas ist jaehrlich).
+    """
+
+    kind: Literal["accident"] = "accident"
+    reference_year: int | None = None
+    total: int | None = None
+    fatal: int | None = None
+    serious: int | None = None
+    light: int | None = None
+    with_bicycle: int | None = None
+    with_pedestrian: int | None = None
+    with_car: int | None = None
+    with_motorcycle: int | None = None
+    district_key: str | None = None
+
+
+class RegionalStatPayload(BaseModel):
+    """Regionalstatistik-Kennzahl je Kreis (GENESIS, Tier A, DATA-28).
+
+    Generischer Traeger fuer das GENESIS-Trio (Arbeitslosenquote, Tourismus/
+    Uebernachtungen, Bautaetigkeit/Baugenehmigungen). ``dataset`` benennt den
+    Datensatz (unemployment/tourism/construction), ``values`` haelt je Kennzahl
+    einen Wert (z.B. arbeitslose/arbeitslosenquote). Regionale Aufloesung ist der
+    Kreis/die kreisfreie Stadt; ``region_name`` weist ihn ehrlich aus. Die
+    Regionalstatistik fuehrt diese Tabellen je Kreis als Jahreswert ->
+    ``reference_year`` traegt das Berichtsjahr. Mutable Default via
+    ``Field(default_factory=dict)`` (ruff B006).
+    """
+
+    kind: Literal["regional_stat"] = "regional_stat"
+    dataset: str
+    reference_year: int | None = None
+    region_name: str | None = None
+    values: dict = Field(default_factory=dict)
+
+
+class VehicleRegistrationPayload(BaseModel):
+    """Pkw-Bestand + Elektro-Anteil je Stadt (KBA, Tier A, DATA-27).
+
+    Quelle ist das Kraftfahrt-Bundesamt (FZ Pkw mit Elektroantrieb je
+    Zulassungsbezirk). Regionale Aufloesung ist der Zulassungsbezirk, der sich mit
+    dem Kreis/der kreisfreien Stadt deckt (``district``/``district_key`` weisen
+    ihn ehrlich aus): fuer kreisfreie Staedte stadtgenau, fuer uebrige Staedte der
+    umgebende Kreis. ``electric_share``/``bev_share``/``plugin_hybrid_share`` sind
+    Anteile in Prozent; ``bev_estimated`` ist die aus ``pkw_total`` und
+    ``bev_share`` abgeleitete absolute BEV-Zahl (das KBA fuehrt im Datensatz nur
+    Anteile, keine Absolutwerte). ``reference_period`` ist der Berichtszeitpunkt
+    (Format JJJJ.MM).
+    """
+
+    kind: Literal["vehicle_registration"] = "vehicle_registration"
+    pkw_total: int | None = None
+    electric_share: float | None = None
+    bev_share: float | None = None
+    plugin_hybrid_share: float | None = None
+    bev_estimated: int | None = None
+    district: str | None = None
+    district_key: str | None = None
+    reference_period: str | None = None
 
 
 class AdminBoundaryPayload(BaseModel):
@@ -344,6 +445,10 @@ class TrafficFlowPayload(BaseModel):
     kind: Literal["traffic_flow"] = "traffic_flow"
     station_id: str | None = None
     measurements: list[dict] = Field(default_factory=list)
+    # Additiv (Phase 26): optionale Netz-Zusammenfassung fuer flaechige Quellen wie
+    # Hamburg-Verkehrslage (``total`` + ``by_state``-Zaehlung je Zustandsklasse).
+    # Default None -> die station-basierten Quellen (Koeln) bleiben unveraendert.
+    summary: dict | None = None
 
 
 class ParkingPayload(BaseModel):
@@ -440,6 +545,109 @@ class TransitRouteStatusPayload(BaseModel):
     trips: list[dict] = Field(default_factory=list)
 
 
+class FuelPricePayload(BaseModel):
+    """Aggregierte Spritpreise je Stadt (Tankerkoenig/MTS-K, Tier A, DATA-30).
+
+    Verdichtet die einzelnen Tankstellen im Umkreis (``radius_km``) der
+    Stadtkoordinate zu einer Stadt-Kennzahl: ``avg_*``/``min_*`` sind Durchschnitt
+    bzw. Minimum je Sorte (e5/e10/diesel, EUR/Liter) ueber die geoeffneten
+    Tankstellen mit gueltigem Preis. ``station_count`` = Tankstellen im Radius,
+    ``open_count`` = davon geoeffnet. ``stations`` traegt je Tankstelle ein
+    schlankes dict (station_id/name/brand/e5/e10/diesel/is_open/dist_km). Quelle:
+    Markttransparenzstelle fuer Kraftstoffe (MTS-K) via Tankerkoenig. Mutable
+    Default via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["fuel_price"] = "fuel_price"
+    radius_km: float | None = None
+    station_count: int = 0
+    open_count: int = 0
+    avg_e5: float | None = None
+    avg_e10: float | None = None
+    avg_diesel: float | None = None
+    min_e5: float | None = None
+    min_e10: float | None = None
+    min_diesel: float | None = None
+    stations: list[dict] = Field(default_factory=list)
+
+
+class SharingPayload(BaseModel):
+    """Bike-/Scooter-Sharing-Snapshot je Stadt (GBFS, Tier A, DATA-33).
+
+    Verdichtet die offenen GBFS-Feeds der kuratierten Tier-A-Anbieter (Primaer
+    Nextbike, CC0) im Stadtgebiet zu einer Live-Kennzahl. ``vehicles_available`` =
+    insgesamt verfuegbare Fahrzeuge (``free_floating_available`` frei abgestellt +
+    ``docked_available`` an Stationen). ``station_count`` = Stationen im Stadtgebiet.
+    ``providers`` traegt je akzeptiertem GBFS-System ein schlankes dict (provider/
+    operator/system_id/license_id/free_floating_available/docked_available/
+    station_count/stations) - inkl. der pro System fail-closed verifizierten
+    Tier-A-``license_id`` (GOV-02/04). Mutable Default via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["sharing"] = "sharing"
+    radius_km: float | None = None
+    vehicles_available: int = 0
+    free_floating_available: int = 0
+    docked_available: int = 0
+    station_count: int = 0
+    providers: list[dict] = Field(default_factory=list)
+
+
+class IndicatorsPayload(BaseModel):
+    """Kuratierte sozialoekonomische Indikatoren je Stadt (INKAR/BBSR, Tier A, DATA-32).
+
+    Buendelt ein breites Set INKAR-Kennzahlen (Arbeitsmarkt, Wirtschaft, Einkommen,
+    Demografie, Wohnen, Erreichbarkeit, Verkehr, Bildung, Gesundheit, Flaeche) je
+    Kreis/kreisfreie Stadt zu einer Liste schlanker dicts. ``indicators`` traegt je
+    Indikator ``gruppe`` (INKAR-Variablen-ID), ``name`` (inkl. Einheit, z.B. "...
+    in %"), ``value`` (juengster Jahreswert), ``year`` und ``category``.
+    ``indicator_count`` = Anzahl gelieferter Indikatoren. Regionale Aufloesung ist
+    der Kreis (kreisfreie Staedte stadtgenau, sonst der umgebende Kreis). Mutable
+    Default via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["indicators"] = "indicators"
+    indicator_count: int = 0
+    indicators: list[dict] = Field(default_factory=list)
+
+
+class StationDeparturesPayload(BaseModel):
+    """Live-Abfahrtstafel eines Metropolen-Hbf (DB Timetables, Tier A, DATA-34).
+
+    Buendelt die naechsten Zugabfahrten am Fernverkehrs-Hbf einer Stadt (inkl.
+    Echtzeit-Verspaetung) zu einer Liste schlanker dicts. ``departures`` traegt je
+    Abfahrt ``line`` (z.B. "ICE 73"/"RB22"), ``category`` (ICE/IC/RE/RB/S),
+    ``train_number``, ``long_distance`` (Fernverkehr-Flag), ``destination``,
+    ``planned_time`` (ISO), ``platform``, ``delay_minutes`` (None = keine Echtzeit)
+    und ``cancelled``. ``departure_count`` = Anzahl, ``long_distance_count`` =
+    davon Fernverkehr. Quelle: DB Timetables (CC BY 4.0). Mutable Default via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["station_departures"] = "station_departures"
+    departure_count: int = 0
+    long_distance_count: int = 0
+    departures: list[dict] = Field(default_factory=list)
+
+
+class StationArrivalsPayload(BaseModel):
+    """Live-Ankunftstafel eines Metropolen-Hbf (DB Timetables, Tier A, DATA-34).
+
+    Spiegelbild zu ``StationDeparturesPayload`` fuer ankommende Zuege. ``arrivals``
+    traegt je Ankunft ``line``, ``category``, ``train_number``, ``long_distance``,
+    ``origin`` (Startbahnhof = erstes ppth-Glied), ``planned_time`` (ISO),
+    ``platform``, ``delay_minutes`` (None = keine Echtzeit) und ``cancelled``.
+    ``arrival_count`` = Anzahl, ``long_distance_count`` = davon Fernverkehr. Quelle:
+    DB Timetables (CC BY 4.0). Mutable Default via ``Field(default_factory=list)``.
+    """
+
+    kind: Literal["station_arrivals"] = "station_arrivals"
+    arrival_count: int = 0
+    long_distance_count: int = 0
+    arrivals: list[dict] = Field(default_factory=list)
+
+
 PayloadUnion = Annotated[
     CityBaseDataPayload
     | AirQualityPayload
@@ -450,9 +658,19 @@ PayloadUnion = Annotated[
     | ChargingStationPayload
     | WaterLevelPayload
     | FloodWarningPayload
+    | PowerPayload
+    | WeatherWarningPayload
     | PollenUvPayload
     | DemographicsPayload
     | EnergyAssetPayload
+    | VehicleRegistrationPayload
+    | RegionalStatPayload
+    | AccidentPayload
+    | FuelPricePayload
+    | SharingPayload
+    | IndicatorsPayload
+    | StationDeparturesPayload
+    | StationArrivalsPayload
     | AdminBoundaryPayload
     | ElectionResultPayload
     | HolidayPayload

@@ -23,6 +23,11 @@ dependencies = [
     "redis==8.0.0",
     "slowapi==0.1.9",
     "structlog==26.1.0",
+    # tzdata: IANA-Zeitzonen fuer zoneinfo (DATA-34 DB-Timetables nutzt
+    # Europe/Berlin fuer die lokale Bahnhofs-Stunde). Auf Linux-Docker oft via
+    # System-tz vorhanden, auf Windows/slim-Images aber NICHT -> explizit pinnen,
+    # damit ZoneInfo("Europe/Berlin") ueberall (Tests + Prod) aufloest.
+    "tzdata==2026.1",
     "uvicorn[standard]==0.49.0",
 ]
 
