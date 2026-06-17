@@ -38,7 +38,7 @@ docker compose -f deploy/docker-compose.yml up
 curl http://localhost/api/v1/health
 ```
 
-Der Health-Endpunkt antwortet mit `{"status": "ok", "version": "0.1.0", "redis": true}`, sobald der Stack läuft.
+Der Health-Endpunkt antwortet mit `{"status": "ok", "version": "1.0.0", "redis": true}`, sobald der Stack läuft.
 
 > Hinweis: Das Docker-Compose-Setup (`deploy/docker-compose.yml`) wird in Plan 01-02 ergänzt. Bis dahin lässt sich die API auch direkt via `uv run uvicorn infranode.main:app --reload` lokal starten (erfordert ein lokales Redis unter `redis://localhost:6379/0` oder einen angepassten `INFRANODE_REDIS_URL`).
 

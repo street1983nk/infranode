@@ -1,6 +1,6 @@
 [project]
 name = "infranode"
-version = "0.1.0"
+version = "1.0.0"
 description = "InfraNode API: quelloffene Proxy-REST-API fuer offene Daten deutscher Staedte"
 authors = [
     { name = "street1983nk", email = "street1983nk@users.noreply.github.com" }

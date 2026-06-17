@@ -377,7 +377,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="InfraNode API",
-        version="0.1.0",
+        version="1.0.0",
         default_response_class=OrjsonResponse,
         lifespan=lifespan,
     )

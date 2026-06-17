@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: InfraNode API
-  version: 0.1.0
+  version: 1.0.0
   description: >-
     Open-Source-Proxy-REST-API für normalisierte offene Daten deutscher
     Großstädte. Bekannt sind 84 Städte über 100.000 Einwohner, davon 28
@@ -3247,7 +3247,7 @@ components:
           example: ok
         version:
           type: string
-          example: "0.1.0"
+          example: "1.0.0"
         redis:
           type: boolean
           description: true wenn Redis erreichbar (Ping erfolgreich)

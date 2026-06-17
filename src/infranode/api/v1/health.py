@@ -28,7 +28,7 @@ async def health(request: Request) -> dict:
         redis_ok = True
     except Exception:
         redis_ok = False
-    return {"status": "ok", "version": "0.1.0", "redis": redis_ok}
+    return {"status": "ok", "version": "1.0.0", "redis": redis_ok}
 
 
 @router.get("/ping")

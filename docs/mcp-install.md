@@ -51,7 +51,7 @@ Konkrete Schutzmechanismen im Code (`src/infranode/mcp/client.py`):
 | --- | --- | --- |
 | MCP Python SDK (gebündeltes FastMCP) | `mcp[cli]==1.27.2` (exakt gepinnt) | im `mcp`-Dependency-Group fixiert |
 | Python | >= 3.13 | erforderlich |
-| InfraNode-Paket | 0.1.0 | siehe `pyproject.toml` |
+| InfraNode-Paket | 1.0.0 | siehe `pyproject.toml` |
 | Claude Code | stdio + Remote-HTTP | manuell verifiziert |
 | Claude Desktop | stdio | manuell verifiziert |
 | Cursor und andere MCP-Clients | stdio + streamable-http | standardkonform, nicht separat verifiziert |
