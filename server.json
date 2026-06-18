@@ -1,8 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.street1983nk/infranode",
+  "name": "dev.infranode/infranode",
   "title": "InfraNode",
-  "description": "Key-less open data for 84 German cities as 38 MCP tools: weather, transit, air, traffic, compare, more.",
+  "description": "Keyless open data for 84 German cities: weather, air, transit, traffic. 38 read-only MCP tools.",
   "version": "1.0.0",
   "repository": {
     "url": "https://github.com/street1983nk/infranode",
