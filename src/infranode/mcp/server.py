@@ -21,62 +21,86 @@ from __future__ import annotations
 import os
 
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 
 from infranode.mcp import tools
 
 mcp = FastMCP("infranode")
 
+# Verhaltens-Hinweise (MCP Tool Annotations): Jedes InfraNode-Tool ist ein
+# read-only GET-Wrapper auf die Live-API: es schreibt keinen State, ist gefahrlos
+# wiederholbar (idempotent) und nicht destruktiv. Clients koennen Aufrufe so ohne
+# Rueckfrage zulassen; Verzeichnis-Scanner (Glama/Smithery) bewerten die
+# Transparenz positiv. ``open_world`` unterscheidet ehrlich: Datentools ziehen
+# Live-Daten von externen Behoerden-APIs (offene, veraenderliche Domaene = True),
+# die Meta-Tools list_cities/sources liefern dagegen InfraNodes eigene,
+# abgeschlossene Abdeckungsliste (geschlossene Domaene = False).
+def _annotations(*, open_world: bool) -> ToolAnnotations:
+    return ToolAnnotations(
+        readOnlyHint=True,
+        destructiveHint=False,
+        idempotentHint=True,
+        openWorldHint=open_world,
+    )
+
+
 # Duenne Registrierung der freistehenden Tool-Funktionen (Blocker 4): der
 # Decorator wird programmatisch ueber jede Funktion gelegt. Die Funktion selbst
 # bleibt in infranode.mcp.tools unveraendert als Coroutine aufrufbar; FastMCP
 # generiert das Schema aus den Typannotationen und Docstrings.
-mcp.tool()(tools.get_city)
-mcp.tool()(tools.air_quality)
-mcp.tool()(tools.air_quality_live)
-mcp.tool()(tools.weather)
-mcp.tool()(tools.pois)
-mcp.tool()(tools.traffic)
-mcp.tool()(tools.transit)
-mcp.tool()(tools.charging)
-mcp.tool()(tools.water_level)
-mcp.tool()(tools.flood)
-mcp.tool()(tools.pollen_uv)
-mcp.tool()(tools.demographics)
-mcp.tool()(tools.energy)
-mcp.tool()(tools.geo)
-mcp.tool()(tools.election)
-mcp.tool()(tools.holidays)
-mcp.tool()(tools.health)
-mcp.tool()(tools.icu_live)
-mcp.tool()(tools.road_events)
-mcp.tool()(tools.events)
-mcp.tool()(tools.webcams)
+def _register(fn, *, open_world: bool = True) -> None:
+    """Registriert ein Tool mit den read-only Annotations (siehe oben)."""
+    mcp.tool(annotations=_annotations(open_world=open_world))(fn)
+
+
+_register(tools.get_city)
+_register(tools.air_quality)
+_register(tools.air_quality_live)
+_register(tools.weather)
+_register(tools.pois)
+_register(tools.traffic)
+_register(tools.transit)
+_register(tools.charging)
+_register(tools.water_level)
+_register(tools.flood)
+_register(tools.pollen_uv)
+_register(tools.demographics)
+_register(tools.energy)
+_register(tools.geo)
+_register(tools.election)
+_register(tools.holidays)
+_register(tools.health)
+_register(tools.icu_live)
+_register(tools.road_events)
+_register(tools.events)
+_register(tools.webcams)
 # SMARD/DWD (frueher ergaenzte Endpunkte, jetzt als MCP-Tools nachgezogen).
-mcp.tool()(tools.power_load)
-mcp.tool()(tools.power_price)
-mcp.tool()(tools.weather_warnings)
+_register(tools.power_load)
+_register(tools.power_price)
+_register(tools.weather_warnings)
 # DATA-27/28/29: KBA Pkw-Bestand + GENESIS-Trio + Unfallatlas (Tier A).
-mcp.tool()(tools.vehicle_registrations)
-mcp.tool()(tools.unemployment)
-mcp.tool()(tools.tourism)
-mcp.tool()(tools.construction)
-mcp.tool()(tools.accidents)
+_register(tools.vehicle_registrations)
+_register(tools.unemployment)
+_register(tools.tourism)
+_register(tools.construction)
+_register(tools.accidents)
 # DATA-30: Tankerkoenig Spritpreise (Tier A, aggregiert je Stadt).
-mcp.tool()(tools.fuel_prices)
+_register(tools.fuel_prices)
 # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
-mcp.tool()(tools.sharing)
+_register(tools.sharing)
 # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
-mcp.tool()(tools.indicators)
+_register(tools.indicators)
 # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
-mcp.tool()(tools.station_departures)
-mcp.tool()(tools.station_arrivals)
+_register(tools.station_departures)
+_register(tools.station_arrivals)
 # DATA-26: Live-/Meta-Tools (echte neue Faehigkeiten, nicht slug-redundant):
-# Echtzeit-Abfahrten, Staedte-Liste, Quellen-Uebersicht.
-mcp.tool()(tools.transit_departures)
-mcp.tool()(tools.list_cities)
-mcp.tool()(tools.sources)
+# Echtzeit-Abfahrten, Staedte-Liste, Quellen-Uebersicht. list_cities/sources
+# beschreiben die eigene Abdeckung -> geschlossene Domaene (open_world=False).
+_register(tools.transit_departures)
+_register(tools.list_cities, open_world=False)
+_register(tools.sources, open_world=False)
 # API-05/D-06: Multi-City-Compare einer Ressource (weather/air) in einer Antwort.
-mcp.tool()(tools.compare)
+_register(tools.compare)
 
 
 def run() -> None:
