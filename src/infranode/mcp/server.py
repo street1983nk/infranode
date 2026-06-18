@@ -103,6 +103,53 @@ _register(tools.sources, open_world=False)
 _register(tools.compare)
 
 
+# MCP Resources: expose the coverage catalog as browsable resources, so clients
+# can discover what InfraNode offers (cities + sources) without a tool call.
+@mcp.resource("infranode://cities")
+async def cities_resource() -> dict:
+    """All covered German cities with slug, federal state, population and coverage."""
+    return await tools.list_cities()
+
+
+@mcp.resource("infranode://sources")
+async def sources_resource() -> dict:
+    """All InfraNode data sources with license, attribution and availability."""
+    return await tools.sources()
+
+
+# MCP Prompts: a few ready-made prompts that showcase common multi-tool flows.
+@mcp.prompt()
+def city_briefing(slug: str) -> str:
+    """A concise live briefing (weather, air, transit) for a German city."""
+    return (
+        f"Give me a concise current briefing for the German city '{slug}'. "
+        "Use the InfraNode tools to fetch weather, air quality and live "
+        "public-transport departures, then summarize the situation in a few "
+        "bullet points. If a source has no data, say so briefly."
+    )
+
+
+@mcp.prompt()
+def compare_air_quality(cities: str) -> str:
+    """Compare current air quality across several German cities."""
+    return (
+        f"Compare the current air quality across these German cities: {cities}. "
+        "Use the InfraNode 'compare' tool with resource='air', then rank the "
+        "cities from cleanest to most polluted and note any missing data."
+    )
+
+
+@mcp.prompt()
+def commute_check(slug: str) -> str:
+    """Check the live commute/transit situation for a German city."""
+    return (
+        f"Check the live commute situation in the German city '{slug}': pull "
+        "real-time public-transport departures (transit_departures) and any "
+        "motorway roadworks/traffic, then tell me whether there are notable "
+        "delays right now."
+    )
+
+
 def run() -> None:
     """Startet den Server im per Env gewaehlten Transport.
 

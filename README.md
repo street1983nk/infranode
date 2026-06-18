@@ -1,60 +1,136 @@
-# InfraNode API
+# InfraNode
 
-[![CI](https://github.com/street1983nk/infranode-api/actions/workflows/ci.yml/badge.svg)](https://github.com/street1983nk/infranode-api/actions/workflows/ci.yml)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](./LICENSE)
+[![Glama score](https://glama.ai/mcp/servers/street1983nk/infranode/badges/score.svg)](https://glama.ai/mcp/servers/street1983nk/infranode)
+[![MCP Registry](https://img.shields.io/badge/MCP_Registry-dev.infranode%2Finfranode-1f6feb)](https://registry.modelcontextprotocol.io)
+[![Smithery](https://img.shields.io/badge/Smithery-infranode-7c3aed)](https://smithery.ai/server/infranode/infranode)
 
-InfraNode ist eine öffentliche, quelloffene Proxy-REST-API, die fragmentierte offene Daten zu deutschen Städten hinter einer einheitlichen, normalisierten Schnittstelle bündelt. Entwickler erhalten ein konsistentes JSON-Format für Stammdaten, Luftqualität, Wetter, POIs, ÖPNV, Baustellen und Verkehr von 84 deutschen Städten (28 Kern-Städte: die 20 größten plus alle 16 Landeshauptstädte, sowie weitere Großstädte), statt sich mit Dutzenden unterschiedlicher Behörden- und Open-Data-APIs (verschiedene Formate, Felder, Sprachen) auseinandersetzen zu müssen.
+**A keyless, remote MCP server for German public-infrastructure open data.**
 
-## Core Value
+German cities publish a lot of open data, but every source has its own format,
+fields and quirks, and several need portal registration. InfraNode normalizes
+~20 categories, weather, air quality, public transit (incl. realtime
+departures), traffic, parking, charging, water levels, demographics, energy and
+more, for **84+ German cities** behind **one** interface, and serves it as an
+MCP server. **38 read-only tools, no API key, no account, no install.**
 
-Ein einziger, konsistenter und zuverlässig gecachter Endpunkt-Satz, der heterogene Open-Data-Quellen zu deutschen Städten normalisiert ausliefert, auch wenn einzelne Upstream-Quellen fehlen oder ausfallen.
+Sources include the Deutscher Wetterdienst (DWD), Umweltbundesamt (UBA),
+Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
 
-## Status
+## Connect
 
-In Betrieb. Die versionierte FastAPI-Anwendung läuft unter `/api/v1/...` mit strukturiertem JSON-Logging, Correlation-IDs, zentralem Fehler-Mapping und Resilienz (Circuit-Breaker, Graceful Degradation). Es sind reale Datenquellen angebunden (u.a. Wikidata, UBA, OpenAQ, DWD, OpenStreetMap/Overpass, DELFI/HVV, Autobahn, SMARD, KBA, DIVI). Die Daten der 84 Städte sind zusätzlich als MCP-Server verfügbar.
-
-## MCP-Server
-
-InfraNode ist auch als Model-Context-Protocol-Server nutzbar: 38 read-only Tools über alle Stadtdaten, keylos. Der schnellste Weg ist der öffentliche Remote-Endpunkt (kein Build, keine lokale API):
+One line with Claude Code:
 
 ```bash
 claude mcp add --transport http infranode https://mcp.infranode.dev/mcp
 ```
 
-Vollständige Installationsanleitung, das komplette Tool-Manifest mit Beispiel-Ausgaben, das Berechtigungsmodell und ein Beispiel-Transkript stehen in [docs/mcp-install.md](./docs/mcp-install.md). Das Registry-Manifest ist [server.json](./server.json).
+Any other MCP client, point it at the remote endpoint (Streamable HTTP):
 
-## Quick Start
-
-Voraussetzung: Docker mit Compose v2.
-
-```bash
-# 1. Beispiel-Konfiguration kopieren (enthält KEINE echten Secrets)
-cp .env.example .env
-
-# 2. Stack lokal in einem Schritt starten (Caddy + API + Redis)
-docker compose -f deploy/docker-compose.yml up
-
-# 3. Health-Check über den Caddy-Ingress prüfen
-curl http://localhost/api/v1/health
+```jsonc
+{
+  "mcpServers": {
+    "infranode": { "url": "https://mcp.infranode.dev/mcp" }
+  }
+}
 ```
 
-Der Health-Endpunkt antwortet mit `{"status": "ok", "version": "1.0.0", "redis": true}`, sobald der Stack läuft.
+- **Cursor / Windsurf:** add the block above to `~/.cursor/mcp.json` (or the app's MCP settings).
+- **VS Code:** `code --add-mcp '{"name":"infranode","url":"https://mcp.infranode.dev/mcp"}'`
+- **Claude Desktop:** add the same `mcpServers` block to your `claude_desktop_config.json`.
+- **ChatGPT:** add a connector with the URL `https://mcp.infranode.dev/mcp`.
 
-> Hinweis: Das Docker-Compose-Setup (`deploy/docker-compose.yml`) wird in Plan 01-02 ergänzt. Bis dahin lässt sich die API auch direkt via `uv run uvicorn infranode.main:app --reload` lokal starten (erfordert ein lokales Redis unter `redis://localhost:6379/0` oder einen angepassten `INFRANODE_REDIS_URL`).
+Full install guide, the complete tool manifest with example outputs, the
+permission model and an example transcript are in
+[docs/mcp-install.md](./docs/mcp-install.md). The registry manifest is
+[server.json](./server.json).
 
-## Konfiguration
+## Example
 
-Alle Einstellungen werden über Umgebungsvariablen mit dem Präfix `INFRANODE_` gesteuert (siehe `.env.example`). Jede Datenquelle ist einzeln per `INFRANODE_ENABLE_*`-Flag aktivierbar (Graceful Degradation: fehlt ein Key oder fällt eine Quelle aus, bleibt die API lauffähig).
+Ask your agent something like *"What's the weather in Cologne right now?"* and it
+calls `weather`:
 
-Es werden niemals echte Secrets in das Repository committet. Nur `.env.example` ist versioniert; die lokale `.env` mit echten Keys bleibt durch `.gitignore` ausgeschlossen und wird in CI per gitleaks-Scan abgesichert.
+```jsonc
+// weather(slug="koeln")
+{
+  "data": {
+    "city_slug": "koeln",
+    "observed_at": "2026-06-18T13:00:00Z",
+    "source": "dwd",
+    "attribution": { "text": "Datenbasis: Deutscher Wetterdienst", "modified": true },
+    "payload": { "kind": "weather", "temperature_c": 30.4, "humidity": 43.0, "station_id": "02667" }
+  },
+  "meta": { "source_status": "ok", "cache_status": "hit", "correlation_id": "..." }
+}
+```
 
-## Lizenz: Code und Daten getrennt
+Every response follows the same `{ data, meta }` envelope: each record carries
+its `attribution` (license + source), and `meta.source_status` tells you whether
+the upstream source delivered data, so a dead source degrades gracefully instead
+of failing the call.
 
-- **Code:** Apache-2.0 (siehe [LICENSE](./LICENSE)). Patentschutz und seriöse Basis für ein öffentliches OSS-Projekt.
-- **Daten:** Die über InfraNode ausgelieferten Open-Data-Inhalte stehen unter den jeweils eigenen Lizenzen der Upstream-Quellen (z. B. ODbL für OpenStreetMap, DL-DE-BY für GovData, Quellenangabe-Pflicht beim DWD). Diese Daten-Lizenzen und die zugehörige Attribution werden separat in `DATA-LICENSES.md` geführt. Diese Datei wird ab Phase 4 mit den ersten echten Quellen befüllt.
+> Tip: call `list_cities` first to discover valid city slugs (e.g. `koeln`,
+> `berlin`, `hamburg`), then call any city-scoped tool.
 
-Das Code-vs-Daten-Lizenz-Prinzip ist bewusst getrennt: Die Apache-2.0-Lizenz deckt ausschließlich den Quellcode der API, nicht die durchgereichten Daten.
+## Tools (38)
 
-## Mitwirken
+| Group | Tools |
+|-------|-------|
+| **Discovery** | `list_cities`, `sources`, `compare` (one resource across many cities) |
+| **Weather & environment** | `weather`, `weather_warnings`, `air_quality`, `air_quality_live`, `pollen_uv`, `water_level`, `flood` |
+| **Mobility** | `transit`, `transit_departures`, `station_departures`, `station_arrivals`, `traffic`, `road_events`, `webcams`, `charging`, `sharing`, `fuel_prices` |
+| **City & people** | `get_city`, `geo`, `demographics`, `indicators`, `unemployment`, `tourism`, `construction`, `accidents`, `health`, `icu_live`, `holidays`, `election`, `events`, `pois` |
+| **Energy & vehicles** | `power_load`, `power_price`, `energy`, `vehicle_registrations` |
 
-Beiträge sind willkommen. Setup, Gate-Kommandos und die Secret-Regel stehen in [CONTRIBUTING.md](./CONTRIBUTING.md).
+All tools are annotated `readOnlyHint: true` / `destructiveHint: false` /
+`idempotentHint: true`, so MCP clients can safely auto-allow them.
+
+### Prompts & resources
+
+- **Prompts:** `city_briefing`, `compare_air_quality`, `commute_check`, ready-made flows that chain several tools.
+- **Resources:** `infranode://cities` and `infranode://sources`, browse the coverage catalog without a tool call.
+
+## How it behaves
+
+- **Keyless & read-only.** No credentials, no writes, no user accounts.
+- **Canonical envelope.** `{ data, meta }` with per-source status and attribution.
+- **Graceful degradation.** A failing upstream returns `source_status`, not an error.
+- **Safe by design.** SSRF and injection gates validate every request; inputs are checked against fixed allowlists.
+
+See [SECURITY.md](./SECURITY.md) for the security model.
+
+## Self-host (optional)
+
+You don't need to, the hosted endpoint above is the fastest path. But the code
+is open. Run the API stack locally with Docker (Compose v2):
+
+```bash
+cp .env.example .env          # example config, contains NO real secrets
+docker compose -f deploy/docker-compose.yml up
+curl http://localhost/api/v1/health   # -> {"status":"ok","version":"1.0.0","redis":true}
+```
+
+To run the MCP server itself locally over stdio (against the public API):
+
+```bash
+uv sync --group mcp
+INFRANODE_MCP_API_BASE=https://infranode.dev/api/v1 uv run python -m infranode.mcp.server
+```
+
+All settings use the `INFRANODE_` env prefix (see `.env.example`); each data
+source is toggled by its own `INFRANODE_ENABLE_*` flag. Real secrets are never
+committed, only `.env.example` is versioned and CI runs a gitleaks scan.
+
+## License: code and data are separate
+
+- **Code:** Apache-2.0 (see [LICENSE](./LICENSE)).
+- **Data:** the open data served through InfraNode keeps the licenses of its
+  upstream sources (e.g. ODbL for OpenStreetMap, DL-DE-BY for GovData, attribution
+  for DWD). These data licenses and attribution are tracked separately in
+  `DATA-LICENSES.md`. The Apache-2.0 license covers only the API source code, not
+  the passed-through data.
+
+## Contributing
+
+Contributions are welcome. Setup, gate commands and the secret rule are in
+[CONTRIBUTING.md](./CONTRIBUTING.md).

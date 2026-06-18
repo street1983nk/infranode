@@ -125,44 +125,44 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
 | --- | --- | --- | --- |
-| `get_city` | `slug` | Stammdaten (Einwohner, Fläche, Geo) | Wikidata |
-| `air_quality` | `slug` | Luftqualität (PM10/NO2 u.a.) | UBA |
-| `air_quality_live` | `slug` | Luftqualität, Live-Messwerte | OpenAQ |
-| `weather` | `slug` | Aktuelles Wetter | DWD |
-| `pois` | `slug`, `type` | Points of Interest, gefiltert nach Typ | OpenStreetMap |
-| `traffic` | `slug` | Baustellen/Verkehrsmeldungen (Region) | Autobahn |
-| `transit` | `slug` | ÖPNV-Haltestellen | DELFI/GTFS, HVV |
-| `charging` | `slug` | E-Ladesäulen-Standorte | Bundesnetzagentur |
-| `water_level` | `slug` | Pegelstände an Bundeswasserstraßen | PEGELONLINE |
-| `flood` | `slug` | Hochwasser-Warnstufen | Länderhochwasserportal |
-| `pollen_uv` | `slug` | Pollenflug und UV-Index | DWD |
-| `demographics` | `slug` | Demografie-Kennzahlen | GENESIS/Regionalstatistik |
-| `energy` | `slug` | Energie-/Anlagen-Kennzahlen | Marktstammdatenregister |
-| `geo` | `slug` | Geodaten/Grenzen | diverse |
-| `election` | `slug` | Wahlergebnisse | diverse |
-| `holidays` | `slug` | Gesetzliche Feiertage | Bundesland-Kalender |
-| `health` | `slug` | Krankenhausverzeichnis | Regionalstatistik |
-| `icu_live` | `slug` | Live-Intensivbetten-Auslastung | DIVI |
-| `road_events` | `slug` | Innerstädtische Baustellen/Sperrungen | kommunal |
-| `events` | `slug` | Stadt-Events und Veranstaltungen | kommunal |
-| `webcams` | `slug` | Verkehrs-Webcams (Region) | Autobahn |
-| `power_load` | `slug` | Netzlast der Regelzone, Tageswert | SMARD |
-| `power_price` | `slug` | Day-ahead-Börsenstrompreis (bundesweit) | SMARD |
-| `weather_warnings` | `slug` | Amtliche DWD-Wetterwarnungen | DWD |
-| `vehicle_registrations` | `slug` | Pkw-Bestand und Elektro-Anteil | KBA |
-| `unemployment` | `slug` | Arbeitslose und Quote (Kreis) | Regionalstatistik |
-| `tourism` | `slug` | Gästeübernachtungen/Ankünfte (Kreis) | Regionalstatistik |
-| `construction` | `slug` | Baugenehmigungen (Kreis) | Regionalstatistik |
-| `accidents` | `slug` | Straßenverkehrsunfälle (Kreis, Jahr) | Unfallatlas |
-| `fuel_prices` | `slug` | Spritpreise, aggregiert je Stadt | Tankerkönig |
-| `sharing` | `slug` | Bike-/Scooter-Sharing, aggregiert | GBFS |
-| `indicators` | `slug` | Sozioökonomische Indikatoren (Kreis) | INKAR/BBSR |
-| `station_departures` | `slug` | Live-Abfahrten am Fernverkehrs-Hbf | DB Timetables |
-| `station_arrivals` | `slug` | Live-Ankünfte am Fernverkehrs-Hbf | DB Timetables |
-| `transit_departures` | `slug`, `stop_id?` | Live-ÖPNV-Abfahrten je Halt | GTFS-RT/HVV/VGN |
-| `list_cities` | keine | Liste aller abgedeckten Städte | InfraNode |
-| `sources` | keine | Übersicht aller Quellen mit Lizenz/Status | InfraNode |
-| `compare` | `resource`, `cities` | Eine Ressource (`weather`/`air`) über mehrere Städte vergleichen | InfraNode |
+| `get_city` | `slug` | Base data for a German city (population, area, coordinates) | Wikidata |
+| `air_quality` | `slug` | Official air quality (PM10, NO2 and more) | UBA |
+| `air_quality_live` | `slug` | Live air quality readings (live-only, no history) | OpenAQ |
+| `weather` | `slug` | Current weather observations (not a forecast) | DWD |
+| `pois` | `slug`, `type` | Points of interest, filtered by type | OpenStreetMap |
+| `traffic` | `slug` | Motorway roadworks and traffic messages (region) | Autobahn |
+| `transit` | `slug` | Public-transport stops (static) | DELFI/GTFS, HVV |
+| `charging` | `slug` | EV charging-station locations | Bundesnetzagentur |
+| `water_level` | `slug` | Water levels on federal waterways (partial coverage) | PEGELONLINE |
+| `flood` | `slug` | Flood warning levels (partial coverage) | Länderhochwasserportal |
+| `pollen_uv` | `slug` | Pollen forecast and UV index (region) | DWD |
+| `demographics` | `slug` | Demographic indicators | GENESIS/Regionalstatistik |
+| `energy` | `slug` | Energy installation metrics (power-generation units) | Marktstammdatenregister |
+| `geo` | `slug` | Geodata and administrative boundaries | diverse |
+| `election` | `slug` | Election results | diverse |
+| `holidays` | `slug` | Public holidays for the city's federal state | Bundesland-Kalender |
+| `health` | `slug` | Hospital directory | Regionalstatistik |
+| `icu_live` | `slug` | Live ICU bed occupancy (current snapshot) | DIVI |
+| `road_events` | `slug` | Inner-city roadworks and closures (partial coverage) | kommunal |
+| `events` | `slug` | Public events and happenings (partial coverage) | kommunal |
+| `webcams` | `slug` | Traffic webcams (region, partial coverage) | Autobahn |
+| `power_load` | `slug` | Daily grid load of the control zone | SMARD |
+| `power_price` | `slug` | Day-ahead wholesale electricity price (nationwide) | SMARD |
+| `weather_warnings` | `slug` | Official weather warnings (highest active level) | DWD |
+| `vehicle_registrations` | `slug` | Registered car stock and electric share | KBA |
+| `unemployment` | `slug` | Number of unemployed and unemployment rate (district) | Regionalstatistik |
+| `tourism` | `slug` | Guest overnight stays and arrivals (district) | Regionalstatistik |
+| `construction` | `slug` | Building permits (district) | Regionalstatistik |
+| `accidents` | `slug` | Road-traffic accidents (district, yearly) | Unfallatlas |
+| `fuel_prices` | `slug` | Current fuel prices, aggregated per fuel type | Tankerkönig |
+| `sharing` | `slug` | Bike/scooter sharing availability, aggregated (partial) | GBFS |
+| `indicators` | `slug` | Socioeconomic indicators (district, latest year) | INKAR/BBSR |
+| `station_departures` | `slug` | Live long-distance train departures (metro hubs) | DB Timetables |
+| `station_arrivals` | `slug` | Live long-distance train arrivals (metro hubs) | DB Timetables |
+| `transit_departures` | `slug`, `stop_id?` | Live public-transport departures with real-time delays | GTFS-RT/HVV/VGN |
+| `list_cities` | keine | List all covered cities (slug, state, population, coverage) | InfraNode |
+| `sources` | keine | List all data sources with license, attribution and status | InfraNode |
+| `compare` | `resource`, `cities` | Compare one resource (`weather`/`air`) across multiple cities | InfraNode |
 
 Das `pois`-Tool nimmt zusätzlich `type` aus der API-Whitelist (z.B. `hospital`,
 `school`, `pharmacy`, `restaurant`, `police`, `kindergarten`).
