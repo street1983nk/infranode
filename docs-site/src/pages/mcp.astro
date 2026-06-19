@@ -1,10 +1,11 @@
 ---
 // MCP-Server-Seite (/mcp): erklaert kurz MCP fuer Devs, zeigt die Einrichtung
-// in Claude Code und Claude Desktop (CodeTabs) und listet die 39 Tools nach
+// in Claude Code und Claude Desktop (CodeTabs) und listet die 42 Tools nach
 // Thema gruppiert. Quelle der Einrichtungs-Snippets ist docs/mcp-install.md.
 import Docs from "../layouts/Docs.astro";
 import CodeTabs from "../components/CodeTabs.astro";
 import JsonLd from "../components/JsonLd.astro";
+import { mcpTopics } from "../data/mcp-topics";
 
 // Einrichtungs-Snippets. Der Server ist oeffentlich gehostet (Remote, Streamable
 // HTTP) unter https://mcp.infranode.dev/mcp. Tab 1: Claude Code (Remote, ein
@@ -39,7 +40,7 @@ const mcpRemoteConfig = [
   `}`,
 ].join("\n");
 
-// Die 39 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
+// Die 42 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
 const toolGroups = [
   {
     title: "Stammdaten und Geo",
@@ -73,6 +74,9 @@ const toolGroups = [
       ["sharing", "Bike- und Scooter-Sharing je Stadt, aggregiert (GBFS/Nextbike)"],
       ["station_departures", "Live-Abfahrten am Fernverkehrs-Hbf mit Verspätung (DB Timetables)"],
       ["station_arrivals", "Live-Ankünfte am Fernverkehrs-Hbf mit Verspätung (DB Timetables)"],
+      ["stations", "Katalog aller Bahnhöfe einer Stadt mit EVA-Nummer (DB StaDa)"],
+      ["station_board_departures", "Live-Abfahrten jedes Bahnhofs per EVA, alle Gattungen inkl. Nahverkehr + Störungen (DB Timetables)"],
+      ["station_board_arrivals", "Live-Ankünfte jedes Bahnhofs per EVA, alle Gattungen inkl. Nahverkehr + Störungen (DB Timetables)"],
     ],
   },
   {
@@ -135,7 +139,7 @@ const faq = [
   },
   {
     q: "Welche Daten liefert der InfraNode-MCP-Server?",
-    a: "39 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Bike- und Scooter-Sharing, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
+    a: "42 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Bike- und Scooter-Sharing, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
   },
   {
     q: "Mein MCP-Client unterstützt nur lokale stdio-Server. Wie verbinde ich InfraNode?",
@@ -153,8 +157,8 @@ const faq = [
 ---
 
 <Docs
-  title="MCP-Server"
-  description="Gehosteter InfraNode-MCP-Server unter mcp.infranode.dev: 39 Tools für KI-Agenten, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel. Connector für Claude und ChatGPT."
+  title="Open-Data-MCP-Server Deutschland für KI-Agenten"
+  description="Open-Data-MCP-Server für deutsche Städte: 42 Tools für KI-Agenten wie Claude und ChatGPT, gehostet unter mcp.infranode.dev, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel, kostenlos."
   current="mcp"
   lang="de"
   altLangPath="/en/mcp/"
@@ -163,20 +167,41 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP-Server"
-    description="Gehosteter MCP-Server mit 39 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
+    description="Gehosteter MCP-Server mit 42 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
-  <h1>MCP-Server</h1>
+  <h1>Open-Data-MCP-Server für deutsche Städte</h1>
   <p>
     Der InfraNode-MCP-Server ist ein kostenloser, gehosteter
-    Model-Context-Protocol-Server, der KI-Agenten über 39 Tools Zugriff auf
+    Model-Context-Protocol-Server, der KI-Agenten über 42 Tools Zugriff auf
     offene Daten von 84 deutschen Großstädten gibt, ohne API-Schlüssel. Er stellt
     die Stadtdaten als Werkzeuge bereit, die ein Agent direkt aufruft, ohne dass
     du HTTP-Aufrufe von Hand schreibst. Der Server ist im offiziellen
     <a href="https://registry.modelcontextprotocol.io">MCP Registry</a> unter dem
     Namen <code>dev.infranode/infranode</code> gelistet, mit Tool-Übersicht und
     Score auch bei <a href="https://glama.ai/mcp/servers/@street1983nk/infranode">Glama</a>.
+  </p>
+  <p>
+    Kurz gesagt: InfraNode ist der Open-Data-MCP-Server für Deutschland, ein
+    kostenloser, keyloser MCP-Server für deutsche Städte und ihre offenen Daten,
+    nutzbar in Claude, ChatGPT und anderen KI-Agenten.
+  </p>
+
+  <h2>Datentools nach Thema</h2>
+  <p>
+    Eigene Seiten je Datenart erklären das passende MCP-Tool und wie du es im
+    KI-Assistenten nutzt:
+  </p>
+  <ul>
+    {mcpTopics.map((topic) => (<li><a href={`/mcp/${topic.de.slug}/`}>{topic.de.h1}</a></li>))}
+  </ul>
+  <p>
+    Diese Daten gibt es für alle <a href="/staedte/">84 abgedeckten Städte</a>.
+    Neu bei MCP? <a href="/tutorials/was-ist-ein-mcp-server/">Was ist ein
+    MCP-Server</a> erklärt die Grundlagen, die
+    <a href="/tutorials/mcp-server-claude-einrichten/">Einrichtungs-Anleitung</a>
+    zeigt die Verbindung in Claude und ChatGPT.
   </p>
 
   <div class="tldr">
@@ -188,6 +213,16 @@ const faq = [
       MCP-Client als Connector mit dieser URL hinzufügen, fertig.
     </p>
   </div>
+
+  <h2>Ein-Klick-Installation</h2>
+  <p>
+    Für Cursor und VS Code geht es per Klick. Da InfraNode keylos ist, entfällt
+    jeder Login, der Server ist sofort verbunden:
+  </p>
+  <p class="install">
+    <a class="install__btn" href="https://cursor.com/install-mcp?name=infranode&config=eyJ1cmwiOiJodHRwczovL21jcC5pbmZyYW5vZGUuZGV2L21jcCJ9">In Cursor installieren</a>
+    <a class="install__btn install__btn--ghost" href="vscode:mcp/install?%7B%22name%22%3A%22infranode%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.infranode.dev%2Fmcp%22%7D">In VS Code installieren</a>
+  </p>
 
   <h2>Was ist MCP</h2>
   <p>
@@ -256,7 +291,7 @@ const faq = [
 
   <h2>Tool-Übersicht</h2>
   <p>
-    Der Server stellt insgesamt 39 Tools bereit. Die meisten erwarten einen
+    Der Server stellt insgesamt 42 Tools bereit. Die meisten erwarten einen
     Stadt-Slug (zum Beispiel <code>berlin</code> oder <code>hamburg</code>);
     <code>pois</code> verlangt zusätzlich den Pflichtparameter <code>type</code>
     (z.B. <code>hospital</code>, <code>school</code>, <code>pharmacy</code>),

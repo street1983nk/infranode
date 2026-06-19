@@ -1,0 +1,98 @@
+---
+// Daten-Hub DE (/daten/): Pillar fuer "Daten-API / Datenanalyse-API / Stadtdaten-
+// API / offene Daten API". Buendelt die per-Datentyp-Seiten, MCP, den Datensatz
+// (Zenodo/HF) und die Analyse-Tutorials. Kein Konflikt mit /daten/[topic].
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { topics } from "../../data/topics";
+import { API_BASE } from "../../lib/codegen";
+
+const title = "Daten-API für deutsche Städte: offene Daten als JSON";
+const description =
+  "Kostenlose, keylose Daten-API für 84 deutsche Großstädte: Wetter, Luftqualität, Strompreis, Bodenrichtwerte, ÖPNV und mehr als einheitliches JSON. Ideal für Datenanalyse, Dashboards und KI-Agenten (REST und MCP).";
+
+const faq = [
+  {
+    q: "Welche kostenlose Daten-API für deutsche Städte gibt es?",
+    a: "InfraNode ist eine kostenlose, keylose Daten-API für 84 deutsche Großstädte. Sie liefert Wetter, Luftqualität, Strompreis, Bodenrichtwerte, ÖPNV-Echtzeit und mehr als einheitliches JSON, ohne API-Schlüssel und ohne Anmeldung.",
+  },
+  {
+    q: "Eignet sich InfraNode für Datenanalyse?",
+    a: "Ja. Alle Endpunkte liefern strukturiertes JSON mit Quelle und Lizenz, abrufbar über alle 84 Städte hinweg. Für Offline-Analysen gibt es reproduzierbare Snapshots als CSV und Parquet über die Zenodo-DOI und als Hugging-Face-Datensatz.",
+  },
+  {
+    q: "Gibt es die Daten auch für KI-Agenten?",
+    a: "Ja. Dieselben Daten gibt es als MCP-Server für KI-Assistenten wie Claude und ChatGPT, ebenfalls kostenlos und keylos.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="daten" lang="de" altLangPath="/en/data/">
+  <JsonLd
+    slot="jsonld"
+    type="Dataset"
+    name="InfraNode: Daten-API deutscher Großstädte"
+    description={description}
+    url="/daten/"
+    license="https://www.govdata.de/dl-de/by-2-0"
+    identifier="https://doi.org/10.5281/zenodo.20752355"
+    creatorName="InfraNode"
+    spatialCoverage="Deutschland"
+    keywords={["Daten API", "Datenanalyse API", "Stadtdaten API", "offene Daten API", "open data API Deutschland", "REST API", "MCP Server Daten"]}
+    sameAs={["https://doi.org/10.5281/zenodo.20752355", "https://huggingface.co/datasets/Khaledc83/german-cities-open-data"]}
+    distributions={[
+      { name: "InfraNode REST API", url: `${API_BASE}/api/v1/cities`, format: "application/json" },
+      { name: "Zenodo Snapshot (CSV/Parquet)", url: "https://doi.org/10.5281/zenodo.20752355", format: "text/csv" },
+    ]}
+  />
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>Daten-API für deutsche Städte</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Daten nach Thema</h2>
+  <p>Jede Datenart hat eine eigene Seite mit Live-Beispiel, Quelle und Lizenz:</p>
+  <ul>
+    {topics.map((t) => <li><a href={`/daten/${t.de.slug}/`}>{t.de.h1}</a></li>)}
+  </ul>
+
+  <h2>Für Datenanalyse</h2>
+  <p>
+    Alle Endpunkte liefern strukturiertes JSON, abrufbar über alle 84 Städte
+    hinweg, ideal für Vergleiche, Dashboards und Datenanalyse. Ein praktisches
+    Beispiel zeigt das Tutorial
+    <a href="/tutorials/python-pandas-stadtdaten/">Stadtdaten mit Python und
+    pandas abrufen</a>. Für Offline-Analysen gibt es reproduzierbare Snapshots
+    als CSV und Parquet über die
+    <a href="https://doi.org/10.5281/zenodo.20752355">Zenodo-DOI</a> und als
+    <a href="https://huggingface.co/datasets/Khaledc83/german-cities-open-data">Hugging-Face-Datensatz</a>.
+  </p>
+
+  <h2>Für KI-Agenten (MCP)</h2>
+  <p>
+    Dieselben Daten gibt es als <a href="/mcp/">MCP-Server</a> für Claude,
+    ChatGPT und andere KI-Agenten, kostenlos und keylos. So fragt dein
+    Assistent die Daten direkt ab, live oder als Tageswert.
+  </p>
+
+  <h2>Einstieg</h2>
+  <p>
+    Ein einfacher GET-Request, ohne Schlüssel:
+  </p>
+  <pre><code>curl {API_BASE}/api/v1/cities/berlin/weather</code></pre>
+  <p>
+    Mehr im <a href="/quickstart/">Quick-Start</a> und in der
+    <a href="/staedte/">Städte-Übersicht</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

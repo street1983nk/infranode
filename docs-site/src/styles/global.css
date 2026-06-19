@@ -910,6 +910,27 @@ code {
   padding-left: 1.2rem;
 }
 
+/* Ein-Klick-Install-Buttons (Cursor/VS Code) auf der MCP-Seite. */
+.install {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.install__btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+.install__btn--ghost {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
 /* FAQ als border-getrennte Liste statt schwebender Karten (editorial, flach). */
 .faq {
   margin-top: 1rem;

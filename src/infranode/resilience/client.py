@@ -85,6 +85,10 @@ _SOURCE_TTL: dict[str, tuple[float, float]] = {
     # Akkrual-Timer den Cache dauerhaft warm haelt und Clients praktisch nie den
     # kalten Abruf treffen (sonst "sende Anfrage..." sekundenlang).
     "genesis": (86400.0, 2592000.0),
+    # StaDa-Bahnhofskatalog ist Stammdaten (aendert sich praktisch nie) und wird
+    # als EINE bundesweite Liste geholt + je Stadt gefiltert -> sehr lange TTL
+    # (24h frisch / 30d stale), ein Abruf bedient alle 84 Staedte aus dem Cache.
+    "stada": (86400.0, 2592000.0),
 }
 
 

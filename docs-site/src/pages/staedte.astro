@@ -38,8 +38,8 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
 ---
 
 <Docs
-  title="Städte"
-  description="Alle 84 von InfraNode abgedeckten deutschen Großstädte über 100.000 Einwohner: Name, Slug, Bundesland, Einwohner und Abdeckung. Durchsuchbar."
+  title="Open-Data-API für 84 deutsche Großstädte: Übersicht"
+  description="Alle 84 von InfraNode abgedeckten deutschen Großstädte über 100.000 Einwohner mit kostenloser, keyloser Open-Data-API: Name, Slug, Bundesland, Einwohner und Abdeckung. Durchsuchbar."
   current="staedte"
   lang="de"
   altLangPath="/en/cities/"
@@ -97,7 +97,7 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
       },
     ]}
   />
-  <h1>Städte</h1>
+  <h1>Open-Data-API für 84 deutsche Großstädte</h1>
 
   <p>
     InfraNode deckt {total} deutsche Großstädte über 100.000 Einwohner ab. Davon
@@ -171,7 +171,7 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
               data-slug={city.slug.toLowerCase()}
               data-state={stateName.toLowerCase()}
             >
-              <td>{city.name}</td>
+              <td><a href={`/staedte/${city.slug}/`}>{city.name}</a></td>
               <td><code>{city.slug}</code></td>
               <td>{stateName}</td>
               <td class="cities__num">{city.population != null ? fmt.format(city.population) : "-"}</td>

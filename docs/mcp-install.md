@@ -159,6 +159,9 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `indicators` | `slug` | Socioeconomic indicators (district, latest year) | INKAR/BBSR |
 | `station_departures` | `slug` | Live long-distance train departures (metro hubs) | DB Timetables |
 | `station_arrivals` | `slug` | Live long-distance train arrivals (metro hubs) | DB Timetables |
+| `stations` | `slug` | Catalog of all DB stations in a city (with EVA numbers) | DB StaDa |
+| `station_board_departures` | `eva` | Live departures of any station by EVA (all categories, incl. local trains + disruptions) | DB Timetables |
+| `station_board_arrivals` | `eva` | Live arrivals of any station by EVA (all categories, incl. local trains + disruptions) | DB Timetables |
 | `transit_departures` | `slug`, `stop_id?` | Live public-transport departures with real-time delays | GTFS-RT/HVV/VGN |
 | `list_cities` | keine | List all covered cities (slug, state, population, coverage) | InfraNode |
 | `sources` | keine | List all data sources with license, attribution and status | InfraNode |

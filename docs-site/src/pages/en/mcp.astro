@@ -3,6 +3,7 @@
 import Docs from "../../layouts/Docs.astro";
 import CodeTabs from "../../components/CodeTabs.astro";
 import JsonLd from "../../components/JsonLd.astro";
+import { mcpTopics } from "../../data/mcp-topics";
 
 // The server is publicly hosted (remote, Streamable HTTP) at
 // https://mcp.infranode.dev/mcp. Tab 1: Claude Code (remote, one command),
@@ -69,6 +70,9 @@ const toolGroups = [
       ["sharing", "Bike and scooter sharing per city, aggregated (GBFS/Nextbike)"],
       ["station_departures", "Live departures at the long-distance main station with delays (DB Timetables)"],
       ["station_arrivals", "Live arrivals at the long-distance main station with delays (DB Timetables)"],
+      ["stations", "Catalog of all stations in a city with EVA numbers (DB StaDa)"],
+      ["station_board_departures", "Live departures of any station by EVA, all categories incl. local trains + disruptions (DB Timetables)"],
+      ["station_board_arrivals", "Live arrivals of any station by EVA, all categories incl. local trains + disruptions (DB Timetables)"],
     ],
   },
   {
@@ -131,7 +135,7 @@ const faq = [
   },
   {
     q: "What data does the InfraNode MCP server provide?",
-    a: "39 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, plus a cities and a sources overview, and a multi-city comparison.",
+    a: "42 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, plus a cities and a sources overview, and a multi-city comparison.",
   },
   {
     q: "My MCP client only supports local stdio servers. How do I connect InfraNode?",
@@ -149,8 +153,8 @@ const faq = [
 ---
 
 <Docs
-  title="MCP server"
-  description="Hosted InfraNode MCP server at mcp.infranode.dev: 39 tools for AI agents, remote over Streamable HTTP, no install, no API key. Connector for Claude and ChatGPT."
+  title="Open Data MCP Server for Germany (AI agents)"
+  description="Open data MCP server for German cities: 42 tools for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
   current="mcp"
   lang="en"
   altLangPath="/mcp/"
@@ -159,11 +163,11 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP server"
-    description="Hosted MCP server with 39 tools for open city data of 84 major German cities, key-free and free of charge."
+    description="Hosted MCP server with 42 tools for open city data of 84 major German cities, key-free and free of charge."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
-  <h1>MCP server</h1>
+  <h1>Open data MCP server for German cities</h1>
   <p>
     The InfraNode MCP server is a free, hosted Model Context Protocol server that
     gives AI agents access to open data for 84 major German cities through 38
@@ -172,6 +176,27 @@ const faq = [
     official <a href="https://registry.modelcontextprotocol.io">MCP Registry</a>
     under the name <code>dev.infranode/infranode</code>, with a tool overview and
     score also on <a href="https://glama.ai/mcp/servers/@street1983nk/infranode">Glama</a>.
+  </p>
+  <p>
+    In short: InfraNode is the open data MCP server for Germany, a free, keyless
+    MCP server for German cities and their open data, usable in Claude, ChatGPT
+    and other AI agents.
+  </p>
+
+  <h2>Data tools by topic</h2>
+  <p>
+    Dedicated pages per data type explain the matching MCP tool and how to use it
+    in your AI assistant:
+  </p>
+  <ul>
+    {mcpTopics.map((topic) => (<li><a href={`/en/mcp/${topic.en.slug}/`}>{topic.en.h1}</a></li>))}
+  </ul>
+  <p>
+    This data is available for all <a href="/en/cities/">84 covered cities</a>.
+    New to MCP? <a href="/en/tutorials/what-is-an-mcp-server/">What is an MCP
+    server</a> covers the basics, the
+    <a href="/en/tutorials/set-up-mcp-server-claude/">setup guide</a> shows how to
+    connect it in Claude and ChatGPT.
   </p>
 
   <div class="tldr">
@@ -182,6 +207,16 @@ const faq = [
       URL in Claude, ChatGPT or any other MCP client and you are done.
     </p>
   </div>
+
+  <h2>One-click install</h2>
+  <p>
+    For Cursor and VS Code it is one click. Because InfraNode is keyless, there
+    is no login, the server connects instantly:
+  </p>
+  <p class="install">
+    <a class="install__btn" href="https://cursor.com/install-mcp?name=infranode&config=eyJ1cmwiOiJodHRwczovL21jcC5pbmZyYW5vZGUuZGV2L21jcCJ9">Add to Cursor</a>
+    <a class="install__btn install__btn--ghost" href="vscode:mcp/install?%7B%22name%22%3A%22infranode%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.infranode.dev%2Fmcp%22%7D">Add to VS Code</a>
+  </p>
 
   <h2>What is MCP</h2>
   <p>
@@ -249,7 +284,7 @@ const faq = [
 
   <h2>Tool overview</h2>
   <p>
-    The server provides 39 tools in total. Most expect a city slug (for example
+    The server provides 42 tools in total. Most expect a city slug (for example
     <code>berlin</code> or <code>hamburg</code>); <code>pois</code> also requires
     a <code>type</code> parameter (e.g. <code>hospital</code>,
     <code>school</code>, <code>pharmacy</code>), and

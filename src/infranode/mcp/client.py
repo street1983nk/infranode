@@ -21,6 +21,7 @@ Sicherheit:
 from __future__ import annotations
 
 import os
+import re
 from urllib.parse import quote, urlsplit
 
 import httpx
@@ -95,8 +96,15 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
         "station-departures",
         "station-arrivals",
+        # DATA-36: StaDa Bahnhofs-Katalog je Stadt (alle Bahnhoefe mit EVA, Tier A).
+        "stations",
     }
 )
+
+# T-12-MCP-INJECT: erlaubte Per-Bahnhof-Board-Pfade unter GET /api/v1/stations/{eva}/...
+# Die EVA wird zusaetzlich als reine Zahl validiert (_validate_eva), bevor sie in
+# die URL gelangt; nur diese Board-Namen sind als zweites Segment zulaessig.
+ALLOWED_STATION_BOARDS: frozenset[str] = frozenset({"departures", "arrivals"})
 
 # T-12-MCP-INJECT: erlaubte Live-Ressourcen-Pfade unter GET /api/v1/live/{slug}/...
 # Mehrsegmentige Pfade sind hier zulaessig, weil sie gegen DIESE Allowlist
@@ -284,6 +292,34 @@ async def get_collection(
             f"Erlaubt: {', '.join(sorted(ALLOWED_COLLECTIONS))}."
         )
     return await _request(f"/{name}", params, tag=f"collection:{name}")
+
+
+_EVA_RE = re.compile(r"^\d{6,8}$")
+
+
+async def get_station_board(eva: str, board: str) -> dict:
+    """Ruft ein Per-Bahnhof-Board ``/stations/{eva}/{board}`` und gibt das JSON zurueck.
+
+    ``eva`` wird strikt als 6-8-stellige Zahl validiert (T-12-MCP-SSRF/-INJECT),
+    ``board`` gegen ``ALLOWED_STATION_BOARDS`` geprueft, der Base-Host gegen
+    ``ALLOWED_HOSTS``, BEVOR ein Request rausgeht. Envelope 1:1.
+
+    Args:
+        eva: EVA-Nummer des Bahnhofs (reine Zahl, z.B. ``"8011160"``; aus dem
+            Katalog ``GET /cities/{slug}/stations``).
+        board: ``"departures"`` oder ``"arrivals"``.
+    """
+    if board not in ALLOWED_STATION_BOARDS:
+        raise ValueError(
+            f"Unbekanntes Board {board!r} (T-12-MCP-INJECT). "
+            f"Erlaubt: {', '.join(sorted(ALLOWED_STATION_BOARDS))}."
+        )
+    if not isinstance(eva, str) or not _EVA_RE.match(eva):
+        raise ValueError(
+            f"Ungueltige EVA {eva!r} (T-12-MCP-INJECT): erwartet eine 6-8-stellige "
+            "Zahl."
+        )
+    return await _request(f"/stations/{eva}/{board}", None, tag=f"station:{board}")
 
 
 async def _request(

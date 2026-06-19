@@ -191,6 +191,19 @@ const partialMap: Record<string, string[]> = coverage.partial;
       service alerts. Hamburg only (Geofox covers the HVV area), station name via
       <code>?station=</code>. Tier C live-only.
     </li>
+    <li>
+      <a href="/en/api/getCityStations/"><strong>Station catalog</strong></a>
+      (<code>/api/v1/cities/{"{slug}"}/stations</code>): every DB station in a city
+      (mapped via the official municipality key), full coverage across all cities.
+      Provides each station's EVA number for the per-station boards.
+    </li>
+    <li>
+      <a href="/en/api/getStationDepartures/"><strong>Per-station live departures/arrivals</strong></a>
+      (<code>/api/v1/stations/{"{eva}"}/departures</code>): board of ANY station by
+      its EVA number, all categories including local trains (S/RB/RE), with
+      real-time delays, cancellations and disruption messages. No fixed city list:
+      any valid EVA can be queried (otherwise <code>no_data</code>).
+    </li>
   </ul>
 
   <h2>Understanding source_status</h2>

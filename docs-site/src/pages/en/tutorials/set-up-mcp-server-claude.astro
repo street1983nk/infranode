@@ -1,0 +1,84 @@
+---
+// Tutorial EN: set up the MCP server in Claude and ChatGPT (MCP SEO + GEO).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+
+const title = "Set up an MCP server in Claude and ChatGPT";
+const description =
+  "Guide: set up the free, keyless InfraNode MCP server in Claude Code, Claude Desktop and ChatGPT to use open data for German cities directly in your AI assistant.";
+
+const claudeCode = "claude mcp add --transport http infranode https://mcp.infranode.dev/mcp";
+
+const connector = `{
+  "mcpServers": {
+    "infranode": {
+      "url": "https://mcp.infranode.dev/mcp"
+    }
+  }
+}`;
+
+const faq = [
+  {
+    q: "Do I need an API key to set up the MCP server?",
+    a: "No. The InfraNode MCP server is keyless and free. You only enter the URL https://mcp.infranode.dev/mcp, no token, no sign-up.",
+  },
+  {
+    q: "Does the MCP server work with ChatGPT and Claude?",
+    a: "Yes. It is a remote server over Streamable HTTP and works with any client that supports remote MCP, including Claude Code, Claude Desktop, ChatGPT and Cursor.",
+  },
+  {
+    q: "What data do I get through the MCP server?",
+    a: "Open data for 84 major German cities: weather (DWD), air quality (UBA), electricity price (SMARD), land values (BORIS), real-time public transport and more, across 42 tools.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/mcp-server-claude-einrichten/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>What you need</h2>
+  <p>
+    Just the server URL <code>https://mcp.infranode.dev/mcp</code>. The InfraNode
+    MCP server is free, keyless and remotely hosted, nothing to install and no
+    key to request.
+  </p>
+
+  <h2>Claude Code</h2>
+  <p>One command in the terminal:</p>
+  <pre><code>{claudeCode}</code></pre>
+
+  <h2>Claude Desktop and ChatGPT</h2>
+  <p>Add the server as a connector via its URL. In config files it looks like this:</p>
+  <pre><code>{connector}</code></pre>
+  <p>
+    In clients with a graphical interface, add a connector or remote MCP server
+    instead and enter the URL <code>https://mcp.infranode.dev/mcp</code>.
+  </p>
+
+  <h2>Done: just ask</h2>
+  <p>After that the assistant calls the right tools itself. Examples:</p>
+  <ul>
+    <li>What is the <a href="/en/mcp/weather/">weather</a> in Hamburg right now?</li>
+    <li>How is the <a href="/en/mcp/air-quality/">air quality</a> in Munich?</li>
+    <li>What is today's <a href="/en/mcp/electricity-price/">spot electricity price</a>?</li>
+  </ul>
+  <p>
+    An overview of all tools and setup is on the
+    <a href="/en/mcp/">MCP server page</a>. What MCP is in the first place is
+    explained in <a href="/en/tutorials/what-is-an-mcp-server/">What is an MCP server</a>.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

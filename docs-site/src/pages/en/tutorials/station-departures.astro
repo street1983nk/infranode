@@ -1,0 +1,100 @@
+---
+// Tutorial EN: station catalog + live departures/arrivals for any station (DATA-36).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+import { API_BASE } from "../../../lib/codegen";
+
+const title = "Get live departures for any railway station";
+const description =
+  "Tutorial: list every railway station in a German city, then fetch live departures and arrivals for any station including local trains, delays and disruptions via the free keyless InfraNode API.";
+
+const catalog = `import requests
+
+base = "${API_BASE}/api/v1"
+# 1) All stations in a city (with EVA number)
+stations = requests.get(f"{base}/cities/berlin/stations", timeout=10).json()
+for s in stations["data"]["payload"]["stations"][:5]:
+    print(s["eva"], s["name"], "cat.", s["category"])`;
+
+const board = `# 2) Live departures of any station by its EVA
+eva = "8011160"  # Berlin Hauptbahnhof (from the catalog above)
+board = requests.get(f"{base}/stations/{eva}/departures", timeout=10).json()
+for d in board["data"]["payload"]["departures"][:10]:
+    delay = d.get("delay_minutes")
+    print(d["planned_time"], d["line"], "->", d["destination"],
+          f"(+{delay} min)" if delay else "", "platform", d.get("platform"))`;
+
+const messages = `# 3) Disruptions and messages per departure
+for d in board["data"]["payload"]["departures"]:
+    if d.get("cancelled"):
+        print("Cancelled:", d["line"], "->", d["destination"])
+    for m in d.get("messages", []):
+        print("Message:", m.get("type"), m.get("code"), m.get("category"))`;
+
+const faq = [
+  {
+    q: "How is this different from station-departures?",
+    a: "/cities/{slug}/station-departures returns the merged board of a city's curated long-distance main stations. /stations/{eva}/departures returns the board of EVERY individual station by its EVA number, including local trains (S-Bahn, RB, RE).",
+  },
+  {
+    q: "Where do I get the EVA number?",
+    a: "From the catalog /cities/{slug}/stations. Each station carries an eva field that you pass straight into /stations/{eva}/departures.",
+  },
+  {
+    q: "Are local trains and disruptions included?",
+    a: "Yes. The boards include all categories (ICE/IC/RE/RB/S) plus real-time delays, cancellations and disruption messages (messages per entry).",
+  },
+  {
+    q: "Do I need a key?",
+    a: "Not for calling the public InfraNode API. Internally the board is sourced from the DB Timetables API (CC BY 4.0); show the attribution Deutsche Bahn AG.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/bahnhof-abfahrten/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>1. List every station in a city</h2>
+  <p>
+    The catalog <code>/cities/&lbrace;slug&rbrace;/stations</code> returns every DB
+    station within the city with EVA number, name, category, coordinates and ZIP.
+    It maps stations via the official municipality key, so it covers all cities.
+  </p>
+  <pre><code>{catalog}</code></pre>
+
+  <h2>2. Live departures per station (incl. local trains)</h2>
+  <p>
+    With the EVA number you fetch the live board of each individual station, all
+    categories, with real-time delay and platform:
+  </p>
+  <pre><code>{board}</code></pre>
+
+  <h2>3. Disruptions and messages</h2>
+  <p>
+    Every departure/arrival carries <code>cancelled</code> and
+    <code>messages</code> (disruption and info messages with type, code, category
+    and timestamp):
+  </p>
+  <pre><code>{messages}</code></pre>
+
+  <h2>Also via MCP</h2>
+  <p>
+    AI agents use the same data through the <code>stations</code>,
+    <code>station_board_departures</code> and <code>station_board_arrivals</code>
+    tools of the <a href="/en/mcp/">InfraNode MCP server</a>.
+  </p>
+
+  <h2>FAQ</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

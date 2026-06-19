@@ -8,7 +8,26 @@ import sitemap from "@astrojs/sitemap";
 // site steuert ausserdem canonical, og:url und die .md-Links in llms.txt.
 const site = process.env.INFRANODE_DOCS_SITE || "https://infranode.dev";
 
+// Build-Datum als lastmod fuer alle Sitemap-Eintraege (Crawl-Frische-Signal).
+// Wird je Deploy neu gesetzt. i18n erzeugt zusaetzlich xhtml:link-hreflang-
+// Annotationen DE<->EN je URL (Pfad-Prefix /en/ = en, sonst de = x-default).
+const lastmod = new Date();
+
 export default defineConfig({
   site,
-  integrations: [sitemap()],
+  integrations: [
+    sitemap({
+      i18n: {
+        defaultLocale: "de",
+        locales: {
+          de: "de",
+          en: "en",
+        },
+      },
+      serialize(item) {
+        item.lastmod = lastmod.toISOString();
+        return item;
+      },
+    }),
+  ],
 });

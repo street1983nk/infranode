@@ -1,0 +1,123 @@
+---
+// Tutorial DE: Das offizielle Python-Paket "infranode" nutzen (Client + LangChain/LlamaIndex).
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+
+const title = "InfraNode mit Python: das infranode-Paket";
+const description =
+  "Tutorial: offene Daten deutscher Großstädte mit dem keylosen Python-Paket infranode abrufen, synchron und asynchron, plus fertige LangChain- und LlamaIndex-Tools für KI-Agenten.";
+
+const install = `pip install infranode`;
+
+const basic = `from infranode import InfraNode
+
+api = InfraNode()
+rec = api.weather("berlin")
+print(rec.payload["temperature_c"], "degC")
+print("Quelle:", rec.attribution["text"])   # Attribution immer anzeigen
+
+# Jeder Endpunkt per Name
+fuel = api.record("hamburg", "fuel-prices")
+cities = api.cities()                          # alle 84 Städte`;
+
+const async_ = `import asyncio
+from infranode import AsyncInfraNode
+
+async def main():
+    async with AsyncInfraNode() as api:
+        rec = await api.air("muenchen")
+        print(rec.payload)
+
+asyncio.run(main())`;
+
+const langchain = `pip install "infranode[langchain]"`;
+
+const langchainCode = `from infranode.integrations.langchain import infranode_tools
+
+tools = infranode_tools()   # an deinen LangChain-Agenten binden`;
+
+const llamaindex = `pip install "infranode[llamaindex]"`;
+
+const llamaindexCode = `from infranode.integrations.llamaindex import infranode_tools
+
+tools = infranode_tools()   # an deinen LlamaIndex-Agenten übergeben`;
+
+const faq = [
+  {
+    q: "Brauche ich einen API-Schlüssel?",
+    a: "Nein. Das Paket spricht die keylose, kostenlose InfraNode-API an. Kein Key, keine Registrierung.",
+  },
+  {
+    q: "Synchron oder asynchron?",
+    a: "Beides. InfraNode ist der synchrone Client, AsyncInfraNode der asynchrone. Beide teilen dieselbe Methoden-API.",
+  },
+  {
+    q: "Worin liegt der Unterschied zum MCP-Server?",
+    a: "Der MCP-Server ist ideal, wenn deine Laufzeit MCP spricht (Claude, Cursor). Das Python-Paket ist der leichtgewichtige, MCP-freie Weg für Skripte, Notebooks und LangChain/LlamaIndex-Agenten.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="de" altLangPath="/en/tutorials/python-sdk/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Installation</h2>
+  <pre><code>{install}</code></pre>
+
+  <h2>Erste Abfrage</h2>
+  <p>
+    Eine Instanz, dann jeden Endpunkt per Methode oder generisch über
+    <code>record(slug, endpunkt)</code>. Die Fachdaten liegen unter
+    <code>payload</code>, die Quellenangabe unter <code>attribution</code>.
+  </p>
+  <pre><code>{basic}</code></pre>
+  <p>
+    Jeder Datensatz trägt seine eigene <code>attribution</code> (Quelle und
+    Lizenz-URL). Die Open-Data-Lizenzen verlangen die Nennung, zeige sie also
+    deinen Nutzern an.
+  </p>
+
+  <h2>Asynchron</h2>
+  <p>Für viele parallele Abfragen oder asyncio-Anwendungen:</p>
+  <pre><code>{async_}</code></pre>
+  <p>
+    Beachte das Rate-Limit von 300 Anfragen pro Minute und IP. Bei Status 429
+    empfiehlt sich ein kurzer Backoff.
+  </p>
+
+  <h2>Als KI-Agenten-Tool: LangChain</h2>
+  <pre><code>{langchain}</code></pre>
+  <pre><code>{langchainCode}</code></pre>
+
+  <h2>Als KI-Agenten-Tool: LlamaIndex</h2>
+  <pre><code>{llamaindex}</code></pre>
+  <pre><code>{llamaindexCode}</code></pre>
+  <p>
+    Beide stellen die Tools <code>infranode_get_city_data(city, dataset)</code>
+    und <code>infranode_list_cities()</code> bereit. Die Tool-Beschreibung listet
+    die gültigen Datensätze, damit das Modell den richtigen wählt. Spricht deine
+    Laufzeit MCP, nutze den <a href="/mcp/">InfraNode-MCP-Server</a>.
+  </p>
+
+  <h2>Weiterführend</h2>
+  <p>
+    Quellcode und Issues:
+    <a href="https://github.com/street1983nk/infranode-python">github.com/street1983nk/infranode-python</a>.
+    Für reine Notebook-Analysen ohne Paket siehe
+    <a href="/tutorials/python-pandas-stadtdaten/">Stadtdaten mit Python und pandas</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

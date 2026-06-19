@@ -432,6 +432,46 @@ async def station_arrivals(slug: str) -> dict:
     return await client.get_resource(slug, "station-arrivals")
 
 
+async def stations(slug: str) -> dict:
+    """List all railway stations in a city (every station, not just the main hub).
+
+    Returns each Deutsche Bahn station in the city with its EVA number, name,
+    category, coordinates and ZIP. Use an EVA from here with
+    ``station_board_departures``/``station_board_arrivals`` for a live board of any
+    station, including local/regional trains. Sourced from DB StaDa. Read-only.
+
+    Args:
+        slug: City slug from ``list_cities``, e.g. ``"berlin"``.
+    """
+    return await client.get_resource(slug, "stations")
+
+
+async def station_board_departures(eva: str) -> dict:
+    """Get live departures for ANY railway station by its EVA number.
+
+    Covers all train categories including local/regional (S/RB/RE) and long
+    distance, with real-time delays, cancellations and disruption messages. Get
+    the EVA from ``stations``. Read-only.
+
+    Args:
+        eva: Station EVA number (digits only), e.g. ``"8011160"`` (Berlin Hbf).
+    """
+    return await client.get_station_board(eva, "departures")
+
+
+async def station_board_arrivals(eva: str) -> dict:
+    """Get live arrivals for ANY railway station by its EVA number.
+
+    Mirror of ``station_board_departures`` for arriving trains (all categories,
+    real-time delays, disruption messages). Get the EVA from ``stations``.
+    Read-only.
+
+    Args:
+        eva: Station EVA number (digits only), e.g. ``"8000105"`` (Frankfurt Hbf).
+    """
+    return await client.get_station_board(eva, "arrivals")
+
+
 async def transit_departures(slug: str, stop_id: str | None = None) -> dict:
     """Get live public-transport departures with real-time delays.
 

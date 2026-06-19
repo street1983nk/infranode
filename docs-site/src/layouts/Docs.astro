@@ -7,6 +7,8 @@ import { getCollection } from "astro:content";
 import Search from "../components/Search.astro";
 import SeoHead from "../components/SeoHead.astro";
 import PageActions from "../components/PageActions.astro";
+import { topics } from "../data/topics";
+import { mcpTopics } from "../data/mcp-topics";
 import "../styles/global.css";
 
 interface Props {
@@ -48,8 +50,17 @@ const NON_ENDPOINT = new Set([
   "ueber",
   "impressum",
   "datenschutz",
+  "tutorials",
+  "tutorial",
+  "daten",
 ]);
-const isEndpointPage = !NON_ENDPOINT.has(current);
+// Per-Datentyp- ("daten-<id>") und per-City-Landingpages ("stadt-<slug>") sind
+// keine Endpunkt-Seiten und tragen keine Page-Actions (kein .md-Pendant).
+const isEndpointPage =
+  !NON_ENDPOINT.has(current) &&
+  !current.startsWith("daten-") &&
+  !current.startsWith("stadt-") &&
+  !current.startsWith("mcp-");
 const mdUrl = isEndpointPage ? `/api/${current}.md` : "";
 const actionPrompt = isEndpointPage
   ? isEn
@@ -160,6 +171,11 @@ const sortedTags = [...groups.keys()].sort();
                   </a>
                 </li>
                 <li>
+                  <a class="nav__link" href="/en/data/" aria-current={current === "daten" ? "page" : undefined}>
+                    Data API
+                  </a>
+                </li>
+                <li>
                   <a class="nav__link" href="/en/coverage/" aria-current={current === "abdeckung" ? "page" : undefined}>
                     Coverage & status
                   </a>
@@ -170,10 +186,43 @@ const sortedTags = [...groups.keys()].sort();
                   </a>
                 </li>
                 <li>
+                  <a class="nav__link" href="/en/tutorials/" aria-current={current === "tutorials" || current === "tutorial" ? "page" : undefined}>
+                    Tutorials
+                  </a>
+                </li>
+                <li>
                   <a class="nav__link" href="/en/about/" aria-current={current === "ueber" ? "page" : undefined}>
                     About
                   </a>
                 </li>
+              </ul>
+              <p class="nav__title">Data by topic</p>
+              <ul class="nav__list">
+                {topics.map((topic) => (
+                  <li>
+                    <a
+                      class="nav__link"
+                      href={`/en/data/${topic.en.slug}/`}
+                      aria-current={current === `daten-${topic.id}` ? "page" : undefined}
+                    >
+                      {topic.en.h1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p class="nav__title">MCP by topic</p>
+              <ul class="nav__list">
+                {mcpTopics.map((topic) => (
+                  <li>
+                    <a
+                      class="nav__link"
+                      href={`/en/mcp/${topic.en.slug}/`}
+                      aria-current={current === `mcp-${topic.id}` ? "page" : undefined}
+                    >
+                      {topic.en.h1}
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
           ) : (
@@ -200,6 +249,11 @@ const sortedTags = [...groups.keys()].sort();
                   </a>
                 </li>
                 <li>
+                  <a class="nav__link" href="/daten/" aria-current={current === "daten" ? "page" : undefined}>
+                    Daten-API
+                  </a>
+                </li>
+                <li>
                   <a class="nav__link" href="/abdeckung/" aria-current={current === "abdeckung" ? "page" : undefined}>
                     Abdeckung & Status
                   </a>
@@ -210,10 +264,43 @@ const sortedTags = [...groups.keys()].sort();
                   </a>
                 </li>
                 <li>
+                  <a class="nav__link" href="/tutorials/" aria-current={current === "tutorials" || current === "tutorial" ? "page" : undefined}>
+                    Tutorials
+                  </a>
+                </li>
+                <li>
                   <a class="nav__link" href="/ueber/" aria-current={current === "ueber" ? "page" : undefined}>
                     Über
                   </a>
                 </li>
+              </ul>
+              <p class="nav__title">Daten nach Thema</p>
+              <ul class="nav__list">
+                {topics.map((topic) => (
+                  <li>
+                    <a
+                      class="nav__link"
+                      href={`/daten/${topic.de.slug}/`}
+                      aria-current={current === `daten-${topic.id}` ? "page" : undefined}
+                    >
+                      {topic.de.h1}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p class="nav__title">MCP nach Thema</p>
+              <ul class="nav__list">
+                {mcpTopics.map((topic) => (
+                  <li>
+                    <a
+                      class="nav__link"
+                      href={`/mcp/${topic.de.slug}/`}
+                      aria-current={current === `mcp-${topic.id}` ? "page" : undefined}
+                    >
+                      {topic.de.h1}
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
           )

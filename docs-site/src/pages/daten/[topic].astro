@@ -1,0 +1,170 @@
+---
+// Per-Datentyp-Landingpage DE (SEO-Massnahme 1). Eine Seite je Datenachse aus
+// src/data/topics.ts, keyword-optimiert, mit Live-Beispiel, Abdeckung,
+// Dataset- und FAQPage-JSON-LD. Pendant: src/pages/en/data/[topic].astro.
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { topics, topicCityCount } from "../../data/topics";
+import coverage from "../../data/coverage.json";
+import { API_BASE } from "../../lib/codegen";
+
+export function getStaticPaths() {
+  return topics.map((topic) => ({
+    params: { topic: topic.de.slug },
+    props: { topic },
+  }));
+}
+
+const { topic } = Astro.props;
+const t = topic.de;
+const cityCount = topicCityCount(topic, coverage);
+const exampleUrl = `${API_BASE}${topic.examplePath}`;
+const others = topics.filter((o) => o.id !== topic.id);
+---
+
+<Docs
+  title={t.metaTitle}
+  description={t.lead}
+  current={`daten-${topic.id}`}
+  lang="de"
+  altLangPath={`/en/data/${topic.en.slug}/`}
+>
+  <JsonLd
+    slot="jsonld"
+    type="Dataset"
+    name={t.datasetName}
+    description={t.datasetDesc}
+    url={`/daten/${t.slug}/`}
+    license={t.licenseUrl}
+    identifier="https://doi.org/10.5281/zenodo.20752355"
+    creatorName="InfraNode"
+    spatialCoverage="Deutschland"
+    keywords={t.keywords}
+    variableMeasured={t.vars}
+    sameAs={[
+      "https://doi.org/10.5281/zenodo.20752355",
+      "https://huggingface.co/datasets/Khaledc83/german-cities-open-data",
+    ]}
+    distributions={[
+      {
+        name: "InfraNode REST API",
+        url: exampleUrl,
+        format: "application/json",
+      },
+    ]}
+  />
+  <JsonLd slot="jsonld" type="FAQPage" faq={t.faq} />
+
+  <h1>{t.h1}</h1>
+  <p class="lead">{t.lead}</p>
+
+  <h2>Welche Daten gibt es</h2>
+  <p>{t.dataDesc}</p>
+  <ul>
+    {t.vars.map((v) => <li>{v}</li>)}
+  </ul>
+  <p>
+    Quelle: <a href={t.sourceUrl} rel="noopener">{t.sourceName}</a>. Lizenz:
+    {" "}{t.license}. Quelle, Lizenz-URL und Zeitstempel stehen in jeder
+    API-Antwort im <code>meta</code>- und <code>attribution</code>-Block.
+  </p>
+
+  <h2>So rufst du es ab</h2>
+  <p>Ein einfacher GET-Request, ohne Schlüssel und ohne Anmeldung:</p>
+  <pre><code>curl {exampleUrl}</code></pre>
+  <p>
+    Setze für eine andere Stadt einfach den Slug aus der
+    <a href="/staedte/">Städte-Liste</a> in den Pfad ein.
+  </p>
+
+  <div class="cta">
+    <p class="cta__text">Kein Schlüssel, keine Anmeldung, kostenlos.</p>
+    <p class="cta__links">
+      <a class="cta__btn" href="/quickstart/">Quick-Start öffnen</a>
+      <a class="cta__btn cta__btn--ghost" href={`/api/${topic.endpointId}/`}>Endpunkt-Referenz</a>
+    </p>
+  </div>
+
+  <h2>Abgedeckte Städte</h2>
+  <p>{t.coverageNote}</p>
+  <p>
+    {
+      topic.coverageKey === "all"
+        ? `Verfügbar für alle ${cityCount} abgedeckten Großstädte.`
+        : `Aktuell für ${cityCount} Städte verfügbar.`
+    }
+    {" "}Den genauen Stand je Stadt zeigt die
+    <a href="/abdeckung/">Abdeckungs- und Status-Seite</a>, die vollständige
+    Liste aller Städte die <a href="/staedte/">Städte-Übersicht</a>.
+  </p>
+
+  <h2>Endpunkt-Referenz</h2>
+  <p>
+    Alle Parameter, Felder und Antwort-Beispiele stehen in der
+    <a href={`/api/${topic.endpointId}/`}>API-Referenz zu diesem Endpunkt</a>.
+    InfraNode gibt es zusätzlich als
+    <a href="/mcp/">MCP-Server für KI-Assistenten</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {
+      t.faq.map((item) => (
+        <>
+          <dt>{item.q}</dt>
+          <dd>{item.a}</dd>
+        </>
+      ))
+    }
+  </dl>
+
+  <h2>Weitere Datenarten</h2>
+  <ul>
+    {others.map((o) => <li><a href={`/daten/${o.de.slug}/`}>{o.de.h1}</a></li>)}
+  </ul>
+</Docs>
+
+<style>
+  .lead {
+    font-size: 1.1rem;
+    color: var(--fg-muted);
+  }
+  dl.faq dt {
+    font-weight: 700;
+    margin-top: 1rem;
+  }
+  dl.faq dd {
+    margin: 0.3rem 0 0;
+  }
+  .cta {
+    margin: 1.5rem 0;
+    padding: 1rem 1.2rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--bg-soft);
+  }
+  .cta__text {
+    margin: 0 0 0.6rem;
+    font-weight: 700;
+  }
+  .cta__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0;
+  }
+  .cta__btn {
+    display: inline-block;
+    padding: 0.45rem 0.9rem;
+    border-radius: 8px;
+    background: var(--color-primary);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .cta__btn--ghost {
+    background: transparent;
+    color: var(--color-primary);
+    border: 1px solid var(--color-primary);
+  }
+</style>

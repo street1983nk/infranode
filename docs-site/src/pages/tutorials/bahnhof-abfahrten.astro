@@ -1,0 +1,101 @@
+---
+// Tutorial DE: Bahnhofs-Katalog + Live-Abfahrten/-Ankuenfte jedes Bahnhofs (DATA-36).
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { API_BASE } from "../../lib/codegen";
+
+const title = "Live-Abfahrten jedes Bahnhofs abrufen";
+const description =
+  "Tutorial: alle Bahnhöfe einer deutschen Stadt auflisten und für jeden Bahnhof Live-Abfahrten und -Ankünfte inklusive Nahverkehr, Verspätungen und Störungen über die kostenlose InfraNode-API abrufen.";
+
+const catalog = `import requests
+
+base = "${API_BASE}/api/v1"
+# 1) Alle Bahnhöfe einer Stadt (mit EVA-Nummer)
+stations = requests.get(f"{base}/cities/berlin/stations", timeout=10).json()
+for s in stations["data"]["payload"]["stations"][:5]:
+    print(s["eva"], s["name"], "Kat.", s["category"])`;
+
+const board = `# 2) Live-Abfahrten eines beliebigen Bahnhofs über seine EVA
+eva = "8011160"  # Berlin Hauptbahnhof (aus dem Katalog oben)
+board = requests.get(f"{base}/stations/{eva}/departures", timeout=10).json()
+for d in board["data"]["payload"]["departures"][:10]:
+    delay = d.get("delay_minutes")
+    print(d["planned_time"], d["line"], "->", d["destination"],
+          f"(+{delay} min)" if delay else "", "Gleis", d.get("platform"))`;
+
+const messages = `# 3) Störungen und Meldungen je Abfahrt
+for d in board["data"]["payload"]["departures"]:
+    if d.get("cancelled"):
+        print("Ausfall:", d["line"], "->", d["destination"])
+    for m in d.get("messages", []):
+        print("Meldung:", m.get("type"), m.get("code"), m.get("category"))`;
+
+const faq = [
+  {
+    q: "Was ist der Unterschied zu station-departures?",
+    a: "Der Endpunkt /cities/{slug}/station-departures liefert die zusammengeführte Tafel der kuratierten Fernverkehrs-Hauptbahnhöfe einer Stadt. /stations/{eva}/departures liefert die Tafel JEDES einzelnen Bahnhofs über seine EVA-Nummer, inklusive Nahverkehr (S-Bahn, RB, RE).",
+  },
+  {
+    q: "Woher bekomme ich die EVA-Nummer?",
+    a: "Aus dem Katalog /cities/{slug}/stations. Jeder Bahnhof trägt dort sein Feld eva, das du direkt in /stations/{eva}/departures einsetzt.",
+  },
+  {
+    q: "Sind auch Nahverkehr und Störungen enthalten?",
+    a: "Ja. Die Boards enthalten alle Gattungen (ICE/IC/RE/RB/S) sowie Echtzeit-Verspätungen, Ausfälle (cancelled) und Störungs-/Hinweismeldungen (messages je Eintrag).",
+  },
+  {
+    q: "Brauche ich einen Schlüssel?",
+    a: "Für den öffentlichen Aufruf der InfraNode-API nicht. Intern speist sich die Tafel aus der DB-Timetables-API (CC BY 4.0); zeige die Attribution Deutsche Bahn AG an.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="de" altLangPath="/en/tutorials/station-departures/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>1. Alle Bahnhöfe einer Stadt auflisten</h2>
+  <p>
+    Der Katalog <code>/cities/&lbrace;slug&rbrace;/stations</code> liefert jeden
+    DB-Bahnhof im Stadtgebiet mit EVA-Nummer, Name, Kategorie, Koordinate und PLZ.
+    Die Zuordnung erfolgt über den amtlichen Gemeindeschlüssel, deckt also alle
+    Städte ab.
+  </p>
+  <pre><code>{catalog}</code></pre>
+
+  <h2>2. Live-Abfahrten je Bahnhof (inkl. Nahverkehr)</h2>
+  <p>
+    Mit der EVA-Nummer holst du die Live-Tafel jedes einzelnen Bahnhofs, alle
+    Gattungen, mit Echtzeit-Verspätung und Gleis:
+  </p>
+  <pre><code>{board}</code></pre>
+
+  <h2>3. Störungen und Meldungen</h2>
+  <p>
+    Jede Abfahrt/Ankunft trägt <code>cancelled</code> (Ausfall) und
+    <code>messages</code> (Störungs- und Hinweismeldungen mit Typ, Code, Kategorie
+    und Zeitstempel):
+  </p>
+  <pre><code>{messages}</code></pre>
+
+  <h2>Auch per MCP</h2>
+  <p>
+    KI-Agenten nutzen dieselben Daten über die Tools <code>stations</code>,
+    <code>station_board_departures</code> und <code>station_board_arrivals</code>
+    des <a href="/mcp/">InfraNode-MCP-Servers</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

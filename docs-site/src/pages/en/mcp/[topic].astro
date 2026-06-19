@@ -1,0 +1,84 @@
+---
+// MCP data-niche landing page EN (SEO dominance "MCP server Germany").
+// One page per data axis from src/data/mcp-topics.ts, optimized for
+// "{data type} MCP server [Germany]". Counterpart: src/pages/mcp/[topic].astro.
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+import { mcpTopics } from "../../../data/mcp-topics";
+
+export function getStaticPaths() {
+  return mcpTopics.map((topic) => ({
+    params: { topic: topic.en.slug },
+    props: { topic },
+  }));
+}
+
+const { topic } = Astro.props;
+const t = topic.en;
+const others = mcpTopics.filter((o) => o.id !== topic.id);
+---
+
+<Docs
+  title={t.metaTitle}
+  description={t.lead}
+  current={`mcp-${topic.id}`}
+  lang="en"
+  altLangPath={`/mcp/${topic.de.slug}/`}
+>
+  <JsonLd
+    slot="jsonld"
+    type="SoftwareApplication"
+    name={t.h1}
+    description={t.lead}
+    url={`/en/mcp/${t.slug}/`}
+  />
+  <JsonLd slot="jsonld" type="FAQPage" faq={t.faq} />
+
+  <h1>{t.h1}</h1>
+  <p class="lead">{t.lead}</p>
+
+  <h2>What the MCP tool does</h2>
+  <p>{t.what}</p>
+
+  <h2>Use it in Claude or ChatGPT</h2>
+  <p>
+    Connect the InfraNode MCP server to your AI client once (see
+    <a href="/en/mcp/">set up the MCP server</a>). After that a natural-language
+    question is enough, the assistant calls the <code>{topic.tool}</code> tool
+    itself:
+  </p>
+  <blockquote>{t.examplePrompt}</blockquote>
+  <p>
+    The MCP server is free, keyless and remote over Streamable HTTP at
+    <code>https://mcp.infranode.dev/mcp</code>. No API key, no install.
+  </p>
+
+  <h2>Prefer the REST API?</h2>
+  <p>
+    The same data is also available without an AI agent as a classic
+    <a href={`/en/data/${t.dataSlug}/`}>REST API</a>, also free and keyless.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+  <dl class="faq">
+    {t.faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+
+  <h2>More MCP data tools</h2>
+  <ul>
+    {others.map((o) => <li><a href={`/en/mcp/${o.en.slug}/`}>{o.en.h1}</a></li>)}
+  </ul>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  blockquote {
+    margin: 0.6rem 0;
+    padding: 0.6rem 1rem;
+    border-left: 3px solid var(--color-primary);
+    background: var(--bg-soft);
+    font-style: italic;
+  }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

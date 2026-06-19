@@ -1,0 +1,68 @@
+---
+// Tutorials index EN (SEO measure 5). Lists the linkable guides.
+import Docs from "../../../layouts/Docs.astro";
+
+const articles = [
+  {
+    href: "/en/tutorials/python-sdk/",
+    title: "InfraNode with Python: the infranode package",
+    teaser: "Fetch open city data with the keyless Python package, sync and async, plus LangChain and LlamaIndex tools for AI agents.",
+  },
+  {
+    href: "/en/tutorials/javascript-sdk/",
+    title: "InfraNode with JavaScript: infranode-sdk",
+    teaser: "TypeScript client for Node and the browser, a ready-made Vercel AI SDK tool and a Cursor starter template.",
+  },
+  {
+    href: "/en/tutorials/home-assistant-city-data/",
+    title: "Use German open city data in Home Assistant",
+    teaser: "Weather, air quality and electricity price for your city as a REST sensor in Home Assistant, without an API key.",
+  },
+  {
+    href: "/en/tutorials/python-pandas-city-data/",
+    title: "Fetch German city data with Python and pandas",
+    teaser: "Fetch open data for German cities with requests and pandas and analyze it across all cities.",
+  },
+  {
+    href: "/en/tutorials/set-up-mcp-server-claude/",
+    title: "Set up an MCP server in Claude and ChatGPT",
+    teaser: "Set up the free, keyless InfraNode MCP server in Claude Code, Claude Desktop and ChatGPT.",
+  },
+  {
+    href: "/en/tutorials/what-is-an-mcp-server/",
+    title: "What is an MCP server? Simply explained",
+    teaser: "Model Context Protocol explained clearly, with a free example of open data for German cities.",
+  },
+];
+---
+
+<Docs
+  title="Tutorials: using open city data"
+  description="Guides to use the free, keyless InfraNode API for open data of German cities: Home Assistant, Python and more."
+  current="tutorials"
+  lang="en"
+  altLangPath="/tutorials/"
+>
+  <h1>Tutorials</h1>
+  <p class="lead">
+    Practical guides to use open data for German cities through the free,
+    keyless InfraNode API.
+  </p>
+  <ul class="cards">
+    {
+      articles.map((a) => (
+        <li>
+          <a href={a.href}><strong>{a.title}</strong></a>
+          <p>{a.teaser}</p>
+        </li>
+      ))
+    }
+  </ul>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  ul.cards { list-style: none; padding: 0; }
+  ul.cards li { margin: 0 0 1.2rem; }
+  ul.cards p { margin: 0.2rem 0 0; color: var(--fg-muted); }
+</style>

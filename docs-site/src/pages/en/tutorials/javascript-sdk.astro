@@ -1,0 +1,113 @@
+---
+// Tutorial EN: the npm package infranode-sdk (TS client + Vercel AI SDK + starter template).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+
+const title = "InfraNode with JavaScript: infranode-sdk";
+const description =
+  "Tutorial: fetch open data for German cities with the keyless TypeScript package infranode-sdk, in Node and the browser, plus a ready-made Vercel AI SDK tool and a Cursor starter template.";
+
+const install = `npm install infranode-sdk`;
+
+const basic = `import { InfraNode } from "infranode-sdk";
+
+const api = new InfraNode();
+
+const rec = await api.weather("berlin");
+console.log(rec.payload.temperature_c, "degC");
+console.log("Source:", rec.attribution.text);   // always show attribution
+
+// Any endpoint by name
+const fuel = await api.record("hamburg", "fuel-prices");
+const cities = await api.cities();               // all 84 cities`;
+
+const ai = `npm install infranode-sdk ai zod`;
+
+const aiCode = `import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { infranodeTools } from "infranode-sdk/ai";
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  tools: infranodeTools(),
+  maxSteps: 5,
+  prompt: "What's the weather and electricity price in Munich right now?",
+});`;
+
+const faq = [
+  {
+    q: "Does it run in the browser?",
+    a: "Yes. The client uses native fetch and runs in Node 18+ and the browser. The API allows CORS from any origin.",
+  },
+  {
+    q: "Do I need an API key?",
+    a: "No. infranode-sdk talks to the keyless, free InfraNode API. No key, no signup.",
+  },
+  {
+    q: "How do I wire it into an AI agent?",
+    a: "Via the infranode-sdk/ai subpath. infranodeTools() returns ready-made Vercel AI SDK tools you pass to generateText or streamText. ai and zod are optional peer dependencies.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/javascript-sdk/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Install</h2>
+  <pre><code>{install}</code></pre>
+
+  <h2>First request</h2>
+  <p>
+    One instance, then any endpoint via a method or the generic
+    <code>record(slug, endpoint)</code>. The data lives under
+    <code>payload</code>, the source under <code>attribution</code>.
+  </p>
+  <pre><code>{basic}</code></pre>
+  <p>
+    Every record carries its own <code>attribution</code> (source and license
+    URL). The open-data licenses require attribution, so display it to your
+    users. Errors throw <code>InfraNodeError</code>.
+  </p>
+
+  <h2>As an AI agent tool: Vercel AI SDK</h2>
+  <pre><code>{ai}</code></pre>
+  <pre><code>{aiCode}</code></pre>
+  <p>
+    <code>infranodeTools()</code> returns <code>infranode_get_city_data(city,
+    dataset)</code> and <code>infranode_list_cities()</code>. If your runtime
+    speaks MCP, use the <a href="/en/mcp/">InfraNode MCP server</a> instead.
+  </p>
+
+  <h2>Starter template for Cursor</h2>
+  <p>
+    The fastest start: the ready-made dashboard template. It shows weather, air
+    quality, electricity price and charging points for all 84 cities and ships a
+    preconfigured <code>.cursor/mcp.json</code> so the InfraNode MCP server is
+    available to Cursor out of the box.
+  </p>
+  <pre><code>{`git clone https://github.com/street1983nk/infranode-weather-starter.git
+cd infranode-weather-starter
+npm install && npm run dev`}</code></pre>
+
+  <h2>Learn more</h2>
+  <p>
+    Source and issues:
+    <a href="https://github.com/street1983nk/infranode-js">github.com/street1983nk/infranode-js</a>.
+    Template:
+    <a href="https://github.com/street1983nk/infranode-weather-starter">infranode-weather-starter</a>.
+  </p>
+
+  <h2>FAQ</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

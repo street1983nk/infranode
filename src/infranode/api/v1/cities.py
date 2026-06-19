@@ -50,6 +50,7 @@ from infranode.adapters.openaq import fetch_air
 from infranode.adapters.overpass import _ALLOWED_TYPES, fetch_pois
 from infranode.adapters.pegelonline import fetch_water_level
 from infranode.adapters.smard import fetch_smard
+from infranode.adapters.stada import fetch_all_stations
 from infranode.adapters.tankerkoenig import fetch_fuel_prices
 from infranode.adapters.uba import fetch_air_uba
 from infranode.adapters.wikidata import fetch_city_base
@@ -102,6 +103,7 @@ from infranode.normalization.mappers.openaq import map_openaq_air
 from infranode.normalization.mappers.overpass import map_overpass_pois
 from infranode.normalization.mappers.pegelonline import map_water_level
 from infranode.normalization.mappers.smard import map_smard
+from infranode.normalization.mappers.stada import map_station_catalog
 from infranode.normalization.mappers.tankerkoenig import map_fuel_prices
 from infranode.normalization.mappers.uba import map_air_uba
 from infranode.normalization.mappers.unfallatlas import map_accidents
@@ -2497,6 +2499,84 @@ async def city_sharing(slug: str, request: Request) -> dict:
         ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
     )
     await append_record(record, source="gbfs")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/stations")
+async def city_stations(slug: str, request: Request) -> dict:
+    """Bahnhofs-Katalog einer Stadt: ALLE DB-Bahnhoefe (StaDa, DATA-36, CC BY 4.0).
+
+    Listet jeden DB-Bahnhof im Stadtgebiet (Zuordnung ueber den amtlichen
+    Gemeindeschluessel: StaDa ``municipalityCode`` == Stadt-``ags``) mit EVA, Name,
+    Kategorie, Geo und PLZ. Die EVA fuettert die Per-Bahnhof-Boards
+    ``GET /stations/{eva}/departures``. Drei ``source_status``-Werte:
+    - ``disabled``: Toggle aus ODER kein DB-Client-Id/Api-Key -> data None
+    - ``no_data``: kein DB-Bahnhof im Stadtgebiet gefunden
+    - ``ok``: gemappter station_catalog-Payload
+    StaDa wird EINMAL bundesweit geholt + lange gecacht und je Stadt gefiltert; die
+    Keys gelangen NIE in Cache-Key/Response/Log. Volle Abdeckung (alle Staedte).
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    settings = Settings()
+    cid_secret = settings.db_client_id
+    key = settings.db_api_key
+    if (
+        not settings.enable_stada
+        or cid_secret is None
+        or key is None
+        or not cid_secret.get_secret_value()
+        or not key.get_secret_value()
+    ):
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+
+    client = request.app.state.resilient_client
+    # Geteilter Cache-Key (keine Stadt): ein bundesweiter Abruf bedient alle Staedte.
+    cache_key = build_cache_key("stada", city_slug="_all")
+    client_id = cid_secret.get_secret_value()
+    api_key = key.get_secret_value()
+
+    async def fetch_fn():
+        return await fetch_all_stations(
+            request.app.state.http, client_id=client_id, api_key=api_key
+        )
+
+    raw, status = await client.fetch("stada", cache_key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'stada' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # Bahnhof -> Stadt ueber den amtlichen Gemeindeschluessel (municipalityCode==ags),
+    # dann nach Kategorie (Wichtigkeit, 1=gross) und Name sortiert.
+    stations = [s for s in raw.get("stations", []) if s.get("ags") == entry.ags]
+    stations.sort(key=lambda s: (s.get("category") or 99, s.get("name") or ""))
+    if not stations:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": cid,
+                "source_status": "no_data",
+                "cache_status": status,
+            },
+        }
+
+    record = map_station_catalog(
+        {"slug": entry.slug, "stations": stations},
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+    )
     return {
         "data": record.model_dump(mode="json"),
         "meta": {

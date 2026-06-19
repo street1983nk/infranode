@@ -35,6 +35,12 @@ tags:
       bestehende Live-Endpunkte (air, air-uba, water-level, traffic, webcams,
       flood); deren Altpfade unter /api/v1/cities bleiben als Deprecation-Alias
       erhalten (kein Breaking Change).
+  - name: stations
+    description: >-
+      Per-Bahnhof-Live-Boards unter /api/v1/stations/{eva}. Abfahrten/Ankuenfte
+      JEDES DB-Bahnhofs ueber seine EVA-Nummer (aus dem Katalog
+      /cities/{slug}/stations), alle Gattungen inkl. Nahverkehr, mit Echtzeit-
+      Verspaetung und Stoerungen/Meldungen. Quelle: DB Timetables (CC BY 4.0).
 paths:
   /api/v1/health:
     get:
@@ -1641,6 +1647,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/stations:
+    get:
+      tags: [cities]
+      summary: Bahnhofs-Katalog einer Stadt, alle DB-Bahnhoefe (StaDa, Tier A)
+      x-summary-en: City station catalog, all DB stations (StaDa, Tier A)
+      description: >-
+        Liste ALLER DB-Bahnhoefe im Stadtgebiet (Zuordnung ueber den amtlichen
+        Gemeindeschluessel: StaDa municipalityCode == Stadt-ags), nicht nur der
+        Fernverkehrs-Hbf. Je Bahnhof eva (EVA-Nummer, fuettert
+        GET /stations/{eva}/departures), name, category (1-7), lat, lon, zip.
+        Quelle: Deutsche Bahn AG / StaDa (CC BY 4.0). Ohne Zugangsdaten ODER Toggle
+        aus -> 200 source_status="disabled"; kein DB-Bahnhof im Stadtgebiet -> 200
+        source_status="no_data". Volle Abdeckung (alle Staedte).
+      x-description-en: >-
+        List of ALL DB stations within the city (mapped via the official
+        municipality key: StaDa municipalityCode == city ags), not just the
+        long-distance main station. Each carries eva (EVA number, feeds
+        GET /stations/{eva}/departures), name, category (1-7), lat, lon, zip.
+        Source: Deutsche Bahn AG / StaDa (CC BY 4.0). Without credentials OR toggle
+        off -> 200 source_status="disabled"; no DB station in the city -> 200
+        source_status="no_data". Full coverage (all cities).
+      operationId: getCityStations
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Katalog-Envelope (CanonicalRecord mit StationCatalogPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/station-departures:
     get:
       tags: [cities]
@@ -1741,6 +1796,103 @@ paths:
                     $ref: "#/components/schemas/Meta"
         "404":
           description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/stations/{eva}/departures:
+    get:
+      tags: [stations]
+      summary: Live-Abfahrten eines beliebigen Bahnhofs per EVA, alle Gattungen (DB Timetables, Tier A)
+      x-summary-en: Live departures for any station by EVA, all categories (DB Timetables, Tier A)
+      description: >-
+        Live-Abfahrtstafel JEDES DB-Bahnhofs ueber seine EVA-Nummer (aus
+        GET /cities/{slug}/stations), inkl. Nahverkehr (alle Gattungen
+        ICE/IC/RE/RB/S), Echtzeit-Verspaetung und Stoerungen/Meldungen (messages je
+        Eintrag). Quelle: Deutsche Bahn AG (CC BY 4.0). Ohne Zugangsdaten ODER
+        Toggle aus -> 200 source_status="disabled"; keine Abfahrt im Zeitfenster ->
+        200 source_status="no_data"; ungueltige EVA -> 422.
+      x-description-en: >-
+        Live departure board for ANY DB station via its EVA number (from
+        GET /cities/{slug}/stations), including local/regional trains (all
+        categories ICE/IC/RE/RB/S), real-time delays and disruption messages
+        (messages per entry). Source: Deutsche Bahn AG (CC BY 4.0). Without
+        credentials OR toggle off -> 200 source_status="disabled"; no departure in
+        the window -> 200 source_status="no_data"; invalid EVA -> 422.
+      operationId: getStationDepartures
+      parameters:
+        - name: eva
+          in: path
+          required: true
+          description: EVA-Nummer des Bahnhofs (6-8-stellige Zahl).
+          schema:
+            type: string
+            pattern: "^[0-9]{6,8}$"
+      responses:
+        "200":
+          description: Abfahrts-Envelope (CanonicalRecord mit StationDeparturesPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "422":
+          description: Ungueltige EVA-Nummer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/stations/{eva}/arrivals:
+    get:
+      tags: [stations]
+      summary: Live-Ankuenfte eines beliebigen Bahnhofs per EVA, alle Gattungen (DB Timetables, Tier A)
+      x-summary-en: Live arrivals for any station by EVA, all categories (DB Timetables, Tier A)
+      description: >-
+        Spiegelbild zu /stations/{eva}/departures: ankommende Zuege jedes DB-
+        Bahnhofs ueber seine EVA-Nummer (inkl. Nahverkehr, origin = Startbahnhof,
+        Echtzeit-Verspaetung, Stoerungen/Meldungen). Quelle: Deutsche Bahn AG (CC
+        BY 4.0). Ohne Zugangsdaten ODER Toggle aus -> 200 source_status="disabled";
+        keine Ankunft im Zeitfenster -> 200 source_status="no_data"; ungueltige EVA
+        -> 422.
+      x-description-en: >-
+        Mirror of /stations/{eva}/departures: incoming trains for any DB station
+        via its EVA number (incl. local/regional, origin = start station, real-time
+        delays, disruption messages). Source: Deutsche Bahn AG (CC BY 4.0). Without
+        credentials OR toggle off -> 200 source_status="disabled"; no arrival in the
+        window -> 200 source_status="no_data"; invalid EVA -> 422.
+      operationId: getStationArrivals
+      parameters:
+        - name: eva
+          in: path
+          required: true
+          description: EVA-Nummer des Bahnhofs (6-8-stellige Zahl).
+          schema:
+            type: string
+            pattern: "^[0-9]{6,8}$"
+      responses:
+        "200":
+          description: Ankunfts-Envelope (CanonicalRecord mit StationArrivalsPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "422":
+          description: Ungueltige EVA-Nummer
           content:
             application/json:
               schema:

@@ -1,0 +1,91 @@
+---
+// Tutorial DE: MCP-Server in Claude und ChatGPT einrichten (SEO-Dominanz MCP +
+// GEO). Schliesst die deutschsprachige Setup-Luecke aus der Konkurrenzanalyse.
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+
+const title = "MCP-Server in Claude und ChatGPT einrichten";
+const description =
+  "Anleitung: den kostenlosen, keylosen InfraNode-MCP-Server in Claude Code, Claude Desktop und ChatGPT einrichten, um offene Daten deutscher Städte direkt im KI-Assistenten zu nutzen.";
+
+const claudeCode = "claude mcp add --transport http infranode https://mcp.infranode.dev/mcp";
+
+const connector = `{
+  "mcpServers": {
+    "infranode": {
+      "url": "https://mcp.infranode.dev/mcp"
+    }
+  }
+}`;
+
+const faq = [
+  {
+    q: "Brauche ich einen API-Schlüssel, um den MCP-Server einzurichten?",
+    a: "Nein. Der InfraNode-MCP-Server ist keylos und kostenlos. Du trägst nur die URL https://mcp.infranode.dev/mcp ein, kein Token, keine Anmeldung.",
+  },
+  {
+    q: "Funktioniert der MCP-Server mit ChatGPT und Claude?",
+    a: "Ja. Er ist ein Remote-Server über Streamable HTTP und funktioniert mit jedem Client, der Remote-MCP unterstützt, darunter Claude Code, Claude Desktop und ChatGPT sowie Cursor.",
+  },
+  {
+    q: "Welche Daten bekomme ich über den MCP-Server?",
+    a: "Offene Daten von 84 deutschen Großstädten: Wetter (DWD), Luftqualität (UBA), Strompreis (SMARD), Bodenrichtwerte (BORIS), ÖPNV-Echtzeit und mehr, über 42 Tools.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="de" altLangPath="/en/tutorials/set-up-mcp-server-claude/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Was du brauchst</h2>
+  <p>
+    Nur die Server-URL <code>https://mcp.infranode.dev/mcp</code>. Der
+    InfraNode-MCP-Server ist kostenlos, keylos und remote gehostet, du musst
+    nichts installieren und keinen Schlüssel beantragen.
+  </p>
+
+  <h2>Claude Code</h2>
+  <p>Ein Befehl im Terminal:</p>
+  <pre><code>{claudeCode}</code></pre>
+
+  <h2>Claude Desktop und ChatGPT</h2>
+  <p>
+    Trage den Server als Connector über seine URL ein. In Konfigurationsdateien
+    sieht das so aus:
+  </p>
+  <pre><code>{connector}</code></pre>
+  <p>
+    In Clients mit grafischer Oberfläche fügst du stattdessen einen Connector
+    bzw. Remote-MCP-Server hinzu und gibst die URL
+    <code>https://mcp.infranode.dev/mcp</code> ein.
+  </p>
+
+  <h2>Fertig: einfach fragen</h2>
+  <p>
+    Danach ruft der Assistent die passenden Tools selbst auf. Beispiele:
+  </p>
+  <ul>
+    <li>Wie ist das <a href="/mcp/wetter/">Wetter</a> gerade in Hamburg?</li>
+    <li>Wie ist die <a href="/mcp/luftqualitaet/">Luftqualität</a> in München?</li>
+    <li>Wie hoch ist heute der <a href="/mcp/strompreis/">Börsenstrompreis</a>?</li>
+  </ul>
+  <p>
+    Eine Übersicht aller Tools und der Einrichtung findest du auf der
+    <a href="/mcp/">MCP-Server-Seite</a>. Was MCP überhaupt ist, erklärt der
+    Artikel <a href="/tutorials/was-ist-ein-mcp-server/">Was ist ein MCP-Server</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

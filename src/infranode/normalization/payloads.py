@@ -619,8 +619,10 @@ class StationDeparturesPayload(BaseModel):
     Echtzeit-Verspaetung) zu einer Liste schlanker dicts. ``departures`` traegt je
     Abfahrt ``line`` (z.B. "ICE 73"/"RB22"), ``category`` (ICE/IC/RE/RB/S),
     ``train_number``, ``long_distance`` (Fernverkehr-Flag), ``destination``,
-    ``planned_time`` (ISO), ``platform``, ``delay_minutes`` (None = keine Echtzeit)
-    und ``cancelled``. ``departure_count`` = Anzahl, ``long_distance_count`` =
+    ``planned_time`` (ISO), ``platform``, ``delay_minutes`` (None = keine Echtzeit),
+    ``cancelled`` und ``messages`` (Stoerungen/Hinweise je Abfahrt: Liste aus
+    ``{type, code, category, timestamp}``). ``departure_count`` = Anzahl,
+    ``long_distance_count`` =
     davon Fernverkehr. Quelle: DB Timetables (CC BY 4.0). Mutable Default via
     ``Field(default_factory=list)`` (ruff B006).
     """
@@ -637,7 +639,9 @@ class StationArrivalsPayload(BaseModel):
     Spiegelbild zu ``StationDeparturesPayload`` fuer ankommende Zuege. ``arrivals``
     traegt je Ankunft ``line``, ``category``, ``train_number``, ``long_distance``,
     ``origin`` (Startbahnhof = erstes ppth-Glied), ``planned_time`` (ISO),
-    ``platform``, ``delay_minutes`` (None = keine Echtzeit) und ``cancelled``.
+    ``platform``, ``delay_minutes`` (None = keine Echtzeit), ``cancelled`` und
+    ``messages`` (Stoerungen/Hinweise je Ankunft: Liste aus
+    ``{type, code, category, timestamp}``).
     ``arrival_count`` = Anzahl, ``long_distance_count`` = davon Fernverkehr. Quelle:
     DB Timetables (CC BY 4.0). Mutable Default via ``Field(default_factory=list)``.
     """
@@ -646,6 +650,24 @@ class StationArrivalsPayload(BaseModel):
     arrival_count: int = 0
     long_distance_count: int = 0
     arrivals: list[dict] = Field(default_factory=list)
+
+
+class StationCatalogPayload(BaseModel):
+    """Bahnhofs-Katalog einer Stadt (StaDa Station Data, Tier A, DATA-36).
+
+    Listet ALLE DB-Bahnhoefe im Stadtgebiet (Zuordnung ueber den amtlichen
+    Gemeindeschluessel: StaDa ``municipalityCode`` == Stadt-``ags``), nicht nur
+    den Fernverkehrs-Hbf. Je Bahnhof traegt ``stations`` ein schlankes dict mit
+    ``eva`` (EVA-Nummer der Haupt-Betriebsstelle, fuer die Per-Bahnhof-Boards
+    ``/stations/{eva}/departures``), ``name``, ``category`` (1-7, je kleiner desto
+    groesser/wichtiger der Bahnhof), ``lat``/``lon`` (aus der EVA-Geokoordinate)
+    und ``zip`` (PLZ). ``station_count`` = Anzahl. Quelle: DB StaDa (CC BY 4.0).
+    Mutable Default via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["station_catalog"] = "station_catalog"
+    station_count: int = 0
+    stations: list[dict] = Field(default_factory=list)
 
 
 class LandValuesPayload(BaseModel):
@@ -695,6 +717,7 @@ PayloadUnion = Annotated[
     | SharingPayload
     | IndicatorsPayload
     | LandValuesPayload
+    | StationCatalogPayload
     | StationDeparturesPayload
     | StationArrivalsPayload
     | AdminBoundaryPayload

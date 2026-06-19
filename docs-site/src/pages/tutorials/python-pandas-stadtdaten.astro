@@ -1,0 +1,104 @@
+---
+// Tutorial DE: Stadtdaten mit Python und pandas abrufen (SEO-Massnahme 5).
+// Linkbarer, informationeller Inhalt fuer die Data-Science-Zielgruppe.
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { API_BASE } from "../../lib/codegen";
+
+const title = "Stadtdaten mit Python und pandas abrufen";
+const description =
+  "Tutorial: offene Daten deutscher Großstädte mit Python, requests und pandas über die kostenlose, keylose InfraNode-API abrufen und als DataFrame über alle Städte auswerten.";
+
+const single = `import requests
+
+base = "${API_BASE}/api/v1"
+r = requests.get(f"{base}/cities/berlin/weather", timeout=10)
+r.raise_for_status()
+payload = r.json()["data"]["payload"]
+print(payload["temperature_c"], payload["condition"])`;
+
+const crossCity = `import requests
+import pandas as pd
+
+base = "${API_BASE}/api/v1"
+cities = requests.get(f"{base}/cities", timeout=10).json()["data"]
+
+rows = []
+for c in cities[:10]:
+    slug = c["slug"]
+    resp = requests.get(f"{base}/cities/{slug}/air-uba", timeout=10)
+    if resp.status_code != 200:
+        continue
+    p = resp.json()["data"]["payload"]
+    rows.append({"stadt": slug, "pm10": p.get("pm10"), "no2": p.get("no2")})
+
+df = pd.DataFrame(rows)
+print(df.sort_values("pm10", ascending=False))`;
+
+const faq = [
+  {
+    q: "Muss ich mich registrieren oder einen Key beantragen?",
+    a: "Nein. Die API ist keylos und kostenlos. Ein einfacher GET-Request mit requests genügt, ohne Header oder Token.",
+  },
+  {
+    q: "Wo liegen die Fachdaten in der Antwort?",
+    a: "Unter data.payload. Metadaten wie Quelle, Lizenz und Cache-Status stehen unter meta und im attribution-Block.",
+  },
+  {
+    q: "Gibt es einen fertigen Datensatz für Offline-Analysen?",
+    a: "Ja. Reproduzierbare Snapshots als CSV und Parquet gibt es über die Zenodo-DOI und als Hugging-Face-Dataset.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="de" altLangPath="/en/tutorials/python-pandas-city-data/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Eine Stadt abrufen</h2>
+  <p>
+    InfraNode liefert offene Daten deutscher Großstädte über eine kostenlose,
+    keylose REST-API. Der Einstieg mit <code>requests</code> ist eine Zeile:
+  </p>
+  <pre><code>{single}</code></pre>
+  <p>
+    Die Fachdaten liegen im Envelope unter <code>data.payload</code>,
+    Provenienz und Cache-Status unter <code>meta</code>.
+  </p>
+
+  <h2>Querschnitt über viele Städte</h2>
+  <p>
+    Für eine Analyse über mehrere Städte holst du zuerst die Stadt-Liste und
+    iterierst dann über die Slugs. So entsteht ein pandas-DataFrame, das du
+    sortieren, filtern oder plotten kannst:
+  </p>
+  <pre><code>{crossCity}</code></pre>
+  <p>
+    Beachte das Rate-Limit von 300 Anfragen pro Minute und IP. Für die vollen
+    84 Städte empfiehlt sich ein kleiner <code>time.sleep</code> oder ein
+    Retry-Backoff bei Status 429.
+  </p>
+
+  <h2>Welche Daten verfügbar sind</h2>
+  <p>
+    Pro Stadt gibt es unter anderem <a href="/daten/wetter-api/">Wetter</a>,
+    <a href="/daten/luftqualitaet-api/">Luftqualität</a>,
+    <a href="/daten/strompreis-api/">Strompreis</a>,
+    <a href="/daten/bodenrichtwerte-api/">Bodenrichtwerte</a> und
+    <a href="/daten/oepnv-echtzeit-api/">ÖPNV-Echtzeit</a>. Die vollständige
+    Feldreferenz steht in der <a href="/api/getCityWeather/">API-Dokumentation</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

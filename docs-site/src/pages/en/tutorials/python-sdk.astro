@@ -1,0 +1,120 @@
+---
+// Tutorial EN: the official Python package "infranode" (client + LangChain/LlamaIndex).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+
+const title = "InfraNode with Python: the infranode package";
+const description =
+  "Tutorial: fetch open data for German cities with the keyless Python package infranode, sync and async, plus ready-made LangChain and LlamaIndex tools for AI agents.";
+
+const install = `pip install infranode`;
+
+const basic = `from infranode import InfraNode
+
+api = InfraNode()
+rec = api.weather("berlin")
+print(rec.payload["temperature_c"], "degC")
+print("Source:", rec.attribution["text"])   # always show attribution
+
+# Any endpoint by name
+fuel = api.record("hamburg", "fuel-prices")
+cities = api.cities()                          # all 84 cities`;
+
+const async_ = `import asyncio
+from infranode import AsyncInfraNode
+
+async def main():
+    async with AsyncInfraNode() as api:
+        rec = await api.air("muenchen")
+        print(rec.payload)
+
+asyncio.run(main())`;
+
+const langchain = `pip install "infranode[langchain]"`;
+
+const langchainCode = `from infranode.integrations.langchain import infranode_tools
+
+tools = infranode_tools()   # bind these to your LangChain agent`;
+
+const llamaindex = `pip install "infranode[llamaindex]"`;
+
+const llamaindexCode = `from infranode.integrations.llamaindex import infranode_tools
+
+tools = infranode_tools()   # pass to your LlamaIndex agent`;
+
+const faq = [
+  {
+    q: "Do I need an API key?",
+    a: "No. The package talks to the keyless, free InfraNode API. No key, no signup.",
+  },
+  {
+    q: "Sync or async?",
+    a: "Both. InfraNode is the synchronous client, AsyncInfraNode the asynchronous one. They share the same method API.",
+  },
+  {
+    q: "How is this different from the MCP server?",
+    a: "The MCP server is ideal when your runtime speaks MCP (Claude, Cursor). The Python package is the lightweight, MCP-free path for scripts, notebooks and LangChain/LlamaIndex agents.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/python-sdk/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Install</h2>
+  <pre><code>{install}</code></pre>
+
+  <h2>First request</h2>
+  <p>
+    One instance, then any endpoint via a method or the generic
+    <code>record(slug, endpoint)</code>. The data lives under
+    <code>payload</code>, the source under <code>attribution</code>.
+  </p>
+  <pre><code>{basic}</code></pre>
+  <p>
+    Every record carries its own <code>attribution</code> (source and license
+    URL). The open-data licenses require attribution, so display it to your
+    users.
+  </p>
+
+  <h2>Async</h2>
+  <p>For many parallel requests or asyncio apps:</p>
+  <pre><code>{async_}</code></pre>
+  <p>Mind the rate limit of 300 requests per minute per IP; back off on 429.</p>
+
+  <h2>As an AI agent tool: LangChain</h2>
+  <pre><code>{langchain}</code></pre>
+  <pre><code>{langchainCode}</code></pre>
+
+  <h2>As an AI agent tool: LlamaIndex</h2>
+  <pre><code>{llamaindex}</code></pre>
+  <pre><code>{llamaindexCode}</code></pre>
+  <p>
+    Both expose <code>infranode_get_city_data(city, dataset)</code> and
+    <code>infranode_list_cities()</code>. The tool description lists valid
+    datasets so the model picks the right one. If your runtime speaks MCP, use
+    the <a href="/en/mcp/">InfraNode MCP server</a>.
+  </p>
+
+  <h2>Learn more</h2>
+  <p>
+    Source and issues:
+    <a href="https://github.com/street1983nk/infranode-python">github.com/street1983nk/infranode-python</a>.
+    For plain notebook analysis without the package, see
+    <a href="/en/tutorials/python-pandas-city-data/">City data with Python and pandas</a>.
+  </p>
+
+  <h2>FAQ</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

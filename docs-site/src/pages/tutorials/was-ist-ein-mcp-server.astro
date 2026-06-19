@@ -1,0 +1,86 @@
+---
+// Tutorial DE: Was ist ein MCP-Server (informationeller Pillar + GEO).
+// Beantwortet die Einsteigerfrage, die viele direkt KI-Assistenten stellen.
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+
+const title = "Was ist ein MCP-Server? Einfach erklärt";
+const description =
+  "MCP-Server einfach erklärt: Was das Model Context Protocol ist, wie ein MCP-Server KI-Assistenten wie Claude und ChatGPT mit Daten verbindet, und ein kostenloses Beispiel für offene Daten deutscher Städte.";
+
+const faq = [
+  {
+    q: "Was ist ein MCP-Server?",
+    a: "Ein MCP-Server stellt einem KI-Assistenten über das Model Context Protocol (MCP) Werkzeuge und Daten bereit. Der Assistent kann diese Tools selbst aufrufen, um aktuelle Informationen zu holen oder Aktionen auszuführen, statt nur auf sein Trainingswissen angewiesen zu sein.",
+  },
+  {
+    q: "Was ist das Model Context Protocol (MCP)?",
+    a: "MCP ist ein offener Standard, der festlegt, wie KI-Anwendungen mit externen Tools und Datenquellen kommunizieren. Er wurde 2024 eingeführt und wird von Clients wie Claude und ChatGPT unterstützt.",
+  },
+  {
+    q: "Gibt es einen kostenlosen MCP-Server für deutsche Daten?",
+    a: "Ja. InfraNode ist ein kostenloser, keyloser MCP-Server mit offenen Daten von 84 deutschen Großstädten (Wetter, Luftqualität, Strompreis, ÖPNV und mehr), nutzbar in Claude und ChatGPT ohne Anmeldung.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="de" altLangPath="/en/tutorials/what-is-an-mcp-server/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>Was ist ein MCP-Server?</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Kurz erklärt</h2>
+  <p>
+    Ein MCP-Server stellt einem KI-Assistenten über das Model Context Protocol
+    (MCP) Werkzeuge und Daten bereit. Der Assistent, etwa Claude oder ChatGPT,
+    kann diese Tools selbstständig aufrufen, um aktuelle Informationen zu holen
+    oder Aktionen auszuführen. So beantwortet die KI Fragen mit echten,
+    aktuellen Daten statt nur aus ihrem Trainingswissen.
+  </p>
+
+  <h2>Was ist das Model Context Protocol</h2>
+  <p>
+    MCP ist ein offener Standard für die Verbindung zwischen KI-Anwendungen und
+    externen Tools oder Datenquellen. Er wurde 2024 eingeführt und löst ein
+    konkretes Problem: Statt für jede Datenquelle eine eigene Integration zu
+    bauen, sprechen alle Tools dieselbe Sprache. Ein KI-Client, der MCP
+    unterstützt, kann jeden MCP-Server einbinden.
+  </p>
+
+  <h2>Wie funktioniert ein MCP-Server</h2>
+  <p>
+    Ein MCP-Server bietet eine Liste von Tools an, jedes mit Name, Beschreibung
+    und Parametern. Der KI-Agent liest diese Liste, entscheidet selbst, wann ein
+    Tool nützlich ist, ruft es auf und nutzt die Antwort. Server können lokal
+    (über stdio) oder remote (über Streamable HTTP) laufen.
+  </p>
+
+  <h2>Beispiel: offene Daten deutscher Städte</h2>
+  <p>
+    InfraNode ist ein kostenloser, keyloser MCP-Server mit 42 Tools für offene
+    Daten von 84 deutschen Großstädten: <a href="/mcp/wetter/">Wetter</a>,
+    <a href="/mcp/luftqualitaet/">Luftqualität</a>,
+    <a href="/mcp/strompreis/">Strompreis</a>,
+    <a href="/mcp/bodenrichtwerte/">Bodenrichtwerte</a> und
+    <a href="/mcp/oepnv/">ÖPNV-Echtzeit</a>. Fragst du Claude oder ChatGPT nach
+    dem Wetter in Hamburg, ruft der Assistent das passende Tool selbst auf.
+  </p>
+  <p>
+    So richtest du ihn ein:
+    <a href="/tutorials/mcp-server-claude-einrichten/">MCP-Server in Claude und
+    ChatGPT einrichten</a>. Mehr zum Server:
+    <a href="/mcp/">InfraNode MCP-Server</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

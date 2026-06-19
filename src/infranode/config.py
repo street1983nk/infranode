@@ -137,6 +137,12 @@ class Settings(BaseSettings):
     # enable_kba. Read-only Store-Lesung im Request-Pfad. Toggle-Name ==
     # SourceId-Wert (boris) == _KNOWN_SOURCES-Eintrag.
     enable_boris: bool = True
+    # DATA-36: StaDa Station Data (Bahnhofs-Katalog je Stadt). Keyed Live-Quelle
+    # ueber denselben DB-API-Marketplace wie db_timetables -> nutzt dieselben
+    # db_client_id/db_api_key (kein eigener Key). Ohne Credentials liefert die
+    # Route 200 disabled (analog db_timetables). Toggle-Name == SourceId-Wert
+    # (stada) == _KNOWN_SOURCES-Eintrag.
+    enable_stada: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True

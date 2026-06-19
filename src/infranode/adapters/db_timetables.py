@@ -70,6 +70,30 @@ def _parse_dt(value: str | None) -> datetime | None:
         return None
 
 
+def _parse_messages(elem) -> list[dict]:
+    """Liest die ``<m>``-Stoerungs-/Hinweismeldungen unter ``elem`` (rein).
+
+    DB-Timetables traegt Stoerungen, Verspaetungsgruende und Hinweise als ``<m>``-
+    Elemente (Attribute: ``t`` Typ [h=HIM/Stoerung, q=Qualitaet/Grund], ``c`` Code,
+    ``cat`` Kategorietext, ``ts`` Zeitstempel ``YYMMDDHHmm``). Je Meldung ein
+    schlankes dict; leere Liste, wenn keine vorhanden. ``elem`` kann ``None`` sein.
+    """
+    if elem is None:
+        return []
+    out: list[dict] = []
+    for m in elem.findall("m"):
+        ts = _parse_dt(m.get("ts"))
+        out.append(
+            {
+                "type": m.get("t"),
+                "code": m.get("c"),
+                "category": m.get("cat"),
+                "timestamp": ts.isoformat() if ts else None,
+            }
+        )
+    return out
+
+
 def _line_label(dp, category: str | None, number: str | None) -> str | None:
     """Bildet das Linien-Label (RB22 / "ICE 73" / Kategorie+Nummer) (rein)."""
     return (
@@ -116,6 +140,9 @@ def _parse_board(
         platform = ev.get("pp")
         delay_minutes: int | None = None
         cancelled = False
+        # Stoerungen/Meldungen aus Soll (Stop + Ereignis) lesen; Echtzeit-
+        # Meldungen aus /fchg kommen unten ueber den change-Eintrag dazu.
+        messages = _parse_messages(s) + _parse_messages(ev)
         change = changes.get(sid) if sid else None
         if change is not None:
             if change.get("cp"):
@@ -124,6 +151,7 @@ def _parse_board(
             changed = _parse_dt(change.get("ct"))
             if changed is not None and planned is not None:
                 delay_minutes = round((changed - planned).total_seconds() / 60)
+            messages = messages + (change.get("messages") or [])
 
         out.append(
             {
@@ -138,6 +166,7 @@ def _parse_board(
                 "platform": platform,
                 "delay_minutes": delay_minutes,
                 "cancelled": cancelled,
+                "messages": messages,
                 "_sort": planned or datetime.max,
             }
         )
@@ -145,13 +174,23 @@ def _parse_board(
 
 
 def _parse_changes(root, *, tag: str) -> dict[str, dict]:
-    """Baut aus /fchg die Stop-``id`` -> Aenderung-Map fuer ``tag`` (rein)."""
+    """Baut aus /fchg die Stop-``id`` -> Aenderung-Map fuer ``tag`` (rein).
+
+    Enthaelt neben Zeit/Gleis/Ausfall (ct/cp/cs) auch die Echtzeit-Stoerungs-/
+    Hinweismeldungen (``<m>`` unter Stop und Ereignis), die im Board je Eintrag
+    mit den Soll-Meldungen zusammengefuehrt werden.
+    """
     changes: dict[str, dict] = {}
     for s in root.findall("s"):
         sid = s.get("id")
         ev = s.find(tag)
         if sid and ev is not None:
-            changes[sid] = {"ct": ev.get("ct"), "cp": ev.get("cp"), "cs": ev.get("cs")}
+            changes[sid] = {
+                "ct": ev.get("ct"),
+                "cp": ev.get("cp"),
+                "cs": ev.get("cs"),
+                "messages": _parse_messages(s) + _parse_messages(ev),
+            }
     return changes
 
 

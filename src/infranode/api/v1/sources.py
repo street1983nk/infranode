@@ -72,6 +72,9 @@ _KNOWN_SOURCES = (
     # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Bulk, keylos, pro
     # Bundesland foederierter WFS). Name == enable_boris == SourceId.BORIS.
     "boris",
+    # DATA-36: StaDa Station Data (Bahnhofs-Katalog je Stadt, keyed Live ueber den
+    # DB-API-Marketplace, CC BY 4.0). Name == enable_stada == SourceId.STADA.
+    "stada",
     "bkg",
     "bundeswahl",
     "divi",
@@ -243,6 +246,13 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
     "boris": {
         "license_id": "dl_de_zero_2_0",
         "attribution": "Geoportal Berlin / Bodenrichtwerte",
+    },
+    # DATA-36: StaDa Station Data (Bahnhofs-Katalog). CC BY 4.0 = Tier A (verifiziert
+    # ueber die Lizenz-Angabe des DB-API-Marketplace-Produkts "StaDa - Station Data").
+    # Attribution wortgenau wie im Mapper (map_station_catalog) + DATA-LICENSES.md.
+    "stada": {
+        "license_id": "cc_by_4_0",
+        "attribution": "Deutsche Bahn AG",
     },
     "bkg": {
         "license_id": "dl_de_by_2_0",

@@ -95,6 +95,11 @@ _register(tools.land_values)
 # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
 _register(tools.station_departures)
 _register(tools.station_arrivals)
+# DATA-36: StaDa Bahnhofs-Katalog je Stadt + Per-Bahnhof-Live-Boards (jede EVA,
+# alle Gattungen inkl. Nahverkehr, Stoerungen/Meldungen). Tier A.
+_register(tools.stations)
+_register(tools.station_board_departures)
+_register(tools.station_board_arrivals)
 # DATA-26: Live-/Meta-Tools (echte neue Faehigkeiten, nicht slug-redundant):
 # Echtzeit-Abfahrten, Staedte-Liste, Quellen-Uebersicht. list_cities/sources
 # beschreiben die eigene Abdeckung -> geschlossene Domaene (open_world=False).

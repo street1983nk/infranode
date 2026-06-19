@@ -127,6 +127,17 @@ if (type === "WebAPI") {
       name: creatorName ?? "InfraNode",
       url: `${site}/`,
     },
+    // dateModified = Build-Datum: die API liefert laufend aktuelle Werte, die
+    // Doku/Snapshot wird mit jedem Deploy neu erzeugt. Gibt Google Dataset
+    // Search ein Frische-Signal.
+    dateModified: new Date().toISOString().slice(0, 10),
+    // Verweis auf den DCAT-AP-Katalog (EU-harvestbar), staerkt die Einordnung
+    // als Datensatz.
+    includedInDataCatalog: {
+      "@type": "DataCatalog",
+      name: "InfraNode DCAT-AP Catalog",
+      url: `${site}/api/v1/catalog.jsonld`,
+    },
     ...(keywords && keywords.length ? { keywords } : {}),
     ...(spatialCoverage
       ? { spatialCoverage: { "@type": "Place", name: spatialCoverage } }

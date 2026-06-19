@@ -193,6 +193,19 @@ const partialMap: Record<string, string[]> = coverage.partial;
       Linien-Störungshinweisen. Nur Hamburg (Geofox deckt den HVV-Raum ab),
       Stationsname über <code>?station=</code>. Tier C live-only.
     </li>
+    <li>
+      <a href="/api/getCityStations/"><strong>Bahnhofs-Katalog</strong></a>
+      (<code>/api/v1/cities/{"{slug}"}/stations</code>): alle DB-Bahnhöfe einer
+      Stadt (Zuordnung über den amtlichen Gemeindeschlüssel), volle Abdeckung über
+      alle Städte. Liefert je Bahnhof die EVA-Nummer für die Per-Bahnhof-Boards.
+    </li>
+    <li>
+      <a href="/api/getStationDepartures/"><strong>Live-Abfahrten/-Ankünfte je Bahnhof</strong></a>
+      (<code>/api/v1/stations/{"{eva}"}/departures</code>): Tafel JEDES Bahnhofs
+      über seine EVA-Nummer, alle Gattungen inklusive Nahverkehr (S/RB/RE), mit
+      Echtzeit-Verspätung, Ausfällen und Störungs-/Hinweismeldungen. Keine feste
+      Städteliste: jede gültige EVA ist abfragbar (sonst <code>no_data</code>).
+    </li>
   </ul>
 
   <h2>source_status verstehen</h2>

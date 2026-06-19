@@ -1,0 +1,113 @@
+---
+// Tutorial DE: Das npm-Paket infranode-sdk nutzen (TS-Client + Vercel AI SDK + Starter-Template).
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+
+const title = "InfraNode mit JavaScript: infranode-sdk";
+const description =
+  "Tutorial: offene Daten deutscher Großstädte mit dem keylosen TypeScript-Paket infranode-sdk abrufen, in Node und im Browser, plus fertiges Vercel-AI-SDK-Tool und ein Starter-Template für Cursor.";
+
+const install = `npm install infranode-sdk`;
+
+const basic = `import { InfraNode } from "infranode-sdk";
+
+const api = new InfraNode();
+
+const rec = await api.weather("berlin");
+console.log(rec.payload.temperature_c, "degC");
+console.log("Quelle:", rec.attribution.text);   // Attribution immer anzeigen
+
+// Jeder Endpunkt per Name
+const fuel = await api.record("hamburg", "fuel-prices");
+const cities = await api.cities();               // alle 84 Städte`;
+
+const ai = `npm install infranode-sdk ai zod`;
+
+const aiCode = `import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+import { infranodeTools } from "infranode-sdk/ai";
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  tools: infranodeTools(),
+  maxSteps: 5,
+  prompt: "Wie ist Wetter und Strompreis in München gerade?",
+});`;
+
+const faq = [
+  {
+    q: "Läuft das auch im Browser?",
+    a: "Ja. Der Client nutzt das native fetch und läuft in Node 18 oder neuer sowie im Browser. Die API erlaubt CORS für beliebige Origins.",
+  },
+  {
+    q: "Brauche ich einen API-Schlüssel?",
+    a: "Nein. infranode-sdk spricht die keylose, kostenlose InfraNode-API an. Kein Key, keine Registrierung.",
+  },
+  {
+    q: "Wie binde ich es in einen KI-Agenten ein?",
+    a: "Über den Unterpfad infranode-sdk/ai. infranodeTools() liefert fertige Vercel-AI-SDK-Tools, die du in generateText oder streamText übergibst. ai und zod sind optionale Peer-Abhängigkeiten.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="de" altLangPath="/en/tutorials/javascript-sdk/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Installation</h2>
+  <pre><code>{install}</code></pre>
+
+  <h2>Erste Abfrage</h2>
+  <p>
+    Eine Instanz, dann jeden Endpunkt per Methode oder generisch über
+    <code>record(slug, endpunkt)</code>. Die Fachdaten liegen unter
+    <code>payload</code>, die Quellenangabe unter <code>attribution</code>.
+  </p>
+  <pre><code>{basic}</code></pre>
+  <p>
+    Jeder Datensatz trägt seine eigene <code>attribution</code> (Quelle und
+    Lizenz-URL). Die Open-Data-Lizenzen verlangen die Nennung, zeige sie also
+    deinen Nutzern an. Fehler werfen <code>InfraNodeError</code>.
+  </p>
+
+  <h2>Als KI-Agenten-Tool: Vercel AI SDK</h2>
+  <pre><code>{ai}</code></pre>
+  <pre><code>{aiCode}</code></pre>
+  <p>
+    <code>infranodeTools()</code> liefert <code>infranode_get_city_data(city,
+    dataset)</code> und <code>infranode_list_cities()</code>. Spricht deine
+    Laufzeit MCP, nutze stattdessen den <a href="/mcp/">InfraNode-MCP-Server</a>.
+  </p>
+
+  <h2>Starter-Template für Cursor</h2>
+  <p>
+    Schnellster Einstieg: das fertige Dashboard-Template. Es zeigt Wetter,
+    Luftqualität, Strompreis und Ladepunkte für alle 84 Städte und bringt eine
+    vorkonfigurierte <code>.cursor/mcp.json</code> mit, damit der InfraNode-MCP-Server
+    in Cursor sofort verfügbar ist.
+  </p>
+  <pre><code>{`git clone https://github.com/street1983nk/infranode-weather-starter.git
+cd infranode-weather-starter
+npm install && npm run dev`}</code></pre>
+
+  <h2>Weiterführend</h2>
+  <p>
+    Quellcode und Issues:
+    <a href="https://github.com/street1983nk/infranode-js">github.com/street1983nk/infranode-js</a>.
+    Template:
+    <a href="https://github.com/street1983nk/infranode-weather-starter">infranode-weather-starter</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

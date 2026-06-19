@@ -1,0 +1,95 @@
+---
+// Tutorial EN: fetch German city data with Python and pandas (SEO measure 5).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+import { API_BASE } from "../../../lib/codegen";
+
+const title = "Fetch German city data with Python and pandas";
+const description =
+  "Tutorial: fetch open data for German cities with Python, requests and pandas through the free, keyless InfraNode API and analyze it as a DataFrame across all cities.";
+
+const single = `import requests
+
+base = "${API_BASE}/api/v1"
+r = requests.get(f"{base}/cities/berlin/weather", timeout=10)
+r.raise_for_status()
+payload = r.json()["data"]["payload"]
+print(payload["temperature_c"], payload["condition"])`;
+
+const crossCity = `import requests
+import pandas as pd
+
+base = "${API_BASE}/api/v1"
+cities = requests.get(f"{base}/cities", timeout=10).json()["data"]
+
+rows = []
+for c in cities[:10]:
+    slug = c["slug"]
+    resp = requests.get(f"{base}/cities/{slug}/air-uba", timeout=10)
+    if resp.status_code != 200:
+        continue
+    p = resp.json()["data"]["payload"]
+    rows.append({"city": slug, "pm10": p.get("pm10"), "no2": p.get("no2")})
+
+df = pd.DataFrame(rows)
+print(df.sort_values("pm10", ascending=False))`;
+
+const faq = [
+  {
+    q: "Do I need to register or request a key?",
+    a: "No. The API is keyless and free. A simple GET request with requests is enough, no headers or tokens.",
+  },
+  {
+    q: "Where is the domain data in the response?",
+    a: "Under data.payload. Metadata such as source, license and cache status is under meta and in the attribution block.",
+  },
+  {
+    q: "Is there a ready-made dataset for offline analysis?",
+    a: "Yes. Reproducible snapshots as CSV and Parquet are available via the Zenodo DOI and as a Hugging Face dataset.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/python-pandas-stadtdaten/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Fetch one city</h2>
+  <p>InfraNode serves open data for German cities through a free, keyless REST
+    API. Getting started with <code>requests</code> is one line:</p>
+  <pre><code>{single}</code></pre>
+  <p>The domain data sits in the envelope under <code>data.payload</code>,
+    provenance and cache status under <code>meta</code>.</p>
+
+  <h2>Cross-section across many cities</h2>
+  <p>For an analysis across several cities, first fetch the city list and then
+    iterate over the slugs to build a pandas DataFrame you can sort, filter or
+    plot:</p>
+  <pre><code>{crossCity}</code></pre>
+  <p>Mind the rate limit of 300 requests per minute per IP. For all 84 cities,
+    add a small <code>time.sleep</code> or a retry backoff on status 429.</p>
+
+  <h2>What data is available</h2>
+  <p>
+    Per city you get, among others,
+    <a href="/en/data/weather-api/">weather</a>,
+    <a href="/en/data/air-quality-api/">air quality</a>,
+    <a href="/en/data/electricity-price-api/">electricity price</a>,
+    <a href="/en/data/land-values-api/">land values</a> and
+    <a href="/en/data/public-transport-api/">real-time public transport</a>. The
+    full field reference is in the <a href="/en/api/getCityWeather/">API documentation</a>.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

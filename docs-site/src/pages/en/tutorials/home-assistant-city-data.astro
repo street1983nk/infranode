@@ -1,0 +1,94 @@
+---
+// Tutorial EN: use German open city data in Home Assistant (SEO measure 5).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+import { API_BASE } from "../../../lib/codegen";
+
+const title = "Use German open city data in Home Assistant";
+const description =
+  "Step-by-step guide: bring weather, air quality and electricity price for your city into Home Assistant as a sensor through the free, keyless InfraNode API.";
+
+const restSensor = `# configuration.yaml
+sensor:
+  - platform: rest
+    name: Air quality Berlin
+    resource: ${API_BASE}/api/v1/cities/berlin/air-uba
+    method: GET
+    value_template: "{{ value_json.data.payload.pm10 }}"
+    unit_of_measurement: "ug/m3"
+    scan_interval: 1800`;
+
+const priceSensor = `  - platform: rest
+    name: Day ahead electricity price
+    resource: ${API_BASE}/api/v1/cities/berlin/power-price
+    method: GET
+    value_template: "{{ value_json.data.payload.value }}"
+    unit_of_measurement: "EUR/MWh"
+    scan_interval: 3600`;
+
+const faq = [
+  {
+    q: "Do I need an API key for Home Assistant?",
+    a: "No. The InfraNode API is keyless and free. The REST sensor calls the URL directly, without headers or tokens.",
+  },
+  {
+    q: "How often can I poll?",
+    a: "The rate limit is 300 requests per minute per IP. A scan_interval of 1800 seconds (30 minutes) is more than enough for environmental data and is gentle on the source.",
+  },
+  {
+    q: "Which cities are supported?",
+    a: "84 major German cities. Just replace berlin in the path with your city slug from the cities overview.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/home-assistant-stadtdaten/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Why InfraNode for Home Assistant</h2>
+  <p>
+    To couple smart home automations to real environmental data you need a
+    source that works without sign-up and returns stable JSON. InfraNode bundles
+    open data for 84 major German cities behind a free, keyless REST API. Every
+    response carries source, license and timestamp, so you can filter reliably
+    in Home Assistant.
+  </p>
+
+  <h2>Air quality as a REST sensor</h2>
+  <p>Add the following sensor to your <code>configuration.yaml</code>. It reads
+    the PM10 value from the envelope under <code>data.payload</code>:</p>
+  <pre><code>{restSensor}</code></pre>
+
+  <h2>Electricity price for dynamic tariffs</h2>
+  <p>The nationwide day-ahead spot price is ideal for shifting loads like a
+    wallbox or heat pump into cheaper hours:</p>
+  <pre><code>{priceSensor}</code></pre>
+  <p>Use the value as a condition in an automation, for example "only charge the
+    car when the price is below X".</p>
+
+  <h2>Understand the envelope</h2>
+  <p>All domain data sits under <code>data.payload</code>, metadata such as
+    source and cache status under <code>meta</code>. Inspect a raw response:</p>
+  <pre><code>curl {API_BASE}/api/v1/cities/berlin/weather</code></pre>
+  <p>
+    The data types are described on the pages for
+    <a href="/en/data/weather-api/">weather</a>,
+    <a href="/en/data/air-quality-api/">air quality</a> and
+    <a href="/en/data/electricity-price-api/">electricity price</a>. Find the
+    slug for your city in the <a href="/en/cities/">cities overview</a>.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

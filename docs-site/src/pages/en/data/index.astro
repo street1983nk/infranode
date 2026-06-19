@@ -1,0 +1,96 @@
+---
+// Data hub EN (/en/data/): pillar for "data API / data analysis API / city data
+// API / open data API". Bundles the per-data-type pages, MCP, the dataset
+// (Zenodo/HF) and the analysis tutorials. No conflict with /en/data/[topic].
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+import { topics } from "../../../data/topics";
+import { API_BASE } from "../../../lib/codegen";
+
+const title = "Data API for German cities: open data as JSON";
+const description =
+  "Free, keyless data API for 84 major German cities: weather, air quality, electricity price, land values, public transport and more as consistent JSON. Ideal for data analysis, dashboards and AI agents (REST and MCP).";
+
+const faq = [
+  {
+    q: "Is there a free data API for German cities?",
+    a: "InfraNode is a free, keyless data API for 84 major German cities. It serves weather, air quality, electricity price, land values, real-time public transport and more as consistent JSON, without an API key and without sign-up.",
+  },
+  {
+    q: "Is InfraNode suitable for data analysis?",
+    a: "Yes. All endpoints return structured JSON with source and license, retrievable across all 84 cities. For offline analysis there are reproducible snapshots as CSV and Parquet via the Zenodo DOI and as a Hugging Face dataset.",
+  },
+  {
+    q: "Is the data also available for AI agents?",
+    a: "Yes. The same data is available as an MCP server for AI assistants like Claude and ChatGPT, also free and keyless.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="daten" lang="en" altLangPath="/daten/">
+  <JsonLd
+    slot="jsonld"
+    type="Dataset"
+    name="InfraNode: data API for German cities"
+    description={description}
+    url="/en/data/"
+    license="https://www.govdata.de/dl-de/by-2-0"
+    identifier="https://doi.org/10.5281/zenodo.20752355"
+    creatorName="InfraNode"
+    spatialCoverage="Germany"
+    keywords={["data API", "data analysis API", "city data API", "open data API Germany", "German data API", "REST API", "MCP server data"]}
+    sameAs={["https://doi.org/10.5281/zenodo.20752355", "https://huggingface.co/datasets/Khaledc83/german-cities-open-data"]}
+    distributions={[
+      { name: "InfraNode REST API", url: `${API_BASE}/api/v1/cities`, format: "application/json" },
+      { name: "Zenodo snapshot (CSV/Parquet)", url: "https://doi.org/10.5281/zenodo.20752355", format: "text/csv" },
+    ]}
+  />
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>Data API for German cities</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Data by topic</h2>
+  <p>Each data type has its own page with a live example, source and license:</p>
+  <ul>
+    {topics.map((t) => <li><a href={`/en/data/${t.en.slug}/`}>{t.en.h1}</a></li>)}
+  </ul>
+
+  <h2>For data analysis</h2>
+  <p>
+    All endpoints return structured JSON, retrievable across all 84 cities,
+    ideal for comparisons, dashboards and data analysis. A practical example is
+    the tutorial
+    <a href="/en/tutorials/python-pandas-city-data/">Fetch German city data with
+    Python and pandas</a>. For offline analysis there are reproducible snapshots
+    as CSV and Parquet via the
+    <a href="https://doi.org/10.5281/zenodo.20752355">Zenodo DOI</a> and as a
+    <a href="https://huggingface.co/datasets/Khaledc83/german-cities-open-data">Hugging Face dataset</a>.
+  </p>
+
+  <h2>For AI agents (MCP)</h2>
+  <p>
+    The same data is available as an <a href="/en/mcp/">MCP server</a> for
+    Claude, ChatGPT and other AI agents, free and keyless. Your assistant
+    queries the data directly, live or as a daily value.
+  </p>
+
+  <h2>Getting started</h2>
+  <p>A simple GET request, no key:</p>
+  <pre><code>curl {API_BASE}/api/v1/cities/berlin/weather</code></pre>
+  <p>
+    More in the <a href="/en/quickstart/">quickstart</a> and the
+    <a href="/en/cities/">cities overview</a>.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

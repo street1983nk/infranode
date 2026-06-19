@@ -1,0 +1,420 @@
+{
+  "datasets": [
+    {
+      "id": "weather",
+      "endpoint": "weather",
+      "theme": "ENVI",
+      "source": "dwd",
+      "title_de": "Wetter deutscher Staedte",
+      "title_en": "Weather for German cities",
+      "desc_de": "Aktuelle Wetterbeobachtungen (Temperatur, Luftfeuchte, Wind, Zustand) je Stadt aus DWD-Stationsdaten.",
+      "desc_en": "Current weather observations (temperature, humidity, wind, condition) per city from DWD station data.",
+      "keywords": [
+        "Wetter",
+        "weather",
+        "DWD",
+        "Temperatur"
+      ]
+    },
+    {
+      "id": "weather-warnings",
+      "endpoint": "weather-warnings",
+      "theme": "ENVI",
+      "source": "dwd_warnings",
+      "title_de": "Amtliche Wetterwarnungen",
+      "title_en": "Official severe weather warnings",
+      "desc_de": "Amtliche DWD-Wetterwarnungen je Stadt mit Warnstufe und Anzahl.",
+      "desc_en": "Official DWD severe weather warnings per city with level and count.",
+      "keywords": [
+        "Unwetter",
+        "warnings",
+        "DWD"
+      ]
+    },
+    {
+      "id": "air-quality",
+      "endpoint": "air-uba",
+      "theme": "ENVI",
+      "source": "uba",
+      "title_de": "Luftqualitaet",
+      "title_en": "Air quality",
+      "desc_de": "Luftqualitaetsmesswerte (PM10, NO2, PM2.5, O3, SO2) je Stadt aus dem UBA-Messnetz.",
+      "desc_en": "Air quality measurements (PM10, NO2, PM2.5, O3, SO2) per city from the UBA monitoring network.",
+      "keywords": [
+        "Luftqualitaet",
+        "air quality",
+        "PM10",
+        "NO2",
+        "UBA"
+      ]
+    },
+    {
+      "id": "pollen-uv",
+      "endpoint": "pollen-uv",
+      "theme": "HEAL",
+      "source": "dwd_pollen",
+      "title_de": "Pollen und UV-Index",
+      "title_en": "Pollen and UV index",
+      "desc_de": "Pollenbelastung und UV-Index je Region/Stadt aus DWD-Daten.",
+      "desc_en": "Pollen load and UV index per region/city from DWD data.",
+      "keywords": [
+        "Pollen",
+        "UV",
+        "DWD",
+        "Gesundheit"
+      ]
+    },
+    {
+      "id": "water-level",
+      "endpoint": "water-level",
+      "theme": "ENVI",
+      "source": "pegelonline",
+      "title_de": "Pegelstaende",
+      "title_en": "Water levels",
+      "desc_de": "Aktuelle Wasserstaende der naechstgelegenen Pegel an Bundeswasserstrassen (PEGELONLINE/WSV).",
+      "desc_en": "Current water levels of the nearest gauges on federal waterways (PEGELONLINE/WSV).",
+      "keywords": [
+        "Pegel",
+        "water level",
+        "WSV",
+        "Gewaesser"
+      ]
+    },
+    {
+      "id": "flood",
+      "endpoint": "flood",
+      "theme": "ENVI",
+      "source": "lhp",
+      "title_de": "Hochwasserwarnungen",
+      "title_en": "Flood warnings",
+      "desc_de": "Hochwasserwarnungen je Stadt (Datenquelle hochwasserzentralen.de).",
+      "desc_en": "Flood warnings per city (source hochwasserzentralen.de).",
+      "keywords": [
+        "Hochwasser",
+        "flood",
+        "Warnung"
+      ]
+    },
+    {
+      "id": "demographics",
+      "endpoint": "demographics",
+      "theme": "SOCI",
+      "source": "wikidata",
+      "title_de": "Demografie",
+      "title_en": "Demographics",
+      "desc_de": "Einwohnerzahl und demografische Eckdaten je Stadt.",
+      "desc_en": "Population and core demographic figures per city.",
+      "keywords": [
+        "Demografie",
+        "population",
+        "Einwohner"
+      ]
+    },
+    {
+      "id": "indicators",
+      "endpoint": "indicators",
+      "theme": "REGI",
+      "source": "inkar",
+      "title_de": "Regionalindikatoren (INKAR)",
+      "title_en": "Regional indicators (INKAR)",
+      "desc_de": "Sozieoekonomische Regionalindikatoren je Kreis/Stadt aus INKAR/BBSR.",
+      "desc_en": "Socioeconomic regional indicators per district/city from INKAR/BBSR.",
+      "keywords": [
+        "INKAR",
+        "BBSR",
+        "Indikatoren",
+        "Region"
+      ]
+    },
+    {
+      "id": "unemployment",
+      "endpoint": "unemployment",
+      "theme": "SOCI",
+      "source": "genesis",
+      "title_de": "Arbeitslosigkeit",
+      "title_en": "Unemployment",
+      "desc_de": "Arbeitslosenzahlen und -quote je Stadt aus der amtlichen Regionalstatistik (Destatis).",
+      "desc_en": "Unemployment figures and rate per city from official regional statistics (Destatis).",
+      "keywords": [
+        "Arbeitslosigkeit",
+        "unemployment",
+        "Destatis"
+      ]
+    },
+    {
+      "id": "tourism",
+      "endpoint": "tourism",
+      "theme": "ECON",
+      "source": "genesis",
+      "title_de": "Tourismus",
+      "title_en": "Tourism",
+      "desc_de": "Uebernachtungen und Ankuenfte je Stadt aus der amtlichen Regionalstatistik (Destatis).",
+      "desc_en": "Overnight stays and arrivals per city from official regional statistics (Destatis).",
+      "keywords": [
+        "Tourismus",
+        "tourism",
+        "Destatis"
+      ]
+    },
+    {
+      "id": "construction",
+      "endpoint": "construction",
+      "theme": "ECON",
+      "source": "genesis",
+      "title_de": "Bautaetigkeit",
+      "title_en": "Construction activity",
+      "desc_de": "Fertiggestellte Wohngebaeude und Wohnungen je Stadt (Destatis).",
+      "desc_en": "Completed residential buildings and dwellings per city (Destatis).",
+      "keywords": [
+        "Bau",
+        "construction",
+        "Wohnungen",
+        "Destatis"
+      ]
+    },
+    {
+      "id": "vehicle-registrations",
+      "endpoint": "vehicle-registrations",
+      "theme": "TRAN",
+      "source": "kba",
+      "title_de": "Kfz-Zulassungen",
+      "title_en": "Vehicle registrations",
+      "desc_de": "Pkw-Bestand und Elektro-Anteil je Zulassungsbezirk (Kraftfahrt-Bundesamt).",
+      "desc_en": "Car stock and electric share per registration district (KBA).",
+      "keywords": [
+        "Kfz",
+        "vehicles",
+        "KBA",
+        "Elektro"
+      ]
+    },
+    {
+      "id": "accidents",
+      "endpoint": "accidents",
+      "theme": "TRAN",
+      "source": "unfallatlas",
+      "title_de": "Verkehrsunfaelle",
+      "title_en": "Road accidents",
+      "desc_de": "Verkehrsunfaelle je Kreis/Stadt aus dem Unfallatlas der Statistischen Aemter.",
+      "desc_en": "Road accidents per district/city from the official accident atlas.",
+      "keywords": [
+        "Unfaelle",
+        "accidents",
+        "Unfallatlas"
+      ]
+    },
+    {
+      "id": "land-values",
+      "endpoint": "land-values",
+      "theme": "REGI",
+      "source": "boris",
+      "title_de": "Bodenrichtwerte",
+      "title_en": "Land values",
+      "desc_de": "Amtliche Bodenrichtwerte (Bauland) je Stadt aus BORIS (foederiert je Bundesland).",
+      "desc_en": "Official land reference values (building land) per city from BORIS (federated per state).",
+      "keywords": [
+        "Bodenrichtwerte",
+        "land values",
+        "BORIS",
+        "Immobilien"
+      ]
+    },
+    {
+      "id": "energy-assets",
+      "endpoint": "energy",
+      "theme": "ENER",
+      "source": "mastr",
+      "title_de": "Energieanlagen",
+      "title_en": "Energy assets",
+      "desc_de": "Energieerzeugungsanlagen (PV, Wind, Biogas, Speicher) je Stadt aus dem Marktstammdatenregister.",
+      "desc_en": "Energy generation assets (PV, wind, biogas, storage) per city from the Marktstammdatenregister.",
+      "keywords": [
+        "Energie",
+        "energy",
+        "MaStR",
+        "PV",
+        "Wind"
+      ]
+    },
+    {
+      "id": "power-price",
+      "endpoint": "power-price",
+      "theme": "ENER",
+      "source": "smard",
+      "title_de": "Strompreis und -last",
+      "title_en": "Electricity price and load",
+      "desc_de": "Strommarktdaten (Day-Ahead-Preis, Netzlast) aus SMARD der Bundesnetzagentur.",
+      "desc_en": "Electricity market data (day-ahead price, grid load) from SMARD (Bundesnetzagentur).",
+      "keywords": [
+        "Strom",
+        "electricity",
+        "SMARD",
+        "Preis"
+      ]
+    },
+    {
+      "id": "fuel-prices",
+      "endpoint": "fuel-prices",
+      "theme": "ENER",
+      "source": "tankerkoenig",
+      "title_de": "Kraftstoffpreise",
+      "title_en": "Fuel prices",
+      "desc_de": "Aktuelle Kraftstoffpreise (E5, E10, Diesel) im Stadtumkreis (MTS-K via Tankerkoenig).",
+      "desc_en": "Current fuel prices (E5, E10, diesel) around the city (MTS-K via Tankerkoenig).",
+      "keywords": [
+        "Kraftstoff",
+        "fuel",
+        "Tankerkoenig",
+        "MTS-K"
+      ]
+    },
+    {
+      "id": "charging",
+      "endpoint": "charging",
+      "theme": "ENER",
+      "source": "bnetza",
+      "title_de": "Ladesaeulen",
+      "title_en": "EV charging stations",
+      "desc_de": "Oeffentliche Ladesaeulen je Stadt aus dem Ladesaeulenregister der Bundesnetzagentur.",
+      "desc_en": "Public EV charging stations per city from the Bundesnetzagentur charging register.",
+      "keywords": [
+        "Ladesaeulen",
+        "charging",
+        "EV",
+        "Bundesnetzagentur"
+      ]
+    },
+    {
+      "id": "sharing",
+      "endpoint": "sharing",
+      "theme": "TRAN",
+      "source": "gbfs",
+      "title_de": "Sharing-Mobilitaet",
+      "title_en": "Shared mobility",
+      "desc_de": "Verfuegbare Sharing-Fahrzeuge (GBFS) je Stadt.",
+      "desc_en": "Available shared mobility vehicles (GBFS) per city.",
+      "keywords": [
+        "Sharing",
+        "GBFS",
+        "Mobilitaet",
+        "bikesharing"
+      ]
+    },
+    {
+      "id": "roadworks",
+      "endpoint": "traffic",
+      "theme": "TRAN",
+      "source": "autobahn",
+      "title_de": "Baustellen und Verkehrsmeldungen",
+      "title_en": "Roadworks and traffic events",
+      "desc_de": "Baustellen und Verkehrsmeldungen je Stadt (Autobahn GmbH / BASt).",
+      "desc_en": "Roadworks and traffic events per city (Autobahn GmbH / BASt).",
+      "keywords": [
+        "Baustellen",
+        "roadworks",
+        "Verkehr",
+        "Autobahn"
+      ]
+    },
+    {
+      "id": "transit",
+      "endpoint": "transit",
+      "theme": "TRAN",
+      "source": "delfi",
+      "title_de": "OEPNV-Haltestellen",
+      "title_en": "Public transit stops",
+      "desc_de": "OEPNV-Haltestellen je Stadt aus dem bundesweiten DELFI-Datensatz.",
+      "desc_en": "Public transit stops per city from the nationwide DELFI dataset.",
+      "keywords": [
+        "OEPNV",
+        "transit",
+        "DELFI",
+        "Haltestellen"
+      ]
+    },
+    {
+      "id": "station-departures",
+      "endpoint": "station-departures",
+      "theme": "TRAN",
+      "source": "db_timetables",
+      "title_de": "Bahnhof-Abfahrten",
+      "title_en": "Station departures",
+      "desc_de": "Abfahrten am Hauptbahnhof je Metropole (Deutsche Bahn).",
+      "desc_en": "Departures at the main station per metropolis (Deutsche Bahn).",
+      "keywords": [
+        "Bahn",
+        "departures",
+        "Bahnhof",
+        "DB"
+      ]
+    },
+    {
+      "id": "land-boundaries",
+      "endpoint": "geo",
+      "theme": "REGI",
+      "source": "bkg",
+      "title_de": "Verwaltungsgrenzen",
+      "title_en": "Administrative boundaries",
+      "desc_de": "Verwaltungsgrenzen und Flaeche je Stadt (GeoBasis-DE / BKG).",
+      "desc_en": "Administrative boundaries and area per city (GeoBasis-DE / BKG).",
+      "keywords": [
+        "Grenzen",
+        "boundaries",
+        "BKG",
+        "Geo"
+      ]
+    },
+    {
+      "id": "elections",
+      "endpoint": "election",
+      "theme": "GOVE",
+      "source": "bundeswahl",
+      "title_de": "Wahlergebnisse",
+      "title_en": "Election results",
+      "desc_de": "Bundestagswahlergebnisse je Stadt (Die Bundeswahlleiterin).",
+      "desc_en": "Federal election results per city (Federal Returning Officer).",
+      "keywords": [
+        "Wahl",
+        "elections",
+        "Bundestagswahl"
+      ]
+    },
+    {
+      "id": "holidays",
+      "endpoint": "holidays",
+      "theme": "GOVE",
+      "source": "feiertage",
+      "title_de": "Feiertage und Schulferien",
+      "title_en": "Public and school holidays",
+      "desc_de": "Gesetzliche Feiertage und Schulferien je Bundesland/Stadt.",
+      "desc_en": "Public holidays and school holidays per state/city.",
+      "keywords": [
+        "Feiertage",
+        "holidays",
+        "Schulferien"
+      ]
+    }
+  ],
+  "snapshot_distributions": [
+    {
+      "title": "Zenodo (CSV/Parquet, versioniert mit DOI)",
+      "accessURL": "https://doi.org/10.5281/zenodo.20752355",
+      "format": "CSV",
+      "mediaType": "text/csv",
+      "license": [
+        "DL-DE-BY-2.0",
+        "https://www.govdata.de/dl-de/by-2-0"
+      ]
+    },
+    {
+      "title": "Hugging Face Datasets",
+      "accessURL": "https://huggingface.co/datasets/Khaledc83/german-cities-open-data",
+      "format": "CSV",
+      "mediaType": "text/csv",
+      "license": [
+        "DL-DE-BY-2.0",
+        "https://www.govdata.de/dl-de/by-2-0"
+      ]
+    }
+  ]
+}

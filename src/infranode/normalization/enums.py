@@ -164,3 +164,8 @@ class SourceId(StrEnum):
     # resilient_client. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag:
     # getattr(settings, f"enable_{name}").
     BORIS = "boris"
+    # DATA-36: StaDa Station Data (Bahnhofs-Katalog je Stadt: alle Bahnhoefe einer
+    # Stadt mit EVA, Geo, Kategorie). Keyed Live-Quelle ueber denselben DB-API-
+    # Marketplace wie DB_TIMETABLES (gleiche db_client_id/db_api_key), CC BY 4.0 =
+    # Tier A. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    STADA = "stada"

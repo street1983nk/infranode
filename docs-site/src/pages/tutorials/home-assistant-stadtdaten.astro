@@ -1,0 +1,104 @@
+---
+// Tutorial DE: offene Stadtdaten in Home Assistant einbinden (SEO-Massnahme 5).
+// Linkbarer, informationeller Inhalt fuer die Smart-Home-Zielgruppe.
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { API_BASE } from "../../lib/codegen";
+
+const title = "Offene Stadtdaten in Home Assistant einbinden";
+const description =
+  "Schritt-für-Schritt-Anleitung: Wetter, Luftqualität und Strompreis deiner Stadt über die kostenlose, keylose InfraNode-API als Sensor in Home Assistant einbinden.";
+
+const restSensor = `# configuration.yaml
+sensor:
+  - platform: rest
+    name: Luftqualitaet Berlin
+    resource: ${API_BASE}/api/v1/cities/berlin/air-uba
+    method: GET
+    value_template: "{{ value_json.data.payload.pm10 }}"
+    unit_of_measurement: "ug/m3"
+    scan_interval: 1800`;
+
+const priceSensor = `  - platform: rest
+    name: Strompreis Day Ahead
+    resource: ${API_BASE}/api/v1/cities/berlin/power-price
+    method: GET
+    value_template: "{{ value_json.data.payload.value }}"
+    unit_of_measurement: "EUR/MWh"
+    scan_interval: 3600`;
+
+const faq = [
+  {
+    q: "Brauche ich einen API-Schlüssel für Home Assistant?",
+    a: "Nein. Die InfraNode-API ist keylos und kostenlos. Der REST-Sensor ruft die URL direkt ab, ohne Header oder Token.",
+  },
+  {
+    q: "Wie oft darf ich abfragen?",
+    a: "Das Rate-Limit liegt bei 300 Anfragen pro Minute und IP. Ein scan_interval von 1800 Sekunden (30 Minuten) ist für Umweltdaten mehr als ausreichend und schont die Quelle.",
+  },
+  {
+    q: "Welche Städte werden unterstützt?",
+    a: "84 deutsche Großstädte. Ersetze einfach berlin im Pfad durch den Slug deiner Stadt aus der Städte-Übersicht.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="de" altLangPath="/en/tutorials/home-assistant-city-data/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Warum InfraNode für Home Assistant</h2>
+  <p>
+    Wer Smart-Home-Automationen an reale Umweltdaten koppeln will, braucht eine
+    Quelle, die ohne Anmeldung funktioniert und stabile JSON-Antworten liefert.
+    InfraNode bündelt offene Daten von 84 deutschen Großstädten hinter einer
+    kostenlosen, keylosen REST-API. Jede Antwort enthält Quelle, Lizenz und
+    Zeitstempel, sodass du in Home Assistant verlässlich filtern kannst.
+  </p>
+
+  <h2>Luftqualität als REST-Sensor</h2>
+  <p>
+    Trage den folgenden Sensor in deine <code>configuration.yaml</code> ein. Er
+    fragt die Luftqualität für Berlin ab und liest den PM10-Wert aus dem
+    Envelope unter <code>data.payload</code>:
+  </p>
+  <pre><code>{restSensor}</code></pre>
+
+  <h2>Strompreis für dynamische Tarife</h2>
+  <p>
+    Der bundesweite Day-Ahead-Börsenstrompreis eignet sich, um Verbraucher wie
+    Wallbox oder Wärmepumpe in günstige Stunden zu legen:
+  </p>
+  <pre><code>{priceSensor}</code></pre>
+  <p>
+    Den Wert kannst du danach in einer Automation als Bedingung nutzen, etwa
+    "lade das Auto nur, wenn der Strompreis unter X liegt".
+  </p>
+
+  <h2>Den Envelope verstehen</h2>
+  <p>
+    Alle Fachdaten liegen unter <code>data.payload</code>, Metadaten wie Quelle
+    und Cache-Status unter <code>meta</code>. Schau dir eine rohe Antwort an:
+  </p>
+  <pre><code>curl {API_BASE}/api/v1/cities/berlin/weather</code></pre>
+  <p>
+    Welche Datenarten es gibt, zeigen die Seiten zu
+    <a href="/daten/wetter-api/">Wetter</a>,
+    <a href="/daten/luftqualitaet-api/">Luftqualität</a> und
+    <a href="/daten/strompreis-api/">Strompreis</a>. Die passenden Slugs für
+    deine Stadt findest du in der <a href="/staedte/">Städte-Übersicht</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

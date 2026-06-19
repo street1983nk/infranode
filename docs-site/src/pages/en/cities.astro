@@ -37,8 +37,8 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
 ---
 
 <Docs
-  title="Cities"
-  description="All 84 German cities over 100,000 inhabitants covered by InfraNode: name, slug, state, population and coverage. Searchable."
+  title="Open Data API for 84 German Cities: Overview"
+  description="All 84 German cities over 100,000 inhabitants covered by InfraNode with a free, keyless open data API: name, slug, state, population and coverage. Searchable."
   current="cities"
   lang="en"
   altLangPath="/staedte/"
@@ -96,7 +96,7 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
       },
     ]}
   />
-  <h1>Cities</h1>
+  <h1>Open data API for 84 German cities</h1>
 
   <p>
     InfraNode covers {total} German cities with more than 100,000 inhabitants.
@@ -170,7 +170,7 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
               data-slug={city.slug.toLowerCase()}
               data-state={stateName.toLowerCase()}
             >
-              <td>{city.name}</td>
+              <td><a href={`/en/cities/${city.slug}/`}>{city.name}</a></td>
               <td><code>{city.slug}</code></td>
               <td>{stateName}</td>
               <td class="cities__num">{city.population != null ? fmt.format(city.population) : "-"}</td>

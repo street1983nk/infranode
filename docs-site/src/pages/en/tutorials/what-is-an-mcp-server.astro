@@ -1,0 +1,86 @@
+---
+// Tutorial EN: what is an MCP server (informational pillar + GEO).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+
+const title = "What is an MCP server? Simply explained";
+const description =
+  "MCP server explained simply: what the Model Context Protocol is, how an MCP server connects AI assistants like Claude and ChatGPT to data, and a free example with open data for German cities.";
+
+const faq = [
+  {
+    q: "What is an MCP server?",
+    a: "An MCP server provides tools and data to an AI assistant through the Model Context Protocol (MCP). The assistant can call these tools itself to fetch current information or perform actions, instead of relying only on its training knowledge.",
+  },
+  {
+    q: "What is the Model Context Protocol (MCP)?",
+    a: "MCP is an open standard that defines how AI applications communicate with external tools and data sources. It was introduced in 2024 and is supported by clients such as Claude and ChatGPT.",
+  },
+  {
+    q: "Is there a free MCP server for German data?",
+    a: "Yes. InfraNode is a free, keyless MCP server with open data for 84 major German cities (weather, air quality, electricity price, public transport and more), usable in Claude and ChatGPT without sign-up.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/was-ist-ein-mcp-server/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>What is an MCP server?</h1>
+  <p class="lead">{description}</p>
+
+  <h2>In short</h2>
+  <p>
+    An MCP server provides tools and data to an AI assistant through the Model
+    Context Protocol (MCP). The assistant, such as Claude or ChatGPT, can call
+    these tools on its own to fetch current information or perform actions. This
+    lets the AI answer questions with real, up-to-date data instead of only its
+    training knowledge.
+  </p>
+
+  <h2>What is the Model Context Protocol</h2>
+  <p>
+    MCP is an open standard for connecting AI applications to external tools or
+    data sources. It was introduced in 2024 and solves a concrete problem:
+    instead of building a separate integration for every data source, all tools
+    speak the same language. Any AI client that supports MCP can connect to any
+    MCP server.
+  </p>
+
+  <h2>How an MCP server works</h2>
+  <p>
+    An MCP server offers a list of tools, each with a name, description and
+    parameters. The AI agent reads this list, decides itself when a tool is
+    useful, calls it and uses the response. Servers can run locally (over stdio)
+    or remotely (over Streamable HTTP).
+  </p>
+
+  <h2>Example: open data for German cities</h2>
+  <p>
+    InfraNode is a free, keyless MCP server with 42 tools for open data of 84
+    major German cities: <a href="/en/mcp/weather/">weather</a>,
+    <a href="/en/mcp/air-quality/">air quality</a>,
+    <a href="/en/mcp/electricity-price/">electricity price</a>,
+    <a href="/en/mcp/land-values/">land values</a> and
+    <a href="/en/mcp/public-transport/">real-time public transport</a>. Ask
+    Claude or ChatGPT about the weather in Hamburg and the assistant calls the
+    right tool itself.
+  </p>
+  <p>
+    How to set it up:
+    <a href="/en/tutorials/set-up-mcp-server-claude/">Set up an MCP server in
+    Claude and ChatGPT</a>. More about the server:
+    <a href="/en/mcp/">InfraNode MCP server</a>.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

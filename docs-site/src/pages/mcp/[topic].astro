@@ -1,0 +1,86 @@
+---
+// MCP-Datennischen-Landingpage DE (SEO-Dominanz "MCP-Server Deutschland").
+// Eine Seite je Datenachse aus src/data/mcp-topics.ts, optimiert auf
+// "{Datentyp} MCP-Server [Deutschland]". Pendant: src/pages/en/mcp/[topic].astro.
+import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
+import { mcpTopics } from "../../data/mcp-topics";
+
+export function getStaticPaths() {
+  return mcpTopics.map((topic) => ({
+    params: { topic: topic.de.slug },
+    props: { topic },
+  }));
+}
+
+const { topic } = Astro.props;
+const t = topic.de;
+const others = mcpTopics.filter((o) => o.id !== topic.id);
+---
+
+<Docs
+  title={t.metaTitle}
+  description={t.lead}
+  current={`mcp-${topic.id}`}
+  lang="de"
+  altLangPath={`/en/mcp/${topic.en.slug}/`}
+>
+  <JsonLd
+    slot="jsonld"
+    type="SoftwareApplication"
+    name={t.h1}
+    description={t.lead}
+    url={`/mcp/${t.slug}/`}
+  />
+  <JsonLd slot="jsonld" type="FAQPage" faq={t.faq} />
+
+  <h1>{t.h1}</h1>
+  <p class="lead">{t.lead}</p>
+
+  <h2>Was das MCP-Tool macht</h2>
+  <p>{t.what}</p>
+
+  <h2>In Claude oder ChatGPT nutzen</h2>
+  <p>
+    Verbinde den InfraNode-MCP-Server einmal mit deinem KI-Client (siehe
+    <a href="/mcp/">MCP-Server einrichten</a>). Danach genügt eine Frage in
+    natürlicher Sprache, der Assistent ruft das Tool
+    <code>{topic.tool}</code> selbst auf:
+  </p>
+  <blockquote>{t.examplePrompt}</blockquote>
+  <p>
+    Der MCP-Server ist kostenlos, keylos und remote über Streamable HTTP unter
+    <code>https://mcp.infranode.dev/mcp</code> erreichbar. Kein API-Schlüssel,
+    keine Installation.
+  </p>
+
+  <h2>Lieber per REST-API?</h2>
+  <p>
+    Dieselben Daten gibt es auch ohne KI-Agent als klassische
+    <a href={`/daten/${t.dataSlug}/`}>REST-API</a>, ebenfalls kostenlos und
+    keylos.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <dl class="faq">
+    {t.faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+
+  <h2>Weitere MCP-Datentools</h2>
+  <ul>
+    {others.map((o) => <li><a href={`/mcp/${o.de.slug}/`}>{o.de.h1}</a></li>)}
+  </ul>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  blockquote {
+    margin: 0.6rem 0;
+    padding: 0.6rem 1rem;
+    border-left: 3px solid var(--color-primary);
+    background: var(--bg-soft);
+    font-style: italic;
+  }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>
