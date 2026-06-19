@@ -420,10 +420,14 @@ def create_app() -> FastAPI:
             https_only=settings.admin_cookie_https_only,
             max_age=60 * 60 * 8,
         )
+    # Keylose, oeffentliche Read-API: "*" ist der Default (siehe config.py). "*"
+    # und allow_credentials=True schliessen sich per CORS-Spec aus -> Credentials
+    # nur bei expliziter Whitelist. Admin ist same-origin und damit CORS-neutral.
+    cors_wildcard = "*" in settings.cors_origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,  # NIE ["*"]
-        allow_credentials=True,
+        allow_origins=settings.cors_origins,
+        allow_credentials=not cors_wildcard,
         allow_methods=["GET"],
         allow_headers=["*"],
     )

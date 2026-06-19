@@ -25,16 +25,18 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
     redis_url: str = "redis://redis:6379/0"
-    # Whitelist statt "*" (REST-Regel 5). Phase 12: additiv um den Astro-Dev-
-    # Port (4321) ergaenzt, damit die "Try it"-Konsole der Doku-Seite die Live-
-    # API rein client-seitig aufrufen kann, ohne von der CORS-Policy still
-    # blockiert zu werden (T-12-TRYIT-CORS). Doku + API liegen beide auf
-    # infranode.dev. Nie "*"; per INFRANODE_CORS_ORIGINS ueberschreibbar.
-    cors_origins: list[str] = [
-        "http://localhost:3000",
-        "http://localhost:4321",
-        "https://infranode.dev",
-    ]
+    # CORS: die oeffentliche API ist KEYLOS, READ-ONLY und liefert offene Daten,
+    # die explizit fuer beliebige Browser-/Client-Apps gedacht sind (Vibecoder,
+    # Dashboards, Starter-Templates auf Vercel/Netlify/localhost). Fuer so eine
+    # oeffentliche Datendienst-API ist "*" der Standard (vgl. Open-Meteo,
+    # Nominatim): die alte Whitelist hat jeden Cross-Origin-Browser-Client still
+    # blockiert. Bewusste Abkehr von der frueheren "nie *"-Regel; sie galt fuer
+    # credentialed APIs. Hier wird allow_credentials in main.py auf False
+    # gesetzt, sobald "*" aktiv ist (CORS-Spec: "*" + credentials schliessen sich
+    # aus). Das Admin-Dashboard ist same-origin (Cookie cs_admin SameSite=strict)
+    # und von CORS unberuehrt. Per INFRANODE_CORS_ORIGINS auf eine Whitelist
+    # einschraenkbar (dann wird wieder credentialed CORS verwendet).
+    cors_origins: list[str] = ["*"]
 
     # Rate-Limit (API-06), limits/slowapi-Format ("<zahl>/<einheit>"). Die API ist
     # keylos/offen; limit_anon ist das IP-Budget fuer ALLE Clients (DoS-Schutz).
