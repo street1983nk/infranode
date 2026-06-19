@@ -48,6 +48,38 @@ const PARTIAL = [
     reason: "kuratierte Autobahnen je Stadt",
     note: "Quelle aktuell ohne Daten",
   },
+  {
+    key: "sharing",
+    label: "Bike-/Scooter-Sharing",
+    path: "/api/v1/cities/{slug}/sharing",
+    op: "getCitySharing",
+    reason: "kuratierte GBFS-Systeme je Stadt",
+    note: "",
+  },
+  {
+    key: "station-departures",
+    label: "Bahnhof-Abfahrten (Fernverkehr)",
+    path: "/api/v1/cities/{slug}/station-departures",
+    op: "getCityStationDepartures",
+    reason: "kuratierte Fernverkehrs-Hbf",
+    note: "",
+  },
+  {
+    key: "station-arrivals",
+    label: "Bahnhof-Ankünfte (Fernverkehr)",
+    path: "/api/v1/cities/{slug}/station-arrivals",
+    op: "getCityStationArrivals",
+    reason: "kuratierte Fernverkehrs-Hbf",
+    note: "",
+  },
+  {
+    key: "land-values",
+    label: "Bodenrichtwerte",
+    path: "/api/v1/cities/{slug}/land-values",
+    op: "getCityLandValues",
+    reason: "BORIS-WFS je Bundesland (aktuell Berlin)",
+    note: "",
+  },
 ];
 
 const total = coverage.total_cities;

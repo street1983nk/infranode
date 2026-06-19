@@ -262,6 +262,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                     ident=ident,
                     user_agent=request.headers.get("user-agent", ""),
                     path=request.url.path,
+                    status_code=response.status_code,
                     now=datetime.now(UTC),
                 )
         except Exception as exc:  # noqa: BLE001 - Metrik-Verlust crasht nie den Request

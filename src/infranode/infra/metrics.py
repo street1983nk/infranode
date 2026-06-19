@@ -137,20 +137,22 @@ def consumer_hour(now) -> str:
 
 
 async def record_consumer(
-    redis, *, ident: str, user_agent: str, path: str, now
+    redis, *, ident: str, user_agent: str, path: str, status_code: int, now
 ) -> None:
     """Zaehlt einen aktiven Consumer in den Stunden-Bucket (Anzahl + letzte Meta).
 
     ``ident`` = echte Client-IP oder ``"mcp"`` (interner MCP-Server-Aufruf). Der
-    Meta-Hash haelt User-Agent + letzten Pfad (last-write-wins) zur App-Erkennung.
-    Beide Keys laufen nach ``_CONSUMER_TTL`` selbst ab. Graceful: jeder Redis-
-    Fehler degradiert still und crasht NIE den Request.
+    Meta-Hash haelt User-Agent + letzten Pfad + letzten HTTP-Status (last-write-
+    wins, tab-getrennt) zur App-Erkennung und damit im Digest sichtbar ist, ob ein
+    (Scanner-)Pfad 200 oder 404 zurueckgab. Beide Keys laufen nach ``_CONSUMER_TTL``
+    selbst ab. Graceful: jeder Redis-Fehler degradiert still und crasht NIE den
+    Request.
     """
     try:
         hour = consumer_hour(now)
         ckey = f"{_CONSUMER_PREFIX}{hour}"
         mkey = f"{_CONSUMER_PREFIX}meta:{hour}"
-        meta = f"{(user_agent or '')[:200]}\t{path}"
+        meta = f"{(user_agent or '')[:200]}\t{path}\t{status_code}"
         pipe = redis.pipeline()
         pipe.hincrby(ckey, ident, 1)
         pipe.hset(mkey, ident, meta)
@@ -162,10 +164,12 @@ async def record_consumer(
 
 
 async def read_consumers(redis, hour: str) -> list[dict]:
-    """Liest die aktiven Consumer eines Stunden-Buckets (Anzahl + User-Agent + Pfad).
+    """Liest die aktiven Consumer eines Stunden-Buckets (Anzahl + UA + Pfad + Status).
 
-    Rueckgabe je Eintrag: ``{ident, count, user_agent, last_path}``, nach Anzahl
-    absteigend. Graceful: bei einem Redis-Fehler -> leere Liste.
+    Rueckgabe je Eintrag: ``{ident, count, user_agent, last_path, last_status}``,
+    nach Anzahl absteigend. ``last_status`` ist der HTTP-Status des letzten Requests
+    als String (``""`` fuer Alt-Eintraege ohne Status-Feld). Graceful: bei einem
+    Redis-Fehler -> leere Liste.
     """
     try:
         counts = await redis.hgetall(f"{_CONSUMER_PREFIX}{hour}")
@@ -178,13 +182,18 @@ async def read_consumers(redis, hour: str) -> list[dict]:
     out = []
     for ident_raw, count_raw in (counts or {}).items():
         ident = _to_bytes(ident_raw).decode()
-        ua, _, last_path = meta.get(ident, "\t").partition("\t")
+        # Tab-getrennt: UA \t Pfad \t Status. Alt-Eintraege (ohne Status) -> "".
+        parts = meta.get(ident, "").split("\t")
+        ua = parts[0] if parts else ""
+        last_path = parts[1] if len(parts) > 1 else ""
+        last_status = parts[2] if len(parts) > 2 else ""
         out.append(
             {
                 "ident": ident,
                 "count": int(count_raw),
                 "user_agent": ua,
                 "last_path": last_path,
+                "last_status": last_status,
             }
         )
     out.sort(key=lambda c: c["count"], reverse=True)

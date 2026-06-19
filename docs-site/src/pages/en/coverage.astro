@@ -46,6 +46,38 @@ const PARTIAL = [
     reason: "curated motorways per city",
     note: "Source currently has no data",
   },
+  {
+    key: "sharing",
+    label: "Bike/scooter sharing",
+    path: "/api/v1/cities/{slug}/sharing",
+    op: "getCitySharing",
+    reason: "curated GBFS systems per city",
+    note: "",
+  },
+  {
+    key: "station-departures",
+    label: "Station departures (long-distance)",
+    path: "/api/v1/cities/{slug}/station-departures",
+    op: "getCityStationDepartures",
+    reason: "curated long-distance main stations",
+    note: "",
+  },
+  {
+    key: "station-arrivals",
+    label: "Station arrivals (long-distance)",
+    path: "/api/v1/cities/{slug}/station-arrivals",
+    op: "getCityStationArrivals",
+    reason: "curated long-distance main stations",
+    note: "",
+  },
+  {
+    key: "land-values",
+    label: "Land values",
+    path: "/api/v1/cities/{slug}/land-values",
+    op: "getCityLandValues",
+    reason: "BORIS WFS per federal state (currently Berlin)",
+    note: "",
+  },
 ];
 
 const total = coverage.total_cities;
