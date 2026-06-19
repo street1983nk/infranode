@@ -658,8 +658,11 @@ class StationCatalogPayload(BaseModel):
     Listet ALLE DB-Bahnhoefe im Stadtgebiet (Zuordnung ueber den amtlichen
     Gemeindeschluessel: StaDa ``municipalityCode`` == Stadt-``ags``), nicht nur
     den Fernverkehrs-Hbf. Je Bahnhof traegt ``stations`` ein schlankes dict mit
-    ``eva`` (EVA-Nummer der Haupt-Betriebsstelle, fuer die Per-Bahnhof-Boards
-    ``/stations/{eva}/departures``), ``name``, ``category`` (1-7, je kleiner desto
+    ``eva`` (Haupt-EVA-Nummer, fuer die Per-Bahnhof-Boards
+    ``/stations/{eva}/departures``), ``evas`` (ALLE EVA-Nummern des Bahnhofs;
+    Grossbahnhoefe haben mehrere Ebenen, deren Abfahrtstafel teils an einer
+    Ebenen-EVA haengt statt an der Haupt-EVA -> Fallback fuer Split-Bahnhoefe),
+    ``name``, ``category`` (1-7, je kleiner desto
     groesser/wichtiger der Bahnhof), ``lat``/``lon`` (aus der EVA-Geokoordinate)
     und ``zip`` (PLZ). ``station_count`` = Anzahl. Quelle: DB StaDa (CC BY 4.0).
     Mutable Default via ``Field(default_factory=list)`` (ruff B006).

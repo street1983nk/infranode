@@ -53,8 +53,18 @@ def _normalize(station: dict) -> dict | None:
     lat = coords[1] if len(coords) == 2 else None
     lon = coords[0] if len(coords) == 2 else None
     addr = station.get("mailingAddress") or {}
+    # Alle EVA-Nummern: Grossbahnhoefe haben mehrere Ebenen mit eigener EVA, und
+    # die Abfahrtstafel (/plan) haengt teils an einer Ebenen-EVA, nicht an der
+    # Haupt-EVA. ``eva`` = Haupt-EVA (Bequemlichkeit), ``evas`` = alle (Fallback
+    # fuer Split-Bahnhoefe, damit jeder Bahnhof per Board nutzbar ist).
+    all_evas = [
+        str(e["number"])
+        for e in (station.get("evaNumbers") or [])
+        if e.get("number") is not None
+    ]
     return {
         "eva": str(eva["number"]),
+        "evas": all_evas,
         "name": station.get("name"),
         "category": station.get("category"),
         "lat": lat,
@@ -82,7 +92,12 @@ async def fetch_all_stations(
         "DB-Api-Key": api_key,
         "Accept": "application/json",
     }
-    resp = await http.get(_BASE, params={"limit": _LIMIT}, headers=headers)
+    # Die bundesweite Liste ist gross (~8 MB / ~13 s); eigener grosszuegiger
+    # Timeout statt des knappen globalen http-Defaults. Ergebnis wird lange
+    # gecacht (24h/30d) + SWR-warmgehalten, der Abruf passiert also selten.
+    resp = await http.get(
+        _BASE, params={"limit": _LIMIT}, headers=headers, timeout=60.0
+    )
     resp.raise_for_status()
     body = resp.json()
     result = body.get("result", []) if isinstance(body, dict) else []
