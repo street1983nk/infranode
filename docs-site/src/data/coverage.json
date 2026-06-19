@@ -18,7 +18,30 @@
    "nuernberg"
   ],
   "land-values": [
-   "berlin"
+   "berlin",
+   "braunschweig",
+   "bremen",
+   "bremerhaven",
+   "cottbus",
+   "darmstadt",
+   "erfurt",
+   "frankfurt-am-main",
+   "goettingen",
+   "hamburg",
+   "hanau",
+   "hannover",
+   "hildesheim",
+   "jena",
+   "kassel",
+   "offenbach-am-main",
+   "oldenburg",
+   "osnabrueck",
+   "potsdam",
+   "rostock",
+   "salzgitter",
+   "schwerin",
+   "wiesbaden",
+   "wolfsburg"
   ],
   "road-events": [
    "berlin",
