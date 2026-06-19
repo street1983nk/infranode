@@ -8,18 +8,34 @@
 // (T-12-SEO-INVALID: invalid schema waere schlechter als keins, daher nur
 // Kernfelder).
 interface Props {
-  type: "WebAPI" | "APIReference" | "FAQPage" | "SoftwareApplication";
-  // APIReference / SoftwareApplication
+  type:
+    | "WebAPI"
+    | "APIReference"
+    | "FAQPage"
+    | "SoftwareApplication"
+    | "Dataset";
+  // APIReference / SoftwareApplication / Dataset
   name?: string;
   abstract?: string;
   url?: string;
-  // WebAPI / SoftwareApplication
+  // WebAPI / SoftwareApplication / Dataset
   description?: string;
   documentation?: string;
   // SoftwareApplication
   applicationCategory?: string;
   // FAQPage: Liste von Frage/Antwort-Paaren (q/a, reiner Text).
   faq?: { q: string; a: string }[];
+  // Dataset (DX: Google Dataset Search). Konservativ nach schema.org/Dataset.
+  keywords?: string[];
+  license?: string;
+  identifier?: string; // z.B. DOI-URL
+  spatialCoverage?: string;
+  temporalCoverage?: string;
+  variableMeasured?: string[];
+  creatorName?: string;
+  // distribution[]: je Bezugsquelle eine DataDownload (contentUrl + Format).
+  distributions?: { url: string; format: string; name?: string }[];
+  sameAs?: string[];
 }
 
 const {
@@ -31,6 +47,15 @@ const {
   documentation,
   applicationCategory,
   faq,
+  keywords,
+  license,
+  identifier,
+  spatialCoverage,
+  temporalCoverage,
+  variableMeasured,
+  creatorName,
+  distributions,
+  sameAs,
 } = Astro.props;
 
 const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
@@ -85,6 +110,43 @@ if (type === "WebAPI") {
       "@type": "Organization",
       name: "InfraNode",
     },
+  };
+} else if (type === "Dataset") {
+  data = {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name: name ?? "InfraNode: Open Data deutscher Großstädte",
+    description:
+      description ??
+      "Normalisierte offene Daten für deutsche Großstädte über eine kostenlose REST-API: Wetter, Luftqualität, Verkehr, ÖPNV und mehr.",
+    url: url ?? `${site}/staedte/`,
+    license: license ?? "https://www.govdata.de/dl-de/by-2-0",
+    isAccessibleForFree: true,
+    creator: {
+      "@type": "Organization",
+      name: creatorName ?? "InfraNode",
+      url: `${site}/`,
+    },
+    ...(keywords && keywords.length ? { keywords } : {}),
+    ...(spatialCoverage
+      ? { spatialCoverage: { "@type": "Place", name: spatialCoverage } }
+      : {}),
+    ...(temporalCoverage ? { temporalCoverage } : {}),
+    ...(variableMeasured && variableMeasured.length
+      ? { variableMeasured }
+      : {}),
+    ...(identifier ? { identifier } : {}),
+    ...(sameAs && sameAs.length ? { sameAs } : {}),
+    ...(distributions && distributions.length
+      ? {
+          distribution: distributions.map((d) => ({
+            "@type": "DataDownload",
+            ...(d.name ? { name: d.name } : {}),
+            encodingFormat: d.format,
+            contentUrl: d.url,
+          })),
+        }
+      : {}),
   };
 } else {
   data = {

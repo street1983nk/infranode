@@ -54,6 +54,7 @@ from infranode.adapters.tankerkoenig import fetch_fuel_prices
 from infranode.adapters.uba import fetch_air_uba
 from infranode.adapters.wikidata import fetch_city_base
 from infranode.api.errors import UnprocessableError, UpstreamError
+from infranode.archive.boris_db import read_land_values
 from infranode.archive.inkar_db import read_indicators
 from infranode.archive.kba_db import read_vehicle_registrations
 from infranode.archive.mastr_db import read_energy
@@ -67,6 +68,7 @@ from infranode.normalization.mappers.autobahn import (
     map_autobahn_webcams,
 )
 from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
+from infranode.normalization.mappers.boris import map_land_values
 from infranode.normalization.mappers.db_timetables import (
     map_station_arrivals,
     map_station_departures,
@@ -2017,6 +2019,67 @@ async def city_indicators(slug: str, request: Request) -> dict:
         wikidata_qid=entry.qid,
     )
     await append_record(record, source="inkar")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
+@router.get("/cities/{slug}/land-values")
+async def city_land_values(slug: str, request: Request) -> dict:
+    """Liefert die aggregierten amtlichen Bodenrichtwerte je Stadt (DATA-35).
+
+    Ablauf wie ``city_indicators`` (Store-read, KEIN resilient_client): Register-
+    Lookup (unbekannt -> 404), Toggle-Pruefung (aus -> 200 disabled), Coverage-
+    Pruefung (BORIS ist pro Bundesland foederiert -> Stadt ohne Landes-WFS liefert
+    ehrlich ``not_covered`` statt leerem ``ok``), parametrisierter Read ueber
+    ``read_land_values`` aus dem Bulk-Datensatz. Vier ``source_status``:
+    - ``disabled``: ``enable_boris`` per Env-Toggle aus -> data None
+    - ``not_covered``: Bundesland der Stadt hat (noch) keinen BORIS-WFS -> data None
+    - ``not_ingested``: abgedeckt, aber kein Snapshot -> data None, kein 5xx
+    - ``ok``: gemappte Bodenrichtwert-Kennzahl (Median/Min/Max + Zonen + Stichtag)
+
+    KRITISCH (kein Bulk-Upstream im Request-Pfad): liest AUSSCHLIESSLICH aus dem
+    vorverarbeiteten Datensatz; die Landes-WFS-Aggregation laeuft offline als Batch.
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_boris:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    # Teilabdeckung (GOV-honesty): nicht-abgedecktes Bundesland -> ehrliches
+    # not_covered (200, data null) statt verschleierndem leerem ok.
+    if not is_covered("land-values", entry.slug):
+        return _not_covered("land-values")
+
+    row = read_land_values(entry.slug)
+    if row is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_land_values(
+        entry.slug,
+        row,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    await append_record(record, source="boris")
 
     return {
         "data": record.model_dump(mode="json"),

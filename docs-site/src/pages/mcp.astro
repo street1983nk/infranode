@@ -1,6 +1,6 @@
 ---
 // MCP-Server-Seite (/mcp): erklaert kurz MCP fuer Devs, zeigt die Einrichtung
-// in Claude Code und Claude Desktop (CodeTabs) und listet die 38 Tools nach
+// in Claude Code und Claude Desktop (CodeTabs) und listet die 39 Tools nach
 // Thema gruppiert. Quelle der Einrichtungs-Snippets ist docs/mcp-install.md.
 import Docs from "../layouts/Docs.astro";
 import CodeTabs from "../components/CodeTabs.astro";
@@ -39,7 +39,7 @@ const mcpRemoteConfig = [
   `}`,
 ].join("\n");
 
-// Die 38 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
+// Die 39 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
 const toolGroups = [
   {
     title: "Stammdaten und Geo",
@@ -99,6 +99,7 @@ const toolGroups = [
       ["tourism", "Gästeübernachtungen und Ankünfte (Tourismus)"],
       ["construction", "Baugenehmigungen (Wohngebäude und Wohnungen)"],
       ["indicators", "Sozialökonomische Indikatoren je Kreis (INKAR/BBSR, ~70 Kennzahlen)"],
+      ["land_values", "Amtliche Bodenrichtwerte je Stadt, aggregiert (BORIS, Bauland)"],
     ],
   },
   {
@@ -134,7 +135,7 @@ const faq = [
   },
   {
     q: "Welche Daten liefert der InfraNode-MCP-Server?",
-    a: "38 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bike- und Scooter-Sharing, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
+    a: "39 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Bike- und Scooter-Sharing, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
   },
   {
     q: "Mein MCP-Client unterstützt nur lokale stdio-Server. Wie verbinde ich InfraNode?",
@@ -144,12 +145,16 @@ const faq = [
     q: "Kann ich den InfraNode-MCP-Server selbst hosten?",
     a: "Ja, lokal über stdio. Der Quellcode ist öffentlich auf GitHub verfügbar (Apache-2.0).",
   },
+  {
+    q: "Ist der InfraNode-MCP-Server offiziell gelistet?",
+    a: "Ja. Der Server ist im offiziellen MCP Registry (registry.modelcontextprotocol.io) unter dem Namen dev.infranode/infranode gelistet.",
+  },
 ];
 ---
 
 <Docs
   title="MCP-Server"
-  description="Gehosteter InfraNode-MCP-Server unter mcp.infranode.dev: 38 Tools für KI-Agenten, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel. Connector für Claude und ChatGPT."
+  description="Gehosteter InfraNode-MCP-Server unter mcp.infranode.dev: 39 Tools für KI-Agenten, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel. Connector für Claude und ChatGPT."
   current="mcp"
   lang="de"
   altLangPath="/en/mcp/"
@@ -158,17 +163,20 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP-Server"
-    description="Gehosteter MCP-Server mit 38 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
+    description="Gehosteter MCP-Server mit 39 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
   <h1>MCP-Server</h1>
   <p>
     Der InfraNode-MCP-Server ist ein kostenloser, gehosteter
-    Model-Context-Protocol-Server, der KI-Agenten über 38 Tools Zugriff auf
+    Model-Context-Protocol-Server, der KI-Agenten über 39 Tools Zugriff auf
     offene Daten von 84 deutschen Großstädten gibt, ohne API-Schlüssel. Er stellt
     die Stadtdaten als Werkzeuge bereit, die ein Agent direkt aufruft, ohne dass
-    du HTTP-Aufrufe von Hand schreibst.
+    du HTTP-Aufrufe von Hand schreibst. Der Server ist im offiziellen
+    <a href="https://registry.modelcontextprotocol.io">MCP Registry</a> unter dem
+    Namen <code>dev.infranode/infranode</code> gelistet, mit Tool-Übersicht und
+    Score auch bei <a href="https://glama.ai/mcp/servers/@street1983nk/infranode">Glama</a>.
   </p>
 
   <div class="tldr">
@@ -209,7 +217,7 @@ const faq = [
     labels={["Claude Code (Remote)", "Connector per URL", "Lokal (stdio)"]}
   />
   <p>
-    Nach dem Hinzufügen stehen die 38 InfraNode-Tools im Agenten zur Verfügung.
+    Nach dem Hinzufügen stehen die 39 InfraNode-Tools im Agenten zur Verfügung.
     Der Zugriff ist lesend und ohne Schlüssel.
   </p>
 
@@ -248,7 +256,7 @@ const faq = [
 
   <h2>Tool-Übersicht</h2>
   <p>
-    Der Server stellt insgesamt 38 Tools bereit. Die meisten erwarten einen
+    Der Server stellt insgesamt 39 Tools bereit. Die meisten erwarten einen
     Stadt-Slug (zum Beispiel <code>berlin</code> oder <code>hamburg</code>);
     <code>pois</code> verlangt zusätzlich den Pflichtparameter <code>type</code>
     (z.B. <code>hospital</code>, <code>school</code>, <code>pharmacy</code>),

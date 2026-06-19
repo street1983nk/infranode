@@ -156,3 +156,11 @@ class SourceId(StrEnum):
     # CC-BY 4.0 = Tier A. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag;
     # die Keys sind eigene SecretStr-Felder (db_client_id/db_api_key).
     DB_TIMETABLES = "db_timetables"
+    # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Bulk, keylos). BORIS ist
+    # pro Bundesland foederiert (je Land ein eigener WFS, kein bundesweiter
+    # Single-Endpoint) -> die BORIS_WFS-Registry (api.v1.cities) mappt Bundesland
+    # -> WFS-Config. Lizenz Berlin = DL-DE/Zero 2.0 (DL_DE_ZERO_2_0 existiert
+    # bereits). Read-only Store-Lesung im Request-Pfad (wie INKAR/KBA), kein
+    # resilient_client. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag:
+    # getattr(settings, f"enable_{name}").
+    BORIS = "boris"

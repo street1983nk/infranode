@@ -38,7 +38,10 @@ class Settings(BaseSettings):
 
     # Rate-Limit (API-06), limits/slowapi-Format ("<zahl>/<einheit>"). Die API ist
     # keylos/offen; limit_anon ist das IP-Budget fuer ALLE Clients (DoS-Schutz).
-    limit_anon: str = "60/minute"
+    # 300/min (= 18.000/h pro IP): grosszuegig genug fuer Bulk-/Data-Science-Scans
+    # ueber alle Staedte x Endpunkte, ohne Scraping-Freibrief. Echter DoS-Schutz
+    # liegt bei Cloudflare + Circuit-Breaker (Upstream), nicht am App-Limit.
+    limit_anon: str = "300/minute"
     # Striktes Budget am Admin-Login gegen Passwort-Brute-Force (Security-Audit
     # 2026-06-10, HIGH-1). Eigener strenger @limiter.limit-Decorator auf der Route.
     limit_admin_login: str = "5/minute"
@@ -127,6 +130,11 @@ class Settings(BaseSettings):
     # liefert die Route 200 disabled (analog tankerkoenig/hvv_geofox). Toggle-Name
     # == SourceId-Wert (db_timetables) == _KNOWN_SOURCES-Eintrag.
     enable_db_timetables: bool = True
+    # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Bulk, keylos, pro
+    # Bundesland foederierter WFS). Keylos -> Default True analog enable_inkar/
+    # enable_kba. Read-only Store-Lesung im Request-Pfad. Toggle-Name ==
+    # SourceId-Wert (boris) == _KNOWN_SOURCES-Eintrag.
+    enable_boris: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True
@@ -285,6 +293,10 @@ class Settings(BaseSettings):
     # JSON-Datei (vorab geholte Indikator-Zeilenliste). None = der Batch holt die
     # Indikatoren live von www.inkar.de. NICHT im Request-Pfad.
     inkar_source_path: str | None = None
+    # BORIS-Bulk-Ingest (DATA-35): optionaler Pfad zu einer lokal vorgehaltenen
+    # JSON-Datei (vorab aggregierte Stadt-Zeilenliste). None = der Batch holt die
+    # Bodenrichtwerte live von den Landes-WFS (BORIS_WFS). NICHT im Request-Pfad.
+    boris_source_path: str | None = None
 
     # Optionaler Override des Upstream-User-Agents (RES-05). None = die
     # USER_AGENT-Konstante aus infra/http.py greift; per INFRANODE_HTTP_USER_AGENT

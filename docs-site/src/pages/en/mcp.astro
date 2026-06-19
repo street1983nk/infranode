@@ -95,6 +95,7 @@ const toolGroups = [
       ["tourism", "Guest overnight stays and arrivals (tourism)"],
       ["construction", "Building permits (residential buildings and dwellings)"],
       ["indicators", "Socioeconomic indicators per county (INKAR/BBSR, ~70 metrics)"],
+      ["land_values", "Official land values per city, aggregated (BORIS, building land)"],
     ],
   },
   {
@@ -130,7 +131,7 @@ const faq = [
   },
   {
     q: "What data does the InfraNode MCP server provide?",
-    a: "38 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, plus a cities and a sources overview, and a multi-city comparison.",
+    a: "39 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, plus a cities and a sources overview, and a multi-city comparison.",
   },
   {
     q: "My MCP client only supports local stdio servers. How do I connect InfraNode?",
@@ -140,12 +141,16 @@ const faq = [
     q: "Can I self-host the InfraNode MCP server?",
     a: "Yes, locally over stdio. The source code is available on GitHub (Apache-2.0).",
   },
+  {
+    q: "Is the InfraNode MCP server officially listed?",
+    a: "Yes. The server is listed in the official MCP Registry (registry.modelcontextprotocol.io) under the name dev.infranode/infranode.",
+  },
 ];
 ---
 
 <Docs
   title="MCP server"
-  description="Hosted InfraNode MCP server at mcp.infranode.dev: 38 tools for AI agents, remote over Streamable HTTP, no install, no API key. Connector for Claude and ChatGPT."
+  description="Hosted InfraNode MCP server at mcp.infranode.dev: 39 tools for AI agents, remote over Streamable HTTP, no install, no API key. Connector for Claude and ChatGPT."
   current="mcp"
   lang="en"
   altLangPath="/mcp/"
@@ -154,7 +159,7 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP server"
-    description="Hosted MCP server with 38 tools for open city data of 84 major German cities, key-free and free of charge."
+    description="Hosted MCP server with 39 tools for open city data of 84 major German cities, key-free and free of charge."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
@@ -163,7 +168,10 @@ const faq = [
     The InfraNode MCP server is a free, hosted Model Context Protocol server that
     gives AI agents access to open data for 84 major German cities through 38
     tools, with no API key. It exposes the city data as tools an agent calls
-    directly, so you do not write HTTP calls by hand.
+    directly, so you do not write HTTP calls by hand. The server is listed in the
+    official <a href="https://registry.modelcontextprotocol.io">MCP Registry</a>
+    under the name <code>dev.infranode/infranode</code>, with a tool overview and
+    score also on <a href="https://glama.ai/mcp/servers/@street1983nk/infranode">Glama</a>.
   </p>
 
   <div class="tldr">
@@ -204,7 +212,7 @@ const faq = [
     lang="en"
   />
   <p>
-    Once added, the 38 InfraNode tools are available in the agent. Access is
+    Once added, the 39 InfraNode tools are available in the agent. Access is
     read-only and key-free.
   </p>
 
@@ -241,7 +249,7 @@ const faq = [
 
   <h2>Tool overview</h2>
   <p>
-    The server provides 38 tools in total. Most expect a city slug (for example
+    The server provides 39 tools in total. Most expect a city slug (for example
     <code>berlin</code> or <code>hamburg</code>); <code>pois</code> also requires
     a <code>type</code> parameter (e.g. <code>hospital</code>,
     <code>school</code>, <code>pharmacy</code>), and

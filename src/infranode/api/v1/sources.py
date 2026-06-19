@@ -69,6 +69,9 @@ _KNOWN_SOURCES = (
     # DATA-34: DB Timetables (Bahnhof-Abfahrten Metropolen-Hbf, keyed Live, CC BY
     # 4.0). Name == enable_db_timetables == SourceId.DB_TIMETABLES.
     "db_timetables",
+    # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Bulk, keylos, pro
+    # Bundesland foederierter WFS). Name == enable_boris == SourceId.BORIS.
+    "boris",
     "bkg",
     "bundeswahl",
     "divi",
@@ -231,6 +234,15 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
     "db_timetables": {
         "license_id": "cc_by_4_0",
         "attribution": "Deutsche Bahn AG",
+    },
+    # DATA-35: BORIS Bodenrichtwerte. BORIS ist pro Bundesland foederiert; die
+    # Lizenz variiert je Land. Repraesentativ steht hier die aktuell aktive Quelle
+    # Berlin (DL-DE/Zero 2.0 = Tier A). Attribution wortgenau wie in der BORIS_WFS-
+    # Config (adapters.boris) und in DATA-LICENSES.md (T-11-SRC-DRIFT). Je Record
+    # traegt der Mapper die landesspezifische Lizenz aus dem Store.
+    "boris": {
+        "license_id": "dl_de_zero_2_0",
+        "attribution": "Geoportal Berlin / Bodenrichtwerte",
     },
     "bkg": {
         "license_id": "dl_de_by_2_0",

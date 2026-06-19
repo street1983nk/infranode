@@ -6,6 +6,7 @@
 // cities.json is exported from the single source CITY_REGISTRY. Regenerate:
 //   uv run python scripts/export-cities.py
 import Docs from "../../layouts/Docs.astro";
+import JsonLd from "../../components/JsonLd.astro";
 import cities from "../../data/cities.json";
 import { API_BASE } from "../../lib/codegen";
 
@@ -42,6 +43,59 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
   lang="en"
   altLangPath="/staedte/"
 >
+  <JsonLd
+    slot="jsonld"
+    type="Dataset"
+    name="InfraNode: Open Data for German Cities"
+    description={`Normalised open data for ${total} German cities via a free, key-less REST API: weather (DWD), air quality (Umweltbundesamt), traffic and roadworks (Autobahn), public-transport departures (GTFS/DB), base data (Wikidata) and more. Machine-readable as JSON; reproducible snapshots as CSV/Parquet.`}
+    url="/en/cities/"
+    license="https://www.govdata.de/dl-de/by-2-0"
+    identifier="https://doi.org/10.5281/zenodo.20752355"
+    creatorName="InfraNode"
+    spatialCoverage="Germany"
+    keywords={[
+      "open data",
+      "Germany",
+      "cities",
+      "smart city",
+      "air quality",
+      "weather",
+      "public transport",
+      "traffic",
+      "geospatial",
+      "REST API",
+    ]}
+    variableMeasured={[
+      "Temperature and weather conditions",
+      "Air quality (PM10, NO2, PM2.5, O3)",
+      "Roadworks and traffic situation",
+      "Public-transport stops and real-time departures",
+      "Population and area",
+      "Electric-vehicle charging points",
+      "Land values (BORIS, EUR/m²)",
+    ]}
+    sameAs={[
+      "https://doi.org/10.5281/zenodo.20752355",
+      "https://huggingface.co/datasets/Khaledc83/german-cities-open-data",
+    ]}
+    distributions={[
+      {
+        name: "InfraNode REST API (all cities)",
+        url: `${API_BASE}/cities`,
+        format: "application/json",
+      },
+      {
+        name: "Zenodo snapshot (CSV/Parquet, with DOI)",
+        url: "https://doi.org/10.5281/zenodo.20752355",
+        format: "text/csv",
+      },
+      {
+        name: "Hugging Face dataset",
+        url: "https://huggingface.co/datasets/Khaledc83/german-cities-open-data",
+        format: "text/csv",
+      },
+    ]}
+  />
   <h1>Cities</h1>
 
   <p>

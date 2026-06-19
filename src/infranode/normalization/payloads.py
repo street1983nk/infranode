@@ -648,6 +648,31 @@ class StationArrivalsPayload(BaseModel):
     arrivals: list[dict] = Field(default_factory=list)
 
 
+class LandValuesPayload(BaseModel):
+    """Aggregierte Bodenrichtwerte je Stadt (BORIS, Tier A, DATA-35).
+
+    Verdichtet die amtlichen Bodenrichtwert-Bauland-Zonen (BORIS, Bodenrichtwert-
+    Informationssystem der Gutachterausschuesse; Bauland = Wohnen/Misch/Gewerbe,
+    ohne Wald/Wasser/Landwirtschaft) im Stadtgebiet zu einer
+    Kennzahl: ``brw_median_eur_m2`` (Median des Bodenrichtwerts in EUR/m2),
+    ``brw_min_eur_m2``/``brw_max_eur_m2`` (Spanne) und ``zone_count`` (Anzahl der
+    beruecksichtigten Zonen). ``stichtag`` ist der Bewertungsstichtag des
+    Landes-WFS (ISO-Datum, z.B. "2026-01-01"). ``bbox_radius_deg`` dokumentiert
+    den Umkreis um das Stadtzentrum, ueber den aggregiert wurde (ehrliche
+    Methoden-Transparenz: kein amtlicher Stadtgrenzen-Schnitt, sondern eine
+    Bounding-Box). Regionale Aufloesung ist das Stadtgebiet; BORIS ist pro
+    Bundesland foederiert (ein Landes-WFS deckt alle Staedte des Landes ab).
+    """
+
+    kind: Literal["land_values"] = "land_values"
+    brw_median_eur_m2: float | None = None
+    brw_min_eur_m2: float | None = None
+    brw_max_eur_m2: float | None = None
+    zone_count: int = 0
+    stichtag: str | None = None
+    bbox_radius_deg: float | None = None
+
+
 PayloadUnion = Annotated[
     CityBaseDataPayload
     | AirQualityPayload
@@ -669,6 +694,7 @@ PayloadUnion = Annotated[
     | FuelPricePayload
     | SharingPayload
     | IndicatorsPayload
+    | LandValuesPayload
     | StationDeparturesPayload
     | StationArrivalsPayload
     | AdminBoundaryPayload

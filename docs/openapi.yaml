@@ -1794,6 +1794,60 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/land-values:
+    get:
+      tags: [cities]
+      summary: Amtliche Bodenrichtwerte je Stadt, aggregiert (BORIS, Tier A)
+      x-summary-en: Official land values per city, aggregated (BORIS, Tier A)
+      description: >-
+        Amtliche Bodenrichtwerte (BORIS, Bodenrichtwert-Informationssystem der
+        Gutachterausschüsse) je Stadt zu einer Bauland-Kennzahl aggregiert
+        (Bauland = Wohnen/Misch/Gewerbe, ohne Wald/Wasser/Landwirtschaft):
+        brw_median_eur_m2, brw_min_eur_m2, brw_max_eur_m2, zone_count, der
+        Bewertungsstichtag und der bbox_radius_deg (Umkreis um das Stadtzentrum).
+        BORIS ist pro Bundesland föderiert (je Land ein WFS). Toggle aus -> 200
+        source_status="disabled"; Bundesland ohne BORIS-WFS -> 200
+        source_status="not_covered" (mit covered_cities); abgedeckt, aber kein
+        Snapshot -> 200 source_status="not_ingested".
+      x-description-en: >-
+        Official land values (BORIS, the surveyor committees' land-value
+        information system) per city, aggregated into a building-land metric
+        (building land = residential/mixed/commercial, excluding
+        forest/water/farmland): brw_median_eur_m2, brw_min_eur_m2,
+        brw_max_eur_m2, zone_count, the valuation reference date and
+        bbox_radius_deg (radius around the city centre). BORIS is federated per
+        federal state (one WFS per state). Toggle off -> 200
+        source_status="disabled"; state without a BORIS WFS -> 200
+        source_status="not_covered" (with covered_cities); covered but no
+        snapshot -> 200 source_status="not_ingested".
+      operationId: getCityLandValues
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bodenrichtwerte-Envelope (CanonicalRecord mit LandValuesPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/sharing:
     get:
       tags: [cities]

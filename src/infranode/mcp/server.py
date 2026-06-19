@@ -90,6 +90,8 @@ _register(tools.fuel_prices)
 _register(tools.sharing)
 # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
 _register(tools.indicators)
+# DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Tier A, aggregiert, Bauland).
+_register(tools.land_values)
 # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
 _register(tools.station_departures)
 _register(tools.station_arrivals)

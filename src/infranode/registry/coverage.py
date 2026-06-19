@@ -33,7 +33,9 @@ Alle uebrigen city-/live-Endpunkte sind flaechendeckend (84/84).
 from __future__ import annotations
 
 from infranode.adapters.autobahn import _CITY_ROADS
+from infranode.adapters.boris import BORIS_WFS
 from infranode.adapters.lhp import _CITY_PEGEL
+from infranode.registry.cities import CITY_REGISTRY
 
 # road-events: gespiegelt aus ``api.v1.cities.CONNECTOR_MAP`` (siehe Modul-Docstring).
 # Die Assertion in cities.py haelt diese Liste mit der CONNECTOR_MAP synchron.
@@ -105,6 +107,14 @@ _STATION_CITIES: frozenset[str] = frozenset(
     }
 )
 
+# land-values (DATA-35): BORIS ist pro Bundesland foederiert -> abgedeckt sind
+# genau die Register-Staedte, deren Bundesland (``state``) einen Eintrag in
+# ``adapters.boris.BORIS_WFS`` hat. Direkt aus BORIS_WFS + Register ABGELEITET
+# (kein Duplizieren): ein neuer Landes-WFS erweitert die Abdeckung automatisch.
+_LAND_VALUES_CITIES: frozenset[str] = frozenset(
+    c.slug for c in CITY_REGISTRY if c.state in BORIS_WFS
+)
+
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
 # Die Kennung entspricht dem letzten Pfadsegment der Route (``/cities/{slug}/<key>``).
 PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
@@ -116,6 +126,7 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "station-departures": _STATION_CITIES,
     # station-arrivals teilt dieselbe STATION_EVAS-Map (gleiche Bahnhoefe).
     "station-arrivals": _STATION_CITIES,
+    "land-values": _LAND_VALUES_CITIES,
 }
 
 

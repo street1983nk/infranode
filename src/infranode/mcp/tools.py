@@ -391,6 +391,23 @@ async def indicators(slug: str) -> dict:
     return await client.get_resource(slug, "indicators")
 
 
+async def land_values(slug: str) -> dict:
+    """Get aggregated official land values (Bodenrichtwerte) for a German city.
+
+    Sourced from BORIS (the surveyor committees' land-value information system),
+    federated per federal state. Returns a building-land summary
+    (residential/mixed/commercial, excluding forest/water/farmland): median, min
+    and max land value in EUR/m2, the number of zones, the valuation reference
+    date and the bounding-box radius the aggregate was computed over. Read-only.
+    Coverage is partial (per state); ``source_status`` is ``not_covered`` for
+    states without a BORIS WFS yet.
+
+    Args:
+        slug: City slug from ``list_cities``, e.g. ``"berlin"``.
+    """
+    return await client.get_resource(slug, "land-values")
+
+
 async def station_departures(slug: str) -> dict:
     """Get live long-distance train departures from a city's major stations.
 
