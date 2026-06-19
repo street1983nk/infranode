@@ -33,7 +33,7 @@ Alle uebrigen city-/live-Endpunkte sind flaechendeckend (84/84).
 from __future__ import annotations
 
 from infranode.adapters.autobahn import _CITY_ROADS
-from infranode.adapters.boris import BORIS_WFS
+from infranode.adapters.boris import BORIS_SHAPEFILE, BORIS_WFS
 from infranode.adapters.lhp import _CITY_PEGEL
 from infranode.registry.cities import CITY_REGISTRY
 
@@ -108,11 +108,13 @@ _STATION_CITIES: frozenset[str] = frozenset(
 )
 
 # land-values (DATA-35): BORIS ist pro Bundesland foederiert -> abgedeckt sind
-# genau die Register-Staedte, deren Bundesland (``state``) einen Eintrag in
-# ``adapters.boris.BORIS_WFS`` hat. Direkt aus BORIS_WFS + Register ABGELEITET
-# (kein Duplizieren): ein neuer Landes-WFS erweitert die Abdeckung automatisch.
+# genau die Register-Staedte, deren Bundesland (``state``) entweder einen offenen
+# WFS (``BORIS_WFS``) ODER einen offenen Shapefile-Download (``BORIS_SHAPEFILE``,
+# NW/ST) hat. Direkt aus beiden Maps + Register ABGELEITET (kein Duplizieren): ein
+# neues Land erweitert die Abdeckung automatisch.
+_BORIS_STATES = set(BORIS_WFS) | set(BORIS_SHAPEFILE)
 _LAND_VALUES_CITIES: frozenset[str] = frozenset(
-    c.slug for c in CITY_REGISTRY if c.state in BORIS_WFS
+    c.slug for c in CITY_REGISTRY if c.state in _BORIS_STATES
 )
 
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.

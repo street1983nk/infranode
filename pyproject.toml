@@ -62,6 +62,12 @@ dev = [
 mcp = [
     "mcp[cli]==1.27.2",
 ]
+# BORIS-Shapefile-Ingest (DATA-35): Laender ohne offenen WFS (NW/ST) liefern die
+# Bodenrichtwerte nur als Shapefile-Download. pyshp (pure-python, .shp/.dbf) NUR
+# fuer den Offline-Bulk-Ingest, NIE im Live-Docker-Image/Request-Pfad (Pitfall 1).
+ingest = [
+    "pyshp==2.3.1",
+]
 # Optionale Daten-Explorer-Schicht (DuckDB-Query gegen lokale JSONL-Daten, OPS-09).
 # Eigene Gruppe, NIE in [project] dependencies: duckdb darf nicht ins Live-Docker-
 # Image (Image-Size/Memory auf CAX11, ARM/4 GB, nicht im Request-Hotpath, Pitfall 1).

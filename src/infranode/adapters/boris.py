@@ -270,6 +270,72 @@ BORIS_WFS: dict[str, BorisWfsConfig] = {
 }
 
 
+@dataclass(frozen=True)
+class BorisShapefileConfig:
+    """Download-Config eines Bundeslandes OHNE offenen WFS (NW/ST, nur Shapefile).
+
+    Reine Daten (kein pyshp-Import hier - der laeuft NUR im Offline-Ingest
+    ``ingest.boris_shapefile``, nie im Live-Request-Pfad). ``shp_glob`` waehlt die
+    relevante .shp im ZIP (z.B. der Bauland-Layer bei ST). ``ags_field`` (dbf) ist
+    der 8-stellige Gemeindeschluessel fuer den Stadt-Filter (NW); ist er ``None``
+    (ST hat kein AGS-Feld), wird ueber die Geometrie-Bounding-Box gefiltert.
+    ``value_decimal_comma`` behandelt das deutsche Dezimalkomma (NW: "1,1").
+    """
+
+    url: str
+    shp_glob: str
+    value_field: str
+    license_id: str
+    attribution: str
+    license_url: str
+    land: str
+    value_decimal_comma: bool = False
+    ags_field: str | None = None
+    entwicklung_field: str | None = None
+    building_codes: tuple[str, ...] = ()
+    crs_epsg: int = 25832
+
+
+# Bundeslaender OHNE offenen WFS, aber mit offenem Shapefile-Download (DATA-35,
+# Welle 4). Coverage wird zusammen mit BORIS_WFS abgeleitet.
+BORIS_SHAPEFILE: dict[str, BorisShapefileConfig] = {
+    # NRW [VERIFIED 2026-06-19] - landesweites Shapefile (~212 MB), AGS-Feld GESL,
+    # Bauland via ENTW='B', BRW mit Dezimalkomma. dl-de/zero.
+    "NW": BorisShapefileConfig(
+        url=(
+            "https://www.opengeodata.nrw.de/produkte/infrastruktur_bauen_wohnen/"
+            "boris/BRW/BRW_EPSG25832_Shape.zip"
+        ),
+        shp_glob="*.shp",
+        value_field="BRW",
+        value_decimal_comma=True,
+        ags_field="GESL",
+        entwicklung_field="ENTW",
+        building_codes=("B",),
+        license_id="dl_de_zero_2_0",
+        attribution="Land NRW / GeoBasis NRW",
+        license_url="https://www.govdata.de/dl-de/zero-2-0",
+        land="Nordrhein-Westfalen",
+    ),
+    # Sachsen-Anhalt [VERIFIED 2026-06-19] - ZIP (~47 MB) mit eigenem Bauland-Layer
+    # (bereits ENTWZ='B' gefiltert), KEIN AGS-Feld -> Stadt-Filter per Geometrie-
+    # Bounding-Box. dl-de/by.
+    "ST": BorisShapefileConfig(
+        url=(
+            "https://geodatenportal.sachsen-anhalt.de/gfds/datei/anzeigen/"
+            "id/646905,501/BRW_20260101.ZIP"
+        ),
+        shp_glob="*BRW_Bauland*.shp",
+        value_field="BRW",
+        ags_field=None,
+        license_id="dl_de_by_2_0",
+        attribution="© GeoBasis-DE / LVermGeo LSA, dl-de/by-2-0",
+        license_url="https://www.govdata.de/dl-de/by-2-0",
+        land="Sachsen-Anhalt",
+    ),
+}
+
+
 def city_bbox_radius_deg(population: int | None) -> float:
     """Leitet den Bounding-Box-Radius (Grad, Breitenrichtung) aus der Einwohnerzahl ab.
 
