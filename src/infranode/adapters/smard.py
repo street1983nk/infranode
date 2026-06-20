@@ -47,7 +47,10 @@ async def fetch_smard(http: httpx.AsyncClient, *, filter_id: str, region: str) -
         raise ValueError(f"unzulaessige SMARD-Region: {region!r}")
 
     empty = {
-        "filter_id": filter_id, "region": region, "value": None, "series_date": None,
+        "filter_id": filter_id,
+        "region": region,
+        "value": None,
+        "series_date": None,
     }
 
     index = await http.get(f"{_BASE}/{filter_id}/{region}/index_day.json")

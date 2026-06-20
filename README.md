@@ -13,7 +13,7 @@ fields and quirks, and several need portal registration. InfraNode normalizes
 ~20 categories, weather (DWD), air quality (UBA), public transit (incl. realtime
 departures), traffic, electricity price (SMARD), land values (BORIS), parking,
 charging, water levels, demographics, energy and more, for **84+ German cities**
-behind **one** interface, and serves it as an MCP server. **42 read-only tools,
+behind **one** interface, and serves it as an MCP server. **44 read-only tools,
 no API key, no account, no install.**
 
 Sources include the Deutscher Wetterdienst (DWD), Umweltbundesamt (UBA),
@@ -74,7 +74,7 @@ of failing the call.
 > Tip: call `list_cities` first to discover valid city slugs (e.g. `koeln`,
 > `berlin`, `hamburg`), then call any city-scoped tool.
 
-## Tools (42)
+## Tools (44)
 
 | Group | Tools |
 |-------|-------|
@@ -82,6 +82,7 @@ of failing the call.
 | **Weather & environment** | `weather`, `weather_warnings`, `air_quality`, `air_quality_live`, `pollen_uv`, `water_level`, `flood` |
 | **Mobility** | `transit`, `transit_departures`, `stations` (catalog), `station_board_departures`/`station_board_arrivals` (any station by EVA, incl. local trains + disruptions), `station_departures`, `station_arrivals`, `traffic`, `road_events`, `webcams`, `charging`, `sharing`, `fuel_prices` |
 | **City & people** | `get_city`, `geo`, `demographics`, `indicators`, `unemployment`, `tourism`, `construction`, `accidents`, `health`, `icu_live`, `holidays`, `election`, `events`, `pois` |
+| **Economy & real estate** | `land_values`, `tax_rates` (trade/property tax multipliers per municipality), `business_registrations` (founding dynamics per district) |
 | **Energy & vehicles** | `power_load`, `power_price`, `energy`, `vehicle_registrations` |
 
 All tools are annotated `readOnlyHint: true` / `destructiveHint: false` /

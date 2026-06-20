@@ -73,7 +73,9 @@ def _sign(payload: str, key: str) -> str:
     Hash): HMAC-SHA1 ist hier korrekt und kein schwacher-Hash-Befund.
     """
     digest = hmac.new(
-        key.encode("utf-8"), payload.encode("utf-8"), hashlib.sha1  # noqa: S324
+        key.encode("utf-8"),
+        payload.encode("utf-8"),
+        hashlib.sha1,  # noqa: S324
     ).digest()
     return base64.b64encode(digest).decode("ascii")
 

@@ -83,6 +83,11 @@ select = ["E", "F", "I", "UP", "B", "ASYNC", "S"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
+# scripts/ = einmalige Betriebs-/Ops-Helfer (Kuma-Setup, Deploy, Export-Gate),
+# keine ausgelieferte Library. Lange Zeilen (URLs, Shell-Befehle, Regex) sind hier
+# akzeptabel -> E501 ignorieren; alle uebrigen Regeln (F/B/I/S) bleiben aktiv,
+# damit echte Bugs (unbenutzte Importe, zip-strict) weiter gefangen werden.
+"scripts/**" = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

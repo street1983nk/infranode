@@ -408,6 +408,35 @@ async def land_values(slug: str) -> dict:
     return await client.get_resource(slug, "land-values")
 
 
+async def tax_rates(slug: str) -> dict:
+    """Get the local real-property tax multipliers (Hebesätze) for a German city.
+
+    Sourced from Regionalstatistik (German statistical offices, table 71231),
+    municipality-level: trade-tax multiplier (gewerbesteuer_hebesatz) and property
+    tax A/B/C (grundsteuer_a/b/c), all in percent, plus the reference date
+    (stichtag). An unset rate is null. Location/real-estate relevant. Read-only.
+
+    Args:
+        slug: City slug from ``list_cities``, e.g. ``"muenchen"``.
+    """
+    return await client.get_resource(slug, "tax-rates")
+
+
+async def business_registrations(slug: str) -> dict:
+    """Get business registrations/deregistrations for a German city (district level).
+
+    Sourced from Regionalstatistik (German business notification statistics, table
+    52311, annual total), district-level: anmeldungen (registrations), abmeldungen
+    (deregistrations), saldo (net = registrations - deregistrations; positive = a
+    founding surplus) and the reporting year (jahr). A measure of founding
+    dynamics. Read-only.
+
+    Args:
+        slug: City slug from ``list_cities``, e.g. ``"koeln"``.
+    """
+    return await client.get_resource(slug, "business-registrations")
+
+
 async def station_departures(slug: str) -> dict:
     """Get live train departures from a city's main station, all train categories.
 

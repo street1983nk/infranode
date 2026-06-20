@@ -93,6 +93,12 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "sharing",
         # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
         "indicators",
+        # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt, aggregiert (Tier A).
+        "land-values",
+        # DATA-37: Regionalstatistik.de Realsteuer-Hebesaetze (Gemeinde) +
+        # Gewerbean-/-abmeldungen (Kreis), Tier A.
+        "tax-rates",
+        "business-registrations",
         # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
         "station-departures",
         "station-arrivals",

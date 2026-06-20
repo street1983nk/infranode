@@ -169,3 +169,11 @@ class SourceId(StrEnum):
     # Marketplace wie DB_TIMETABLES (gleiche db_client_id/db_api_key), CC BY 4.0 =
     # Tier A. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
     STADA = "stada"
+    # DATA-37: Regionalstatistik.de (GENESIS-Webservice der Statistischen Aemter):
+    # Realsteuer-Hebesaetze (71231, GEMEINDE-genau) + Gewerbean-/-abmeldungen
+    # (52311, KREIS-genau). Bulk-Ingest -> SQLite (kein Live-Call im Request-Pfad,
+    # wie INKAR/BORIS), aber die GENESIS-API verlangt seit 05/2025 eine
+    # Registrierung (Header-Auth username/password, NUR im Ingest, regio_user/
+    # regio_pass). Lizenz DL-DE/BY 2.0 = Tier A (DL_DE_BY_2_0 existiert bereits).
+    # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    REGIONALSTATISTIK = "regionalstatistik"

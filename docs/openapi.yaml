@@ -2005,6 +2005,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/tax-rates:
+    get:
+      tags: [cities]
+      summary: Realsteuer-Hebesätze je Gemeinde (Regionalstatistik, Tier A)
+      x-summary-en: Local business/property tax rates per municipality (Regionalstatistik, Tier A)
+      description: >-
+        Amtliche Realsteuer-Hebesätze GEMEINDE-genau (Regionalstatistik der
+        Statistischen Ämter, Tabelle 71231): gewerbesteuer_hebesatz, grundsteuer_a,
+        grundsteuer_b, grundsteuer_c (alle in %, ein nicht festgesetzter Satz ist
+        null) sowie der stichtag (Stand 31.12., neuester Jahrgang). Standort-/
+        immobilienrelevant. Toggle aus oder keine GENESIS-Credentials -> 200
+        source_status="disabled"; Batch nicht gelaufen -> 200
+        source_status="not_ingested".
+      x-description-en: >-
+        Official local real-property tax multipliers per MUNICIPALITY
+        (Regionalstatistik of the German statistical offices, table 71231):
+        gewerbesteuer_hebesatz (trade tax), grundsteuer_a/b/c (property tax, all in
+        %, an unset rate is null) plus the stichtag (as of Dec 31, latest year).
+        Toggle off or no GENESIS credentials -> 200 source_status="disabled"; batch
+        not run -> 200 source_status="not_ingested".
+      operationId: getCityTaxRates
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Hebesatz-Envelope (CanonicalRecord mit TaxRatesPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/business-registrations:
+    get:
+      tags: [cities]
+      summary: Gewerbean-/-abmeldungen je Kreis (Regionalstatistik, Tier A)
+      x-summary-en: Business registrations/deregistrations per district (Regionalstatistik, Tier A)
+      description: >-
+        Gewerbean-/-abmeldungen KREIS-genau (Gewerbeanzeigenstatistik der
+        Statistischen Ämter, Tabelle 52311, Jahressumme, ohne Automatenaufsteller):
+        anmeldungen, abmeldungen, saldo (anmeldungen - abmeldungen; positiv =
+        Netto-Gründungsplus) und das Berichtsjahr (jahr). Gründungsdynamik je
+        Stadt. Toggle aus oder keine GENESIS-Credentials -> 200
+        source_status="disabled"; Batch nicht gelaufen -> 200
+        source_status="not_ingested".
+      x-description-en: >-
+        Business registrations and deregistrations per DISTRICT (German business
+        notification statistics, table 52311, annual total, excluding vending
+        machines): anmeldungen (registrations), abmeldungen (deregistrations),
+        saldo (net, positive = founding surplus) and the reporting year (jahr).
+        Toggle off or no GENESIS credentials -> 200 source_status="disabled"; batch
+        not run -> 200 source_status="not_ingested".
+      operationId: getCityBusinessRegistrations
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Gewerbeanzeigen-Envelope (CanonicalRecord mit BusinessRegistrationsPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/sharing:
     get:
       tags: [cities]

@@ -59,6 +59,10 @@ from infranode.archive.boris_db import read_land_values
 from infranode.archive.inkar_db import read_indicators
 from infranode.archive.kba_db import read_vehicle_registrations
 from infranode.archive.mastr_db import read_energy
+from infranode.archive.regionalstatistik_db import (
+    read_business_registrations,
+    read_tax_rates,
+)
 from infranode.archive.store import append_record, read_records
 from infranode.archive.transit_store import read_stops
 from infranode.archive.unfallatlas_db import read_accidents
@@ -102,6 +106,10 @@ from infranode.normalization.mappers.muenchen_opendata import map_muenchen_road_
 from infranode.normalization.mappers.openaq import map_openaq_air
 from infranode.normalization.mappers.overpass import map_overpass_pois
 from infranode.normalization.mappers.pegelonline import map_water_level
+from infranode.normalization.mappers.regionalstatistik import (
+    map_business_registrations,
+    map_tax_rates,
+)
 from infranode.normalization.mappers.smard import map_smard
 from infranode.normalization.mappers.stada import map_station_catalog
 from infranode.normalization.mappers.tankerkoenig import map_fuel_prices
@@ -327,6 +335,7 @@ async def _resolve_city_station_evas(
             break
     return tuple(evas[:_MAX_CITY_STATION_EVAS])
 
+
 # [ASSUMED] EVAS-23111-Tabellen-Code des Krankenhausverzeichnisses (RESEARCH
 # A4). None-faehig: der Live-Abgleich ist Manual-Only nach Deploy (Owner). Der
 # genesis-Adapter liest die Antwort defensiv (None-Fallback je Feld).
@@ -337,7 +346,7 @@ async def _resolve_city_station_evas(
 # Hinweis auf www-genesis.destatis.de (Pitfall 2) traf fuer 23111 NICHT zu; die
 # Route nutzt daher den genesis-Adapter-Default-Host (Finding B-3 aufgeloest auf
 # den Test-Vertrag, beide Hosts liegen ohnehin in der SSRF-Allowlist).
-_HOSPITAL_TABLE = "23111-01-01-4" # [ASSUMED], Live-Abgleich Manual-Only.
+_HOSPITAL_TABLE = "23111-01-01-4"  # [ASSUMED], Live-Abgleich Manual-Only.
 
 
 @router.get("/cities")
@@ -2126,6 +2135,130 @@ async def city_land_values(slug: str, request: Request) -> dict:
     }
 
 
+def _regio_configured() -> bool:
+    """True, wenn Toggle an UND beide GENESIS-Credentials gesetzt sind (DATA-37).
+
+    Anders als die keylosen Bulk-Quellen (INKAR/BORIS) verlangt der GENESIS-
+    Webservice eine Registrierung; ohne ``regio_user``/``regio_pass`` koennte der
+    Bulk-Datensatz nie ingestet werden -> die Routen melden ehrlich ``disabled``.
+    """
+    s = Settings()
+    # SecretStr-Objekte sind immer truthy -> den eigentlichen Wert pruefen, damit
+    # ein leer gesetzter Key (INFRANODE_REGIO_USER="") als "fehlt" gilt.
+    user = s.regio_user.get_secret_value() if s.regio_user else None
+    pw = s.regio_pass.get_secret_value() if s.regio_pass else None
+    return bool(s.enable_regionalstatistik and user and pw)
+
+
+@router.get("/cities/{slug}/tax-rates")
+async def city_tax_rates(slug: str, request: Request) -> dict:
+    """Liefert die Realsteuer-Hebesaetze einer Stadt im Envelope (DATA-37, 71231).
+
+    Ablauf wie ``city_indicators`` (Store-read, KEIN resilient_client): Register-
+    Lookup (unbekannt -> 404), Konfig-Pruefung (Toggle aus ODER keine GENESIS-
+    Credentials -> 200 disabled), parametrisierter Read ueber ``read_tax_rates``
+    (je 8-stelligem Gemeindeschluessel). Drei ``source_status``:
+    - ``disabled``: ``enable_regionalstatistik`` aus ODER regio_user/pass fehlt
+    - ``not_ingested``: kein Snapshot fuer die Gemeinde -> data None, kein 5xx
+    - ``ok``: gemappte Hebesatz-Kennzahl (Gewerbe-/Grundsteuer A/B/C + Stichtag)
+
+    KRITISCH (kein Bulk-Upstream im Request-Pfad): liest AUSSCHLIESSLICH aus dem
+    vorverarbeiteten Datensatz; der GENESIS-Pull laeuft offline als Batch.
+    """
+    entry = get_city(slug)
+
+    if not _regio_configured():
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    row = read_tax_rates(entry.slug)
+    if row is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_tax_rates(
+        entry.slug,
+        row,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    await append_record(record, source="regionalstatistik")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
+@router.get("/cities/{slug}/business-registrations")
+async def city_business_registrations(slug: str, request: Request) -> dict:
+    """Liefert die Gewerbean-/-abmeldungen einer Stadt im Envelope (DATA-37, 52311).
+
+    Ablauf wie ``city_tax_rates`` (Store-read, KEIN resilient_client): Register-
+    Lookup (unbekannt -> 404), Konfig-Pruefung (Toggle aus ODER keine GENESIS-
+    Credentials -> 200 disabled), parametrisierter Read ueber
+    ``read_business_registrations`` (je 5-stelligem Kreisschluessel). Drei
+    ``source_status``:
+    - ``disabled``: ``enable_regionalstatistik`` aus ODER regio_user/pass fehlt
+    - ``not_ingested``: kein Snapshot fuer den Kreis -> data None, kein 5xx
+    - ``ok``: gemappte Gruendungsdynamik (Anmeldungen/Abmeldungen/Saldo + Jahr)
+
+    KRITISCH (kein Bulk-Upstream im Request-Pfad): liest AUSSCHLIESSLICH aus dem
+    vorverarbeiteten Datensatz; der GENESIS-Pull laeuft offline als Batch.
+    """
+    entry = get_city(slug)
+
+    if not _regio_configured():
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    row = read_business_registrations(entry.slug)
+    if row is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_business_registrations(
+        entry.slug,
+        row,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    await append_record(record, source="regionalstatistik")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
 # GENESIS-Regionalstatistik-Trio (DATA-28): je Datensatz der verifizierte
 # Tabellen-Code + die Spaltenindizes der datencsv-Datenzeile (0=Jahr, 1=AGS,
 # 2=Name, ab 3 die Werte). Live gegen regionalstatistik.de verifiziert
@@ -2215,8 +2348,12 @@ async def _genesis_regio_envelope(slug: str, request: Request, *, dataset: str) 
         }
 
     record = map_regional_stat(
-        entry.slug, raw, dataset=dataset, retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid,
+        entry.slug,
+        raw,
+        dataset=dataset,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
     )
     await append_record(record, source=spec["archive_source"])
     return {
@@ -2268,10 +2405,21 @@ async def city_construction(slug: str, request: Request) -> dict:
 # regionale Verbrauchs-Kennzahl je Stadt aber die etablierte Zuordnung.
 _SMARD_STATE_TO_ZONE = {
     "BW": "TransnetBW",
-    "BY": "TenneT", "HB": "TenneT", "HE": "TenneT", "NI": "TenneT", "SH": "TenneT",
-    "BE": "50Hertz", "BB": "50Hertz", "HH": "50Hertz", "MV": "50Hertz",
-    "SN": "50Hertz", "ST": "50Hertz", "TH": "50Hertz",
-    "NW": "Amprion", "RP": "Amprion", "SL": "Amprion",
+    "BY": "TenneT",
+    "HB": "TenneT",
+    "HE": "TenneT",
+    "NI": "TenneT",
+    "SH": "TenneT",
+    "BE": "50Hertz",
+    "BB": "50Hertz",
+    "HH": "50Hertz",
+    "MV": "50Hertz",
+    "SN": "50Hertz",
+    "ST": "50Hertz",
+    "TH": "50Hertz",
+    "NW": "Amprion",
+    "RP": "Amprion",
+    "SL": "Amprion",
 }
 
 
@@ -2312,8 +2460,15 @@ async def _smard_envelope(
             "meta": {"correlation_id": cid, "source_status": "no_data"},
         }
     record = map_smard(
-        entry.slug, raw, measure=measure, unit=unit, retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+        entry.slug,
+        raw,
+        measure=measure,
+        unit=unit,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
     )
     # Verbrauch und Preis in getrennte Archiv-Partitionen (smard_load/smard_price),
     # damit die Per-Tag-Aggregation des Analysten beide Reihen sauber trennt.
@@ -2384,8 +2539,13 @@ async def city_weather_warnings(slug: str, request: Request) -> dict:
         )
     raw = extract_warncell(full, warncell_for_ags(entry.ags))
     record = map_dwd_warnings(
-        entry.slug, raw, retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+        entry.slug,
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
     )
     await append_record(record, source="dwd_warnings")
     return {
@@ -2454,8 +2614,12 @@ async def city_fuel_prices(slug: str, request: Request) -> dict:
         }
 
     record = map_fuel_prices(
-        raw, retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
     )
     await append_record(record, source="tankerkoenig")
     return {
@@ -2529,8 +2693,12 @@ async def city_sharing(slug: str, request: Request) -> dict:
         }
 
     record = map_sharing(
-        raw, retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
     )
     await append_record(record, source="gbfs")
     return {
@@ -2609,7 +2777,10 @@ async def city_stations(slug: str, request: Request) -> dict:
     record = map_station_catalog(
         {"slug": entry.slug, "stations": stations},
         retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
     )
     return {
         "data": record.model_dump(mode="json"),
@@ -2696,8 +2867,12 @@ async def city_station_departures(slug: str, request: Request) -> dict:
         }
 
     record = map_station_departures(
-        raw, retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
     )
     await append_record(record, source="db_timetables")
     return {
@@ -2779,8 +2954,12 @@ async def city_station_arrivals(slug: str, request: Request) -> dict:
         }
 
     record = map_station_arrivals(
-        raw, retrieved_at=datetime.now(UTC),
-        ags=entry.ags, wikidata_qid=entry.qid, lat=entry.geo.lat, lon=entry.geo.lon,
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
     )
     await append_record(record, source="db_timetables")
     return {

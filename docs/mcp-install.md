@@ -120,7 +120,7 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-38 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+44 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
@@ -157,6 +157,9 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `fuel_prices` | `slug` | Current fuel prices, aggregated per fuel type | Tankerkönig |
 | `sharing` | `slug` | Bike/scooter sharing availability, aggregated (partial) | GBFS |
 | `indicators` | `slug` | Socioeconomic indicators (district, latest year) | INKAR/BBSR |
+| `land_values` | `slug` | Official land values, aggregated (building land, partial coverage) | BORIS |
+| `tax_rates` | `slug` | Local tax multipliers per municipality: trade tax, property tax A/B/C | Regionalstatistik |
+| `business_registrations` | `slug` | Business registrations/deregistrations and net per district | Regionalstatistik |
 | `station_departures` | `slug` | Live long-distance train departures (metro hubs) | DB Timetables |
 | `station_arrivals` | `slug` | Live long-distance train arrivals (metro hubs) | DB Timetables |
 | `stations` | `slug` | Catalog of all DB stations in a city (with EVA numbers) | DB StaDa |

@@ -143,6 +143,13 @@ class Settings(BaseSettings):
     # Route 200 disabled (analog db_timetables). Toggle-Name == SourceId-Wert
     # (stada) == _KNOWN_SOURCES-Eintrag.
     enable_stada: bool = True
+    # DATA-37: Regionalstatistik.de (Realsteuer-Hebesaetze 71231 + Gewerbean-/
+    # -abmeldungen 52311). Bulk-Ingest -> SQLite (Read-only im Request-Pfad, wie
+    # INKAR/BORIS), aber die GENESIS-API verlangt eine Registrierung -> ohne
+    # regio_user/regio_pass liefert die Route 200 disabled (die Daten koennten nie
+    # ingestet werden). Toggle-Name == SourceId-Wert (regionalstatistik) ==
+    # _KNOWN_SOURCES-Eintrag.
+    enable_regionalstatistik: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True
@@ -263,6 +270,15 @@ class Settings(BaseSettings):
     # INFRANODE_DB_API_KEY in der gitignored .env gesetzt.
     db_client_id: SecretStr | None = None
     db_api_key: SecretStr | None = None
+    # DATA-37: Regionalstatistik.de GENESIS-Webservice-Credentials (Header-Auth
+    # username/password). Beide SecretStr (nie im Klartext geloggt/serialisiert),
+    # gehen NUR in die Ingest-Request-Header (username/password), NIE in den
+    # Request-Pfad/Cache/Response/Log. None -> die /tax-rates- und
+    # /business-registrations-Routen liefern 200 source_status="disabled" (ohne
+    # Credentials koennte der Bulk-Datensatz nie ingestet werden). Per
+    # INFRANODE_REGIO_USER / INFRANODE_REGIO_PASS in der gitignored .env gesetzt.
+    regio_user: SecretStr | None = None
+    regio_pass: SecretStr | None = None
     # Lokale Pfade zu den vorverarbeiteten GTFS-ZIPs fuer den Batch-Ingest
     # (DATA-05). None = Batch nicht lauffaehig (kein Default-Pfad, damit der
     # CLI sauber mit Exit 2 abbricht). Per INFRANODE_DELFI_GTFS_PATH /
@@ -305,6 +321,11 @@ class Settings(BaseSettings):
     # JSON-Datei (vorab aggregierte Stadt-Zeilenliste). None = der Batch holt die
     # Bodenrichtwerte live von den Landes-WFS (BORIS_WFS). NICHT im Request-Pfad.
     boris_source_path: str | None = None
+    # Regionalstatistik-Bulk-Ingest (DATA-37): optionaler Pfad zu einer lokal
+    # vorgehaltenen JSON-Datei (vorab geholte {tax_rates:[...], business:[...]}-
+    # Zeilenlisten, Test-/Offline-Quelle). None = der Batch holt die Tabellen live
+    # vom GENESIS-Webservice (regio_user/regio_pass). NICHT im Request-Pfad.
+    regio_source_path: str | None = None
 
     # Optionaler Override des Upstream-User-Agents (RES-05). None = die
     # USER_AGENT-Konstante aus infra/http.py greift; per INFRANODE_HTTP_USER_AGENT

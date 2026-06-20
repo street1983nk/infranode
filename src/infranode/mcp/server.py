@@ -27,6 +27,7 @@ from infranode.mcp import tools
 
 mcp = FastMCP("infranode")
 
+
 # Verhaltens-Hinweise (MCP Tool Annotations): Jedes InfraNode-Tool ist ein
 # read-only GET-Wrapper auf die Live-API: es schreibt keinen State, ist gefahrlos
 # wiederholbar (idempotent) und nicht destruktiv. Clients koennen Aufrufe so ohne
@@ -92,6 +93,10 @@ _register(tools.sharing)
 _register(tools.indicators)
 # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Tier A, aggregiert, Bauland).
 _register(tools.land_values)
+# DATA-37: Regionalstatistik.de Realsteuer-Hebesaetze (Gemeinde) + Gewerbean-/
+# -abmeldungen (Kreis), Tier A.
+_register(tools.tax_rates)
+_register(tools.business_registrations)
 # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
 _register(tools.station_departures)
 _register(tools.station_arrivals)

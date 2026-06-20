@@ -105,9 +105,16 @@ async def fetch_air(
         # schlicht keine Daten (viele kleinere Staedte; UBA/air-uba deckt diese ab).
         # Sentinel mit location_id=None -> Handler liefert 200 source_status=no_data.
         return {
-            "slug": slug, "lat": lat, "lon": lon,
-            "pm10": None, "no2": None, "pm25": None, "o3": None, "so2": None,
-            "observed_at": None, "location_id": None,
+            "slug": slug,
+            "lat": lat,
+            "lon": lon,
+            "pm10": None,
+            "no2": None,
+            "pm25": None,
+            "o3": None,
+            "so2": None,
+            "observed_at": None,
+            "location_id": None,
         }
     location_id = results[0]["id"]
 

@@ -251,8 +251,12 @@ async def _fetch_board(
             if root is None:
                 continue
             for entry in _parse_board(
-                root, changes=changes, tag=tag, place_key=place_key,
-                path_index=path_index, station=root.get("station"),
+                root,
+                changes=changes,
+                tag=tag,
+                place_key=place_key,
+                path_index=path_index,
+                station=root.get("station"),
             ):
                 if entry["stop_id"] and entry["stop_id"] not in by_id:
                     by_id[entry["stop_id"]] = entry
@@ -280,9 +284,18 @@ async def fetch_station_departures(
     ``departures``.
     """
     return await _fetch_board(
-        http, slug=slug, evas=evas, client_id=client_id, api_key=api_key, now=now,
-        tag="dp", place_key="destination", path_index=-1, result_key="departures",
-        horizon_hours=horizon_hours, limit=limit,
+        http,
+        slug=slug,
+        evas=evas,
+        client_id=client_id,
+        api_key=api_key,
+        now=now,
+        tag="dp",
+        place_key="destination",
+        path_index=-1,
+        result_key="departures",
+        horizon_hours=horizon_hours,
+        limit=limit,
     )
 
 
@@ -303,7 +316,16 @@ async def fetch_station_arrivals(
     ``arrivals``.
     """
     return await _fetch_board(
-        http, slug=slug, evas=evas, client_id=client_id, api_key=api_key, now=now,
-        tag="ar", place_key="origin", path_index=0, result_key="arrivals",
-        horizon_hours=horizon_hours, limit=limit,
+        http,
+        slug=slug,
+        evas=evas,
+        client_id=client_id,
+        api_key=api_key,
+        now=now,
+        tag="ar",
+        place_key="origin",
+        path_index=0,
+        result_key="arrivals",
+        horizon_hours=horizon_hours,
+        limit=limit,
     )

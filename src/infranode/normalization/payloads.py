@@ -699,6 +699,47 @@ class LandValuesPayload(BaseModel):
     bbox_radius_deg: float | None = None
 
 
+class TaxRatesPayload(BaseModel):
+    """Realsteuer-Hebesaetze einer Gemeinde (Regionalstatistik 71231, Tier A, DATA-37).
+
+    Die amtlichen Hebesaetze der Realsteuern GEMEINDE-genau (Realsteuervergleich
+    der Statistischen Aemter, Tabelle 71231): ``gewerbesteuer_hebesatz`` (Hebesatz
+    der Gewerbesteuer in %), ``grundsteuer_a`` (land-/forstwirtschaftliche
+    Betriebe), ``grundsteuer_b`` (Grundstuecke) und ``grundsteuer_c`` (baureife,
+    unbebaute Grundstuecke; erst seit 2025 moeglich, daher oft ``None``). Alle
+    Werte sind ganze Prozentpunkte; ein nicht festgesetzter Satz ist ``None``
+    (Quelle-Sperrwert "-"). ``stichtag`` ist der Bewertungsstichtag (ISO-Datum,
+    Stand 31.12., neuester verfuegbarer Jahrgang). Standort-/immobilienrelevante
+    Kennzahl, die kaum anderswo als API gemeindegenau vorliegt.
+    """
+
+    kind: Literal["tax_rates"] = "tax_rates"
+    gewerbesteuer_hebesatz: int | None = None
+    grundsteuer_a: int | None = None
+    grundsteuer_b: int | None = None
+    grundsteuer_c: int | None = None
+    stichtag: str | None = None
+
+
+class BusinessRegistrationsPayload(BaseModel):
+    """Gewerbean-/-abmeldungen je Kreis (Regionalstatistik 52311, Tier A, DATA-37).
+
+    Die Gruendungsdynamik aus der Gewerbeanzeigenstatistik (Tabelle 52311,
+    Jahressumme, KREIS-genau, ohne Automatenaufsteller): ``anmeldungen``
+    (Gewerbeanmeldungen), ``abmeldungen`` (Gewerbeabmeldungen) und ``saldo``
+    (anmeldungen - abmeldungen; positiv = Netto-Gruendungsplus). ``jahr`` ist das
+    Berichtsjahr (neuester Jahrgang, fuer den beide Kennzahlen vorliegen).
+    Regionale Aufloesung ist der Kreis/die kreisfreie Stadt (kreisfreie Staedte
+    stadtgenau, sonst der umgebende Kreis).
+    """
+
+    kind: Literal["business_registrations"] = "business_registrations"
+    anmeldungen: int | None = None
+    abmeldungen: int | None = None
+    saldo: int | None = None
+    jahr: int | None = None
+
+
 PayloadUnion = Annotated[
     CityBaseDataPayload
     | AirQualityPayload
@@ -721,6 +762,8 @@ PayloadUnion = Annotated[
     | SharingPayload
     | IndicatorsPayload
     | LandValuesPayload
+    | TaxRatesPayload
+    | BusinessRegistrationsPayload
     | StationCatalogPayload
     | StationDeparturesPayload
     | StationArrivalsPayload

@@ -75,6 +75,10 @@ _KNOWN_SOURCES = (
     # DATA-36: StaDa Station Data (Bahnhofs-Katalog je Stadt, keyed Live ueber den
     # DB-API-Marketplace, CC BY 4.0). Name == enable_stada == SourceId.STADA.
     "stada",
+    # DATA-37: Regionalstatistik.de (Realsteuer-Hebesaetze 71231 + Gewerbean-/
+    # -abmeldungen 52311, Bulk-Ingest, DL-DE/BY 2.0). Name ==
+    # enable_regionalstatistik == SourceId.REGIONALSTATISTIK.
+    "regionalstatistik",
     "bkg",
     "bundeswahl",
     "divi",
@@ -253,6 +257,13 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
     "stada": {
         "license_id": "cc_by_4_0",
         "attribution": "Deutsche Bahn AG",
+    },
+    # DATA-37: Regionalstatistik.de (GENESIS-Webservice der Statistischen Aemter).
+    # DL-DE/BY 2.0 = Tier A. Attribution wortgenau wie im Mapper
+    # (map_tax_rates/map_business_registrations) + DATA-LICENSES.md (T-11-SRC-DRIFT).
+    "regionalstatistik": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": "Statistische Ämter des Bundes und der Länder",
     },
     "bkg": {
         "license_id": "dl_de_by_2_0",
