@@ -613,10 +613,11 @@ class IndicatorsPayload(BaseModel):
 
 
 class StationDeparturesPayload(BaseModel):
-    """Live-Abfahrtstafel eines Metropolen-Hbf (DB Timetables, Tier A, DATA-34).
+    """Live-Abfahrtstafel des Stadt-Hauptbahnhofs (DB Timetables, Tier A, DATA-34).
 
-    Buendelt die naechsten Zugabfahrten am Fernverkehrs-Hbf einer Stadt (inkl.
-    Echtzeit-Verspaetung) zu einer Liste schlanker dicts. ``departures`` traegt je
+    Buendelt die naechsten Zugabfahrten am Haupt-Bahnhof einer Stadt (alle
+    Gattungen inkl. Echtzeit-Verspaetung) zu einer Liste schlanker dicts.
+    ``departures`` traegt je
     Abfahrt ``line`` (z.B. "ICE 73"/"RB22"), ``category`` (ICE/IC/RE/RB/S),
     ``train_number``, ``long_distance`` (Fernverkehr-Flag), ``destination``,
     ``planned_time`` (ISO), ``platform``, ``delay_minutes`` (None = keine Echtzeit),
@@ -634,7 +635,7 @@ class StationDeparturesPayload(BaseModel):
 
 
 class StationArrivalsPayload(BaseModel):
-    """Live-Ankunftstafel eines Metropolen-Hbf (DB Timetables, Tier A, DATA-34).
+    """Live-Ankunftstafel des Stadt-Hauptbahnhofs (DB Timetables, Tier A, DATA-34).
 
     Spiegelbild zu ``StationDeparturesPayload`` fuer ankommende Zuege. ``arrivals``
     traegt je Ankunft ``line``, ``category``, ``train_number``, ``long_distance``,

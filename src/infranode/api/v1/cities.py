@@ -248,7 +248,10 @@ if set(GBFS_SYSTEMS) != set(PARTIAL_COVERAGE["sharing"]):
 # Ost/Pasing, Koeln Messe-Deutz, Dresden Neustadt, ...). Berlin Hbf hat zwei Ebenen
 # mit eigenen EVAs. Der Adapter aggregiert + dedupliziert ueber alle EVAs und fuehrt
 # je Abfahrt/Ankunft den Bahnhofsnamen (``station``). Alle EVAs gegen die
-# DB-Timetables-API live verifiziert. Kein Eintrag -> ehrliches not_covered.
+# DB-Timetables-API live verifiziert. Diese Map ist eine BEVORZUGTE/verifizierte
+# Override-Liste fuer die grossen Knoten; Staedte OHNE Eintrag werden zur Laufzeit
+# aus dem StaDa-Katalog abgeleitet (_resolve_city_station_evas) -> volle Abdeckung
+# ueber alle 84 Staedte, kein not_covered mehr.
 STATION_EVAS: dict[str, tuple[str, ...]] = {
     # Berlin: Hbf (Nord-Sued 8098160 + Ost-West 8089021) + Suedkreuz + Gesundbrunnen
     # + Spandau + Ostbahnhof.
@@ -280,18 +283,49 @@ STATION_EVAS: dict[str, tuple[str, ...]] = {
     "augsburg": ("8000013",),
 }
 
-# Drift-Schutz (verbindlich, wie CONNECTOR_MAP/GBFS_SYSTEMS): echtes raise.
-if set(STATION_EVAS) != set(PARTIAL_COVERAGE["station-departures"]):
-    raise RuntimeError(
-        "STATION_EVAS und PARTIAL_COVERAGE['station-departures'] sind divergiert: "
-        f"{set(STATION_EVAS) ^ set(PARTIAL_COVERAGE['station-departures'])}"
-    )
-# station-arrivals nutzt dieselbe STATION_EVAS-Map -> dieselbe Abdeckung.
-if set(STATION_EVAS) != set(PARTIAL_COVERAGE["station-arrivals"]):
-    raise RuntimeError(
-        "STATION_EVAS und PARTIAL_COVERAGE['station-arrivals'] sind divergiert: "
-        f"{set(STATION_EVAS) ^ set(PARTIAL_COVERAGE['station-arrivals'])}"
-    )
+# Obergrenze der je Stadt aggregierten EVAs (gegen zu viele Upstream-Calls): die
+# wichtigsten Bahnhoefe reichen fuer die Stadt-Tafel.
+_MAX_CITY_STATION_EVAS = 6
+
+
+async def _resolve_city_station_evas(
+    request: Request, *, slug: str, ags: str | None, client_id: str, api_key: str
+) -> tuple[str, ...]:
+    """Liefert die Haupt-Bahnhof-EVAs einer Stadt fuer die Stadt-Tafel.
+
+    Bevorzugt die verifizierte ``STATION_EVAS``-Override-Liste; fuer alle anderen
+    Staedte werden die EVAs zur Laufzeit aus dem StaDa-Katalog abgeleitet
+    (Stationen der Stadt via ``municipalityCode == ags``, nach Kategorie sortiert,
+    die wichtigsten genommen, ALLE Ebenen-EVAs uebernommen, da die /plan-Tafel bei
+    Grossbahnhoefen teils an einer Ebenen-EVA haengt). So sind alle 84 Staedte
+    abgedeckt. SSRF: nur numerische EVAs aus StaDa, kein roher User-Input.
+    """
+    override = STATION_EVAS.get(slug)
+    if override:
+        return override
+    if not ags:
+        return ()
+    client = request.app.state.resilient_client
+    cache_key = build_cache_key("stada", city_slug="_all")
+
+    async def fetch_fn():
+        return await fetch_all_stations(
+            request.app.state.http, client_id=client_id, api_key=api_key
+        )
+
+    raw, _ = await client.fetch("stada", cache_key, fetch_fn)
+    if raw is None:
+        return ()
+    stations = [s for s in raw.get("stations", []) if s.get("ags") == ags]
+    stations.sort(key=lambda s: (s.get("category") or 99, s.get("name") or ""))
+    evas: list[str] = []
+    for station in stations:
+        for eva in station.get("evas") or []:
+            if eva not in evas:
+                evas.append(eva)
+        if len(evas) >= _MAX_CITY_STATION_EVAS:
+            break
+    return tuple(evas[:_MAX_CITY_STATION_EVAS])
 
 # [ASSUMED] EVAS-23111-Tabellen-Code des Krankenhausverzeichnisses (RESEARCH
 # A4). None-faehig: der Live-Abgleich ist Manual-Only nach Deploy (Owner). Der
@@ -2589,15 +2623,16 @@ async def city_stations(slug: str, request: Request) -> dict:
 
 @router.get("/cities/{slug}/station-departures")
 async def city_station_departures(slug: str, request: Request) -> dict:
-    """Live-Abfahrtstafel des Metropolen-Hbf inkl. Fernverkehr (DB Timetables, DATA-34).
+    """Live-Abfahrtstafel der Haupt-Bahnhoefe einer Stadt (DB Timetables, DATA-34).
 
-    Naechste Zugabfahrten am Fernverkehrs-Hauptbahnhof der Stadt mit Echtzeit-
-    Verspaetung (Soll- + Aenderungsdaten gemerged). Quelle: DB Timetables (DB API
-    Marketplace, CC BY 4.0). Vier ``source_status``-Werte:
+    Naechste Zugabfahrten an den wichtigsten Bahnhoefen der Stadt mit Echtzeit-
+    Verspaetung (Soll- + Aenderungsdaten gemerged). Die EVAs der Haupt-Bahnhoefe
+    werden aus dem StaDa-Katalog abgeleitet (bzw. einer verifizierten Override-
+    Liste) -> ALLE 84 Staedte abgedeckt. Fuer einen bestimmten Bahnhof:
+    ``GET /stations/{eva}/departures``. Quelle: DB Timetables (CC BY 4.0). Drei
+    ``source_status``-Werte:
     - ``disabled``: Toggle aus ODER kein DB-Client-Id/Api-Key -> data None
-    - ``not_covered``: kein kuratierter Fernverkehrs-Hbf fuer diese Stadt (mit
-      covered_cities), klar unterscheidbar von no_data
-    - ``no_data``: Bahnhof erreichbar, aber keine Abfahrt im Zeitfenster
+    - ``no_data``: kein Bahnhof/keine Abfahrt im Zeitfenster
     - ``ok``: gemappter station_departures-Payload
     Die Keys gelangen NIE in Cache-Key/Response/Log.
     """
@@ -2619,14 +2654,19 @@ async def city_station_departures(slug: str, request: Request) -> dict:
             "meta": {"correlation_id": cid, "source_status": "disabled"},
         }
 
-    evas = STATION_EVAS.get(entry.slug)
-    if evas is None:
-        return _not_covered("station-departures")
-
     client = request.app.state.resilient_client
     cache_key = build_cache_key("db_timetables", city_slug=entry.slug)
     client_id = cid_secret.get_secret_value()
     api_key = key.get_secret_value()
+
+    evas = await _resolve_city_station_evas(
+        request, slug=entry.slug, ags=entry.ags, client_id=client_id, api_key=api_key
+    )
+    if not evas:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "no_data"},
+        }
 
     async def fetch_fn():
         return await fetch_station_departures(
@@ -2672,11 +2712,12 @@ async def city_station_departures(slug: str, request: Request) -> dict:
 
 @router.get("/cities/{slug}/station-arrivals")
 async def city_station_arrivals(slug: str, request: Request) -> dict:
-    """Live-Ankunftstafel des Metropolen-Hbf inkl. Fernverkehr (DB Timetables, DATA-34).
+    """Live-Ankunftstafel des Haupt-Bahnhofs einer Stadt (DB Timetables, DATA-34).
 
     Spiegelbild zu ``city_station_departures``: ankommende Zuege mit Echtzeit-
     Verspaetung (``origin`` = Startbahnhof). Gleiche Quelle/Lizenz/Abdeckung wie die
-    Abfahrtstafel. Vier ``source_status``: disabled / not_covered / no_data / ok.
+    Abfahrtstafel (alle 84 Staedte, EVAs aus StaDa abgeleitet). Drei
+    ``source_status``: disabled / no_data / ok.
     Die Keys gelangen NIE in Cache-Key/Response/Log.
     """
     entry = get_city(slug)
@@ -2696,14 +2737,19 @@ async def city_station_arrivals(slug: str, request: Request) -> dict:
             "meta": {"correlation_id": cid, "source_status": "disabled"},
         }
 
-    evas = STATION_EVAS.get(entry.slug)
-    if evas is None:
-        return _not_covered("station-arrivals")
-
     client = request.app.state.resilient_client
     cache_key = build_cache_key("db_timetables_arr", city_slug=entry.slug)
     client_id = cid_secret.get_secret_value()
     api_key = key.get_secret_value()
+
+    evas = await _resolve_city_station_evas(
+        request, slug=entry.slug, ags=entry.ags, client_id=client_id, api_key=api_key
+    )
+    if not evas:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "no_data"},
+        }
 
     async def fetch_fn():
         return await fetch_station_arrivals(

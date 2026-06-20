@@ -77,35 +77,10 @@ _SHARING_CITIES: frozenset[str] = frozenset(
     }
 )
 
-# station-departures (DATA-34): gespiegelt aus ``api.v1.cities.STATION_EVAS``
-# (kuratierte Metropolen-Hbf mit Fernverkehr). Wie bei road-events/sharing lebt die
-# Quell-Map in cities.py; die Slug-Menge wird hier gespiegelt und per Modul-
-# Assertion in cities.py drift-synchron gehalten.
-_STATION_CITIES: frozenset[str] = frozenset(
-    {
-        "berlin",
-        "hamburg",
-        "muenchen",
-        "koeln",
-        "frankfurt-am-main",
-        "stuttgart",
-        "duesseldorf",
-        "hannover",
-        "nuernberg",
-        "leipzig",
-        "dresden",
-        "bremen",
-        "dortmund",
-        "essen",
-        "karlsruhe",
-        "mannheim",
-        "muenster",
-        "mainz",
-        "freiburg-im-breisgau",
-        "bonn",
-        "augsburg",
-    }
-)
+# station-departures/-arrivals (DATA-34/36): NICHT mehr teilabgedeckt. Die Haupt-
+# Bahnhof-EVAs je Stadt werden aus dem StaDa-Katalog abgeleitet
+# (api.v1.cities._resolve_city_station_evas) -> volle Abdeckung ueber alle 84
+# Staedte. Daher kein PARTIAL_COVERAGE-Eintrag (kein not_covered) mehr.
 
 # land-values (DATA-35): BORIS ist pro Bundesland foederiert -> abgedeckt sind
 # genau die Register-Staedte, deren Bundesland (``state``) entweder einen offenen
@@ -125,9 +100,6 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "traffic": frozenset(_CITY_ROADS),
     "road-events": _ROAD_EVENTS_CITIES,
     "sharing": _SHARING_CITIES,
-    "station-departures": _STATION_CITIES,
-    # station-arrivals teilt dieselbe STATION_EVAS-Map (gleiche Bahnhoefe).
-    "station-arrivals": _STATION_CITIES,
     "land-values": _LAND_VALUES_CITIES,
 }
 

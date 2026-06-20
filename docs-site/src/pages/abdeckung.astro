@@ -57,22 +57,6 @@ const PARTIAL = [
     note: "",
   },
   {
-    key: "station-departures",
-    label: "Bahnhof-Abfahrten (Fernverkehr-Hbf)",
-    path: "/api/v1/cities/{slug}/station-departures",
-    op: "getCityStationDepartures",
-    reason: "kuratierte Fernverkehrs-Hbf je Stadt; JEDER andere Bahnhof bundesweit über /stations/{eva}/departures (siehe unten)",
-    note: "",
-  },
-  {
-    key: "station-arrivals",
-    label: "Bahnhof-Ankünfte (Fernverkehr-Hbf)",
-    path: "/api/v1/cities/{slug}/station-arrivals",
-    op: "getCityStationArrivals",
-    reason: "kuratierte Fernverkehrs-Hbf je Stadt; JEDER andere Bahnhof bundesweit über /stations/{eva}/arrivals (siehe unten)",
-    note: "",
-  },
-  {
     key: "land-values",
     label: "Bodenrichtwerte",
     path: "/api/v1/cities/{slug}/land-values",
@@ -192,6 +176,16 @@ const partialMap: Record<string, string[]> = coverage.partial;
       HVV-Station aus der Geofox-GTI-API, inklusive Verspätung und
       Linien-Störungshinweisen. Nur Hamburg (Geofox deckt den HVV-Raum ab),
       Stationsname über <code>?station=</code>. Tier C live-only.
+    </li>
+    <li>
+      <a href="/api/getCityStationDepartures/"><strong>Bahnhof-Abfahrten je Stadt</strong></a>
+      und <a href="/api/getCityStationArrivals/"><strong>-Ankünfte</strong></a>
+      (<code>/api/v1/cities/{"{slug}"}/station-departures</code> bzw.
+      <code>/station-arrivals</code>): volle Abdeckung über alle {total} Städte. Der
+      Haupt-Bahnhof einer Stadt wird automatisch aus dem amtlichen StaDa-Katalog
+      abgeleitet (für die großen Knoten eine verifizierte Auswahl), alle Gattungen
+      inklusive Nahverkehr. Für einen bestimmten Bahnhof statt der Stadt-Auswahl
+      dient <code>/stations/{"{eva}"}/departures</code> (siehe unten).
     </li>
     <li>
       <a href="/api/getCityStations/"><strong>Bahnhofs-Katalog</strong></a>

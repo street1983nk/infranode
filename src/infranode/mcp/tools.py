@@ -409,10 +409,12 @@ async def land_values(slug: str) -> dict:
 
 
 async def station_departures(slug: str) -> dict:
-    """Get live long-distance train departures from a city's major stations.
+    """Get live train departures from a city's main station, all train categories.
 
-    Sourced from Deutsche Bahn Timetables, including delays and cancellations.
-    Read-only. Covered for metropolitan hubs only (otherwise ``not_covered``).
+    Sourced from Deutsche Bahn Timetables, including delays and cancellations. All
+    84 cities are covered: the main station is auto-selected from the official
+    StaDa catalog. For a specific station use ``station_board_departures`` with its
+    EVA from ``stations``. Read-only.
 
     Args:
         slug: City slug from ``list_cities``, e.g. ``"berlin"``.
@@ -421,10 +423,12 @@ async def station_departures(slug: str) -> dict:
 
 
 async def station_arrivals(slug: str) -> dict:
-    """Get live long-distance train arrivals at a city's major stations.
+    """Get live train arrivals at a city's main station, all train categories.
 
-    Sourced from Deutsche Bahn Timetables, including delays and cancellations.
-    Read-only. Covered for metropolitan hubs only (otherwise ``not_covered``).
+    Sourced from Deutsche Bahn Timetables, including delays and cancellations. All
+    84 cities are covered: the main station is auto-selected from the official
+    StaDa catalog. For a specific station use ``station_board_arrivals`` with its
+    EVA from ``stations``. Read-only.
 
     Args:
         slug: City slug from ``list_cities``, e.g. ``"frankfurt"``.

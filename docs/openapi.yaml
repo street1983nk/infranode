@@ -1699,28 +1699,31 @@ paths:
   /api/v1/cities/{slug}/station-departures:
     get:
       tags: [cities]
-      summary: Live-Abfahrtstafel Metropolen-Hbf inkl. Fernverkehr (DB Timetables, Tier A)
-      x-summary-en: Live departure board major station incl. long-distance (DB Timetables, Tier A)
+      summary: Live-Abfahrtstafel Haupt-Bahnhof der Stadt, alle Gattungen (DB Timetables, Tier A)
+      x-summary-en: Live departure board for a city's main station, all categories (DB Timetables, Tier A)
       description: >-
-        Naechste Zugabfahrten am Fernverkehrs-Hauptbahnhof der Stadt mit Echtzeit-
-        Verspaetung: Sollfahrplan (/plan) und aktuelle Abweichungen (/fchg) der
+        Naechste Zugabfahrten am Haupt-Bahnhof der Stadt mit Echtzeit-Verspaetung:
+        Sollfahrplan (/plan) und aktuelle Abweichungen (/fchg) der
         DB-Timetables-API, je Bahnhof zu einer nach Abfahrt sortierten Liste
         zusammengefuehrt (line, category, destination, planned_time, platform,
-        delay_minutes, cancelled, long_distance). Quelle: Deutsche Bahn AG (CC BY
-        4.0). Ohne Zugangsdaten ODER Toggle aus -> 200 source_status="disabled";
-        Stadt ohne kuratierten Fernverkehrs-Hbf -> 200 source_status="not_covered"
-        (mit covered_cities); keine Abfahrt im Zeitfenster -> 200
-        source_status="no_data".
+        delay_minutes, cancelled, long_distance). Volle Abdeckung ueber alle 84
+        Staedte: der Haupt-Bahnhof wird automatisch aus dem amtlichen StaDa-Katalog
+        abgeleitet (fuer die grossen Knoten eine verifizierte Auswahl). Quelle:
+        Deutsche Bahn AG (CC BY 4.0). Ohne Zugangsdaten ODER Toggle aus -> 200
+        source_status="disabled"; keine Abfahrt im Zeitfenster -> 200
+        source_status="no_data". Fuer einen bestimmten Bahnhof statt der
+        Stadt-Auswahl dient /api/v1/stations/{eva}/departures.
       x-description-en: >-
-        Upcoming train departures at a city's long-distance main station with
-        real-time delays: scheduled timetable (/plan) and current changes (/fchg)
-        of the DB Timetables API, merged per station into a list sorted by
-        departure (line, category, destination, planned_time, platform,
-        delay_minutes, cancelled, long_distance). Source: Deutsche Bahn AG (CC BY
-        4.0). Without credentials OR toggle off -> 200 source_status="disabled";
-        city without a curated long-distance station -> 200
-        source_status="not_covered" (with covered_cities); no departure in the
-        window -> 200 source_status="no_data".
+        Upcoming train departures at a city's main station with real-time delays:
+        scheduled timetable (/plan) and current changes (/fchg) of the DB
+        Timetables API, merged per station into a list sorted by departure (line,
+        category, destination, planned_time, platform, delay_minutes, cancelled,
+        long_distance). Full coverage across all 84 cities: the main station is
+        derived automatically from the official StaDa catalog (a verified pick for
+        the major hubs). Source: Deutsche Bahn AG (CC BY 4.0). Without credentials
+        OR toggle off -> 200 source_status="disabled"; no departure in the window ->
+        200 source_status="no_data". To target a specific station instead of the
+        city's pick, use /api/v1/stations/{eva}/departures.
       operationId: getCityStationDepartures
       parameters:
         - name: slug
@@ -1752,26 +1755,28 @@ paths:
   /api/v1/cities/{slug}/station-arrivals:
     get:
       tags: [cities]
-      summary: Live-Ankunftstafel Metropolen-Hbf inkl. Fernverkehr (DB Timetables, Tier A)
-      x-summary-en: Live arrival board major station incl. long-distance (DB Timetables, Tier A)
+      summary: Live-Ankunftstafel Haupt-Bahnhof der Stadt, alle Gattungen (DB Timetables, Tier A)
+      x-summary-en: Live arrival board for a city's main station, all categories (DB Timetables, Tier A)
       description: >-
-        Spiegelbild zu station-departures: ankommende Zuege am Fernverkehrs-Hbf der
+        Spiegelbild zu station-departures: ankommende Zuege am Haupt-Bahnhof der
         Stadt mit Echtzeit-Verspaetung (Soll /plan + Aenderungen /fchg gemerged),
         je Eintrag mit origin (Startbahnhof), line, category, planned_time,
-        platform, delay_minutes, cancelled, long_distance. Quelle: Deutsche Bahn
-        AG (CC BY 4.0). Ohne Zugangsdaten ODER Toggle aus -> 200
-        source_status="disabled"; Stadt ohne kuratierten Fernverkehrs-Hbf -> 200
-        source_status="not_covered"; keine Ankunft im Zeitfenster -> 200
-        source_status="no_data".
+        platform, delay_minutes, cancelled, long_distance. Volle Abdeckung ueber
+        alle 84 Staedte: der Haupt-Bahnhof wird automatisch aus dem amtlichen
+        StaDa-Katalog abgeleitet. Quelle: Deutsche Bahn AG (CC BY 4.0). Ohne
+        Zugangsdaten ODER Toggle aus -> 200 source_status="disabled"; keine Ankunft
+        im Zeitfenster -> 200 source_status="no_data". Fuer einen bestimmten Bahnhof
+        statt der Stadt-Auswahl dient /api/v1/stations/{eva}/arrivals.
       x-description-en: >-
-        Mirror of station-departures: incoming trains at a city's long-distance
-        main station with real-time delays (scheduled /plan + changes /fchg
-        merged), each with origin (start station), line, category, planned_time,
-        platform, delay_minutes, cancelled, long_distance. Source: Deutsche Bahn AG
-        (CC BY 4.0). Without credentials OR toggle off -> 200
-        source_status="disabled"; city without a curated long-distance station ->
-        200 source_status="not_covered"; no arrival in the window -> 200
-        source_status="no_data".
+        Mirror of station-departures: incoming trains at a city's main station with
+        real-time delays (scheduled /plan + changes /fchg merged), each with origin
+        (start station), line, category, planned_time, platform, delay_minutes,
+        cancelled, long_distance. Full coverage across all 84 cities: the main
+        station is derived automatically from the official StaDa catalog. Source:
+        Deutsche Bahn AG (CC BY 4.0). Without credentials OR toggle off -> 200
+        source_status="disabled"; no arrival in the window -> 200
+        source_status="no_data". To target a specific station instead of the city's
+        pick, use /api/v1/stations/{eva}/arrivals.
       operationId: getCityStationArrivals
       parameters:
         - name: slug

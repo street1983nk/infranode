@@ -34,7 +34,7 @@ for d in board["data"]["payload"]["departures"]:
 const faq = [
   {
     q: "How is this different from station-departures?",
-    a: "/cities/{slug}/station-departures returns the merged board of a city's curated long-distance main stations. /stations/{eva}/departures returns the board of EVERY individual station by its EVA number, including local trains (S-Bahn, RB, RE).",
+    a: "/cities/{slug}/station-departures returns the merged board of a city's main station, derived automatically from the official StaDa catalog (full coverage across all 84 cities). /stations/{eva}/departures returns the board of EVERY individual station by its EVA number, including local trains (S-Bahn, RB, RE).",
   },
   {
     q: "Where do I get the EVA number?",

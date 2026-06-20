@@ -34,7 +34,7 @@ for d in board["data"]["payload"]["departures"]:
 const faq = [
   {
     q: "Was ist der Unterschied zu station-departures?",
-    a: "Der Endpunkt /cities/{slug}/station-departures liefert die zusammengeführte Tafel der kuratierten Fernverkehrs-Hauptbahnhöfe einer Stadt. /stations/{eva}/departures liefert die Tafel JEDES einzelnen Bahnhofs über seine EVA-Nummer, inklusive Nahverkehr (S-Bahn, RB, RE).",
+    a: "Der Endpunkt /cities/{slug}/station-departures liefert die zusammengeführte Tafel des Haupt-Bahnhofs einer Stadt, automatisch aus dem amtlichen StaDa-Katalog abgeleitet (volle Abdeckung über alle 84 Städte). /stations/{eva}/departures liefert die Tafel JEDES einzelnen Bahnhofs über seine EVA-Nummer, inklusive Nahverkehr (S-Bahn, RB, RE).",
   },
   {
     q: "Woher bekomme ich die EVA-Nummer?",

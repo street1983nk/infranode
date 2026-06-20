@@ -55,22 +55,6 @@ const PARTIAL = [
     note: "",
   },
   {
-    key: "station-departures",
-    label: "Station departures (long-distance hubs)",
-    path: "/api/v1/cities/{slug}/station-departures",
-    op: "getCityStationDepartures",
-    reason: "curated long-distance main stations per city; ANY other station nationwide via /stations/{eva}/departures (see below)",
-    note: "",
-  },
-  {
-    key: "station-arrivals",
-    label: "Station arrivals (long-distance hubs)",
-    path: "/api/v1/cities/{slug}/station-arrivals",
-    op: "getCityStationArrivals",
-    reason: "curated long-distance main stations per city; ANY other station nationwide via /stations/{eva}/arrivals (see below)",
-    note: "",
-  },
-  {
     key: "land-values",
     label: "Land values",
     path: "/api/v1/cities/{slug}/land-values",
@@ -190,6 +174,16 @@ const partialMap: Record<string, string[]> = coverage.partial;
       per HVV station from the Geofox GTI API, including delay and per-line
       service alerts. Hamburg only (Geofox covers the HVV area), station name via
       <code>?station=</code>. Tier C live-only.
+    </li>
+    <li>
+      <a href="/en/api/getCityStationDepartures/"><strong>Per-city station departures</strong></a>
+      and <a href="/en/api/getCityStationArrivals/"><strong>arrivals</strong></a>
+      (<code>/api/v1/cities/{"{slug}"}/station-departures</code> and
+      <code>/station-arrivals</code>): full coverage across all {total} cities. A
+      city's main station is derived automatically from the official StaDa catalog
+      (a verified pick for the major hubs), all categories including local trains.
+      To target a specific station instead of the city's pick, use
+      <code>/stations/{"{eva}"}/departures</code> (see below).
     </li>
     <li>
       <a href="/en/api/getCityStations/"><strong>Station catalog</strong></a>

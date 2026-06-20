@@ -1,6 +1,6 @@
 """DB-Timetables-Adapter ``fetch_station_departures`` (DATA-34, Live, Tier A).
 
-Live-Abfahrtstafel je Metropolen-Hauptbahnhof (inkl. Fernverkehr) aus der offenen
+Live-Abfahrtstafel je Stadt-Hauptbahnhof (alle Gattungen) aus der offenen
 DB-Timetables-API (DB API Marketplace, Produkt "Timetables", CC BY 4.0 = Tier A).
 Zwei Bausteine je Bahnhof (EVA-Nummer), gemerged:
 
@@ -10,13 +10,15 @@ Zwei Bausteine je Bahnhof (EVA-Nummer), gemerged:
   ein geaendertes ``<dp ct cp cs/>`` (ct=geaenderte Zeit, cp=geaendertes Gleis,
   cs="c"=Ausfall). Gematcht wird ueber die Stop-``id``.
 
-Aggregiert ueber die kuratierten EVAs einer Stadt (Berlin Hbf hat z.B. zwei
-Ebenen mit eigenen EVAs), dedupliziert je Stop-``id``, berechnet die Verspaetung
-und liefert die naechsten Abfahrten zeitsortiert.
+Aggregiert ueber die aufgeloesten EVAs einer Stadt (kuratierte Override-Liste
+oder aus dem StaDa-Katalog abgeleitet; Berlin Hbf hat z.B. zwei Ebenen mit eigenen
+EVAs), dedupliziert je Stop-``id``, berechnet die Verspaetung und liefert die
+naechsten Abfahrten zeitsortiert.
 
 Sicherheit:
-- T-05-08 (SSRF): Host hartkodiert; nur kuratierte EVAs (cities.STATION_EVAS, NIE
-  User-Input) fliessen in die URL.
+- T-05-08 (SSRF): Host hartkodiert; nur kuratierte ODER aus dem StaDa-Katalog
+  abgeleitete EVAs (cities._resolve_city_station_evas, NIE roher User-Input)
+  fliessen in die URL.
 - T-08-CRED: Client-Id/Api-Key gehen NUR in die Request-Header, nie in
   Cache-Key/Response/Log.
 - T-9-01 (untrusted Live-XML): Pre-Parse-Guard gegen DOCTYPE/ENTITY + Size-Cap VOR
