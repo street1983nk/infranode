@@ -56,18 +56,18 @@ const PARTIAL = [
   },
   {
     key: "station-departures",
-    label: "Station departures (long-distance)",
+    label: "Station departures (long-distance hubs)",
     path: "/api/v1/cities/{slug}/station-departures",
     op: "getCityStationDepartures",
-    reason: "curated long-distance main stations",
+    reason: "curated long-distance main stations per city; ANY other station nationwide via /stations/{eva}/departures (see below)",
     note: "",
   },
   {
     key: "station-arrivals",
-    label: "Station arrivals (long-distance)",
+    label: "Station arrivals (long-distance hubs)",
     path: "/api/v1/cities/{slug}/station-arrivals",
     op: "getCityStationArrivals",
-    reason: "curated long-distance main stations",
+    reason: "curated long-distance main stations per city; ANY other station nationwide via /stations/{eva}/arrivals (see below)",
     note: "",
   },
   {
@@ -198,11 +198,13 @@ const partialMap: Record<string, string[]> = coverage.partial;
       Provides each station's EVA number for the per-station boards.
     </li>
     <li>
-      <a href="/en/api/getStationDepartures/"><strong>Per-station live departures/arrivals</strong></a>
-      (<code>/api/v1/stations/{"{eva}"}/departures</code>): board of ANY station by
-      its EVA number, all categories including local trains (S/RB/RE), with
-      real-time delays, cancellations and disruption messages. No fixed city list:
-      any valid EVA can be queried (otherwise <code>no_data</code>).
+      <a href="/en/api/getStationDepartures/"><strong>Per-station live departures</strong></a>
+      and <a href="/en/api/getStationArrivals/"><strong>arrivals</strong></a>
+      (<code>/api/v1/stations/{"{eva}"}/departures</code> and
+      <code>/arrivals</code>): board of ANY station by its EVA number, all
+      categories including local trains (S/RB/RE), with real-time delays,
+      cancellations and disruption messages. No fixed city list: any valid EVA can
+      be queried (otherwise <code>no_data</code>).
     </li>
   </ul>
 

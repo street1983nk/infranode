@@ -58,18 +58,18 @@ const PARTIAL = [
   },
   {
     key: "station-departures",
-    label: "Bahnhof-Abfahrten (Fernverkehr)",
+    label: "Bahnhof-Abfahrten (Fernverkehr-Hbf)",
     path: "/api/v1/cities/{slug}/station-departures",
     op: "getCityStationDepartures",
-    reason: "kuratierte Fernverkehrs-Hbf",
+    reason: "kuratierte Fernverkehrs-Hbf je Stadt; JEDER andere Bahnhof bundesweit über /stations/{eva}/departures (siehe unten)",
     note: "",
   },
   {
     key: "station-arrivals",
-    label: "Bahnhof-Ankünfte (Fernverkehr)",
+    label: "Bahnhof-Ankünfte (Fernverkehr-Hbf)",
     path: "/api/v1/cities/{slug}/station-arrivals",
     op: "getCityStationArrivals",
-    reason: "kuratierte Fernverkehrs-Hbf",
+    reason: "kuratierte Fernverkehrs-Hbf je Stadt; JEDER andere Bahnhof bundesweit über /stations/{eva}/arrivals (siehe unten)",
     note: "",
   },
   {
@@ -200,11 +200,13 @@ const partialMap: Record<string, string[]> = coverage.partial;
       alle Städte. Liefert je Bahnhof die EVA-Nummer für die Per-Bahnhof-Boards.
     </li>
     <li>
-      <a href="/api/getStationDepartures/"><strong>Live-Abfahrten/-Ankünfte je Bahnhof</strong></a>
-      (<code>/api/v1/stations/{"{eva}"}/departures</code>): Tafel JEDES Bahnhofs
-      über seine EVA-Nummer, alle Gattungen inklusive Nahverkehr (S/RB/RE), mit
-      Echtzeit-Verspätung, Ausfällen und Störungs-/Hinweismeldungen. Keine feste
-      Städteliste: jede gültige EVA ist abfragbar (sonst <code>no_data</code>).
+      <a href="/api/getStationDepartures/"><strong>Live-Abfahrten je Bahnhof</strong></a>
+      und <a href="/api/getStationArrivals/"><strong>-Ankünfte</strong></a>
+      (<code>/api/v1/stations/{"{eva}"}/departures</code> bzw.
+      <code>/arrivals</code>): Tafel JEDES Bahnhofs über seine EVA-Nummer, alle
+      Gattungen inklusive Nahverkehr (S/RB/RE), mit Echtzeit-Verspätung, Ausfällen
+      und Störungs-/Hinweismeldungen. Keine feste Städteliste: jede gültige EVA ist
+      abfragbar (sonst <code>no_data</code>).
     </li>
   </ul>
 
