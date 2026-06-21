@@ -32,7 +32,7 @@ CACHE_TTL = {
 # no_data-Zustand bliebe stundenlang eingefroren. no-store haelt /live/
 # cache-frei (Origin-Last bleibt klein, da der resiliente Redis-Cache davor
 # liegt). Clients steuern ihren Poll-Takt ueber meta.refresh_seconds.
-NO_STORE_RESOURCES = frozenset({"live"})
+NO_STORE_RESOURCES = frozenset({"live", "track"})
 
 
 def compute_etag(body: bytes) -> str:

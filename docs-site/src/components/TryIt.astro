@@ -98,6 +98,22 @@ const methodUpper = method.toUpperCase();
 </div>
 
 <script>
+  // Cache-freier Erstkontakt-Beacon: die Daten-Endpunkte sind Cloudflare-edge-
+  // gecacht (cf-cache-status HIT erreicht das Origin nicht), daher meldet ein
+  // gecachter Daten-Abruf dem Origin keinen neuen Dev. Dieser leichte /track-Aufruf
+  // (no-store -> immer ans Origin) loest die Erstkontakt-Benachrichtigung aus. Nur
+  // einmal pro Seitenbesuch, fire-and-forget; ein Fehler stoert die Konsole nie.
+  let beaconSent = false;
+  function sendTrackBeacon(apiBase: string): void {
+    if (beaconSent) return;
+    beaconSent = true;
+    try {
+      void fetch(`${apiBase}/api/v1/track`, { method: "GET", keepalive: true });
+    } catch {
+      // Best-Effort: Beacon-Fehler nie sichtbar machen.
+    }
+  }
+
   for (const root of document.querySelectorAll<HTMLElement>("[data-tryit]")) {
     const sendBtn = root.querySelector<HTMLButtonElement>("[data-tryit-send]")!;
     const out = root.querySelector<HTMLElement>("[data-tryit-out]")!;
@@ -125,6 +141,8 @@ const methodUpper = method.toUpperCase();
     }
 
     sendBtn.addEventListener("click", async () => {
+      // Erstkontakt-Beacon vor dem eigentlichen (gecachten) Daten-Abruf.
+      sendTrackBeacon(apiBase);
       const url = buildUrl();
       out.textContent = sendingText;
       try {

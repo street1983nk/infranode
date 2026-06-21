@@ -4,10 +4,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from . import cities, compare, dcat, health, live, openapi, sources, stations
+from . import cities, compare, dcat, health, live, openapi, sources, stations, track
 
 api_v1 = APIRouter(prefix="/api/v1")
 api_v1.include_router(health.router, tags=["meta"])
+# Cache-freier Erstkontakt-Beacon (/api/v1/track): loest note_first_seen aus, auch
+# wenn die Daten-Endpunkte edge-gecacht sind (HIT erreicht das Origin nicht).
+api_v1.include_router(track.router, tags=["meta"])
 api_v1.include_router(cities.router, tags=["cities"])
 api_v1.include_router(sources.router, tags=["meta"])
 api_v1.include_router(openapi.router, tags=["meta"])
