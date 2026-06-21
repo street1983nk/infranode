@@ -34,7 +34,16 @@
 			X-Content-Type-Options "nosniff"
 			Referrer-Policy "no-referrer"
 		}
-		reverse_proxy api:8000 {
+		reverse_proxy {
+			# Horizontale Skalierung (SCALING.md): dynamische Upstream-Aufloesung statt
+			# fester "api:8000"-Adresse. Caddy fragt den Docker-DNS periodisch nach ALLEN
+			# A-Records des Service "api" und verteilt round-robin ueber alle Replicas.
+			# Bei einer Instanz (Default) genau ein Upstream -> identisches Verhalten.
+			dynamic a {
+				name api
+				port 8000
+				refresh 10s
+			}
 			# Correlation-ID durchreichen, damit asgi-correlation-id sie in
 			# FastAPI uebernehmen kann (FND-03).
 			header_up X-Request-ID {http.request.header.X-Request-ID}
@@ -118,5 +127,11 @@ mcp.{$INFRANODE_PUBLIC_DOMAIN} {
 		Referrer-Policy "no-referrer"
 	}
 
-	reverse_proxy mcp:8081
+	reverse_proxy mcp:8081 {
+		# Client-gesendetes X-Forwarded-For strippen (Konsistenz zum API-Block,
+		# Audit HIGH-2): der MCP-Rate-Limiter (mcp/ratelimit.py) faellt nach
+		# CF-Connecting-IP auf X-Forwarded-For[0] zurueck; ohne Strip koennte ein
+		# Client es faelschen und sich frische Schutzfenster erschleichen.
+		header_up -X-Forwarded-For
+	}
 }

@@ -28,6 +28,7 @@ from infranode.api.responses import OrjsonResponse
 
 from .api.errors import register_exception_handlers
 from .api.v1 import api_v1
+from .api.v1.abuse_guard import AbuseGuardMiddleware
 from .api.v1.ratelimit import limiter, real_client_ip
 from .config import get_settings
 from .infra.etag import cache_control_for, compute_etag
@@ -405,6 +406,11 @@ def create_app() -> FastAPI:
     # griff nur das per-Route-Decorator-Limit (admin-login), die GET-Reads blieben
     # ungedrosselt und ohne RateLimit-Header.
     app.add_middleware(RateLimitMiddleware)
+    # AbuseGuard NACH RateLimitMiddleware added -> laeuft knapp DAVOR (Starlette:
+    # zuletzt added = aeusserste Schicht = zuerst ausgefuehrt). Grobe, billige
+    # Vor-Filter gegen verteilte Bots (Subnetz-Limit + optionaler CF-Bot-Score-Block)
+    # vor dem feineren per-IP-Limit. Scraping-Haertung; Details: abuse_guard.py.
+    app.add_middleware(AbuseGuardMiddleware)
     app.add_middleware(ETagMiddleware)
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(CorrelationIdMiddleware)

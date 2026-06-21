@@ -46,6 +46,11 @@ module-root = "src"
 [dependency-groups]
 dev = [
     "fakeredis==2.36.1",
+    # jsonschema: validiert in den Contract-Tests (tests/contract/) die gespeicherten
+    # Upstream-Samples gegen ihr draft-07-schema.json (Format-Drift-Detektor). Nur
+    # Test-Zeit, NIE im Live-Docker-Image. War bereits transitiv vorhanden, hier
+    # explizit gepinnt, damit der Contract-Test verlaesslich laeuft.
+    "jsonschema==4.26.0",
     "pytest==9.0.3",
     "pytest-asyncio==1.4.0",
     "respx==0.23.1",
@@ -92,3 +97,10 @@ select = ["E", "F", "I", "UP", "B", "ASYNC", "S"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    # Live-Contract-Tests treffen echte Upstreams. Laufen NUR im separaten,
+    # non-blocking contract-live-Workflow (.github/workflows/contract-live.yml),
+    # NIE in der Haupt-CI (dort `pytest -m "not live"`), damit Upstream-Ausfaelle
+    # keine PRs rot faerben.
+    "live: trifft echte Upstream-APIs (nur im contract-live-Workflow)",
+]

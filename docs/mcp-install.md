@@ -14,7 +14,7 @@ InfraNode-Live-API. Jedes Tool ruft einen festen API-Endpunkt auf und gibt
 dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
-deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie und mehr) als 38
+deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie und mehr) als 44
 MCP-Tools.
 
 ## Berechtigungen und Sicherheitsmodell

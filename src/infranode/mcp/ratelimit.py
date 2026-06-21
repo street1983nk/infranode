@@ -6,29 +6,72 @@ FastAPI-App greifen nur auf dem API-Pfad, nicht auf dem MCP-Service. Ein Client
 konnte den MCP-Endpunkt also ungebremst haemmern (jeder Tool-Call loest zudem
 einen API-Aufruf aus, der die Upstream-Last vervielfacht).
 
-Diese Middleware drosselt pro echter Client-IP mit einem In-Memory-Moving-Window
-(``limits``-Library, bereits via slowapi vorhanden). In-Memory genuegt, weil der
-MCP-Server als EIN Prozess/Container laeuft (kein Multi-Worker-Sharing noetig);
-ein Neustart leert die Fenster, was bei einem reinen Schutzlimit unkritisch ist.
-Die echte Client-IP kommt wie in der API zuerst aus ``CF-Connecting-IP`` (von
-Cloudflare verbindlich gesetzt), dann aus ``X-Forwarded-For[0]``, sonst dem Peer.
+Diese Middleware drosselt pro echter Client-IP mit einem Moving-Window
+(``limits``-Library, bereits via slowapi vorhanden). Der Storage liegt in REDIS
+(``INFRANODE_REDIS_URL``), damit das Budget ueber mehrere MCP-Replicas GETEILT
+ist (horizontale Skalierung): liefen N Replicas mit je eigenem In-Memory-Fenster,
+ver-N-fachte sich das effektive Limit. Ist Redis nicht erreichbar (z.B. lokaler
+stdio-Betrieb ohne Redis), faellt die Middleware auf einen prozesslokalen
+In-Memory-Speicher zurueck, damit der Server trotzdem startet (Schutzlimit, kein
+harter State). Die echte Client-IP kommt wie in der API zuerst aus
+``CF-Connecting-IP`` (von Cloudflare verbindlich gesetzt), dann aus
+``X-Forwarded-For[0]``, sonst dem Peer.
 """
 
 from __future__ import annotations
 
+import logging
 import os
 
 from limits import parse
-from limits.storage import MemoryStorage
+from limits.storage import MemoryStorage, storage_from_string
 from limits.strategies import MovingWindowRateLimiter
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+logger = logging.getLogger(__name__)
+
 # Default-Budget pro IP fuer den MCP-Endpunkt. Bewusst knapper als das API-IP-
 # Budget (ein MCP-Tool-Call ist teurer: er erzeugt einen Upstream-API-Aufruf).
 # Per INFRANODE_MCP_RATE_LIMIT (limits-Format "<zahl>/<einheit>") ueberschreibbar.
 _DEFAULT_LIMIT = "60/minute"
+
+
+def _make_storage():
+    """Redis-Storage fuer geteilte Budgets ueber Replicas; Fallback In-Memory.
+
+    storage_from_string verbindet lazy; ``check()`` pingt Redis und gibt bei
+    nicht erreichbarem Server False zurueck (wirft nicht). Nur dann der
+    prozesslokale Fallback, damit ein versehentlich fehlendes Redis den
+    lokalen/stdio-MCP-Server nicht am Start hindert.
+    """
+    url = os.environ.get("INFRANODE_REDIS_URL", "redis://redis:6379/0")
+    try:
+        # Kurze Connect-/Read-Timeouts: ohne sie kann check() bei nicht
+        # aufloesbarem/erreichbarem Host (lokaler stdio-Betrieb ohne Redis, oder
+        # ISP-DNS-Hijack des Compose-Servicenamens "redis") bis zum OS-Default
+        # blockieren -> der MCP-Server-Start haengt. So faellt check() schnell auf
+        # False und wir nehmen den In-Memory-Fallback. memory:// ignoriert die
+        # kwargs (kein Netz), daher unschaedlich.
+        storage = storage_from_string(
+            url, socket_connect_timeout=0.5, socket_timeout=0.5
+        )
+        if storage.check():
+            return storage
+        logger.warning(
+            "MCP rate-limit: Redis (%s) nicht erreichbar, In-Memory-Fallback "
+            "(pro-Prozess, nicht replica-geteilt).",
+            url,
+        )
+    except Exception as exc:  # noqa: BLE001 - jeder Storage-Init-Fehler -> Fallback
+        logger.warning(
+            "MCP rate-limit: Redis-Storage-Init fehlgeschlagen (%s), "
+            "In-Memory-Fallback: %s",
+            url,
+            exc,
+        )
+    return MemoryStorage()
 
 
 def client_ip(request: Request) -> str:
@@ -59,7 +102,7 @@ class MCPRateLimitMiddleware:
 
     def __init__(self, app: ASGIApp, limit: str | None = None) -> None:
         self.app = app
-        self._limiter = MovingWindowRateLimiter(MemoryStorage())
+        self._limiter = MovingWindowRateLimiter(_make_storage())
         self._item = parse(
             limit or os.environ.get("INFRANODE_MCP_RATE_LIMIT", _DEFAULT_LIMIT)
         )

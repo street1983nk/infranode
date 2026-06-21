@@ -116,7 +116,23 @@ async def fetch_air(
             "observed_at": None,
             "location_id": None,
         }
-    location_id = results[0]["id"]
+    # Drift-Schutz: fehlt das ``id``-Feld der gewaehlten Station (Format-Drift),
+    # NICHT mit KeyError abstuerzen, sondern wie "keine Station" als no_data
+    # behandeln (Sentinel mit location_id=None -> Handler liefert 200 no_data).
+    location_id = results[0].get("id")
+    if location_id is None:
+        return {
+            "slug": slug,
+            "lat": lat,
+            "lon": lon,
+            "pm10": None,
+            "no2": None,
+            "pm25": None,
+            "o3": None,
+            "so2": None,
+            "observed_at": None,
+            "location_id": None,
+        }
 
     # Stufe 2: aktuelle Messwerte der gewaehlten Station.
     latest_resp = await _get_with_retry(

@@ -78,6 +78,22 @@ class RateLimitSettings(BaseSettings):
     # Verbindung zum SELBEN Redis-Server). None = in der Anwendung auf redis_url
     # zurueckfallen (gleicher Server, getrennte Verbindung).
     limit_storage_uri: str | None = None
+    # Aggregiertes Subnetz-Limit gegen VERTEILTE Bots (Scraping-Haertung): das
+    # IP-Limit oben fasst nur eine einzelne IP; ein Botnet/Cloud-Range mit vielen
+    # IPs umgeht es. Dieses Zweit-Limit bremst pro /24 (IPv4) bzw. /64 (IPv6).
+    # BEWUSST hoch (Default 1200/min = ~10x das IP-Burst-Budget), damit legitime
+    # NAT-/Campus-Nutzer hinter einer gemeinsamen IP NICHT getroffen werden; es
+    # greift erst, wenn aus EINEM Subnetz untypisch viele Anfragen kommen. Leer
+    # ("") = deaktiviert. Per INFRANODE_LIMIT_SUBNET ueberschreibbar.
+    limit_subnet: str = "1200/minute"
+    subnet_ipv4_prefix: int = 24
+    subnet_ipv6_prefix: int = 64
+    # Optionaler Cloudflare-Bot-Score-Schwellwert (1-99; 0 = deaktiviert). Greift
+    # NUR, wenn Cloudflare den Header ``cf-bot-score`` setzt (Bot Management /
+    # Enterprise). Bei Free/Pro fehlt der Header -> der Check ist ein No-op-Hook,
+    # der automatisch wirksam wird, sobald Scores verfuegbar sind. Anfragen mit
+    # Score < Schwellwert werden mit 403 abgelehnt (sehr wahrscheinlich Bots).
+    bot_score_min: int = 0
 
 
 class AdminSettings(BaseSettings):

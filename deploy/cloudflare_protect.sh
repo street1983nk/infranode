@@ -53,6 +53,18 @@ RL_REQUESTS="${RL_REQUESTS:-100}"
 RL_PERIOD="${RL_PERIOD:-10}"
 RL_TIMEOUT="${RL_TIMEOUT:-10}"
 
+# Bekannte AGGRESSIVE SEO-/Scraper-Bots ohne API-Mehrwert, die typischerweise
+# verteilt abgrasen (Scraping-Haertung). BEWUSST NICHT in der Liste:
+#   - AI-Crawler (GPTBot/ClaudeBot/PerplexityBot/Google-Extended): via robots.txt
+#     ABSICHTLICH erlaubt (GEO/Auffindbarkeit in KI-Antworten),
+#   - generische HTTP-Clients (python-requests/httpx/curl/node-fetch): das sind
+#     legitime Data-Science-/Vibecoder-Nutzer der keylosen API.
+# Diese Bots sind kommerzielle SEO-Crawler, die InfraNode-Daten ohne Nutzen
+# abgreifen und oft robots.txt ignorieren -> harte Block-Regel (kein Challenge,
+# das wuerde nur CPU kosten ohne dass ein Bot es loest). Per BAD_BOTS (kommagetrennt,
+# Substring-Match auf den lowercased User-Agent) anpassbar; leer = WAF-Regel aus.
+BAD_BOTS="${BAD_BOTS:-ahrefsbot,semrushbot,mj12bot,dotbot,blexbot,dataforseobot,petalbot,barkrowler,zoominfobot}"
+
 cf() {
   # cf METHOD PATH [JSON-BODY]
   local method="$1" path="$2" body="${3:-}"
@@ -102,6 +114,36 @@ RL_BODY="$(jq -n \
   }]
 }')"
 
+# --- Phase 3: WAF Custom Rule (Bad-Bot-Block) ------------------------------------
+# Blockt bekannte aggressive SEO-/Scraper-Bots per User-Agent-Substring. Eine
+# Custom-WAF-Regel (mehrere OR-Bedingungen = 1 Regel; im Free-Plan verfuegbar).
+# Greift NUR auf den InfraNode-Hosts. Leeres BAD_BOTS -> Regelsatz leer (Phase aus).
+WAF_EXPR=""
+if [[ -n "$BAD_BOTS" ]]; then
+  IFS=',' read -ra _bots <<<"$BAD_BOTS"
+  _ua=""
+  for b in "${_bots[@]}"; do
+    b="$(echo "$b" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]')"
+    [[ -z "$b" ]] && continue
+    cond="(lower(http.user_agent) contains \"$b\")"
+    _ua="${_ua:+$_ua or }$cond"
+  done
+  # nur auf den eigenen Hosts greifen, sonst Bot-UA egal.
+  WAF_EXPR="((http.host eq \"infranode.dev\") or (http.host eq \"mcp.infranode.dev\")) and (${_ua})"
+fi
+
+if [[ -n "$WAF_EXPR" ]]; then
+  WAF_BODY="$(jq -n --arg expr "$WAF_EXPR" '{
+    rules: [{
+      action: "block",
+      description: "InfraNode: bekannte aggressive SEO-/Scraper-Bots blocken (keine AI-Crawler, keine generischen HTTP-Clients)",
+      expression: $expr
+    }]
+  }')"
+else
+  WAF_BODY="$(jq -n '{rules: []}')"
+fi
+
 # --- Phase 2: Cache Rule ---------------------------------------------------------
 # set_cache_settings + respect_origin: Cloudflare cached /api/v1/* am Edge und
 # folgt dem Origin-Cache-Control (max-age/s-maxage/swr). serve_stale aktiv lassen,
@@ -127,8 +169,12 @@ if [[ "$DRY_RUN" == "1" ]]; then
   echo "[dry-run] Cache-Phase (http_request_cache_settings), aktueller Stand:"
   cf GET "/zones/$CF_ZONE_ID/rulesets/phases/http_request_cache_settings/entrypoint" | jq -r '.result.rules // []'
   echo
+  echo "[dry-run] WAF-Custom-Phase (http_request_firewall_custom), aktueller Stand:"
+  cf GET "/zones/$CF_ZONE_ID/rulesets/phases/http_request_firewall_custom/entrypoint" | jq -r '.result.rules // []'
+  echo
   echo "[dry-run] Wuerde Rate-Limit-Regel setzen:"; echo "$RL_BODY" | jq .
   echo "[dry-run] Wuerde Cache-Regel setzen:";       echo "$CACHE_BODY" | jq .
+  echo "[dry-run] Wuerde Bad-Bot-WAF-Regel setzen:"; echo "$WAF_BODY" | jq .
   exit 0
 fi
 
@@ -138,6 +184,10 @@ echo "   ok."
 
 echo "-> Setze Cache-Regel ..."
 cf PUT "/zones/$CF_ZONE_ID/rulesets/phases/http_request_cache_settings/entrypoint" "$CACHE_BODY" | check_ok >/dev/null
+echo "   ok."
+
+echo "-> Setze Bad-Bot-WAF-Regel ..."
+cf PUT "/zones/$CF_ZONE_ID/rulesets/phases/http_request_firewall_custom/entrypoint" "$WAF_BODY" | check_ok >/dev/null
 echo "   ok."
 
 echo
