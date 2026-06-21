@@ -29,6 +29,7 @@ Dies ist das wichtigste Vertrauenssignal, daher zuerst:
 | Browser / GUI-Automatisierung | Kein Zugriff. |
 | Netzwerk (ausgehend) | Nur GET an die allowlistete InfraNode-Base-URL. |
 | Netzwerk (eingehend, stdio) | Kein offener Port. Lokaler Subprozess über stdio. |
+| Netzwerk (eingehend, Remote) | Nur der Remote-Server bindet einen Port (hinter Caddy/Cloudflare). Pro IP auf 60 Anfragen/Minute begrenzt (HTTP 429 + Retry-After bei Überschreitung). |
 | Schreibende Operationen | Keine. Alle Tools sind reine Lesezugriffe (HTTP GET). |
 
 Konkrete Schutzmechanismen im Code (`src/infranode/mcp/client.py`):
@@ -44,6 +45,11 @@ Konkrete Schutzmechanismen im Code (`src/infranode/mcp/client.py`):
   url-gequotet. Slugs mit Pfad- oder Host-Anteilen (`/`, `@`, `:`, Whitespace)
   werden abgewiesen, bevor ein Request rausgeht.
 - **Endlicher Timeout:** 30 s pro Aufruf, kein hängender Agent.
+- **Rate-Limit (Remote, `src/infranode/mcp/ratelimit.py`):** Der öffentliche
+  Streamable-HTTP-Endpunkt drosselt pro echter Client-IP (CF-Connecting-IP) mit
+  einem Moving-Window (Default 60/Minute, per `INFRANODE_MCP_RATE_LIMIT`
+  einstellbar). Überschreitung liefert HTTP 429 mit `Retry-After`. Der lokale
+  stdio-Transport ist davon unberührt (kein offener Port).
 
 ## Getestete Clients und Versionen
 

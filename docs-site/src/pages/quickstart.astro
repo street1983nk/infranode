@@ -95,10 +95,14 @@ const py = [
   <h2>Rate-Limits</h2>
   <p>
     Die API ist offen und braucht keinen API-Key. Aufrufe sind pro IP begrenzt
-    (Schutz vor Missbrauch). Jede Antwort trägt die Standard-Header
-    <code>RateLimit-Limit</code>, <code>RateLimit-Remaining</code> und
-    <code>RateLimit-Reset</code>. Wird das Limit überschritten, antwortet die
-    API mit Status <code>429</code>.
+    (Schutz vor Missbrauch): bis zu <strong>120 Anfragen pro Minute</strong>
+    (kurze Spitzen) und <strong>3000 pro Stunde</strong> (nachhaltig). Jede
+    Antwort trägt die Standard-Header <code>RateLimit-Limit</code>,
+    <code>RateLimit-Remaining</code> und <code>RateLimit-Reset</code>. Wird ein
+    Limit überschritten, antwortet die API mit Status <code>429</code> und
+    einem <code>Retry-After</code>-Header. Der MCP-Endpunkt
+    (<code>mcp.infranode.dev</code>) ist separat auf 60 Anfragen pro Minute und
+    IP begrenzt.
   </p>
 
   <h2>Nächste Schritte</h2>

@@ -203,7 +203,25 @@ def run() -> None:
             mcp.settings.transport_security = TransportSecuritySettings(
                 enable_dns_rebinding_protection=False,
             )
-        mcp.run(transport="streamable-http")
+        # Eigener uvicorn-Start statt mcp.run(transport=...), damit wir die
+        # Streamable-HTTP-App mit der IP-Rate-Limit-Middleware umhuellen koennen
+        # (Security-Haertung 2026-06-21): der oeffentliche MCP-Endpunkt hatte
+        # sonst KEINE Drosselung. mcp.run() wuerde intern denselben
+        # streamable_http_app() bauen und per uvicorn starten; wir reichen nur die
+        # Middleware dazwischen. Die App-eigene Lifespan (Session-Manager) bleibt
+        # erhalten, da uvicorn sie aus der ASGI-App ausfuehrt.
+        import uvicorn
+
+        from infranode.mcp.ratelimit import MCPRateLimitMiddleware
+
+        app = mcp.streamable_http_app()
+        app.add_middleware(MCPRateLimitMiddleware)
+        uvicorn.run(
+            app,
+            host=mcp.settings.host,
+            port=mcp.settings.port,
+            log_level=mcp.settings.log_level.lower(),
+        )
     else:
         mcp.run()
 

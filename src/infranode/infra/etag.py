@@ -58,4 +58,11 @@ def cache_control_for(resource: str | None = None) -> str:
     if resource in NO_STORE_RESOURCES:
         return "no-store"
     ttl = CACHE_TTL.get(resource or "default", CACHE_TTL["default"])
-    return f"public, max-age={ttl}"
+    # stale-while-revalidate + stale-if-error (Security-Haertung 2026-06-21):
+    # Nach Ablauf der max-age liefert ein Shared Cache (Cloudflare) die Antwort
+    # SOFORT weiter und revalidiert asynchron im Hintergrund -> kein Thundering
+    # Herd aufs Origin bei populaeren Endpunkten (DoS-/Scraping-Last-Glaettung).
+    # stale-if-error haelt die API bei Origin-Ueberlast/-Ausfall antwortfaehig
+    # (das CDN serviert die letzte gute Antwort statt eines Fehlers). Fenster =
+    # ttl. Greift nur an einem Shared Cache; Browser ignorieren swr i. d. R.
+    return f"public, max-age={ttl}, stale-while-revalidate={ttl}, stale-if-error={ttl}"

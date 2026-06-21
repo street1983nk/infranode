@@ -3493,9 +3493,13 @@ components:
       schema: { type: string }
     CacheControl:
       description: >-
-        Cache-Control je Ressource ("public, max-age=<ttl>"). TTL aus der
+        Cache-Control je Ressource ("public, max-age=<ttl>,
+        stale-while-revalidate=<ttl>, stale-if-error=<ttl>"). TTL aus der
         serverseitigen CACHE_TTL-Map (z.B. wikidata 86400 s, dwd 1800 s, uba
-        600 s, default 300 s).
+        600 s, default 300 s). stale-while-revalidate/stale-if-error erlauben
+        einem Shared Cache (Cloudflare), bei Ablauf bzw. Origin-Fehler kurz die
+        letzte gute Antwort weiterzuliefern. Echtzeit-Endpunkte (/api/v1/live/*)
+        liefern stattdessen "no-store".
       schema: { type: string }
     RateLimitLimit:
       description: Erlaubte Requests im aktuellen Fenster (IETF RateLimit-Header).

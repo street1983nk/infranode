@@ -35,13 +35,22 @@ _STANDARD_HEADER_MAPPING = {
 
 
 def ANON_LIMIT() -> str:
-    """IP-Budget fuer alle Clients (frische Settings(), Test-Override-sicher).
+    """Kombiniertes IP-Budget: Burst (limit_anon) + nachhaltiges Fenster.
+
+    Gibt beide Limits semikolon-getrennt zurueck; slowapi/limits ``parse_many``
+    liest das als MEHRERE gleichzeitig geltende Limits (Burst pro Minute bremst
+    Spitzen, das Stunden-Limit bremst Dauer-Scraping). Ist nur limit_anon gesetzt
+    (z.B. Test-Override INFRANODE_LIMIT_ANON), gilt allein dieses.
 
     Frisch instanziiert statt get_settings()-Cache (Konvention Toggle-Lookup), da
     @limiter.limit das Limit pro Request liest und per-Test gesetzte INFRANODE_-
     Env-Vars greifen muessen.
     """
-    return Settings().limit_anon
+    s = Settings()
+    limits = [s.limit_anon]
+    if s.limit_anon_sustained:
+        limits.append(s.limit_anon_sustained)
+    return ";".join(limits)
 
 
 def ADMIN_LOGIN_LIMIT() -> str:
