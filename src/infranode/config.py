@@ -188,6 +188,10 @@ class SourceToggleSettings(BaseSettings):
     # -abmeldungen 52311). Bulk-Ingest -> SQLite (Read-only im Request-Pfad); ohne
     # regio_user/regio_pass 200 disabled (Daten koennten nie ingestet werden).
     enable_regionalstatistik: bool = True
+    # DATA-38 (Stufe 1): PVGIS-Solar (EU JRC PVcalc, keylose Live-Rechen-API). PVGIS
+    # rechnet jede EU-Koordinate -> alle Register-Staedte abgedeckt. Keylos ->
+    # Default True. Toggle-Name == SourceId.SOLAR == _KNOWN_SOURCES-Eintrag.
+    enable_solar: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True
@@ -226,6 +230,16 @@ class SourceToggleSettings(BaseSettings):
     enable_eround_charging: bool = False
     # DATA-31: Bremen Baustellen (Mobilithek DATEX II Situation, DL-DE/BY 2.0).
     enable_bremen_baustellen: bool = False
+    # Hannover Verkehrsmeldungen (Mobilithek DATEX II V2 Situation, DL-DE/BY 2.0).
+    # Live = Cert + Abo noetig -> Default False, bis Zertifikat + Abo-ID gesetzt.
+    enable_hannover_verkehrsmeldungen: bool = False
+    # Frankfurt am Main Parkdaten (Mobilithek DATEX II V3 Parking, statisch +
+    # dynamisch gejoint, DL-DE/BY 2.0). Live = Cert + Abo noetig -> Default False,
+    # bis Zertifikat und beide Abo-IDs gesetzt sind.
+    enable_frankfurt_parking: bool = False
+    # Wuppertal Parkdaten (Mobilithek DATEX II V2 ParkingFacility, statisch +
+    # dynamisch gejoint, DL-DE/Zero 2.0). Live = Cert + Abo -> Default False.
+    enable_wuppertal_parking: bool = False
 
 
 class CredentialSettings(BaseSettings):
@@ -285,6 +299,20 @@ class MobilithekSettings(BaseSettings):
     kiel_zaehlstellen_abo_id: str | None = None
     eround_charging_abo_id: str | None = None
     bremen_baustellen_abo_id: str | None = None
+    # Hannover Verkehrsmeldungen (DATEX II V2 SituationPublication, path-Pull).
+    # Abo-ID aus dem Portal (Detailseite HTTPS-Zugriffspunkt); SSRF-Allowlist
+    # (aboId NIE aus User-Input).
+    hannover_verkehrsmeldungen_abo_id: str | None = None
+    # Frankfurt Parkdaten: ZWEI Abos (DATEX II V3, container-Pull). Das dynamische
+    # Abo traegt die Belegung (frei/Auslastung), das statische die Stammdaten
+    # (Name/Geo/Kapazitaet); der Adapter joint beide ueber die parkingRecord-ID.
+    # Beide als SSRF-Allowlist (aboId NIE aus User-Input).
+    frankfurt_parking_abo_id: str | None = None
+    frankfurt_parking_static_abo_id: str | None = None
+    # Wuppertal Parkdaten: ZWEI Abos (DATEX II V2 ParkingFacility, path-Pull).
+    # dynamisch = Belegung, statisch = Stammdaten; Join ueber parkingFacility-ID.
+    wuppertal_parking_abo_id: str | None = None
+    wuppertal_parking_static_abo_id: str | None = None
 
 
 class TransitSettings(BaseSettings):

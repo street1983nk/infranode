@@ -106,9 +106,18 @@ _KNOWN_SOURCES = (
     "dortmund_parking",
     "kiel_zaehlstellen",
     "eround_charging",
+    # Frankfurt am Main Parkdaten (Mobilithek DATEX II V3 Parking, DL-DE/BY 2.0).
+    # Name == enable_frankfurt_parking (config.py) == SourceId.FRANKFURT_PARKING.
+    "frankfurt_parking",
+    # Wuppertal Parkdaten (Mobilithek DATEX II V2 ParkingFacility, DL-DE/Zero 2.0).
+    # Name == enable_wuppertal_parking (config.py) == SourceId.WUPPERTAL_PARKING.
+    "wuppertal_parking",
     # DATA-31: Bremen Baustellen (Mobilithek DATEX II, DL-DE/BY 2.0). Name ==
     # enable_bremen_baustellen == SourceId.BREMEN_BAUSTELLEN.
     "bremen_baustellen",
+    # Hannover Verkehrsmeldungen (Mobilithek DATEX II V2 Situation, DL-DE/BY 2.0).
+    # Name == enable_hannover_verkehrsmeldungen == SourceId.HANNOVER_VERKEHRSMELDUNGEN.
+    "hannover_verkehrsmeldungen",
     # Phase 19: GTFS-Realtime Trip Updates (Live-ÖPNV). Name MUSS exakt zum
     # enable_<name>-Toggle (config.py) UND zum SourceId-Wert (enums.py) passen:
     # getattr(settings, f"enable_gtfs_rt").
@@ -122,6 +131,10 @@ _KNOWN_SOURCES = (
     # DATA-26: Hamburg-Verkehrslage (keylos OAF, DL-DE/BY 2.0, Tier A). Name ==
     # enable_hamburg_verkehrslage (config.py) == SourceId.HAMBURG_VERKEHRSLAGE.
     "hamburg_verkehrslage",
+    # DATA-38 (Stufe 1): PVGIS-Solar-Einstrahlung + normierter PV-Ertrag je Stadt
+    # (EU JRC PVcalc, keylose Live-Rechen-API). Name == enable_solar (config.py) ==
+    # SourceId.SOLAR (enums.py).
+    "solar",
 )
 
 
@@ -265,6 +278,14 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
         "license_id": "dl_de_by_2_0",
         "attribution": "Statistische Ämter des Bundes und der Länder",
     },
+    # DATA-38 (Stufe 1): PVGIS-Solar (EU JRC PVcalc). EU-Reuse-Policy (ec_reuse,
+    # Commission Decision 2011/833/EU, faktisch CC BY 4.0) = Tier A. Attribution
+    # wortgenau wie im Mapper (map_solar) und in DATA-LICENSES.md (T-11-SRC-DRIFT,
+    # Wortlaut-Gleichheits-Test).
+    "solar": {
+        "license_id": "ec_reuse",
+        "attribution": "PVGIS © European Communities, 2001-2026",
+    },
     "bkg": {
         "license_id": "dl_de_by_2_0",
         "attribution": "(c) GeoBasis-DE / BKG (Jahr)",
@@ -358,12 +379,36 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
         "license_id": "cc0",
         "attribution": "Hamburger Energienetze GmbH / eRound",
     },
+    # Frankfurt am Main Parkdaten (Mobilithek DATEX II V3 Parking, statisch +
+    # dynamisch). Lizenz am Frankfurter Open-Data-Bestand verifiziert
+    # (opendata.hessen.de 2026-06-22, Herausgeber Frankfurt am Main, license_id
+    # dl-by-de/2.0) -> DL-DE/BY 2.0 (Tier A), Attribution wortgenau wie im Mapper
+    # (map_frankfurt_parking).
+    "frankfurt_parking": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": "Stadt Frankfurt am Main",
+    },
+    # Wuppertal Parkdaten (Mobilithek DATEX II V2 ParkingFacility, statisch +
+    # dynamisch). Lizenz DL-DE/Zero 2.0 (mobilitaetsdaten.nrw + Mobilithek-Abo-
+    # Lizenz dl-zero-de/2.0 verifiziert 2026-06-22), Attribution wortgenau wie im
+    # Mapper (map_wuppertal_parking).
+    "wuppertal_parking": {
+        "license_id": "dl_de_zero_2_0",
+        "attribution": "Stadt Wuppertal",
+    },
     # DATA-31: Bremen Baustellen (Verkehrsmanagementzentrale Bremen). Offenes
     # Mobilithek-Angebot "freie Nutzung/Open Data" = DL-DE/BY 2.0 (Tier A),
     # Attribution wortgenau wie im Mapper (map_bremen_road_events).
     "bremen_baustellen": {
         "license_id": "dl_de_by_2_0",
         "attribution": "Freie Hansestadt Bremen",
+    },
+    # Hannover Verkehrsmeldungen (Landeshauptstadt Hannover, Fachbereich Tiefbau).
+    # Offenes Mobilithek-Angebot "freie Nutzung/Open Data" = DL-DE/BY 2.0 (Tier A,
+    # analog Bremen), Attribution wortgenau wie im Mapper (map_hannover_road_events).
+    "hannover_verkehrsmeldungen": {
+        "license_id": "dl_de_by_2_0",
+        "attribution": "Landeshauptstadt Hannover",
     },
     # Phase 19: GTFS-Realtime Trip Updates. CC-BY-SA = Tier B (copyleft, strikt
     # vom Tier-A-Archiv getrennt, KEIN append_record). Die quellenweite Zeile

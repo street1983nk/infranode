@@ -50,6 +50,7 @@ from infranode.adapters.openaq import fetch_air
 from infranode.adapters.overpass import _ALLOWED_TYPES, fetch_pois
 from infranode.adapters.pegelonline import fetch_water_level
 from infranode.adapters.smard import fetch_smard
+from infranode.adapters.solar import fetch_solar
 from infranode.adapters.stada import fetch_all_stations
 from infranode.adapters.tankerkoenig import fetch_fuel_prices
 from infranode.adapters.uba import fetch_air_uba
@@ -111,6 +112,7 @@ from infranode.normalization.mappers.regionalstatistik import (
     map_tax_rates,
 )
 from infranode.normalization.mappers.smard import map_smard
+from infranode.normalization.mappers.solar import map_solar
 from infranode.normalization.mappers.stada import map_station_catalog
 from infranode.normalization.mappers.tankerkoenig import map_fuel_prices
 from infranode.normalization.mappers.uba import map_air_uba
@@ -483,6 +485,71 @@ async def city_weather(slug: str, request: Request) -> dict:
         raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
     )
     await append_record(record, source="dwd")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/solar")
+async def city_solar(slug: str, request: Request) -> dict:
+    """Liefert Solar-Einstrahlung + normierten PV-Ertrag im Envelope (DATA-38).
+
+    Ablauf (DATA-38/06, API-01, GOV-03): Register-Lookup (unbekannter Slug -> 404
+    mit Hint ueber den zentralen Handler), Quellen-Toggle-Pruefung (deaktiviert ->
+    200 ``source_status=disabled``, nie 5xx), resilienter Fetch ueber die Fassade
+    gegen die keylose PVGIS-Rechen-API (lat/lon aus dem Register-Geo), Mapping mit
+    modified-Attribution, dann der Daten-Envelope.
+
+    PVGIS rechnet jede Koordinate in Europa -> alle Register-Staedte sind ohne
+    Stadt-Allowlist abgedeckt. Die Werte sind ein klimatologisches Mehrjahresmittel
+    (kein Tageswert), normiert auf 1 kWp bei optimalem Neigungswinkel; der
+    Bezugszeitraum steht im Payload (``period_start``/``period_end``).
+    """
+    entry = get_city(slug)
+
+    # Quellen-Toggle frisch lesen (Settings() statt app.state.settings, damit der
+    # per-Test gesetzte Env-Override greift). DATA-06: deaktiviert -> 200 disabled.
+    if not Settings().enable_solar:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("solar", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_solar(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+        )
+
+    raw, status = await client.fetch("solar", key, fetch_fn)
+
+    # Pitfall 4: raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper
+    # geprueft werden, sonst 500. 503 mit selbst-korrigierendem Hint (DX-06).
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'solar' voruebergehend nicht erreichbar, kein gecachter "
+            "Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_solar(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="solar")
 
     return {
         "data": record.model_dump(mode="json"),

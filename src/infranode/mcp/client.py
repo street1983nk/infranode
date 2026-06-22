@@ -91,6 +91,8 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "fuel-prices",
         # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
         "sharing",
+        # DATA-38: PVGIS-Solar-Einstrahlung + normierter PV-Ertrag je Stadt (Tier A).
+        "solar",
         # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
         "indicators",
         # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt, aggregiert (Tier A).
@@ -118,6 +120,9 @@ ALLOWED_STATION_BOARDS: frozenset[str] = frozenset({"departures", "arrivals"})
 ALLOWED_LIVE_RESOURCES: frozenset[str] = frozenset(
     {
         "transit/departures",
+        # Frankfurt am Main Live-Parkbelegung (Mobilithek DATEX II V3). Route ist
+        # stadt-fix (/live/frankfurt-am-main/parking); ein anderer Slug -> 404.
+        "parking",
     }
 )
 

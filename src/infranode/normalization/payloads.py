@@ -740,6 +740,36 @@ class BusinessRegistrationsPayload(BaseModel):
     jahr: int | None = None
 
 
+class SolarPayload(BaseModel):
+    """Solar-Einstrahlung + normierter PV-Ertrag je Stadt (PVGIS/JRC, Tier A, DATA-38).
+
+    Klimatologisches Mehrjahresmittel aus der keylosen PVGIS-Rechen-API (PVcalc)
+    am Stadtzentrum, normiert auf eine 1-kWp-Anlage bei optimalem Neigungswinkel
+    (``optimalangles``). KEIN Tageswert -> ``CanonicalRecord.observed_at`` bleibt
+    None; der Bezugszeitraum steht als ``period_start``/``period_end`` (Jahre des
+    PVGIS-Strahlungs-Datensatzes). ``annual_yield_kwh_kwp`` ist der Jahresertrag in
+    kWh je kWp (PVGIS ``E_y``, da peakpower=1), ``annual_irradiation_kwh_m2`` die
+    Globalstrahlung auf die geneigte Flaeche (``H(i)_y``). ``optimal_slope_deg``/
+    ``optimal_azimuth_deg`` der von PVGIS bestimmte optimale Aufstaenderungswinkel
+    bzw. Azimut (0 = Sued). ``radiation_db`` benennt den Strahlungs-Datensatz (z.B.
+    "PVGIS-SARAH3"). ``monthly`` traegt je Monat ein schlankes dict (``month`` 1-12,
+    ``irradiation_kwh_m2``, ``yield_kwh``). Mutable Default IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["solar"] = "solar"
+    annual_irradiation_kwh_m2: float | None = None
+    annual_yield_kwh_kwp: float | None = None
+    optimal_slope_deg: float | None = None
+    optimal_azimuth_deg: float | None = None
+    peakpower_kwp: float | None = None
+    system_loss_pct: float | None = None
+    radiation_db: str | None = None
+    period_start: int | None = None
+    period_end: int | None = None
+    monthly: list[dict] = Field(default_factory=list)
+
+
 PayloadUnion = Annotated[
     CityBaseDataPayload
     | AirQualityPayload
@@ -760,6 +790,7 @@ PayloadUnion = Annotated[
     | AccidentPayload
     | FuelPricePayload
     | SharingPayload
+    | SolarPayload
     | IndicatorsPayload
     | LandValuesPayload
     | TaxRatesPayload

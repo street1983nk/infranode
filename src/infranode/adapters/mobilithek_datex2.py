@@ -462,3 +462,280 @@ async def fetch_datex2(
     # daher direkt parsen (kein zweiter _guard noetig).
     parsed["as_of"] = _extract_publication_time(body)
     return parsed
+
+
+# ---------------------------------------------------------------------------
+# DATEX-II-V2 ParkingFacility-Profil (Wuppertal, statisch + dynamisch gejoint).
+#
+# Eigenes V2-Profil, getrennt vom Koeln-/Dortmund-``parkingStatus``-Pfad
+# (parse_datex2_parking): Wuppertal liefert eine
+# ``parkingFacilityTableStatusPublication`` (dynamisch) bzw. eine
+# ``parkingFacilityTablePublication`` (statisch). GOTCHA (verifiziert
+# 2026-06-22): ``parkingFacilityStatus`` ist DOPPELT belegt -- einmal als Wrapper
+# je Parkplatz (traegt ein ``parkingFacilityReference``-Kind) und einmal als
+# inneres Status-Enum-Feld (Text "open"/"closed"). Der Parser verarbeitet nur den
+# Wrapper (erkannt am ``parkingFacilityReference``-Kind). Join-Key:
+# ``parkingFacilityReference@id`` (dynamisch) == ``parkingFacility@id``
+# (statisch), z.B. "32[Stadthalle]". ``parkingFacilityOccupancy`` ist ein Anteil
+# 0..1 (1.0 = 100 %), wird zu Prozent normalisiert. Pull-Stil = "path".
+# ---------------------------------------------------------------------------
+
+_FACILITY_STATUS_TAG = "parkingFacilityStatus"  # Wrapper UND inneres Enum
+_FACILITY_REF_TAG = "parkingFacilityReference"  # traegt id (Join-Key, nur Wrapper)
+_FACILITY_VACANT_TAG = "totalNumberOfVacantParkingSpaces"
+_FACILITY_OCCUPIED_TAG = "totalNumberOfOccupiedParkingSpaces"
+_FACILITY_CAPACITY_TAG = "totalParkingCapacityOverride"
+_FACILITY_OCCUPANCY_TAG = "parkingFacilityOccupancy"  # Anteil 0..1
+_FACILITY_TREND_TAG = "parkingFacilityOccupancyTrend"
+_FACILITY_TIME_TAG = "parkingFacilityStatusTime"
+
+_FACILITY_TAG = "parkingFacility"  # statisches Record (traegt id)
+_FACILITY_NAME_TAG = "parkingFacilityName"
+_FACILITY_STATIC_CAPACITY_TAG = "totalParkingCapacity"
+_FACILITY_LOCATION_TAG = "facilityLocation"
+_VALUE_TAG = "value"
+_LAT_TAG = "latitude"
+_LON_TAG = "longitude"
+
+
+def _find_local(elem, local: str):
+    """Erstes Descendant-Element mit gegebenem lokalem Tag-Namen (oder None)."""
+    for node in elem.iter():
+        if _localname(node.tag) == local:
+            return node
+    return None
+
+
+def _first_text_local(elem, local: str) -> str | None:
+    """Erster nicht-leerer Text eines Descendant mit gegebenem lokalem Tag-Namen."""
+    for node in elem.iter():
+        if _localname(node.tag) == local:
+            text = (node.text or "").strip()
+            if text:
+                return text
+    return None
+
+
+def _extract_facility_status(wrapper) -> dict | None:
+    """Liest facility_id + Belegung aus einem ``parkingFacilityStatus``-Wrapper (V2).
+
+    Belegung NS-robust: ``free`` (totalNumberOfVacantParkingSpaces, int),
+    ``capacity`` (totalParkingCapacityOverride, int), ``occupied`` (int),
+    ``occupancy`` (parkingFacilityOccupancy * 100 = Prozent), ``status`` (das
+    INNERE parkingFacilityStatus-Enum mit Text; der Wrapper selbst hat keinen
+    direkten Text), ``trend``, ``observed_at`` (parkingFacilityStatusTime).
+    """
+    facility_id: str | None = None
+    free: int | None = None
+    capacity: int | None = None
+    occupied: int | None = None
+    occupancy: float | None = None
+    status: str | None = None
+    trend: str | None = None
+    observed_at: str | None = None
+
+    for node in wrapper.iter():
+        local = _localname(node.tag)
+        if local == _FACILITY_REF_TAG and facility_id is None:
+            facility_id = node.get("id")
+            continue
+        text = (node.text or "").strip()
+        if not text:
+            continue
+        try:
+            if local == _FACILITY_VACANT_TAG:
+                free = int(float(text))
+            elif local == _FACILITY_CAPACITY_TAG:
+                capacity = int(float(text))
+            elif local == _FACILITY_OCCUPIED_TAG:
+                occupied = int(float(text))
+            elif local == _FACILITY_OCCUPANCY_TAG:
+                occupancy = round(float(text) * 100, 2)
+            elif local == _FACILITY_STATUS_TAG and status is None:
+                status = text
+            elif local == _FACILITY_TREND_TAG and trend is None:
+                trend = text
+            elif local == _FACILITY_TIME_TAG and observed_at is None:
+                observed_at = text
+        except ValueError:
+            continue
+
+    if facility_id is None and free is None and occupancy is None:
+        return None
+
+    entry: dict = {"facility_id": facility_id}
+    if free is not None:
+        entry["free"] = free
+    if capacity is not None:
+        entry["capacity"] = capacity
+    if occupied is not None:
+        entry["occupied"] = occupied
+    if occupancy is not None:
+        entry["occupancy"] = occupancy
+    if status is not None:
+        entry["status"] = status
+    if trend is not None:
+        entry["trend"] = trend
+    if observed_at is not None:
+        entry["observed_at"] = observed_at
+    return entry
+
+
+def _extract_facility_site(record) -> dict | None:
+    """Liest facility_id + Stammdaten aus einem statischen ``parkingFacility`` (V2).
+
+    ``facility_id`` aus dem ``id``-Attribut. ``name`` aus dem ersten ``value``
+    unter ``parkingFacilityName`` (gezielt, NICHT der erste ``value`` im Record).
+    ``capacity`` aus ``totalParkingCapacity`` (exakter Tag, nicht ShortTerm/
+    LongTerm). ``lat``/``lon`` gezielt aus ``facilityLocation``.
+    """
+    facility_id = record.get("id")
+
+    name = None
+    name_elem = _find_local(record, _FACILITY_NAME_TAG)
+    if name_elem is not None:
+        name = _first_text_local(name_elem, _VALUE_TAG)
+
+    capacity: int | None = None
+    cap_text = _first_text_local(record, _FACILITY_STATIC_CAPACITY_TAG)
+    if cap_text is not None:
+        try:
+            capacity = int(float(cap_text))
+        except ValueError:
+            capacity = None
+
+    lat: float | None = None
+    lon: float | None = None
+    loc = _find_local(record, _FACILITY_LOCATION_TAG)
+    if loc is not None:
+        lat_text = _first_text_local(loc, _LAT_TAG)
+        lon_text = _first_text_local(loc, _LON_TAG)
+        try:
+            if lat_text is not None and lon_text is not None:
+                lat = float(lat_text)
+                lon = float(lon_text)
+        except ValueError:
+            lat = lon = None
+
+    if facility_id is None and name is None and capacity is None:
+        return None
+
+    site: dict = {"facility_id": facility_id}
+    if name is not None:
+        site["name"] = name
+    if capacity is not None:
+        site["capacity"] = capacity
+    if lat is not None and lon is not None:
+        site["lat"] = lat
+        site["lon"] = lon
+    return site
+
+
+def parse_facility_status_v2(xml_bytes: bytes, *, slug: str) -> dict:
+    """Parst eine DATEX-II-V2 ParkingFacilityTableStatusPublication (dynamisch).
+
+    Nur der Wrapper ``parkingFacilityStatus`` (mit ``parkingFacilityReference``-
+    Kind) wird verarbeitet; das gleichnamige innere Enum-Feld wird uebersprungen.
+    Haertung: ``_guard`` vor ``iterparse``. Rueckgabe ``{"slug", "facilities":
+    [...], "as_of"}``.
+    """
+    _guard(xml_bytes)
+
+    facilities: list[dict] = []
+    bio = io.BytesIO(xml_bytes)
+    for _event, elem in iterparse(bio):  # noqa: S314
+        if _localname(elem.tag) != _FACILITY_STATUS_TAG:
+            continue
+        # Wrapper hat ein parkingFacilityReference-Kind; inneres Enum nicht.
+        if not any(_localname(c.tag) == _FACILITY_REF_TAG for c in elem):
+            continue
+        entry = _extract_facility_status(elem)
+        if entry is not None:
+            facilities.append(entry)
+        elem.clear()
+
+    return {
+        "slug": slug,
+        "facilities": facilities,
+        "as_of": _extract_publication_time(xml_bytes),
+    }
+
+
+def parse_facility_static_v2(xml_bytes: bytes, *, slug: str) -> dict:
+    """Parst eine DATEX-II-V2 ParkingFacilityTablePublication (statisch, Stammdaten).
+
+    Gibt ``{"slug", "sites": {facility_id: {...}}}`` fuer den Join zurueck.
+    Haertung: ``_guard`` vor ``iterparse``.
+    """
+    _guard(xml_bytes)
+
+    sites: dict[str, dict] = {}
+    bio = io.BytesIO(xml_bytes)
+    for _event, elem in iterparse(bio):  # noqa: S314
+        if _localname(elem.tag) != _FACILITY_TAG:
+            continue
+        site = _extract_facility_site(elem)
+        if site is not None and site.get("facility_id"):
+            sites[site["facility_id"]] = site
+        elem.clear()
+
+    return {"slug": slug, "sites": sites}
+
+
+def _join_facilities(status: dict, static: dict) -> list[dict]:
+    """Joint dynamische Belegung mit statischen Stammdaten ueber die facility_id."""
+    sites: dict = static.get("sites", {})
+    merged: list[dict] = []
+    for fac in status.get("facilities", []):
+        fid = fac.get("facility_id")
+        site = sites.get(fid, {}) if fid else {}
+        entry = {**{k: v for k, v in site.items() if k != "facility_id"}, **fac}
+        merged.append(entry)
+    return merged
+
+
+async def fetch_wuppertal_parking(
+    mtls_client,
+    *,
+    abo_id: str,
+    static_abo_id: str | None,
+    slug: str,
+) -> dict:
+    """Pullt Wuppertal-Parkdaten (dynamisch + statisch, V2) und joint sie.
+
+    Pull-Stil "path" (Default ``build_pull_url``; verifiziert 2026-06-22, der
+    container-/query-Zugriff gibt 404). Das statische Abo ist optional: fehlt es
+    oder liefert es nichts, wird die dynamische Belegung ohne Stammdaten
+    zurueckgegeben (ehrliche Degradation). HTTP 422 / ein vom Guard abgelehnter
+    Body liefern ein ehrliches leeres Ergebnis (no_data, kein ``raise``).
+
+    Rueckgabe: ``{"slug", "facilities": [...], "as_of"}``; jedes facility traegt
+    facility_id + free/capacity/occupied/occupancy/status/trend/observed_at
+    (dynamisch) + name/lat/lon/capacity (statisch, Stammdaten-Anreicherung).
+    """
+    dyn_url = build_pull_url(abo_id)  # style="path" (Default)
+    dyn_result = await pull_subscription(mtls_client, dyn_url)
+    if dyn_result["status"] == "no_data" or dyn_result["body"] is None:
+        return {"slug": slug, "facilities": [], "as_of": None}
+
+    try:
+        status = parse_facility_status_v2(dyn_result["body"], slug=slug)
+    except ValueError:
+        return {"slug": slug, "facilities": [], "as_of": None}
+
+    static = {"slug": slug, "sites": {}}
+    if static_abo_id:
+        try:
+            stat_result = await pull_subscription(
+                mtls_client, build_pull_url(static_abo_id)
+            )
+            if stat_result["status"] == "ok" and stat_result["body"] is not None:
+                static = parse_facility_static_v2(stat_result["body"], slug=slug)
+        except ValueError:
+            static = {"slug": slug, "sites": {}}
+
+    return {
+        "slug": slug,
+        "facilities": _join_facilities(status, static),
+        "as_of": status.get("as_of"),
+    }

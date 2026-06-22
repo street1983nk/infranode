@@ -34,6 +34,10 @@ class LicenseId(StrEnum):
     GEONUTZV = "geonutzv"
     ODBL = "odbl"
     CC_BY_SA_4_0 = "cc_by_sa_4_0"
+    # EU-Wiederverwendungs-Policy (Commission Decision 2011/833/EU, faktisch
+    # CC BY 4.0): EU-JRC-Daten wie PVGIS sind frei nutzbar (auch kommerziell), wenn
+    # die Quelle genannt wird ("PVGIS © European Communities"). Permissiv = Tier A.
+    EC_REUSE = "ec_reuse"
     # Ehrlicher Tag fuer Quellen mit heterogener/unbekannter Lizenz je Datensatz
     # (konkret OpenAQ, dessen Lizenz pro Provider variiert): verhindert ein
     # falsches pauschales CC-BY-Tag im Envelope (GOV-01/03-Compliance).
@@ -103,6 +107,17 @@ class SourceId(StrEnum):
     DORTMUND_PARKING = "dortmund_parking"
     KIEL_ZAEHLSTELLEN = "kiel_zaehlstellen"
     EROUND_CHARGING = "eround_charging"
+    # Frankfurt am Main Parkdaten (Mobilithek DATEX II V3 Parking, statisch +
+    # dynamisch gejoint, DL-DE/BY 2.0 = Tier A). EINZIGE DATEX-II-V3-XML-Quelle
+    # (eRound ist V3-JSON, Koeln ist V2-XML): eigener V3-XML-Parser
+    # (adapters/mobilithek_datex3). Toggle-Name == SourceId-Wert ==
+    # _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    FRANKFURT_PARKING = "frankfurt_parking"
+    # Wuppertal Parkdaten (Mobilithek DATEX II V2 ParkingFacility-Profil, statisch
+    # + dynamisch gejoint, DL-DE/Zero 2.0 = Tier A). Eigenes V2-Profil
+    # (parkingFacilityStatus/-Reference), getrennt vom Koeln-parkingStatus-Pfad.
+    # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    WUPPERTAL_PARKING = "wuppertal_parking"
     # Phase 19: GTFS-Realtime Trip Updates, Tier B CC-BY-SA, gtfs.de/Mobilithek-
     # DELFI; kein neuer LicenseId-Wert (CC_BY_SA_4_0 existiert bereits), kein
     # Umlaut (StrEnum, ASCII-lowercase). Toggle-Name == SourceId-Wert ==
@@ -140,6 +155,12 @@ class SourceId(StrEnum):
     # Quelle wie koeln_baustellen_live. Toggle-Name == SourceId-Wert ==
     # _KNOWN_SOURCES-Eintrag.
     BREMEN_BAUSTELLEN = "bremen_baustellen"
+    # Hannover Verkehrsmeldungen (Landeshauptstadt Hannover, Fachbereich Tiefbau,
+    # Mobilithek DATEX II V2 SituationPublication: Baustellen/Veranstaltungen/
+    # Verkehrsstoerungen, Mobilithek-Angebot "freie Nutzung/Open Data" = DL-DE/BY
+    # 2.0 = Tier A, analog Bremen/Berlin). Live-Quelle wie bremen_baustellen.
+    # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    HANNOVER_VERKEHRSMELDUNGEN = "hannover_verkehrsmeldungen"
     # DATA-33: GBFS-Bike-/Scooter-Sharing je Stadt (Live, aggregiert). Primaer
     # Nextbike (CC0 = Tier A); je System wird die Lizenz aus GBFS
     # ``system_information.license_id`` fail-closed gegen eine Tier-A-Allowlist
@@ -177,3 +198,9 @@ class SourceId(StrEnum):
     # regio_pass). Lizenz DL-DE/BY 2.0 = Tier A (DL_DE_BY_2_0 existiert bereits).
     # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
     REGIONALSTATISTIK = "regionalstatistik"
+    # DATA-38 (Stufe 1): PVGIS-Solar-Einstrahlung + normierter PV-Ertrag je Stadt
+    # (EU JRC, keylose Live-Rechen-API re.jrc.ec.europa.eu PVcalc). PVGIS rechnet
+    # jede EU-Koordinate -> alle Register-Staedte ohne Stadt-Allowlist. EU-Reuse-
+    # Policy (EC_REUSE) = Tier A. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-
+    # Eintrag: getattr(settings, f"enable_{name}").
+    SOLAR = "solar"

@@ -36,6 +36,8 @@ from infranode.normalization import (
 )
 
 _DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
+_FRANKFURT_ATTRIBUTION = "Stadt Frankfurt am Main"
+_WUPPERTAL_ATTRIBUTION = "Stadt Wuppertal"
 # Dortmund-Parken kommt seit 2026-06-13 aus dem direkten, keylosen Opendatasoft-
 # Feed der Stadt (adapters/dortmund_parking, statt Mobilithek). Dieser Datensatz
 # steht unter Datenlizenz Deutschland Zero 2.0 (am Datensatz-Meta verifiziert) ->
@@ -88,6 +90,82 @@ def map_dortmund_parking(
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text=_DORTMUND_ATTRIBUTION,
+            license_url=_DL_DE_ZERO_URL,
+        ),
+        payload=ParkingPayload(
+            facilities=raw.get("facilities", []),
+        ),
+    )
+
+
+def map_frankfurt_parking(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet die Frankfurt-Parkdaten (parking) auf einen ``CanonicalRecord`` ab.
+
+    Die ``facilities`` (je Parkplatz facility_id + free/occupancy/
+    occupancy_graded/observed_at aus dem dynamischen Feed, angereichert um
+    name/lat/lon/capacity aus dem statischen Pendant, DATEX II V3 gejoint im
+    Adapter ``mobilithek_datex3``) wandern in den ``ParkingPayload``.
+    ``observed_at`` aus der DATEX-II ``publicationTime`` (``as_of``) des
+    dynamischen Feeds falls vorhanden. ``retrieved_at`` injiziert (keine
+    Systemuhr im Mapper). Tier A, DL-DE/BY 2.0 (opendata.hessen.de verifiziert
+    2026-06-22, license_id dl-by-de/2.0), Attribution "Stadt Frankfurt am Main".
+    """
+    return CanonicalRecord(
+        city_slug=raw["slug"],
+        geo=None,
+        observed_at=_parse_as_of(raw),
+        retrieved_at=retrieved_at,
+        source=SourceId.FRANKFURT_PARKING,
+        license_id=LicenseId.DL_DE_BY_2_0,
+        license_tier=LicenseTier.A,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        attribution=Attribution(
+            text=_FRANKFURT_ATTRIBUTION,
+            license_url=_DL_DE_BY_URL,
+        ),
+        payload=ParkingPayload(
+            facilities=raw.get("facilities", []),
+        ),
+    )
+
+
+def map_wuppertal_parking(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet die Wuppertal-Parkdaten (parking) auf einen ``CanonicalRecord`` ab.
+
+    Die ``facilities`` (je Parkplatz facility_id + free/capacity/occupied/
+    occupancy/status/trend/observed_at aus dem dynamischen Feed, angereichert um
+    name/lat/lon aus dem statischen Pendant, DATEX II V2 ParkingFacility-Profil
+    gejoint im Adapter ``mobilithek_datex2``) wandern in den ``ParkingPayload``.
+    ``observed_at`` aus der DATEX-II ``publicationTime`` (``as_of``) des
+    dynamischen Feeds falls vorhanden. ``retrieved_at`` injiziert (keine Systemuhr
+    im Mapper). Tier A, DL-DE/Zero 2.0 (mobilitaetsdaten.nrw / Mobilithek-Abo-
+    Lizenz dl-zero-de/2.0 verifiziert 2026-06-22), Attribution "Stadt Wuppertal".
+    """
+    return CanonicalRecord(
+        city_slug=raw["slug"],
+        geo=None,
+        observed_at=_parse_as_of(raw),
+        retrieved_at=retrieved_at,
+        source=SourceId.WUPPERTAL_PARKING,
+        license_id=LicenseId.DL_DE_ZERO_2_0,
+        license_tier=LicenseTier.A,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        attribution=Attribution(
+            text=_WUPPERTAL_ATTRIBUTION,
             license_url=_DL_DE_ZERO_URL,
         ),
         payload=ParkingPayload(

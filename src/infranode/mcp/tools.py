@@ -310,6 +310,18 @@ async def sharing(slug: _Slug) -> ToolEnvelope:
     return await client.get_resource(slug, "sharing")
 
 
+async def solar(slug: _Slug) -> ToolEnvelope:
+    """Get solar irradiation and normalized PV yield potential for a German city.
+
+    Sourced from PVGIS (European Commission JRC). Returns a multi-year
+    climatological average for the city centre, normalized to a 1 kWp system at the
+    optimal tilt: annual PV yield (kWh/kWp), annual global irradiation (kWh/m2), the
+    optimal tilt/azimuth and 12 monthly values. All 84 cities are covered.
+    Read-only.
+    """
+    return await client.get_resource(slug, "solar")
+
+
 async def indicators(slug: _Slug) -> ToolEnvelope:
     """Get socioeconomic indicators for a German city (district level, latest year).
 
@@ -447,6 +459,17 @@ async def transit_departures(
     """
     params = {"stop_id": stop_id} if stop_id else None
     return await client.get_live(slug, "transit/departures", params=params)
+
+
+async def parking(slug: _Slug) -> ToolEnvelope:
+    """Get live parking occupancy (vacant spaces, occupancy %) for a city.
+
+    Per car park: vacant spaces, occupancy percentage and graded occupancy,
+    enriched with name, geo coordinate and capacity. Sourced from the Mobilithek
+    (DATEX II V3). Currently available for ``frankfurt-am-main``; other slugs
+    return source_status="disabled". Read-only, live (minute-fresh).
+    """
+    return await client.get_live(slug, "parking")
 
 
 async def list_cities() -> ToolEnvelope:

@@ -2101,6 +2101,59 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/solar:
+    get:
+      tags: [cities]
+      summary: Solar-Einstrahlung + PV-Ertrag je Stadt (PVGIS, Tier A)
+      x-summary-en: Solar irradiation + PV yield per city (PVGIS, Tier A)
+      description: >-
+        Solar-Potenzial je Stadt aus der keylosen PVGIS-Rechen-API (EU JRC,
+        PVcalc). PVGIS rechnet jede EU-Koordinate, daher sind alle Städte
+        abgedeckt. Klimatologisches Mehrjahresmittel am Stadtzentrum, normiert auf
+        1 kWp bei optimalem Neigungswinkel: annual_yield_kwh_kwp (Jahresertrag
+        kWh/kWp), annual_irradiation_kwh_m2 (Globalstrahlung kWh/m²),
+        optimal_slope_deg/optimal_azimuth_deg und 12 Monatswerte (monthly). Kein
+        Messzeitpunkt, daher observed_at=null; der Bezugszeitraum steht als
+        period_start/period_end. Tier A (EU-Reuse-Policy). Toggle aus -> 200
+        source_status="disabled"; toter Upstream ohne Cache -> 503 mit Hint.
+      x-description-en: >-
+        Solar potential per city from the keyless PVGIS computation API (EU JRC,
+        PVcalc). PVGIS computes any EU coordinate, so all cities are covered. A
+        multi-year climatological average at the city centre, normalized to a
+        1 kWp system at the optimal tilt: annual_yield_kwh_kwp (annual yield
+        kWh/kWp), annual_irradiation_kwh_m2 (global irradiation kWh/m²),
+        optimal_slope_deg/optimal_azimuth_deg and 12 monthly values (monthly). No
+        observation timestamp, so observed_at=null; the reference period is carried
+        as period_start/period_end. Tier A (EU reuse policy). Toggle off -> 200
+        source_status="disabled"; dead upstream with no cache -> 503 with a hint.
+      operationId: getCitySolar
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Solar-Envelope (CanonicalRecord mit SolarPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/sharing:
     get:
       tags: [cities]
@@ -2684,6 +2737,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/hannover/verkehrsmeldungen:
+    get:
+      tags: [Live]
+      summary: Live-Verkehrsmeldungen Hannover (Mobilithek DATEX-II)
+      x-summary-en: Live traffic messages for Hanover (Mobilithek DATEX-II)
+      description: >-
+        Liefert die Hannover-Verkehrsmeldungen (Landeshauptstadt Hannover,
+        Fachbereich Tiefbau: Baustellen, verkehrsrelevante Veranstaltungen,
+        Verkehrsstörungen, DATEX-II SituationPublication) im Live-Envelope. Der
+        meta-Block trägt zusätzlich as_of (Datenstand) und refresh_seconds
+        (Aktualisierungstakt). Solange Zertifikat und Abo nicht gesetzt sind ->
+        200 source_status="disabled" (nie 5xx); kein Datenpaket -> 200
+        source_status="no_data". Reine Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns Hanover traffic messages (City of Hanover, road construction
+        department: roadworks, traffic-relevant events, traffic disruptions,
+        DATEX-II SituationPublication) in the live envelope. The meta block
+        additionally carries as_of (data timestamp) and refresh_seconds (update
+        cadence). As long as the certificate and subscription are not set up ->
+        200 source_status="disabled" (never 5xx); no data packet -> 200
+        source_status="no_data". Live data only, kept in the Redis cache.
+      operationId: getLiveHannoverVerkehrsmeldungen
+      responses:
+        "200":
+          description: Live-Verkehrsmeldungen-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/live/dortmund/parking:
     get:
       tags: [Live]
@@ -2708,6 +2810,115 @@ paths:
         source_status="no_data". Licence Data licence Germany Zero 2.0. Live data
         only, kept in the Redis cache.
       operationId: getLiveDortmundParking
+      responses:
+        "200":
+          description: Live-Parkbelegung-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/frankfurt-am-main/parking:
+    get:
+      tags: [Live]
+      summary: Live-Parkbelegung Frankfurt am Main (Stadt Frankfurt, Mobilithek DATEX II V3)
+      x-summary-en: Live parking occupancy for Frankfurt am Main (City of Frankfurt, Mobilithek DATEX II V3)
+      description: >-
+        Liefert die Parkbelegung der Stadt Frankfurt am Main im Live-Envelope:
+        je Parkplatz freie Plätze, Auslastung in Prozent und gestufte Auslastung
+        (facilities), angereichert um Name, Geo-Koordinate und Kapazität aus den
+        statischen Stammdaten. Quelle sind zwei Mobilithek-Abos (DATEX II V3,
+        dynamisch + statisch), die der Adapter über die parkingRecord-ID joint.
+        Der meta-Block trägt zusätzlich as_of (Datenstand) und refresh_seconds
+        (Aktualisierungstakt). Quelle deaktiviert -> 200 source_status="disabled"
+        (nie 5xx); keine Daten -> 200 source_status="no_data". Lizenz Datenlizenz
+        Deutschland Namensnennung 2.0. Reine Live-Daten, nur im Redis-Cache.
+      x-description-en: >-
+        Returns the City of Frankfurt am Main parking occupancy in the live
+        envelope: per car park the vacant spaces, occupancy percentage and graded
+        occupancy (facilities), enriched with name, geo coordinate and capacity
+        from the static master data. Source is two Mobilithek subscriptions
+        (DATEX II V3, dynamic + static) joined by the adapter via the
+        parkingRecord id. The meta block additionally carries as_of (data
+        timestamp) and refresh_seconds (update cadence). Source disabled -> 200
+        source_status="disabled" (never 5xx); no data -> 200
+        source_status="no_data". Licence Data licence Germany Attribution 2.0.
+        Live data only, kept in the Redis cache.
+      operationId: getLiveFrankfurtParking
+      responses:
+        "200":
+          description: Live-Parkbelegung-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/wuppertal/parking:
+    get:
+      tags: [Live]
+      summary: Live-Parkbelegung Wuppertal (Stadt Wuppertal, Mobilithek DATEX II V2)
+      x-summary-en: Live parking occupancy for Wuppertal (City of Wuppertal, Mobilithek DATEX II V2)
+      description: >-
+        Liefert die Parkbelegung der Stadt Wuppertal im Live-Envelope: je
+        Parkplatz freie Plätze, Auslastung in Prozent, Belegungstrend und Status
+        (facilities), angereichert um Name, Geo-Koordinate und Kapazität aus den
+        statischen Stammdaten. Quelle sind zwei Mobilithek-Abos (DATEX II V2
+        ParkingFacility, dynamisch + statisch), die der Adapter über die
+        parkingFacility-ID joint. Der meta-Block trägt zusätzlich as_of
+        (Datenstand) und refresh_seconds (Aktualisierungstakt). Quelle deaktiviert
+        -> 200 source_status="disabled" (nie 5xx); keine Daten -> 200
+        source_status="no_data". Lizenz Datenlizenz Deutschland Zero 2.0. Reine
+        Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns the City of Wuppertal parking occupancy in the live envelope: per
+        car park the vacant spaces, occupancy percentage, occupancy trend and
+        status (facilities), enriched with name, geo coordinate and capacity from
+        the static master data. Source is two Mobilithek subscriptions (DATEX II
+        V2 ParkingFacility, dynamic + static) joined by the adapter via the
+        parkingFacility id. The meta block additionally carries as_of (data
+        timestamp) and refresh_seconds (update cadence). Source disabled -> 200
+        source_status="disabled" (never 5xx); no data -> 200
+        source_status="no_data". Licence Data licence Germany Zero 2.0. Live data
+        only, kept in the Redis cache.
+      operationId: getLiveWuppertalParking
       responses:
         "200":
           description: Live-Parkbelegung-Envelope (CanonicalRecord oder null)

@@ -89,6 +89,8 @@ _register(tools.accidents)
 _register(tools.fuel_prices)
 # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
 _register(tools.sharing)
+# DATA-38: PVGIS-Solar-Einstrahlung + normierter PV-Ertrag je Stadt (Tier A, alle 84).
+_register(tools.solar)
 # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
 _register(tools.indicators)
 # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Tier A, aggregiert, Bauland).
@@ -109,6 +111,9 @@ _register(tools.station_board_arrivals)
 # Echtzeit-Abfahrten, Staedte-Liste, Quellen-Uebersicht. list_cities/sources
 # beschreiben die eigene Abdeckung -> geschlossene Domaene (open_world=False).
 _register(tools.transit_departures)
+# Frankfurt am Main Live-Parkbelegung (Mobilithek DATEX II V3, stadt-fix; weitere
+# Park-Staedte folgen ueber dieselbe parking-Route -> Tool laeuft automatisch mit).
+_register(tools.parking)
 _register(tools.list_cities, open_world=False)
 _register(tools.sources, open_world=False)
 # API-05/D-06: Multi-City-Compare einer Ressource (weather/air) in einer Antwort.

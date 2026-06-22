@@ -30,7 +30,8 @@ from infranode.adapters.dortmund_parking import fetch_dortmund_parking
 from infranode.adapters.hamburg_verkehrslage import fetch_hamburg_verkehrslage
 from infranode.adapters.hvv_geofox import fetch_hvv_departures
 from infranode.adapters.mobilithek_afir import fetch_afir
-from infranode.adapters.mobilithek_datex2 import fetch_datex2
+from infranode.adapters.mobilithek_datex2 import fetch_datex2, fetch_wuppertal_parking
+from infranode.adapters.mobilithek_datex3 import fetch_frankfurt_parking
 from infranode.adapters.vgn import fetch_vgn_departures
 from infranode.api.errors import UpstreamError, ValidationFailedError
 from infranode.api.v1 import cities
@@ -55,10 +56,13 @@ from infranode.normalization.mappers.mobilithek_koeln import (
 )
 from infranode.normalization.mappers.mobilithek_parken import (
     map_dortmund_parking,
+    map_frankfurt_parking,
     map_kiel_counts,
+    map_wuppertal_parking,
 )
 from infranode.normalization.mappers.mobilithek_stadt import (
     map_berlin_traffic_messages,
+    map_hannover_road_events,
     map_koeln_lez,
 )
 from infranode.normalization.mappers.vgn import map_vgn_departures
@@ -326,6 +330,31 @@ async def live_berlin_verkehrsmeldungen(request: Request) -> dict:
     )
 
 
+@router.get("/hannover/verkehrsmeldungen")
+async def live_hannover_verkehrsmeldungen(request: Request) -> dict:
+    """Live-Verkehrsmeldungen Hannover (LH Hannover SituationPublication, DATEX II V2).
+
+    Reine V2-SituationPublication-Quelle (Baustellen, verkehrsrelevante
+    Veranstaltungen, Verkehrsstörungen im strategischen Verkehrsnetz der Stadt
+    Hannover) ueber denselben Plan-04-Parser (``fetch_datex2`` publication=
+    "situation") + den gemeinsamen ``_live_mobilithek``-Helfer; nur der Mapper
+    (``map_hannover_road_events``) ist Hannover-spezifisch. Stadt-Slug fix
+    ``hannover`` (Quelle deckt die Region Hannover ab, BBox-gefiltert). Abo-ID aus
+    der Settings-Allowlist (SSRF, T-20-SSRF). Lizenz DL-DE/BY 2.0 (Tier A,
+    Mobilithek-Angebot "freie Nutzung/Open Data", analog Bremen), Attribution
+    "Landeshauptstadt Hannover". KEIN Archiv (reine Live-Daten, T-20-ARCHIVE).
+    """
+    settings = Settings()
+    return await _live_mobilithek(
+        city="hannover",
+        request=request,
+        source=SourceId.HANNOVER_VERKEHRSMELDUNGEN.value,
+        abo_id=settings.hannover_verkehrsmeldungen_abo_id,
+        publication="situation",
+        mapper=map_hannover_road_events,
+    )
+
+
 @router.get("/koeln/umweltzone")
 async def live_koeln_umweltzone(request: Request) -> dict:
     """Live-LowEmissionZone Köln (MoCKiii SituationPublication, LIVE-12).
@@ -511,6 +540,186 @@ async def live_eround_charging(request: Request) -> dict:
     )
     # KEIN Archiv-Write fuer reine Live-Daten (T-20-ARCHIVE)! Auch bei Tier A:
     # reine Live-Belegung wird nicht archiviert (RESEARCH "Live NICHT archivieren").
+    observed = (
+        record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
+    )
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": _live_meta(
+            source_status="ok",
+            cache_status=status,
+            as_of=observed,
+            refresh_seconds=_LIVE_REFRESH_SECONDS,
+        ),
+    }
+
+
+@router.get("/frankfurt-am-main/parking")
+async def live_frankfurt_parking(request: Request) -> dict:
+    """Live-Parkbelegung Frankfurt am Main (DATEX-II V3, statisch+dynamisch).
+
+    Eigene Route (analog ``live_eround_charging``), weil Frankfurt DATEX-II **V3**
+    als XML liefert (eigener Parser ``fetch_frankfurt_parking`` getrennt vom
+    V2-Pfad) UND zwei Abos joint: das dynamische traegt die Belegung, das
+    statische die Stammdaten (Name/Geo/Kapazitaet). Stadt-Slug fix
+    ``frankfurt-am-main`` (Quelle deckt nur Frankfurt ab). Beide Abo-IDs aus der
+    Settings-Allowlist (SSRF, T-20-SSRF). Container-Pull (Pull-Test 2026-06-22:
+    der Portal-soap/datexv3-Endpoint gibt 405 bei GET).
+
+    Graceful Degradation: Toggle aus ODER kein Cert (mTLS-Client None) ODER keine
+    dynamische Abo-ID -> 200 ``source_status="disabled"`` (nie 5xx). Leerer Feed
+    (422/keine Belegung) -> 200 ``no_data``. Toter Upstream ohne Cache -> 503 mit
+    selbst-korrigierendem Hint. Lizenz DL-DE/BY 2.0 (Tier A), Attribution "Stadt
+    Frankfurt am Main". KEIN Archiv (reine Live-Daten, T-20-ARCHIVE) - nur
+    Redis-Cache ueber die Fassade.
+    """
+    settings = Settings()
+    city = "frankfurt-am-main"
+    abo_id = settings.frankfurt_parking_abo_id
+    source = SourceId.FRANKFURT_PARKING.value
+
+    entry = get_city(city)
+    mobilithek_http = getattr(request.app.state, "mobilithek_http", None)
+    # disabled: Toggle aus ODER kein Cert (mTLS-Client None) ODER keine Abo-ID.
+    if (
+        not getattr(settings, f"enable_{source}", False)
+        or mobilithek_http is None
+        or not abo_id
+    ):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="disabled",
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key(source, city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_frankfurt_parking(
+            mobilithek_http,
+            abo_id=abo_id,
+            static_abo_id=settings.frankfurt_parking_static_abo_id,
+            slug=entry.slug,
+        )
+
+    raw, status = await client.fetch(source, key, fetch_fn)
+
+    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprueft werden.
+    if raw is None:
+        raise UpstreamError(
+            f"Live-Quelle '{source}' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
+        )
+
+    # Leerer Feed (422/keine Daten) -> ehrliches no_data (200) OHNE Mapper.
+    if not raw.get("facilities"):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="no_data",
+                cache_status=status,
+                as_of=raw.get("as_of"),
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    record = map_frankfurt_parking(
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    # KEIN Archiv-Write fuer reine Live-Daten (T-20-ARCHIVE)! Nur Redis-Cache.
+    observed = (
+        record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
+    )
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": _live_meta(
+            source_status="ok",
+            cache_status=status,
+            as_of=observed,
+            refresh_seconds=_LIVE_REFRESH_SECONDS,
+        ),
+    }
+
+
+@router.get("/wuppertal/parking")
+async def live_wuppertal_parking(request: Request) -> dict:
+    """Live-Parkbelegung Wuppertal (DATEX-II V2 ParkingFacility, statisch+dynamisch).
+
+    Eigene Route (analog Frankfurt), weil Wuppertal zwei Abos joint (dynamische
+    Belegung + statische Stammdaten) ueber das DATEX-II-V2-ParkingFacility-Profil
+    (eigener Parser ``fetch_wuppertal_parking``, getrennt vom Koeln-parkingStatus-
+    Pfad). Stadt-Slug fix ``wuppertal``. Beide Abo-IDs aus der Settings-Allowlist
+    (SSRF, T-20-SSRF). Pull-Stil "path" (Pull-Test 2026-06-22).
+
+    Graceful Degradation: Toggle aus ODER kein Cert ODER keine dynamische Abo-ID
+    -> 200 ``source_status="disabled"``. Leerer Feed -> 200 ``no_data``. Toter
+    Upstream ohne Cache -> 503. Lizenz DL-DE/Zero 2.0 (Tier A), Attribution "Stadt
+    Wuppertal". KEIN Archiv (reine Live-Daten, T-20-ARCHIVE).
+    """
+    settings = Settings()
+    city = "wuppertal"
+    abo_id = settings.wuppertal_parking_abo_id
+    source = SourceId.WUPPERTAL_PARKING.value
+
+    entry = get_city(city)
+    mobilithek_http = getattr(request.app.state, "mobilithek_http", None)
+    if (
+        not getattr(settings, f"enable_{source}", False)
+        or mobilithek_http is None
+        or not abo_id
+    ):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="disabled",
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key(source, city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_wuppertal_parking(
+            mobilithek_http,
+            abo_id=abo_id,
+            static_abo_id=settings.wuppertal_parking_static_abo_id,
+            slug=entry.slug,
+        )
+
+    raw, status = await client.fetch(source, key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            f"Live-Quelle '{source}' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
+        )
+
+    if not raw.get("facilities"):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="no_data",
+                cache_status=status,
+                as_of=raw.get("as_of"),
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    record = map_wuppertal_parking(
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
     observed = (
         record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
     )

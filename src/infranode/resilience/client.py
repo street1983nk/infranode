@@ -89,6 +89,10 @@ _SOURCE_TTL: dict[str, tuple[float, float]] = {
     # als EINE bundesweite Liste geholt + je Stadt gefiltert -> sehr lange TTL
     # (24h frisch / 30d stale), ein Abruf bedient alle 84 Staedte aus dem Cache.
     "stada": (86400.0, 2592000.0),
+    # PVGIS-Solar liefert ein klimatologisches Mehrjahresmittel (aendert sich
+    # praktisch nie) -> sehr lange TTL (24h frisch / 30d stale). Ein Abruf je Stadt
+    # haelt den Cache dauerhaft warm und schont das 30-calls/s-Limit der JRC-API.
+    "solar": (86400.0, 2592000.0),
 }
 
 
