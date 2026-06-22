@@ -1,5 +1,6 @@
 # InfraNode
 
+[![GitHub stars](https://img.shields.io/github/stars/street1983nk/infranode?style=flat&logo=github)](https://github.com/street1983nk/infranode/stargazers)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](./LICENSE)
 [![Glama score](https://glama.ai/mcp/servers/street1983nk/infranode/badges/score.svg)](https://glama.ai/mcp/servers/street1983nk/infranode)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-dev.infranode%2Finfranode-1f6feb)](https://registry.modelcontextprotocol.io)
@@ -13,11 +14,13 @@ fields and quirks, and several need portal registration. InfraNode normalizes
 ~20 categories, weather (DWD), air quality (UBA), public transit (incl. realtime
 departures), traffic, electricity price (SMARD), land values (BORIS), parking,
 charging, water levels, demographics, energy and more, for **84+ German cities**
-behind **one** interface, and serves it as an MCP server. **44 read-only tools,
+behind **one** interface, and serves it as an MCP server. **45 read-only tools,
 no API key, no account, no install.**
 
 Sources include the Deutscher Wetterdienst (DWD), Umweltbundesamt (UBA),
 Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
+
+> If InfraNode saves you a data integration, a star helps other developers find it.
 
 ## Connect
 
@@ -74,13 +77,13 @@ of failing the call.
 > Tip: call `list_cities` first to discover valid city slugs (e.g. `koeln`,
 > `berlin`, `hamburg`), then call any city-scoped tool.
 
-## Tools (44)
+## Tools (45)
 
 | Group | Tools |
 |-------|-------|
 | **Discovery** | `list_cities`, `sources`, `compare` (one resource across many cities) |
 | **Weather & environment** | `weather`, `weather_warnings`, `air_quality`, `air_quality_live`, `pollen_uv`, `water_level`, `flood` |
-| **Mobility** | `transit`, `transit_departures`, `stations` (catalog), `station_board_departures`/`station_board_arrivals` (any station by EVA, incl. local trains + disruptions), `station_departures`, `station_arrivals`, `traffic`, `road_events`, `webcams`, `charging`, `sharing`, `fuel_prices` |
+| **Mobility** | `transit`, `transit_departures`, `stations` (catalog), `station_board_departures`/`station_board_arrivals` (any station by EVA, incl. local trains + disruptions), `station_departures`, `station_arrivals`, `traffic`, `road_events`, `webcams`, `charging`, `parking` (live occupancy), `sharing`, `fuel_prices` |
 | **City & people** | `get_city`, `geo`, `demographics`, `indicators`, `unemployment`, `tourism`, `construction`, `accidents`, `health`, `icu_live`, `holidays`, `election`, `events`, `pois` |
 | **Economy & real estate** | `land_values`, `tax_rates` (trade/property tax multipliers per municipality), `business_registrations` (founding dynamics per district) |
 | **Energy & vehicles** | `power_load`, `power_price`, `energy`, `vehicle_registrations` |

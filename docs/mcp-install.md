@@ -14,7 +14,7 @@ InfraNode-Live-API. Jedes Tool ruft einen festen API-Endpunkt auf und gibt
 dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
-deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie und mehr) als 44
+deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie und mehr) als 45
 MCP-Tools.
 
 ## Berechtigungen und Sicherheitsmodell
@@ -126,7 +126,7 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-44 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+45 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
@@ -139,6 +139,7 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `traffic` | `slug` | Motorway roadworks and traffic messages (region) | Autobahn |
 | `transit` | `slug` | Public-transport stops (static) | DELFI/GTFS, HVV |
 | `charging` | `slug` | EV charging-station locations | Bundesnetzagentur |
+| `parking` | `slug` | Live parking occupancy: vacant spaces and occupancy (Dortmund, Frankfurt am Main, Wuppertal) | Stadt/Mobilithek |
 | `water_level` | `slug` | Water levels on federal waterways (partial coverage) | PEGELONLINE |
 | `flood` | `slug` | Flood warning levels (partial coverage) | Länderhochwasserportal |
 | `pollen_uv` | `slug` | Pollen forecast and UV index (region) | DWD |
