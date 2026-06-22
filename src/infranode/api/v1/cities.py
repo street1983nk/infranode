@@ -113,6 +113,10 @@ from infranode.normalization.mappers.regionalstatistik import (
 )
 from infranode.normalization.mappers.smard import map_smard
 from infranode.normalization.mappers.solar import map_solar
+from infranode.normalization.mappers.solar_cadastre import (
+    load_solar_roofs,
+    map_solar_roofs,
+)
 from infranode.normalization.mappers.stada import map_station_catalog
 from infranode.normalization.mappers.tankerkoenig import map_fuel_prices
 from infranode.normalization.mappers.uba import map_air_uba
@@ -557,6 +561,69 @@ async def city_solar(slug: str, request: Request) -> dict:
             "correlation_id": correlation_id.get(),
             "source_status": "ok",
             "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/solar-roofs")
+async def city_solar_roofs(slug: str) -> dict:
+    """Liefert das Dach-Solarkataster je Stadt im kanonischen Envelope (DATA-39).
+
+    Dach-PV-Potenzial (installierbar, kWp + Jahresertrag MWh) plus Bestand
+    (installiert) je Stadt aus dem amtlichen Gemeinde-Aggregat (NRW-Pilot,
+    Solarkataster NRW, MaStR/LANUK/Geobasis NRW, DL-DE/Zero 2.0 = Tier A). Anders
+    als /solar (PVGIS-Einstrahlung/Ertrag je kWp) traegt diese Route die Mengen
+    je Stadt. Teilabgedeckt (NRW), foederiert je Bundesland wie /land-values.
+
+    KRITISCH (kein Upstream im Request-Pfad, T-08-DEP): liest AUSSCHLIESSLICH aus
+    dem committeten Seed ``data/seeds/solar_cadastre_nrw.json`` via stdlib json,
+    KEIN ``resilient_client``, KEINE Fremd-API.
+
+    Vier ``source_status``-Werte:
+    - ``disabled``: ``enable_solar_cadastre`` per Env-Toggle aus -> data None
+    - ``not_covered``: Stadt ausserhalb der abgedeckten Bundeslaender (mit
+      covered_cities) -> data None, KEIN 5xx
+    - ``no_data``: abgedeckte Stadt, aber kein Seed-Eintrag -> data None
+    - ``ok``: Seed-Eintrag vorhanden -> SolarRoofsPayload mit Attribution
+    """
+    entry = get_city(slug)
+
+    # Quellen-Toggle frisch lesen (Settings() statt app.state.settings). DATA-06.
+    if not Settings().enable_solar_cadastre:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    # Teilabdeckung: Stadt ausserhalb NRW -> 200 not_covered mit covered_cities.
+    if not is_covered("solar-roofs", entry.slug):
+        return _not_covered("solar-roofs")
+
+    raw = load_solar_roofs(entry.ags)
+    if raw is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "no_data",
+            },
+        }
+
+    record = map_solar_roofs(
+        raw,
+        slug=entry.slug,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
         },
     }
 

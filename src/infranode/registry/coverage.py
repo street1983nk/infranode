@@ -92,6 +92,15 @@ _LAND_VALUES_CITIES: frozenset[str] = frozenset(
     c.slug for c in CITY_REGISTRY if c.state in _BORIS_STATES
 )
 
+# solar-roofs (DATA-39): Dach-Solarkataster ist pro Bundesland foederiert (wie
+# BORIS). NRW-Pilot aus dem amtlichen Gemeinde-Aggregat (Seed) -> abgedeckt sind
+# die Register-Staedte in NRW. Ein weiteres Land erweitert die Abdeckung, sobald
+# sein Seed vorliegt (dann hier um das Kuerzel ergaenzen).
+_SOLAR_CADASTRE_STATES = {"NW"}
+_SOLAR_ROOFS_CITIES: frozenset[str] = frozenset(
+    c.slug for c in CITY_REGISTRY if c.state in _SOLAR_CADASTRE_STATES
+)
+
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
 # Die Kennung entspricht dem letzten Pfadsegment der Route (``/cities/{slug}/<key>``).
 PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
@@ -101,6 +110,7 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "road-events": _ROAD_EVENTS_CITIES,
     "sharing": _SHARING_CITIES,
     "land-values": _LAND_VALUES_CITIES,
+    "solar-roofs": _SOLAR_ROOFS_CITIES,
 }
 
 

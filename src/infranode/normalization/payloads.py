@@ -740,6 +740,33 @@ class BusinessRegistrationsPayload(BaseModel):
     jahr: int | None = None
 
 
+class SolarRoofsPayload(BaseModel):
+    """Dach-Solarkataster je Stadt: installiertes + Potenzial Dach-PV (DATA-39).
+
+    Aus dem amtlichen Gemeinde-Aggregat (NRW-Pilot: Solarkataster NRW,
+    MaStR/LANUK/Geobasis NRW, DL-DE/Zero 2.0 = Tier A; foederiert je Bundesland wie
+    BORIS). ``potential_kwp``/``potential_yield_mwh`` = gesamtes installierbares
+    Dach-PV-Potenzial (Leistung kWp bzw. Jahresertrag MWh);
+    ``installed_kwp``/``installed_yield_mwh`` = bereits installierte Dach-PV
+    (Bestand, juengstes Jahr, kumuliert). ``exploitation_pct`` =
+    installed_kwp/potential_kwp*100 (Ausschoepfungsgrad). ``potential_by_category``
+    = Potenzial-Leistung kWp je Gebaeudekategorie (wohngebaeude/gewerbe_industrie/
+    oeffentliche/landwirtschaft/sonstige/nicht_zuordbar). ``reference_date`` = Stand
+    des Datensatzes. Anders als ``SolarPayload`` (PVGIS-Einstrahlung je kWp) traegt
+    dieser Payload das Dach-Kataster (Mengen je Stadt). Mutable Default via
+    ``Field(default_factory=dict)`` (ruff B006).
+    """
+
+    kind: Literal["solar_roofs"] = "solar_roofs"
+    potential_kwp: float | None = None
+    potential_yield_mwh: float | None = None
+    installed_kwp: float | None = None
+    installed_yield_mwh: float | None = None
+    exploitation_pct: float | None = None
+    potential_by_category: dict = Field(default_factory=dict)
+    reference_date: str | None = None
+
+
 class SolarPayload(BaseModel):
     """Solar-Einstrahlung + normierter PV-Ertrag je Stadt (PVGIS/JRC, Tier A, DATA-38).
 
@@ -791,6 +818,7 @@ PayloadUnion = Annotated[
     | FuelPricePayload
     | SharingPayload
     | SolarPayload
+    | SolarRoofsPayload
     | IndicatorsPayload
     | LandValuesPayload
     | TaxRatesPayload

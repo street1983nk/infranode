@@ -2154,6 +2154,63 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/solar-roofs:
+    get:
+      tags: [cities]
+      summary: Dach-Solarkataster je Stadt, NRW-Pilot (Tier A)
+      x-summary-en: Rooftop solar cadastre per city, NRW pilot (Tier A)
+      description: >-
+        Dach-Solarkataster je Stadt aus dem amtlichen Gemeinde-Aggregat (NRW-Pilot:
+        Solarkataster NRW, MaStR/LANUK/Geobasis NRW, DL-DE/Zero 2.0). Liefert das
+        gesamte installierbare Dach-PV-Potenzial (potential_kwp,
+        potential_yield_mwh), den bereits installierten Bestand (installed_kwp,
+        installed_yield_mwh), den Ausschöpfungsgrad (exploitation_pct) und die
+        Aufschlüsselung des Potenzials je Gebäudekategorie (potential_by_category).
+        Anders als /solar (PVGIS-Einstrahlung je kWp) trägt diese Route die Mengen
+        je Stadt. Teilabgedeckt (NRW), föderiert je Bundesland: Toggle aus -> 200
+        source_status="disabled"; Stadt ausserhalb der abgedeckten Länder -> 200
+        source_status="not_covered" (mit covered_cities); abgedeckte Stadt ohne
+        Seed-Eintrag -> 200 source_status="no_data".
+      x-description-en: >-
+        Rooftop solar cadastre per city from the official municipal aggregate (NRW
+        pilot: Solarkataster NRW, MaStR/LANUK/Geobasis NRW, DL-DE/Zero 2.0). Returns
+        the total installable rooftop PV potential (potential_kwp,
+        potential_yield_mwh), the already installed stock (installed_kwp,
+        installed_yield_mwh), the exploitation ratio (exploitation_pct) and the
+        potential broken down per building category (potential_by_category). Unlike
+        /solar (PVGIS irradiation per kWp) this route carries the per-city
+        quantities. Partial coverage (NRW), federated per state: toggle off -> 200
+        source_status="disabled"; city outside covered states -> 200
+        source_status="not_covered" (with covered_cities); covered city without a
+        seed entry -> 200 source_status="no_data".
+      operationId: getCitySolarRoofs
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Solar-Roofs-Envelope (CanonicalRecord mit SolarRoofsPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/sharing:
     get:
       tags: [cities]

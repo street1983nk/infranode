@@ -204,3 +204,9 @@ class SourceId(StrEnum):
     # Policy (EC_REUSE) = Tier A. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-
     # Eintrag: getattr(settings, f"enable_{name}").
     SOLAR = "solar"
+    # DATA-39 (Stufe 2): Dach-Solarkataster je Stadt (installiertes + installierbares
+    # PV-Potenzial je Gemeinde). Foederiert je Bundesland wie BORIS; NRW-Pilot aus dem
+    # amtlichen Gemeinde-Aggregat (Solarkataster NRW, MaStR/LANUK/Geobasis NRW,
+    # DL-DE/Zero 2.0 = Tier A). Seed-basiert (kein Live-Fremd-API). Toggle-Name ==
+    # SourceId-Wert == _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    SOLAR_CADASTRE = "solar_cadastre"

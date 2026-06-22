@@ -93,6 +93,8 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "sharing",
         # DATA-38: PVGIS-Solar-Einstrahlung + normierter PV-Ertrag je Stadt (Tier A).
         "solar",
+        # DATA-39: Dach-Solarkataster je Stadt (NRW-Pilot, Tier A, Teilabdeckung).
+        "solar-roofs",
         # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
         "indicators",
         # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt, aggregiert (Tier A).

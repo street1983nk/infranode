@@ -91,6 +91,8 @@ _register(tools.fuel_prices)
 _register(tools.sharing)
 # DATA-38: PVGIS-Solar-Einstrahlung + normierter PV-Ertrag je Stadt (Tier A, alle 84).
 _register(tools.solar)
+# DATA-39: Dach-Solarkataster je Stadt (NRW-Pilot, Tier A, Teilabdeckung).
+_register(tools.solar_roofs)
 # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
 _register(tools.indicators)
 # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Tier A, aggregiert, Bauland).

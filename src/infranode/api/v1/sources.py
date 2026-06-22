@@ -135,6 +135,9 @@ _KNOWN_SOURCES = (
     # (EU JRC PVcalc, keylose Live-Rechen-API). Name == enable_solar (config.py) ==
     # SourceId.SOLAR (enums.py).
     "solar",
+    # DATA-39 (Stufe 2): Dach-Solarkataster je Stadt (Seed, NRW-Pilot, DL-DE/Zero
+    # 2.0). Name == enable_solar_cadastre (config.py) == SourceId.SOLAR_CADASTRE.
+    "solar_cadastre",
 )
 
 
@@ -285,6 +288,13 @@ SOURCE_LICENSE: dict[str, dict[str, str]] = {
     "solar": {
         "license_id": "ec_reuse",
         "attribution": "PVGIS © European Communities, 2001-2026",
+    },
+    # DATA-39 (Stufe 2): Dach-Solarkataster (NRW-Pilot, Gemeinde-Aggregat). DL-DE/
+    # Zero 2.0 = Tier A. Attribution wortgenau wie im Mapper (map_solar_roofs) und
+    # in DATA-LICENSES.md (T-11-SRC-DRIFT, Wortlaut-Gleichheits-Test).
+    "solar_cadastre": {
+        "license_id": "dl_de_zero_2_0",
+        "attribution": "Land NRW / GeoBasis NRW / LANUK (MaStR), Solarkataster NRW",
     },
     "bkg": {
         "license_id": "dl_de_by_2_0",

@@ -192,6 +192,9 @@ class SourceToggleSettings(BaseSettings):
     # rechnet jede EU-Koordinate -> alle Register-Staedte abgedeckt. Keylos ->
     # Default True. Toggle-Name == SourceId.SOLAR == _KNOWN_SOURCES-Eintrag.
     enable_solar: bool = True
+    # DATA-39 (Stufe 2): Dach-Solarkataster je Stadt (Seed-basiert, NRW-Pilot,
+    # DL-DE/Zero 2.0). Teilabgedeckt (NRW), foederiert je Bundesland wie BORIS.
+    enable_solar_cadastre: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True
