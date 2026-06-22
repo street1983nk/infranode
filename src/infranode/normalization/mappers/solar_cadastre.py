@@ -33,9 +33,10 @@ from infranode.normalization import (
 )
 
 _SEED_FILE = "solar_cadastre_nrw.json"
-_LICENSE_URL = "https://www.govdata.de/dl-de/zero-2-0"
-# Wortgenaue Attribution (deckungsgleich mit SOURCE_LICENSE + DATA-LICENSES.md).
-_ATTRIBUTION_TEXT = "Land NRW / GeoBasis NRW / LANUK (MaStR), Solarkataster NRW"
+# Fallback (NRW), falls ein Seed-Eintrag ausnahmsweise kein states-Meta traegt.
+_FALLBACK_LICENSE_ID = "dl_de_zero_2_0"
+_FALLBACK_LICENSE_URL = "https://www.govdata.de/dl-de/zero-2-0"
+_FALLBACK_ATTRIBUTION = "Land NRW / GeoBasis NRW / LANUK (MaStR), Solarkataster NRW"
 
 
 def load_solar_roofs(ags: str | None) -> dict | None:
@@ -56,7 +57,11 @@ def load_solar_roofs(ags: str | None) -> dict | None:
     entry = (data.get("cities") or {}).get(ags)
     if not isinstance(entry, dict):
         return None
-    return {**entry, "reference_date": (data.get("_meta") or {}).get("reference_date")}
+    # Lizenz/Attribution/Stichtag stehen je Bundesland im states-Block (foederiert,
+    # GOV-04): NRW = DL-DE/Zero 2.0, Bayern = CC BY 4.0. Ins Entry-dict heben, damit
+    # der reine Mapper die Pro-Record-Lizenz daraus ableitet.
+    state_meta = (data.get("states") or {}).get(entry.get("state")) or {}
+    return {**state_meta, **entry}
 
 
 def map_solar_roofs(
@@ -79,11 +84,13 @@ def map_solar_roofs(
     """
     potential_kwp = raw.get("potential_kwp")
     installed_kwp = raw.get("installed_kwp")
-    exploitation_pct = None
+    # Ausbaugrad: aus dem Seed (Bayern liefert ppvd_ant) oder abgeleitet (NRW).
+    exploitation_pct = raw.get("exploitation_pct")
     if (
-        isinstance(potential_kwp, int | float)
+        exploitation_pct is None
+        and isinstance(potential_kwp, int | float)
         and potential_kwp > 0
-        and (isinstance(installed_kwp, int | float))
+        and isinstance(installed_kwp, int | float)
     ):
         exploitation_pct = round(installed_kwp / potential_kwp * 100, 1)
 
@@ -93,13 +100,13 @@ def map_solar_roofs(
         observed_at=None,
         retrieved_at=retrieved_at,
         source=SourceId.SOLAR_CADASTRE,
-        license_id=LicenseId.DL_DE_ZERO_2_0,
+        license_id=LicenseId(raw.get("license_id") or _FALLBACK_LICENSE_ID),
         license_tier=LicenseTier.A,
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
-            text=_ATTRIBUTION_TEXT,
-            license_url=_LICENSE_URL,
+            text=raw.get("attribution") or _FALLBACK_ATTRIBUTION,
+            license_url=raw.get("license_url") or _FALLBACK_LICENSE_URL,
             modified=True,
         ),
         payload=SolarRoofsPayload(
