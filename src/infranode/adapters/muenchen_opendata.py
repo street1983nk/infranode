@@ -199,3 +199,109 @@ async def fetch_muenchen_road_events(
         )
 
     return {"slug": slug, "events": events}
+
+
+# --------------------------------------------------------------------------- #
+# Parkhaeuser Muenchen (DATA-40, statischer Standort-Katalog, Tier A DL-DE/BY)  #
+# --------------------------------------------------------------------------- #
+
+# [VERIFIED 2026-06-23] CKAN-Paket der Muenchner Parkhaeuser (package_show:
+# license_id dl-by-de/2.0, Autor muenchen.de). Genau eine JSON-Ressource mit
+# einem Array von Parkhaus-Orten (Standortkatalog, KEINE Live-Belegung; Muenchen
+# veroeffentlicht keine offene Echtzeit-Belegung). Felder je Ort [VERIFIED
+# 2026-06-23]: id, title, street, streetNumber, location.{lat,lng}.
+_PARKHAEUSER_PACKAGE_ID = "parkhaeuser-munchen"
+_PARKHAEUSER_RESOURCE_FORMAT = "json"
+
+
+async def fetch_muenchen_parking(
+    http: httpx.AsyncClient,
+    *,
+    slug: str,
+    lat: float,
+    lon: float,
+    radius_km: float = 30.0,
+) -> dict:
+    """Holt den Muenchner Parkhaus-Standortkatalog ueber den CKAN-2-Step-Pfad.
+
+    Step 1: ``package_show?id=parkhaeuser-munchen`` -> aus ``result.resources``
+    die JSON-Ressource (``format``-Match) waehlen. Step 2: deren ``url`` gegen
+    ``_ALLOWED_HOSTS`` pruefen (SSRF, T-9-02), dann GET und je Ort ein schlankes
+    dict bauen (Felder defensiv per ``.get()`` mit None-Fallback).
+    ``resp.raise_for_status()`` in beiden Steps (STALE-ON-ERROR der Fassade).
+
+    Dies ist ein STATISCHER Standortkatalog (Name/Adresse/Koordinaten), KEINE
+    Live-Belegung. ``lat``/``lon``/``radius_km`` sind vertragskonform Teil der
+    Signatur (alle Stadt-Adapter teilen sie), werden hier aber nicht zur Filterung
+    genutzt (Muenchen liefert den kompletten Stadt-Datensatz).
+
+    Rueckgabe-Keys (exakt das, was ``map_muenchen_parking`` erwartet): ``slug``
+    und ``facilities``.
+    """
+    pkg_resp = await http.get(
+        f"{_BASE}/api/3/action/package_show",
+        params={"id": _PARKHAEUSER_PACKAGE_ID},
+    )
+    pkg_resp.raise_for_status()
+
+    body = pkg_resp.json()
+    result = body.get("result") if isinstance(body, dict) else None
+    resources = result.get("resources") if isinstance(result, dict) else None
+    if not isinstance(resources, list):
+        resources = []
+
+    resource_url: str | None = None
+    for resource in resources:
+        if not isinstance(resource, dict):
+            continue
+        fmt = str(resource.get("format") or "").lower()
+        url = resource.get("url")
+        if _PARKHAEUSER_RESOURCE_FORMAT == fmt and isinstance(url, str) and url:
+            resource_url = url
+            break
+
+    if not resource_url:
+        return {"slug": slug, "facilities": []}
+
+    # T-9-02 SSRF: entdeckte Ressourcen-URL gegen die Allowlist pruefen.
+    discovered_host = urlsplit(resource_url).hostname
+    if discovered_host not in _ALLOWED_HOSTS:
+        raise ValueError(
+            f"entdeckte Ressourcen-URL nicht in der Allowlist: {resource_url!r}"
+        )
+
+    data_resp = await http.get(resource_url)
+    data_resp.raise_for_status()
+
+    payload = data_resp.json()
+    # Die Ressource ist ein JSON-Array von Orten; defensiv auch dict mit Liste.
+    places = payload if isinstance(payload, list) else []
+    if isinstance(payload, dict):
+        for value in payload.values():
+            if isinstance(value, list):
+                places = value
+                break
+
+    facilities: list[dict] = []
+    for place in places:
+        if not isinstance(place, dict):
+            continue
+        location = place.get("location") or {}
+        try:
+            f_lat = float(location["lat"]) if location.get("lat") is not None else None
+            f_lon = float(location["lng"]) if location.get("lng") is not None else None
+        except (TypeError, ValueError):
+            f_lat = f_lon = None
+        street = place.get("street")
+        number = place.get("streetNumber")
+        address = " ".join(p for p in (street, number) if p) or None
+        facilities.append(
+            {
+                "name": place.get("title"),
+                "address": address,
+                "lat": f_lat,
+                "lon": f_lon,
+            }
+        )
+
+    return {"slug": slug, "facilities": facilities}

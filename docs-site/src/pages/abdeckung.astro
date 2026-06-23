@@ -64,6 +64,30 @@ const PARTIAL = [
     reason: "BORIS je Bundesland: WFS (BE, BB, HE, NI, HB, HH, MV, TH) + Shapefile (NW, ST)",
     note: "",
   },
+  {
+    key: "parking",
+    label: "Parkhaus-Belegung",
+    path: "/api/v1/cities/{slug}/parking",
+    op: "getCityParking",
+    reason: "ParkenDD-Live (13 lizenzverifizierte Städte) + München statischer Katalog",
+    note: "",
+  },
+  {
+    key: "bike-counts",
+    label: "Radzählstellen",
+    path: "/api/v1/cities/{slug}/bike-counts",
+    op: "getCityBikeCounts",
+    reason: "kommunale Radzähl-Open-Data je Stadt (je Ursprung lizenzverifiziert)",
+    note: "",
+  },
+  {
+    key: "solar-roofs",
+    label: "Dach-Solarkataster",
+    path: "/api/v1/cities/{slug}/solar-roofs",
+    op: "getCitySolarRoofs",
+    reason: "amtliches Solarkataster je Bundesland (NRW + Bayern)",
+    note: "",
+  },
 ];
 
 const total = coverage.total_cities;
@@ -326,7 +350,7 @@ const partialMap: Record<string, string[]> = coverage.partial;
     display: inline-block;
     margin-left: 0.5rem;
     font-family: var(--mono);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 0.02em;
     color: #9a5b00;
@@ -365,7 +389,7 @@ const partialMap: Record<string, string[]> = coverage.partial;
       display: block;
       margin-bottom: 0.15rem;
       font-family: var(--mono);
-      font-size: 0.66rem;
+      font-size: 0.72rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.03em;

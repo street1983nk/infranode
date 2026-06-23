@@ -210,3 +210,21 @@ class SourceId(StrEnum):
     # DL-DE/Zero 2.0 = Tier A). Seed-basiert (kein Live-Fremd-API). Toggle-Name ==
     # SourceId-Wert == _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
     SOLAR_CADASTRE = "solar_cadastre"
+    # DATA-40: Muenchen Open Data, statische/halbstatische Stadtquellen via CKAN
+    # (opendata.muenchen.de, DL-DE/BY 2.0 = Tier A). PARKHAEUSER = Parkhaus-
+    # Standortkatalog (KEINE Live-Belegung); RADZAEHL = Raddauerzaehlstellen
+    # (Rad-Zaehlungen je Zaehlstelle, monatlich aktualisiert). Toggle-Name ==
+    # SourceId-Wert == _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    MUENCHEN_PARKHAEUSER = "muenchen_parkhaeuser"
+    MUENCHEN_RADZAEHL = "muenchen_radzaehl"
+    # DATA-40: bike-counts je Stadt (kommunale Radzaehlstellen-Open-Data, Tier A,
+    # je Ursprung lizenzverifiziert). Toggle-Name == SourceId-Wert == _KNOWN_SOURCES.
+    LEIPZIG_RADZAEHL = "leipzig_radzaehl"
+    HAMBURG_RADZAEHL = "hamburg_radzaehl"
+    BERLIN_RADZAEHL = "berlin_radzaehl"
+    STUTTGART_RADZAEHL = "stuttgart_radzaehl"
+    # DATA-40: ParkenDD-Aggregator (api.parkendd.de, keylos) = bevorzugte Live-
+    # Parkhaus-Belegung fuer viele Staedte (EIN Adapter, Dedup-Prinzip). Lizenz
+    # heterogen je Stadt -> UNKNOWN/Tier C (OpenAQ-Muster), Attribution "ParkenDD".
+    # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    PARKENDD = "parkendd"

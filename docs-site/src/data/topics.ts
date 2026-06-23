@@ -345,7 +345,10 @@ export const topics: Topic[] = [
     id: "public-transport",
     endpointId: "getCityStationDepartures",
     examplePath: "/api/v1/cities/berlin/station-departures",
-    coverageKey: "station-departures",
+    // ÖPNV-Echtzeit gibt es für alle Städte (DELFI/HVV GTFS), daher "all".
+    // Vorher faelschlich "station-departures" (kein Key in coverage.json) ->
+    // Topic erschien auf KEINER Stadt-Landingpage. Fix 2026-06-23.
+    coverageKey: "all",
     de: {
       slug: "oepnv-echtzeit-api",
       metaTitle: "ÖPNV-Echtzeit-API Deutschland: Abfahrten je Stadt, keylos",

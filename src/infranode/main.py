@@ -282,10 +282,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         # MCP-Aktion per ntfy verfolgen (feuert nur bei gesetztem MCP-Header).
         # Eigene Kapselung, best-effort, crasht den Request nie.
         try:
-            await note_mcp_action(
-                request,
-                settings=request.app.state.settings,
-            )
+            pass  # MCP-Telemetrie ist privat (entfernt im Public-Build)
         except Exception as exc:  # noqa: BLE001 - MCP-Push crasht nie den Request
             log.debug("mcp_action_middleware_failed", error=str(exc))
 

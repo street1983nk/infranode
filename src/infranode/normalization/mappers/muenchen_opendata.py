@@ -24,6 +24,7 @@ from infranode.normalization import (
     CanonicalRecord,
     LicenseId,
     LicenseTier,
+    ParkingPayload,
     RoadEventPayload,
     SourceId,
 )
@@ -65,5 +66,43 @@ def map_muenchen_road_events(
         payload=RoadEventPayload(
             city_source="muenchen_baustellen",
             events=raw.get("events", []),
+        ),
+    )
+
+
+def map_muenchen_parking(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet den Muenchner Parkhaus-Standortkatalog auf einen ``CanonicalRecord`` ab.
+
+    Die ``facilities`` (Parkhaus-Standorte, DATA-40) wandern unveraendert in den
+    ``ParkingPayload``. STATISCHER Standortkatalog der Landeshauptstadt München
+    (CKAN-Paket ``parkhaeuser-munchen`` auf opendata.muenchen.de, [VERIFIED
+    2026-06-23]), KEINE Live-Belegung. Datenlizenz Deutschland Namensnennung 2.0
+    (``license_id=DL_DE_BY_2_0``, ``license_tier=A``), wortgenaue Attribution
+    "Landeshauptstadt München". Die Standorte tragen ihre Koordinaten je Eintrag,
+    daher ``observed_at=None`` und ``geo=None``. ``retrieved_at`` wird injiziert
+    (keine Systemuhr im Mapper), damit das Ergebnis deterministisch bleibt.
+    """
+    return CanonicalRecord(
+        city_slug=raw["slug"],
+        geo=None,
+        observed_at=None,
+        retrieved_at=retrieved_at,
+        source=SourceId.MUENCHEN_PARKHAEUSER,
+        license_id=LicenseId.DL_DE_BY_2_0,
+        license_tier=LicenseTier.A,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        attribution=Attribution(
+            text="Landeshauptstadt München",
+            license_url=_DL_DE_BY_URL,
+        ),
+        payload=ParkingPayload(
+            facilities=raw.get("facilities", []),
         ),
     )

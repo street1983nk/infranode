@@ -28,6 +28,10 @@ from collections.abc import Callable
 import orjson
 import structlog
 
+from infranode.registry.source_specs import (
+    FRAGILE_SOURCE_COOLDOWN as _REGISTRY_COOLDOWN,
+)
+
 from .breaker import BreakerRegistry, BreakerState, CircuitBreaker
 
 log = structlog.get_logger()
@@ -41,20 +45,9 @@ _KEY_PREFIX = "breaker:state:"
 # OPEN-Breaker wird bei jedem record_* neu geschrieben und verlaengert die TTL.
 _STATE_TTL = 86400
 
-# Per-Source-Cooldown (Sekunden) fuer fragile/zeitweise gestoerte Upstreams
-# (Selbstheilung statt manuellem Toggle, 2026-06-14). Der OPEN-Breaker dieser
-# Quellen probt den kranken Upstream nur alle N Sekunden EINMAL (HALF_OPEN-Probe)
-# statt nach dem 30s-Default: wenig Fehler-Laerm waehrend einer laengeren Stoerung,
-# aber garantierte automatische Erholung, sobald der Upstream zurueck ist. So muss
-# eine Behoerden-API mit Wartungsfenstern (z.B. api.hamburg.de) NICHT mehr von Hand
-# per enable_*-Toggle abgeschaltet werden. Quellen ohne Eintrag behalten 30s.
-_FRAGILE_SOURCE_COOLDOWN: dict[str, float] = {
-    "hamburg_verkehrslage": 1800.0,  # api.hamburg.de hatte Wartungs-/Stoerfenster
-    "hamburg_baustellen": 1800.0,
-    "uba": 900.0,  # UBA-Upstream zickt periodisch (503), erholt sich langsam
-    "openaq": 900.0,
-    "pegelonline": 600.0,
-}
+# Per-Source-Cooldown (s) fuer fragile Upstreams aus der deklarativen Quellen-
+# Registry (registry/source_specs.py). Quellen ohne Eintrag behalten 30s.
+_FRAGILE_SOURCE_COOLDOWN: dict[str, float] = dict(_REGISTRY_COOLDOWN)
 
 
 class RedisBreakerRegistry(BreakerRegistry):

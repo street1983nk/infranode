@@ -41,3 +41,30 @@ Falls du versehentlich ein Secret committet hast: Rotiere den betroffenen Key so
 
 - Deutschsprachige Docstrings und Kommentare, korrekte Umlaute (ä/ö/ü/ß), keine ASCII-Ersatzschreibweise.
 - Folge den im Projekt etablierten Mustern (App-Factory, zentrales Error-Mapping, strukturiertes JSON-Logging, versioniertes Routing unter `/api/v1`).
+
+## Datenquelle hinzufügen
+
+Eine neue Upstream-Quelle ist deklarativ an **einer** Stelle definiert:
+`src/infranode/registry/source_specs.py`. Ein `SourceSpec`-Eintrag dort speist
+automatisch die abgeleiteten Strukturen (Quellenliste der `/sources`-Route,
+Lizenz + Attribution, Cache-TTL, Breaker-Cooldown), sodass keine vier verstreuten
+Stellen mehr gepflegt werden müssen.
+
+Schritte für eine neue Quelle `meine_quelle`:
+
+1. **Registry-Eintrag** in `registry/source_specs.py`:
+   `SourceSpec(name="meine_quelle", license_id="...", attribution="...", ttl=(fresh_s, stale_s), cooldown=...)`.
+   `ttl`/`cooldown` weglassen, wenn die Defaults passen (60 s frisch / 120 s stale, 30 s Breaker-Probe).
+2. **Toggle** in `config.py` (`SourceToggleSettings`): `enable_meine_quelle: bool = ...`.
+   Der Name MUSS exakt `enable_<name>` sein (dynamische Auflösung via `getattr`).
+3. **SourceId** in `normalization/enums.py`: ein gleichnamiger Enum-Wert
+   (dokumentierte Ausnahmen/Aliase stehen in `tests/unit/test_source_specs_registry.py`).
+4. **Lizenzzeile** in `DATA-LICENSES.md`: wortgenaue Attribution (fail-closed
+   gegen `tests/unit/test_source_license_map.py`).
+5. **Adapter** (`adapters/<name>.py`, `fetch_*`) + **Mapper**
+   (`normalization/mappers/<name>.py`, `map_*` → kanonischer Envelope).
+6. **Route** (`api/v1/cities.py` bzw. `live.py`) + passender Eintrag in `docs/openapi.yaml`.
+
+`tests/unit/test_source_specs_registry.py` erzwingt die Konsistenz (fehlender
+Toggle, fehlende SourceId, ungültige Lizenz/TTL/Cooldown) und schlägt fehl, wenn
+ein Schritt vergessen wurde.

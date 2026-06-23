@@ -3,6 +3,7 @@
 // src/data/cities.json, with the data types actually available for that city,
 // city-specific curl examples and city-scoped dataset JSON-LD. Counterpart:
 // src/pages/staedte/[slug].astro.
+import { getCollection } from "astro:content";
 import Docs from "../../../layouts/Docs.astro";
 import JsonLd from "../../../components/JsonLd.astro";
 import cities from "../../../data/cities.json";
@@ -22,6 +23,20 @@ const stateName = STATES[city.state] ?? city.state;
 const fmt = new Intl.NumberFormat("en-US");
 const available = topicsForCity(city.slug, coverage);
 const isCore = city.coverage === "full";
+
+// Full list of ALL city-scoped data endpoints (single source openapi.yaml via
+// the endpoints collection): only per-slug paths /cities/{slug}/... (excluding
+// list/compare operations like getCities). Every data type is retrievable for
+// any city via its slug; where a source has nothing, the API honestly returns
+// no_data.
+const cityEndpoints = (await getCollection("endpoints"))
+  .filter((e) => e.data.kind === "city" && /\/cities\/\{[^}]+\}\//.test(e.data.path))
+  .map((e) => ({
+    id: e.data.id,
+    summary: e.data.summaryEn || e.data.summary,
+    example: e.data.path.replace(/\{[^}]+\}/, city.slug),
+  }))
+  .sort((a, b) => a.summary.localeCompare(b.summary, "en"));
 const metaTitle = `Open data API for ${city.name}: free and keyless`;
 const lead = `Open data for ${city.name} (${stateName}) through a free, keyless REST API: weather, air quality, electricity price and more, delivered as consistent JSON with source and license on every response. No API key, no sign-up.`;
 const weatherExample = `${API_BASE}/api/v1/cities/${city.slug}/weather`;
@@ -80,8 +95,8 @@ const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;
     </tbody>
   </table>
 
-  <h2>Available data for {city.name}</h2>
-  <p>These data types can be retrieved for {city.name} using the same slug:</p>
+  <h2>Data with a guide for {city.name}</h2>
+  <p>These data types have an in-depth guide; all are retrievable for {city.name} via the slug:</p>
   <ul>
     {
       available.map((t) => (
@@ -99,12 +114,27 @@ const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;
   <p>Or air quality:</p>
   <pre><code>curl {airExample}</code></pre>
 
-  <h2>All endpoints</h2>
+  <h2>All {cityEndpoints.length} data types for {city.name}</h2>
   <p>
-    {city.name} uses the same city endpoints as every covered city. The full
-    reference is in the <a href="/en/api/getCityWeather/">API documentation</a>,
-    an overview of all cities on the <a href="/en/cities/">cities page</a>.
-    InfraNode is also available as an
+    Using the same slug, all {cityEndpoints.length} city data types can be
+    retrieved for {city.name}. Where a source has nothing for {city.name} (yet),
+    the API honestly returns <code>no_data</code> instead of an error.
+    Parameters and example responses for each data type are in the linked
+    reference:
+  </p>
+  <ul class="endpoint-list">
+    {
+      cityEndpoints.map((e) => (
+        <li>
+          <a href={`/en/api/${e.id}/`}>{e.summary}</a>
+          {" "}<code>{e.example}</code>
+        </li>
+      ))
+    }
+  </ul>
+  <p>
+    An overview of all cities is on the
+    <a href="/en/cities/">cities page</a>. InfraNode is also available as an
     <a href="/en/mcp/">MCP server for AI assistants</a>.
   </p>
 
@@ -131,5 +161,11 @@ const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;
     text-align: left;
     padding-right: 1.2rem;
     white-space: nowrap;
+  }
+  .endpoint-list {
+    line-height: 1.7;
+  }
+  .endpoint-list code {
+    font-size: 0.8em;
   }
 </style>

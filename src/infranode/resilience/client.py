@@ -33,6 +33,8 @@ import httpx
 import orjson
 import structlog
 
+from infranode.registry.source_specs import SOURCE_TTL as _REGISTRY_TTL
+
 from ..infra.cache import cache_get_or_set
 from ..infra.metrics import incr_cache_status
 from .breaker import BreakerOpen, BreakerRegistry
@@ -68,32 +70,12 @@ async def _last_cache(redis, key: str):
     return payload
 
 
-# Per-Source-Cache-TTL (fresh_s, stale_s). Quellen mit langsam wechselnden
-# Live-Daten bekommen ein langes Fresh-Fenster (weniger Upstream-Calls) und ein
-# sehr langes Stale-Fenster (Stale-Serving statt 503, wenn der Upstream 429t/down
-# ist). Default = bisheriges Verhalten (60s fresh, ~120s stale via Pad).
+# Default-Cache-Fenster (fresh_s, stale_s) fuer Quellen ohne expliziten Registry-
+# Eintrag: bisheriges Verhalten (60s fresh, ~120s stale via Pad).
 _DEFAULT_TTL: tuple[float, float] = (60.0, 120.0)
-_SOURCE_TTL: dict[str, tuple[float, float]] = {
-    "openaq": (900.0, 21600.0),
-    "pegelonline": (300.0, 7200.0),
-    "dwd": (600.0, 7200.0),
-    # POIs (OSM/Overpass) aendern sich praktisch nie -> sehr lange TTL, damit das
-    # stark rate-limitierte oeffentliche Overpass nur selten abgefragt wird.
-    "overpass": (86400.0, 604800.0),
-    # GENESIS-Regionalstatistik liefert JAHRESWERTE und ist sehr traege (~25s je
-    # Abruf). Sehr lange TTL (24h frisch / 30d stale), damit der taegliche
-    # Akkrual-Timer den Cache dauerhaft warm haelt und Clients praktisch nie den
-    # kalten Abruf treffen (sonst "sende Anfrage..." sekundenlang).
-    "genesis": (86400.0, 2592000.0),
-    # StaDa-Bahnhofskatalog ist Stammdaten (aendert sich praktisch nie) und wird
-    # als EINE bundesweite Liste geholt + je Stadt gefiltert -> sehr lange TTL
-    # (24h frisch / 30d stale), ein Abruf bedient alle 84 Staedte aus dem Cache.
-    "stada": (86400.0, 2592000.0),
-    # PVGIS-Solar liefert ein klimatologisches Mehrjahresmittel (aendert sich
-    # praktisch nie) -> sehr lange TTL (24h frisch / 30d stale). Ein Abruf je Stadt
-    # haelt den Cache dauerhaft warm und schont das 30-calls/s-Limit der JRC-API.
-    "solar": (86400.0, 2592000.0),
-}
+# Per-Source-Cache-TTL (fresh_s, stale_s) aus der deklarativen Quellen-Registry
+# (registry/source_specs.py). Quellen ohne Eintrag nutzen _DEFAULT_TTL.
+_SOURCE_TTL: dict[str, tuple[float, float]] = dict(_REGISTRY_TTL)
 
 
 class ResilientSourceClient:

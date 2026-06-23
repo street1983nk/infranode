@@ -151,4 +151,6 @@ committed, only `.env.example` is versioned and CI runs a gitleaks scan.
 ## Contributing
 
 Contributions are welcome. Setup, gate commands and the secret rule are in
-[CONTRIBUTING.md](./CONTRIBUTING.md).
+[CONTRIBUTING.md](./CONTRIBUTING.md). To add a new data source, start with the
+declarative source registry in `src/infranode/registry/source_specs.py` (one
+`SourceSpec` entry per upstream); CONTRIBUTING.md has the full checklist.

@@ -35,6 +35,7 @@ from __future__ import annotations
 from infranode.adapters.autobahn import _CITY_ROADS
 from infranode.adapters.boris import BORIS_SHAPEFILE, BORIS_WFS
 from infranode.adapters.lhp import _CITY_PEGEL
+from infranode.adapters.parkendd import PARKENDD_CITIES
 from infranode.registry.cities import CITY_REGISTRY
 
 # road-events: gespiegelt aus ``api.v1.cities.CONNECTOR_MAP`` (siehe Modul-Docstring).
@@ -101,6 +102,22 @@ _SOLAR_ROOFS_CITIES: frozenset[str] = frozenset(
     c.slug for c in CITY_REGISTRY if c.state in _SOLAR_CADASTRE_STATES
 )
 
+# parking (DATA-40): EIN Parking-Endpunkt mit Quellen-Fallback (Dedup-Prinzip).
+# Bevorzugt ParkenDD-Live-Belegung (aus ``adapters.parkendd.PARKENDD_CITIES``
+# abgeleitet, 22 Staedte), zusaetzlich Muenchen ueber den statischen CKAN-
+# Standortkatalog (Fallback ohne Live-Belegung). Eine neue ParkenDD-Stadt
+# erweitert die Abdeckung automatisch.
+_PARKING_CITIES: frozenset[str] = frozenset(PARKENDD_CITIES) | {"muenchen"}
+
+# bike-counts (DATA-40): kommunale Radzaehlstellen-Open-Data je Stadt (KEIN
+# Eco-Counter: Lizenz ungeklaert, Owner-Entscheidung 2026-06-23). Jede Stadt eine
+# eigene, am Ursprung lizenz-verifizierte Quelle. Waechst additiv je integrierter
+# Stadt (muss synchron zu ``_resolve_bike_counts_connector`` in api/v1/cities.py
+# bleiben).
+_BIKE_COUNTS_CITIES: frozenset[str] = frozenset(
+    {"muenchen", "leipzig", "hamburg", "berlin", "stuttgart"}
+)
+
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
 # Die Kennung entspricht dem letzten Pfadsegment der Route (``/cities/{slug}/<key>``).
 PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
@@ -111,6 +128,8 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "sharing": _SHARING_CITIES,
     "land-values": _LAND_VALUES_CITIES,
     "solar-roofs": _SOLAR_ROOFS_CITIES,
+    "parking": _PARKING_CITIES,
+    "bike-counts": _BIKE_COUNTS_CITIES,
 }
 
 

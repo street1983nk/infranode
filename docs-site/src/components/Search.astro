@@ -38,6 +38,7 @@ const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
       aria-label={searchLabel}
       data-search-input
     />
+    <kbd class="search__kbd" aria-hidden="true">/</kbd>
   </div>
   <div class="search__results" data-search-results role="listbox"></div>
 </div>
@@ -120,6 +121,25 @@ const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
       timer = window.setTimeout(() => {
         void run(input.value);
       }, 150);
+    });
+
+    // Tastatur-Shortcut (Flexibilitaet fuer Power-User): "/" oder Cmd/Strg+K
+    // fokussiert die Suche, greift nicht waehrend man in einem Feld tippt.
+    // Escape leert die Suche und verlaesst das Feld.
+    document.addEventListener("keydown", (e) => {
+      const el = document.activeElement;
+      const typing =
+        el instanceof HTMLElement &&
+        (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      if ((e.key === "/" && !typing) || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) {
+        e.preventDefault();
+        input.focus();
+        input.select();
+      } else if (e.key === "Escape" && el === input) {
+        input.value = "";
+        clear();
+        input.blur();
+      }
     });
   }
 </script>

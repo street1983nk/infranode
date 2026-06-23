@@ -62,6 +62,30 @@ const PARTIAL = [
     reason: "BORIS per federal state: WFS (BE, BB, HE, NI, HB, HH, MV, TH) + shapefile (NW, ST)",
     note: "",
   },
+  {
+    key: "parking",
+    label: "Parking occupancy",
+    path: "/api/v1/cities/{slug}/parking",
+    op: "getCityParking",
+    reason: "ParkenDD live (13 license-verified cities) + Munich static catalogue",
+    note: "",
+  },
+  {
+    key: "bike-counts",
+    label: "Bicycle counting stations",
+    path: "/api/v1/cities/{slug}/bike-counts",
+    op: "getCityBikeCounts",
+    reason: "municipal bicycle-count open data per city (license-verified at origin)",
+    note: "",
+  },
+  {
+    key: "solar-roofs",
+    label: "Rooftop solar cadastre",
+    path: "/api/v1/cities/{slug}/solar-roofs",
+    op: "getCitySolarRoofs",
+    reason: "official rooftop solar cadastre per federal state (NRW + Bavaria)",
+    note: "",
+  },
 ];
 
 const total = coverage.total_cities;
@@ -324,7 +348,7 @@ const partialMap: Record<string, string[]> = coverage.partial;
     display: inline-block;
     margin-left: 0.5rem;
     font-family: var(--mono);
-    font-size: 0.68rem;
+    font-size: 0.78rem;
     font-weight: 600;
     letter-spacing: 0.02em;
     color: #9a5b00;
@@ -361,7 +385,7 @@ const partialMap: Record<string, string[]> = coverage.partial;
       display: block;
       margin-bottom: 0.15rem;
       font-family: var(--mono);
-      font-size: 0.66rem;
+      font-size: 0.72rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.03em;

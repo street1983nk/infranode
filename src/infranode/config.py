@@ -124,11 +124,14 @@ class AdminSettings(BaseSettings):
 class SourceToggleSettings(BaseSettings):
     """Per-Quelle ``enable_*``-Toggles (Graceful Degradation).
 
-    WICHTIG: Jeder Toggle-Name MUSS exakt zum _KNOWN_SOURCES-Eintrag (sources.py)
-    und zum SourceId-Wert passen, da er dynamisch ueber
+    WICHTIG: Jeder Toggle-Name MUSS exakt zum SourceSpec-Namen in der Quellen-
+    Registry (registry/source_specs.py, daraus wird _KNOWN_SOURCES abgeleitet) und
+    zum SourceId-Wert passen, da er dynamisch ueber
     ``getattr(settings, f"enable_{name}")`` aufgeloest wird. Deshalb bleiben diese
-    Felder flach auf der Settings-Klasse (keine Verschachtelung). Keyed Live-
-    Quellen stehen trotz Default True ohne Credentials auf "disabled".
+    Felder flach auf der Settings-Klasse (keine Verschachtelung). Der Drift-Test
+    tests/unit/test_source_specs_registry.py erzwingt, dass zu jeder Registry-Quelle
+    ein enable_<name>-Toggle existiert. Keyed Live-Quellen stehen trotz Default True
+    ohne Credentials auf "disabled".
     """
 
     # Phase 4/6: Basis-Quellen.
@@ -195,6 +198,20 @@ class SourceToggleSettings(BaseSettings):
     # DATA-39 (Stufe 2): Dach-Solarkataster je Stadt (Seed-basiert, NRW-Pilot,
     # DL-DE/Zero 2.0). Teilabgedeckt (NRW), foederiert je Bundesland wie BORIS.
     enable_solar_cadastre: bool = True
+    # DATA-40: Muenchen Open Data (CKAN, keylos, DL-DE/BY 2.0). parkhaeuser =
+    # statischer Parkhaus-Standortkatalog; radzaehl = Raddauerzaehlstellen
+    # (monatlich aktualisiert). Beide keylos -> Default True. Teilabgedeckt
+    # (nur muenchen), bis weitere Staedte erschlossen sind.
+    enable_muenchen_parkhaeuser: bool = True
+    enable_muenchen_radzaehl: bool = True
+    # DATA-40 bike-counts: kommunale Radzaehlstellen je Stadt (keylos, Tier A).
+    enable_leipzig_radzaehl: bool = True
+    enable_hamburg_radzaehl: bool = True
+    enable_berlin_radzaehl: bool = True
+    enable_stuttgart_radzaehl: bool = True
+    # DATA-40: ParkenDD-Aggregator (keylos) = bevorzugte Live-Parkbelegung fuer
+    # viele Staedte. Default True (keylos). Loest /live/dortmund/parking ab (Dedup).
+    enable_parkendd: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True

@@ -23,6 +23,7 @@ from asgi_correlation_id import correlation_id
 from fastapi import APIRouter, Request, Response
 
 from infranode.adapters.autobahn import fetch_traffic, fetch_webcams
+from infranode.adapters.berlin_radzaehl import fetch_berlin_radzaehl
 from infranode.adapters.berlin_viz import fetch_berlin_road_events
 from infranode.adapters.db_timetables import (
     fetch_station_arrivals,
@@ -39,19 +40,27 @@ from infranode.adapters.dwd_warnings import (
 )
 from infranode.adapters.gbfs import fetch_sharing
 from infranode.adapters.genesis import fetch_demographics, fetch_genesis_table
+from infranode.adapters.hamburg_radzaehl import fetch_hamburg_radzaehl
 from infranode.adapters.hamburg_transparenz import fetch_hamburg_road_events
 from infranode.adapters.koeln_arcgis import fetch_koeln_road_events
 from infranode.adapters.koeln_events import fetch_events as fetch_koeln_events
+from infranode.adapters.leipzig_radzaehl import fetch_leipzig_radzaehl
 from infranode.adapters.lhp import fetch_flood
 from infranode.adapters.mobidata_bw import fetch_mobidata_road_events
 from infranode.adapters.mobilithek_datex2 import fetch_datex2
-from infranode.adapters.muenchen_opendata import fetch_muenchen_road_events
+from infranode.adapters.muenchen_opendata import (
+    fetch_muenchen_parking,
+    fetch_muenchen_road_events,
+)
+from infranode.adapters.muenchen_radzaehl import fetch_muenchen_radzaehl
 from infranode.adapters.openaq import fetch_air
 from infranode.adapters.overpass import _ALLOWED_TYPES, fetch_pois
+from infranode.adapters.parkendd import PARKENDD_CITIES, fetch_parkendd
 from infranode.adapters.pegelonline import fetch_water_level
 from infranode.adapters.smard import fetch_smard
 from infranode.adapters.solar import fetch_solar
 from infranode.adapters.stada import fetch_all_stations
+from infranode.adapters.stuttgart_radzaehl import fetch_stuttgart_radzaehl
 from infranode.adapters.tankerkoenig import fetch_fuel_prices
 from infranode.adapters.uba import fetch_air_uba
 from infranode.adapters.wikidata import fetch_city_base
@@ -74,6 +83,12 @@ from infranode.normalization.mappers.autobahn import (
     map_autobahn_webcams,
 )
 from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
+from infranode.normalization.mappers.bike_counts import (
+    map_berlin_radzaehl,
+    map_hamburg_radzaehl,
+    map_leipzig_radzaehl,
+    map_stuttgart_radzaehl,
+)
 from infranode.normalization.mappers.boris import map_land_values
 from infranode.normalization.mappers.db_timetables import (
     map_station_arrivals,
@@ -103,9 +118,14 @@ from infranode.normalization.mappers.lhp import map_flood
 from infranode.normalization.mappers.mastr import map_mastr_assets
 from infranode.normalization.mappers.mobidata_bw import map_mobidata_road_events
 from infranode.normalization.mappers.mobilithek_bremen import map_bremen_road_events
-from infranode.normalization.mappers.muenchen_opendata import map_muenchen_road_events
+from infranode.normalization.mappers.muenchen_opendata import (
+    map_muenchen_parking,
+    map_muenchen_road_events,
+)
+from infranode.normalization.mappers.muenchen_radzaehl import map_muenchen_radzaehl
 from infranode.normalization.mappers.openaq import map_openaq_air
 from infranode.normalization.mappers.overpass import map_overpass_pois
+from infranode.normalization.mappers.parkendd import map_parkendd
 from infranode.normalization.mappers.pegelonline import map_water_level
 from infranode.normalization.mappers.regionalstatistik import (
     map_business_registrations,
@@ -1474,6 +1494,235 @@ async def city_road_events(slug: str, request: Request) -> dict:
         raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
     )
     await append_record(record, source=source)
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+# Parking-Connector-Aufloesung (DATA-40, Dedup-Prinzip): EIN Parking-Endpunkt mit
+# Quellen-Fallback. Bevorzugt ParkenDD (Live-Belegung frei/gesamt, ~22 Staedte,
+# Lizenz PRO STADT am Ursprung verifiziert, sonst ehrlich UNKNOWN/Tier C); fuer
+# Muenchen der statische CKAN-Standortkatalog (Fallback ohne Live-Belegung, Tier A
+# DL-DE/BY). Beide Adapter teilen die Signatur
+# (http, *, slug, lat, lon) und Mapper-Signatur (raw, *, retrieved_at, ags, qid).
+# Die abgedeckten Slugs (PARTIAL_COVERAGE["parking"]) leiten sich aus genau diesen
+# Quellen ab (PARKENDD_CITIES | {muenchen}); ein nicht aufgeloester Slug ist daher
+# automatisch not_covered.
+def _resolve_parking_connector(slug: str):
+    """Liefert ``(source, fetch_fn, map_fn)`` fuer den Parking-Endpunkt oder None."""
+    if slug in PARKENDD_CITIES:
+        return ("parkendd", fetch_parkendd, map_parkendd)
+    if slug == "muenchen":
+        return ("muenchen_parkhaeuser", fetch_muenchen_parking, map_muenchen_parking)
+    return None
+
+
+@router.get("/cities/{slug}/parking")
+async def city_parking(slug: str, request: Request) -> dict:
+    """Liefert Parkhaus-Daten je Stadt im kanonischen Envelope (DATA-40, Dedup).
+
+    EIN Parking-Endpunkt mit Quellen-Fallback (loest das fruehere
+    /live/dortmund/parking ab): bevorzugt ParkenDD-Live-Belegung (frei/gesamt je
+    Parkhaus, ~22 Staedte keylos, Lizenz pro Stadt am Ursprung verifiziert), fuer
+    Muenchen den statischen CKAN-Standortkatalog (Fallback ohne Live-Belegung,
+    Tier A DL-DE/BY).
+
+    Ablauf wie ``city_road_events``: Register-Lookup (404 bei unbekanntem Slug),
+    Coverage-/Connector-Pruefung (nicht abgedeckt -> 200 ``not_covered`` +
+    covered_cities), Quellen-Toggle (aus -> 200 ``disabled``), resilienter Fetch
+    ueber die Fassade, Mapping. Quelle erreichbar aber leer -> ``no_data``; toter
+    Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint. KEIN Archiv-Write
+    (Live-/Standortdaten).
+    """
+    entry = get_city(slug)
+
+    connector = _resolve_parking_connector(entry.slug)
+    if connector is None:
+        return _not_covered("parking")
+    source, fetch_parking, map_parking = connector
+
+    if not getattr(Settings(), f"enable_{source}"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key(source, city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_parking(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+        )
+
+    raw, status = await client.fetch(source, key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            f"Quelle '{source}' voruebergehend nicht erreichbar, kein gecachter "
+            "Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # Quelle erreichbar, aber kein Parkhaus -> ehrliches no_data (200).
+    if not raw.get("facilities"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "no_data",
+            },
+        }
+
+    record = map_parking(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+# Bike-Counts-Connector-Aufloesung (DATA-40): EIN /cities/{slug}/bike-counts-
+# Endpunkt mit Per-Stadt-Quelle (kommunale Radzaehl-Open-Data, KEIN Eco-Counter:
+# dessen Lizenz ist ungeklaert -> Owner-Entscheidung 2026-06-23 "ausschliessen").
+# Jede Quelle ist am Ursprung lizenz-verifiziert (Tier im Mapper). Eintrag:
+# slug -> (source, fetch_factory(http, entry) -> raw, mapper). Die fetch_factory
+# kapselt die je Quelle leicht abweichende Adapter-Signatur (z.B. Muenchen braucht
+# das Jahr fuer das CKAN-Paket). Nicht aufgeloester Slug -> not_covered.
+async def _fetch_muenchen_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Muenchen: injiziert das aktuelle Jahr (CKAN-Jahres-Paket)."""
+    return await fetch_muenchen_radzaehl(
+        http,
+        slug=entry.slug,
+        lat=entry.geo.lat,
+        lon=entry.geo.lon,
+        year=datetime.now(UTC).year,
+    )
+
+
+async def _fetch_leipzig_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Leipzig (Standard-Signatur)."""
+    return await fetch_leipzig_radzaehl(
+        http, slug=entry.slug, lat=entry.geo.lat, lon=entry.geo.lon
+    )
+
+
+async def _fetch_hamburg_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Hamburg (Standard-Signatur)."""
+    return await fetch_hamburg_radzaehl(
+        http, slug=entry.slug, lat=entry.geo.lat, lon=entry.geo.lon
+    )
+
+
+async def _fetch_berlin_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Berlin (Standard-Signatur)."""
+    return await fetch_berlin_radzaehl(
+        http, slug=entry.slug, lat=entry.geo.lat, lon=entry.geo.lon
+    )
+
+
+async def _fetch_stuttgart_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Stuttgart (Standard-Signatur)."""
+    return await fetch_stuttgart_radzaehl(
+        http, slug=entry.slug, lat=entry.geo.lat, lon=entry.geo.lon
+    )
+
+
+def _resolve_bike_counts_connector(slug: str):
+    """Liefert ``(source, fetch_factory, map_fn)`` fuer bike-counts oder None."""
+    if slug == "muenchen":
+        return ("muenchen_radzaehl", _fetch_muenchen_radzaehl, map_muenchen_radzaehl)
+    if slug == "leipzig":
+        return ("leipzig_radzaehl", _fetch_leipzig_radzaehl, map_leipzig_radzaehl)
+    if slug == "hamburg":
+        return ("hamburg_radzaehl", _fetch_hamburg_radzaehl, map_hamburg_radzaehl)
+    if slug == "berlin":
+        return ("berlin_radzaehl", _fetch_berlin_radzaehl, map_berlin_radzaehl)
+    if slug == "stuttgart":
+        return (
+            "stuttgart_radzaehl",
+            _fetch_stuttgart_radzaehl,
+            map_stuttgart_radzaehl,
+        )
+    return None
+
+
+@router.get("/cities/{slug}/bike-counts")
+async def city_bike_counts(slug: str, request: Request) -> dict:
+    """Liefert Radzaehlstellen-Daten je Stadt im kanonischen Envelope (DATA-40).
+
+    Per-Stadt-Quelle aus kommunalen Radzaehl-Open-Data (Dauerzaehlstellen), je
+    Ursprung lizenz-verifiziert (Tier im Mapper). Eco-Counter/Eco-Visio ist
+    bewusst NICHT eingebunden (Lizenz ungeklaert, Owner-Entscheidung). Ablauf wie
+    ``city_parking``: Register-Lookup (404 bei unbekanntem Slug), Connector-/
+    Coverage-Pruefung (nicht abgedeckt -> 200 ``not_covered`` + covered_cities),
+    Toggle-Guard (aus -> 200 ``disabled``), resilienter Fetch ueber die Fassade,
+    Mapping. Quelle erreichbar aber ohne Station -> ``no_data``; toter Upstream
+    ohne Cache -> 503 mit selbst-korrigierendem Hint. KEIN Archiv-Write (Live-/
+    Zaehldaten).
+    """
+    entry = get_city(slug)
+
+    connector = _resolve_bike_counts_connector(entry.slug)
+    if connector is None:
+        return _not_covered("bike-counts")
+    source, fetch_factory, map_counts = connector
+
+    if not getattr(Settings(), f"enable_{source}"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key(source, city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_factory(request.app.state.http, entry)
+
+    raw, status = await client.fetch(source, key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            f"Quelle '{source}' voruebergehend nicht erreichbar, kein gecachter "
+            "Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # Quelle erreichbar, aber keine Zaehlstelle -> ehrliches no_data (200).
+    if not raw.get("stations"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "no_data",
+            },
+        }
+
+    record = map_counts(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
 
     return {
         "data": record.model_dump(mode="json"),

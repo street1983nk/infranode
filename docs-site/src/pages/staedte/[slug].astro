@@ -3,6 +3,7 @@
 // aus src/data/cities.json, mit den konkret fuer diese Stadt verfuegbaren
 // Datenarten, stadt-spezifischen curl-Beispielen und stadtbezogenem
 // Dataset-JSON-LD. Pendant: src/pages/en/cities/[slug].astro.
+import { getCollection } from "astro:content";
 import Docs from "../../layouts/Docs.astro";
 import JsonLd from "../../components/JsonLd.astro";
 import cities from "../../data/cities.json";
@@ -22,6 +23,20 @@ const stateName = STATES[city.state] ?? city.state;
 const fmt = new Intl.NumberFormat("de-DE");
 const available = topicsForCity(city.slug, coverage);
 const isCore = city.coverage === "full";
+
+// Vollstaendige Liste ALLER datentragenden Stadt-Endpunkte (Single Source
+// openapi.yaml via endpoints-Collection): nur pro-Slug-Pfade
+// /cities/{slug}/... (ohne Listen-/Vergleichs-Operationen wie getCities).
+// Jede Datenart ist fuer jede Stadt ueber den Slug abrufbar; wo eine Quelle
+// fuer die Stadt nichts hat, antwortet die API ehrlich mit no_data.
+const cityEndpoints = (await getCollection("endpoints"))
+  .filter((e) => e.data.kind === "city" && /\/cities\/\{[^}]+\}\//.test(e.data.path))
+  .map((e) => ({
+    id: e.data.id,
+    summary: e.data.summary,
+    example: e.data.path.replace(/\{[^}]+\}/, city.slug),
+  }))
+  .sort((a, b) => a.summary.localeCompare(b.summary, "de"));
 const metaTitle = `Open-Data-API für ${city.name}: kostenlos und keylos`;
 const lead = `Offene Daten für ${city.name} (${stateName}) über eine kostenlose, keylose REST-API: Wetter, Luftqualität, Strompreis und mehr, einheitlich als JSON mit Quelle und Lizenz je Antwort. Kein API-Schlüssel, keine Anmeldung.`;
 const weatherExample = `${API_BASE}/api/v1/cities/${city.slug}/weather`;
@@ -80,8 +95,8 @@ const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;
     </tbody>
   </table>
 
-  <h2>Verfügbare Daten für {city.name}</h2>
-  <p>Diese Datenarten lassen sich für {city.name} über denselben Slug abrufen:</p>
+  <h2>Datenarten mit Leitfaden für {city.name}</h2>
+  <p>Zu diesen Datenarten gibt es einen ausführlichen Leitfaden; alle sind für {city.name} über den Slug abrufbar:</p>
   <ul>
     {
       available.map((t) => (
@@ -99,13 +114,28 @@ const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;
   <p>Oder die Luftqualität:</p>
   <pre><code>curl {airExample}</code></pre>
 
-  <h2>Alle Endpunkte</h2>
+  <h2>Alle {cityEndpoints.length} Datenarten für {city.name}</h2>
   <p>
-    {city.name} nutzt dieselben Stadt-Endpunkte wie alle abgedeckten Städte. Die
-    vollständige Referenz steht in der
-    <a href="/api/getCityWeather/">API-Dokumentation</a>, eine Übersicht aller
-    Städte auf der <a href="/staedte/">Städte-Seite</a>. InfraNode gibt es auch
-    als <a href="/mcp/">MCP-Server für KI-Assistenten</a>.
+    Über denselben Slug lassen sich für {city.name} alle {cityEndpoints.length}
+    Stadt-Datenarten abrufen. Wo eine Quelle für {city.name} (noch) nichts
+    liefert, antwortet die API ehrlich mit <code>no_data</code> statt einem
+    Fehler. Parameter und Beispielantworten je Datenart in der jeweils
+    verlinkten Referenz:
+  </p>
+  <ul class="endpoint-list">
+    {
+      cityEndpoints.map((e) => (
+        <li>
+          <a href={`/api/${e.id}/`}>{e.summary}</a>
+          {" "}<code>{e.example}</code>
+        </li>
+      ))
+    }
+  </ul>
+  <p>
+    Eine Übersicht aller Städte gibt es auf der
+    <a href="/staedte/">Städte-Seite</a>. InfraNode gibt es auch als
+    <a href="/mcp/">MCP-Server für KI-Assistenten</a>.
   </p>
 
   <h2>{city.name} per MCP-Server in Claude und ChatGPT</h2>
@@ -131,5 +161,11 @@ const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;
     text-align: left;
     padding-right: 1.2rem;
     white-space: nowrap;
+  }
+  .endpoint-list {
+    line-height: 1.7;
+  }
+  .endpoint-list code {
+    font-size: 0.8em;
   }
 </style>

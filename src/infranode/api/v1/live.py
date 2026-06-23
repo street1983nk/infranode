@@ -375,9 +375,14 @@ async def live_koeln_umweltzone(request: Request) -> dict:
     )
 
 
-@router.get("/dortmund/parking")
-async def live_dortmund_parking(request: Request) -> dict:
-    """Live-Parkbelegung Dortmund (DATA-09, Tier A, DIREKT keylos).
+@router.get("/dortmund/parking", deprecated=True)
+async def live_dortmund_parking(request: Request, response: Response) -> dict:
+    """Live-Parkbelegung Dortmund (DATA-09, Tier A, DIREKT keylos). DEPRECATED.
+
+    DEPRECATED (DATA-40, Dedup): abgeloest vom vereinheitlichten Parking-Endpunkt
+    ``GET /api/v1/cities/dortmund/parking`` (EIN Endpunkt fuer alle Park-Staedte mit
+    Quellen-Fallback). Dieser Pfad bleibt rueckwaertskompatibel (unveraenderter
+    Envelope), traegt aber ``Deprecation``-/``Link``-Header auf den Nachfolger.
 
     Direkter, keyloser Zugang zum offenen Parkleitsystem der Stadt Dortmund ueber
     die Opendatasoft-Explore-API (``adapters/dortmund_parking``) statt
@@ -389,6 +394,7 @@ async def live_dortmund_parking(request: Request) -> dict:
     DATA-09-Echtzeit-Parkbelegungsluecke. KEIN Archiv (reine Live-Daten,
     T-20-ARCHIVE) - nur Redis-Cache ueber die Fassade.
     """
+    cities._mark_deprecated(response, "/api/v1/cities/dortmund/parking")
     entry = get_city("dortmund")
     settings = Settings()
     if not settings.enable_dortmund_parking:
