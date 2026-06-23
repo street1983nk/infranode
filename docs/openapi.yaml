@@ -18,6 +18,8 @@ info:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0
 servers:
+  - url: https://infranode.dev
+    description: Öffentliche gehostete API, keylos (Standard)
   - url: http://localhost
     description: Lokaler Caddy-Ingress (Docker Compose)
 tags:
@@ -2154,6 +2156,119 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/parking:
+    get:
+      tags: [cities]
+      summary: Parkhaus-Belegung/-Katalog je Stadt (EIN Endpunkt mit Quellen-Fallback)
+      x-summary-en: Parking occupancy/catalogue per city (one endpoint, source fallback)
+      description: >-
+        Parkhaus-Daten je Stadt aus EINEM Endpunkt mit Quellen-Fallback (Dedup):
+        bevorzugt ParkenDD-Live-Belegung (frei/gesamt je Parkhaus, 13 Städte mit
+        verifiziert offener Lizenz, keylos), für München der statische
+        Open-Data-Standortkatalog (DL-DE/BY 2.0, ohne Live-Belegung). Lizenz/Tier
+        kommen pro Datensatz aus der am Ursprung verifizierten Quelle (alle Tier A:
+        z.B. Köln/Dortmund DL-DE/Zero 2.0, Hamburg DL-DE/BY 2.0, Aachen/Ulm CC0,
+        Karlsruhe/Heidelberg CC BY 4.0). Löst den deprecateten
+        Pfad /api/v1/live/dortmund/parking ab. Toggle aus -> 200
+        source_status="disabled"; nicht-abgedeckte Stadt -> 200
+        source_status="not_covered" (mit covered_cities); abgedeckte Stadt ohne
+        Parkhaus -> 200 source_status="no_data".
+      x-description-en: >-
+        Per-city parking data from ONE endpoint with a source fallback (dedup):
+        prefers ParkenDD live occupancy (free/total per facility, 13 cities with a
+        verified open license, key-less), and for Munich the static open-data
+        location catalogue (DL-DE/BY 2.0, no live occupancy). License/tier are per
+        record from the source verified at origin (all Tier A: e.g. Cologne/Dortmund
+        DL-DE/Zero 2.0, Hamburg DL-DE/BY 2.0, Aachen/Ulm CC0, Karlsruhe/Heidelberg
+        CC BY 4.0). Supersedes the
+        deprecated path /api/v1/live/dortmund/parking. Toggle off -> 200
+        source_status="disabled"; city not covered -> 200
+        source_status="not_covered" (with covered_cities); covered city without a
+        parking facility -> 200 source_status="no_data".
+      operationId: getCityParking
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Parking-Envelope (CanonicalRecord mit ParkingPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/cities/{slug}/bike-counts:
+    get:
+      tags: [cities]
+      summary: Radzählstellen je Stadt (kommunale Open Data, Tier A)
+      x-summary-en: Bicycle counting stations per city (municipal open data, Tier A)
+      description: >-
+        Radzählstellen (Dauerzählstellen) je Stadt aus kommunalen Open-Data-Quellen,
+        je Ursprung lizenzverifiziert. Liefert je Zählstelle (counts) Name,
+        Koordinaten, Zählwert (value), Granularität (granularity, z.B. "day") und
+        ggf. die Werte je Richtung (directions). Eco-Counter/Eco-Visio ist bewusst
+        NICHT eingebunden (Lizenz ungeklärt). Aktuell: München (Mobilitätsreferat,
+        DL-DE/BY 2.0, Tagessummen der 6 Dauerzählstellen). Teilabgedeckt: Toggle aus
+        -> 200 source_status="disabled"; nicht-abgedeckte Stadt -> 200
+        source_status="not_covered" (mit covered_cities); abgedeckte Stadt ohne
+        Zählstelle -> 200 source_status="no_data". Granularität je Quelle (siehe
+        counts[].granularity): München Tag, Leipzig/Hamburg/Berlin Stunde, Stuttgart
+        Jahr. Lizenzen je Ursprung (München/Leipzig/Hamburg DL-DE/BY 2.0, Berlin
+        DL-DE/Zero 2.0, Stuttgart CC BY 4.0).
+      x-description-en: >-
+        Bicycle counting stations (permanent counters) per city from municipal
+        open-data sources, license-verified at origin. Each station (counts)
+        carries name, coordinates, value, granularity (e.g. "day") and optionally
+        per-direction values (directions). Eco-Counter/Eco-Visio is deliberately
+        NOT included (license unclear). Currently: Munich (Mobilitätsreferat,
+        DL-DE/BY 2.0, daily totals of the 6 permanent counters). Partial coverage:
+        toggle off -> 200 source_status="disabled"; city not covered -> 200
+        source_status="not_covered" (with covered_cities); covered city without a
+        station -> 200 source_status="no_data".
+      operationId: getCityBikeCounts
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Bike-Counts-Envelope (CanonicalRecord mit CountStationPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
   /api/v1/cities/{slug}/solar-roofs:
     get:
       tags: [cities]
@@ -2846,9 +2961,14 @@ paths:
   /api/v1/live/dortmund/parking:
     get:
       tags: [Live]
-      summary: Live-Parkbelegung Dortmund (Stadt Dortmund Open Data, keylos)
-      x-summary-en: Live parking occupancy for Dortmund (City of Dortmund open data, key-less)
+      deprecated: true
+      summary: "[DEPRECATED] Live-Parkbelegung Dortmund (Nachfolger: /cities/dortmund/parking)"
+      x-summary-en: "[DEPRECATED] Live parking occupancy Dortmund (successor: /cities/dortmund/parking)"
       description: >-
+        DEPRECATED (DATA-40): abgelöst vom vereinheitlichten Endpunkt
+        GET /api/v1/cities/dortmund/parking (EIN Parking-Endpunkt für alle Städte
+        mit Quellen-Fallback). Dieser Pfad bleibt rückwärtskompatibel und trägt
+        Deprecation-/Link-Header auf den Nachfolger.
         Liefert die Dortmund-Parkbelegung (dynamisches Parkleitsystem, Parkhäuser
         und Park&Ride) im Live-Envelope. Quelle ist der direkte, keylose offene
         Datensatz der Stadt Dortmund (open-data.dortmund.de), nicht die
@@ -2858,6 +2978,10 @@ paths:
         source_status="no_data". Lizenz Datenlizenz Deutschland Zero 2.0.
         Reine Live-Daten, nur im Redis-Cache gehalten.
       x-description-en: >-
+        DEPRECATED (DATA-40): superseded by the unified endpoint
+        GET /api/v1/cities/dortmund/parking (one parking endpoint for all cities
+        with a source fallback). This path stays backward-compatible and carries
+        Deprecation/Link headers pointing to the successor.
         Returns Dortmund parking occupancy (dynamic parking guidance system,
         car parks and park&ride) in the live envelope. Source is the City of
         Dortmund's direct, key-less open dataset (open-data.dortmund.de), not the
