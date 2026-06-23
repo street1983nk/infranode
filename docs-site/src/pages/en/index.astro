@@ -59,14 +59,11 @@ const faqJsonLd = JSON.stringify({
   <script slot="jsonld" type="application/ld+json" set:html={faqJsonLd} />
 
   <p class="hero__eyebrow">Free, public open-data API</p>
-  <h1>Open city data, one consistent envelope</h1>
+  <h1>Open city data, one API instead of dozens</h1>
   <p class="hero__lede">
-    InfraNode brings together the fragmented open data of German cities behind a
-    single REST interface. Every response follows the same JSON envelope with
-    <code>data</code> and <code>meta</code>; each data record additionally
-    carries an <code>attribution</code> field with licence and origin, and the
-    <code>meta</code> block states the source status honestly, instead of dozens
-    of different government and open-data APIs.
+    One single REST interface instead of dozens of different government and
+    open-data APIs. Every response follows the same JSON envelope and names
+    licence, origin and an honest source status.
   </p>
 
   <div class="tldr">
@@ -94,6 +91,23 @@ const faqJsonLd = JSON.stringify({
   <div class="hero__actions">
     <a class="btn-primary" href="/en/quickstart/">Quickstart</a>
     <a class="btn-secondary" href="/api/getCities/">View endpoints</a>
+    <a
+      class="btn-postman"
+      href="https://god.gw.postman.com/run-collection/55901679-26601800-bf9d-4ddd-8413-5f273f18be4d"
+      target="_blank"
+      rel="noopener"
+    >
+      <svg
+        class="btn-postman__icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <circle cx="12" cy="12" r="11" fill="#ffffff" opacity="0.18" />
+        <path d="M9.5 8.2v7.6l6.2-3.8z" fill="#ffffff" />
+      </svg>
+      Run in Postman
+    </a>
   </div>
 
   <h2>What data is available</h2>
@@ -139,23 +153,11 @@ const faqJsonLd = JSON.stringify({
   <h2>Real-time data under /live</h2>
   <p>
     Under <code>/api/v1/live/*</code> InfraNode serves current readings: traffic
-    conditions, roadworks, parking, charging and public transit. Some live
-    sources are city-specific (for example Hamburg HVV departures via
-    <code>/api/v1/live/hamburg/departures</code>, Dortmund parking occupancy
-    via <code>/api/v1/live/dortmund/parking</code> key-less from the City of
-    Dortmund's open data, Frankfurt parking occupancy via
-    <code>/api/v1/live/frankfurt-am-main/parking</code> from the Mobilithek
-    (DATEX II V3, occupancy and master data joined, DL-DE/BY 2.0), Wuppertal
-    parking occupancy via <code>/api/v1/live/wuppertal/parking</code> (Mobilithek
-    DATEX II V2, DL-DE/Zero 2.0), or Nuremberg public-transit real-time departures via
-    <code>/api/v1/live/nuernberg/departures</code> key-less from the open VGN/VAG
-    Puls API under CC-BY 4.0). New is the public-transit real-time feed with delays per
-    stop, trip and route plus a position estimate under
-    <code>/api/v1/live/&lbrace;city&rbrace;/transit/departures</code>,
-    <code>trips/&lbrace;id&rbrace;</code> and
-    <code>routes/&lbrace;id&rbrace;/status</code>. The <code>stop_id</code> is
-    numeric or in the format <code>de:AGS:...</code>. Data from gtfs.de
-    (CC-BY-SA), <code>refresh_seconds</code> 45.
+    conditions, roadworks, parking, charging and public-transit real-time with
+    delays per stop, trip and route. Some live sources are city-specific, for
+    example Hamburg HVV departures or Dortmund parking occupancy. The
+    <a href="/en/coverage/">coverage page</a> shows which city has which live
+    source.
   </p>
 
   <h2>Getting started</h2>

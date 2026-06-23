@@ -224,6 +224,56 @@ code {
   font-weight: 600;
 }
 
+/* Quickstart als Einstiegspfad in der Nav hervorheben (kein Side-Stripe). */
+.nav__link--cta {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Aufklappbare Nav-Sektion (API-Referenz): auf der Startseite eingeklappt, damit
+   der Erstkontakt nicht von der vollen Endpunktliste erschlagen wird; sonst via
+   open-Attribut offen. Links bleiben im DOM (SEO unbeeintraechtigt). Unabhaengig
+   vom mobilen Menue-Toggle (das nur die aeussere .nav__disclosure steuert). */
+.nav__sect {
+  margin-bottom: 1.25rem;
+}
+.nav__sect-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+  padding: 0.1rem 0;
+}
+.nav__sect-title::-webkit-details-marker {
+  display: none;
+}
+.nav__sect-title::after {
+  content: "";
+  flex: none;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+.nav__sect[open] .nav__sect-title {
+  margin-bottom: 0.6rem;
+}
+.nav__sect[open] .nav__sect-title::after {
+  transform: rotate(-135deg);
+}
+.nav__group--sub {
+  margin-bottom: 0.9rem;
+}
+
 /* Mittiger Content */
 .content {
   min-width: 0;
@@ -241,6 +291,22 @@ code {
 
 .content p {
   color: var(--fg);
+}
+
+/* Lesbare Zeilenlaenge fuer Fliesstext-Absaetze (nicht fuer geklasste Sonder-
+   Absaetze wie Hero-Lede, FAQ-Antwort, TL;DR; die tragen eigene Breiten). */
+.content p:not([class]) {
+  max-width: 72ch;
+}
+
+/* Overflow-Schutz (verhindert Rechts-Scroll der ganzen Seite, v.a. mobil):
+   Code-Bloecke scrollen intern, lange Pfade/Inline-Code brechen um. */
+.content {
+  overflow-wrap: break-word;
+}
+.content pre {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* Rechtes On-this-page */
@@ -368,7 +434,7 @@ code {
   padding: 0.3rem 0.65rem;
   margin-bottom: 0.3rem;
   border: 1px solid var(--border-strong);
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--bg);
   color: var(--fg-muted);
   cursor: pointer;
@@ -507,7 +573,26 @@ code {
   border: none;
   background: transparent;
   outline: none;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Tastatur-Hinweis ("/") rechts im Suchfeld: dezent, signalisiert den Shortcut. */
+.search__kbd {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  line-height: 1;
+  color: var(--fg-muted);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  padding: 0.15rem 0.4rem;
+}
+@media (max-width: 640px) {
+  .search__kbd {
+    display: none;
+  }
 }
 
 .search__results {
@@ -666,6 +751,30 @@ code {
   border-color: var(--color-primary);
 }
 
+/* Run-in-Postman: selbst gestylt, kein externes run.pstmn.io-Bild (CSP blockt
+   externe Bilder). Postman-Orange, inline-SVG-Play-Icon. */
+.btn-postman {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  background: #ff6c37;
+  color: #ffffff;
+}
+
+.btn-postman:hover {
+  background: #e8551f;
+  text-decoration: none;
+}
+
+.btn-postman__icon {
+  width: 1.05em;
+  height: 1.05em;
+  flex: 0 0 auto;
+}
+
 /* Hero (Startseite): flach mit dezentem Blueprint-Hairline-Raster statt
    weichem Pastell-Radial-Gradient. Technische Datenblatt-Anmutung. */
 .hero {
@@ -725,7 +834,7 @@ code {
   padding: 0.45rem 0.85rem;
   background: var(--bg-soft);
   border: 1px solid var(--border-strong);
-  border-radius: 5px;
+  border-radius: 6px;
   font-size: 0.9rem;
   color: var(--fg-muted);
 }
@@ -831,6 +940,59 @@ code {
 }
 .langswitch__sep {
   color: var(--border-strong);
+}
+
+/* Mobile-Overflow-Fixes (verhindern Rechts-Scroll der Seite, <=640px). Muss NACH
+   den Basisregeln fuer .search/.langswitch/table stehen, damit die Overrides bei
+   gleicher Spezifitaet greifen (Quellreihenfolge entscheidet). */
+@media (max-width: 640px) {
+  /* Topbar bricht um: Marke + Sprachschalter in Zeile 1, Suche volle Breite
+     darunter. Behebt: Suche nicht zentriert, DE|EN nur per Rechts-Scroll
+     sichtbar. */
+  .topbar {
+    flex-wrap: wrap;
+    gap: 0.55rem 1rem;
+    padding: 0.6rem 1rem;
+  }
+  .search {
+    order: 1;
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .langswitch {
+    margin-left: auto;
+  }
+  /* Lange Inline-Pfade/Slugs im Fliesstext umbrechen statt die Seite zu
+     verbreitern. */
+  .content :not(pre) > code {
+    overflow-wrap: anywhere;
+  }
+  /* Code in Tabellenzellen (z.B. Stadt-Slugs) bevorzugt an Trennstellen
+     (Bindestrichen) umbrechen, damit lange Slugs die Zelle nicht ueber den
+     Rand schieben (sonst Abdeckung-Spalte abgeschnitten). */
+  .content table code {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  /* Tabellen ohne eigenes Mobil-Layout (alle ausser .cov) scrollen intern,
+     statt die ganze Seite zu verbreitern. */
+  .content table:not(.cov) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  /* Staedte-Tabelle: platzraubende Spalten Bundesland (3) + Einwohner (4) +
+     Beispiel (6) auf Mobil ausblenden, damit Name-Link, Slug und Abdeckung
+     ohne Scroll sichtbar sind (Slug = API-Pfad, im Text referenziert; der
+     Beispiel-Pfad steht ohnehin ueber der Tabelle). */
+  table.cities th:nth-child(3),
+  table.cities td:nth-child(3),
+  table.cities th:nth-child(4),
+  table.cities td:nth-child(4),
+  table.cities th:nth-child(6),
+  table.cities td:nth-child(6) {
+    display: none;
+  }
 }
 
 /* Hinweis unter dem API-Reference-Nav-Eintrag (EN) */

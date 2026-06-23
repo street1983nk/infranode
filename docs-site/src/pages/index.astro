@@ -27,8 +27,8 @@ const faqs = [
     a: "Aus öffentlichen, amtlichen Quellen. InfraNode bündelt sie hinter einer Schnittstelle und reicht sie normalisiert durch. Jede Antwort nennt im attribution-Block Lizenz und Herkunft.",
   },
   {
-    q: "Brauche ich einen API-Key? Gibt es Rate-Limits?",
-    a: "Kein API-Key nötig, die API ist offen. Aufrufe sind pro IP begrenzt (Schutz vor Missbrauch); bei Überschreitung antwortet die API mit Status 429. Jede Antwort trägt RateLimit-Header.",
+    q: "Gibt es Rate-Limits?",
+    a: "Ja. Aufrufe sind pro IP begrenzt (Schutz vor Missbrauch); bei Überschreitung antwortet die API mit Status 429. Jede Antwort trägt RateLimit-Header.",
   },
   {
     q: "Wie aktuell sind die Daten?",
@@ -64,15 +64,11 @@ const faqJsonLd = JSON.stringify({
   <script slot="jsonld" type="application/ld+json" set:html={faqJsonLd} />
 
   <p class="hero__eyebrow">Kostenlose, öffentliche Open-Data-API</p>
-  <h1>Offene Stadtdaten, ein konsistenter Envelope</h1>
+  <h1>Offene Stadtdaten, eine API statt Dutzender Portale</h1>
   <p class="hero__lede">
-    InfraNode bündelt fragmentierte offene Daten deutscher Großstädte hinter
-    einer einheitlichen REST-Schnittstelle. Jede Antwort folgt demselben
-    JSON-Envelope mit <code>data</code> und <code>meta</code>; jeder
-    data-Record trägt zusätzlich ein <code>attribution</code>-Feld mit
-    Lizenz und Herkunft, und der <code>meta</code>-Block nennt ehrlich den
-    Quellen-Status, statt Dutzender unterschiedlicher Behörden- und
-    Open-Data-APIs.
+    Eine einzige REST-Schnittstelle statt Dutzender unterschiedlicher Behörden-
+    und Open-Data-APIs. Jede Antwort folgt demselben JSON-Envelope und nennt
+    Lizenz, Herkunft und einen ehrlichen Quellen-Status.
   </p>
 
   <div class="tldr">
@@ -100,6 +96,23 @@ const faqJsonLd = JSON.stringify({
   <div class="hero__actions">
     <a class="btn-primary" href="/quickstart/">Quick-Start</a>
     <a class="btn-secondary" href="/api/getCities/">Endpunkte ansehen</a>
+    <a
+      class="btn-postman"
+      href="https://god.gw.postman.com/run-collection/55901679-26601800-bf9d-4ddd-8413-5f273f18be4d"
+      target="_blank"
+      rel="noopener"
+    >
+      <svg
+        class="btn-postman__icon"
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <circle cx="12" cy="12" r="11" fill="#ffffff" opacity="0.18" />
+        <path d="M9.5 8.2v7.6l6.2-3.8z" fill="#ffffff" />
+      </svg>
+      In Postman ausführen
+    </a>
   </div>
 
   <h2>Abdeckung, ehrlich erklärt</h2>
@@ -193,23 +206,11 @@ const faqJsonLd = JSON.stringify({
       </h3>
       <p>
         Unter <code>/api/v1/live/*</code> liefert InfraNode aktuelle Messwerte:
-        Verkehrslage, Baustellen, Parken, Laden und ÖPNV. Einige Live-Quellen
-        sind stadtspezifisch (zum Beispiel Hamburg HVV-Abfahrten in Echtzeit über
-        <code>/api/v1/live/hamburg/departures</code>, die Dortmunder
-        Parkbelegung über <code>/api/v1/live/dortmund/parking</code> keylos aus den
-        offenen Daten der Stadt Dortmund, die Frankfurter Parkbelegung über
-        <code>/api/v1/live/frankfurt-am-main/parking</code> aus der Mobilithek
-        (DATEX II V3, Belegung und Stammdaten gejoint, DL-DE/BY 2.0), die
-        Wuppertaler Parkbelegung über <code>/api/v1/live/wuppertal/parking</code>
-        (Mobilithek DATEX II V2, DL-DE/Zero 2.0), oder die Nürnberger ÖPNV-Echtzeit-
-        Abfahrten über <code>/api/v1/live/nuernberg/departures</code> keylos aus
-        der offenen VGN/VAG-Puls-API unter CC-BY 4.0). Neu ist die ÖPNV-Echtzeit mit Verspätungen je Halt,
-        Fahrt und Linie sowie Positionsschätzung unter
-        <code>/api/v1/live/&lbrace;stadt&rbrace;/transit/departures</code>,
-        <code>trips/&lbrace;id&rbrace;</code> und
-        <code>routes/&lbrace;id&rbrace;/status</code>. Die <code>stop_id</code>
-        ist numerisch oder im Format <code>de:AGS:...</code>. Daten von gtfs.de
-        (CC-BY-SA), <code>refresh_seconds</code> 45.
+        Verkehrslage, Baustellen, Parken, Laden und ÖPNV-Echtzeit mit
+        Verspätungen je Halt, Fahrt und Linie. Einige Live-Quellen sind
+        stadtspezifisch, etwa Hamburg HVV-Abfahrten oder die Dortmunder
+        Parkbelegung. Welche Stadt welche Live-Quelle hat, zeigt die
+        <a href="/abdeckung/">Abdeckungs-Seite</a>.
       </p>
     </li>
     <li class="feature">
