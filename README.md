@@ -55,9 +55,11 @@ of failing the call.
 [![Run in Postman](https://run.pstmn.io/button.svg)](https://god.gw.postman.com/run-collection/55901679-26601800-bf9d-4ddd-8413-5f273f18be4d)
 
 The full interactive reference and per-city coverage live at
-[infranode.dev](https://infranode.dev). The public Postman workspace
-[alster83-7133231/infranode](https://www.postman.com/alster83-7133231/infranode/overview)
-mirrors the collection, so you can try every endpoint in the browser.
+[infranode.dev](https://infranode.dev). The
+[InfraNode API on the Postman API Network](https://www.postman.com/alster83-7133231/infranode/overview)
+mirrors every endpoint with real example responses, so you can try the
+[InfraNode API Postman collection](https://www.postman.com/alster83-7133231/infranode/collection/pft781f/infranode-api)
+in the browser without an API key.
 
 ## Data (84+ cities, 45 endpoints)
 
