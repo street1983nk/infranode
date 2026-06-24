@@ -2576,7 +2576,12 @@ async def city_tax_rates(slug: str, request: Request) -> dict:
         ags=entry.ags,
         wikidata_qid=entry.qid,
     )
-    await append_record(record, source="regionalstatistik")
+    # Eigener Archiv-Quellenname je Teilmetrik (analog genesis_unemployment/
+    # -tourism/-construction): tax-rates und business-registrations teilten sich
+    # sonst das tier_a/regionalstatistik-Verzeichnis, wo die Tages-Aggregation des
+    # Analysten (letzter Record je Tag gewinnt) eine der beiden Metriken
+    # systematisch verlieren wuerde. Getrennt -> beide sauber auswertbar.
+    await append_record(record, source="regionalstatistik_tax")
 
     return {
         "data": record.model_dump(mode="json"),
@@ -2631,7 +2636,9 @@ async def city_business_registrations(slug: str, request: Request) -> dict:
         ags=entry.ags,
         wikidata_qid=entry.qid,
     )
-    await append_record(record, source="regionalstatistik")
+    # Eigener Archiv-Quellenname (siehe city_tax_rates): getrennt von tax-rates,
+    # damit die Tages-Aggregation des Analysten beide Metriken behaelt.
+    await append_record(record, source="regionalstatistik_business")
 
     return {
         "data": record.model_dump(mode="json"),
