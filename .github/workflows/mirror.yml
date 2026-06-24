@@ -1,0 +1,43 @@
+name: Mirror to GitLab
+
+# Spiegelt dieses oeffentliche Repo (street1983nk/infranode) nach GitLab.
+# Mechanismus: GitHub-Runner pusht bei jedem Push auf main (und manuell) per
+# Token zu GitLab. GitLabs eingebautes PULL-Mirroring ist Premium -> bewusst NICHT
+# genutzt. Solange die beiden Secrets fehlen, ueberspringt der Job sauber (gruen),
+# damit keine roten Laeufe entstehen, bevor GitLab eingerichtet ist.
+#
+# Benoetigte Repo-Secrets (Settings -> Secrets and variables -> Actions):
+#   GITLAB_MIRROR_URL   = gitlab.com/<namespace>/infranode.git   (ohne https://)
+#   GITLAB_MIRROR_TOKEN = GitLab Personal Access Token, Scope write_repository
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+# Parallele Mirror-Laeufe vermeiden (sonst Push-Races auf GitLab).
+concurrency:
+  group: gitlab-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (volle Historie + Tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to GitLab
+        env:
+          GITLAB_URL: ${{ secrets.GITLAB_MIRROR_URL }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+        run: |
+          if [ -z "$GITLAB_URL" ] || [ -z "$GITLAB_TOKEN" ]; then
+            echo "GitLab-Mirror-Secrets fehlen -> uebersprungen (kein Fehler)."
+            exit 0
+          fi
+          git push --prune \
+            "https://oauth2:${GITLAB_TOKEN}@${GITLAB_URL}" \
+            "+refs/heads/*:refs/heads/*" "+refs/tags/*:refs/tags/*"
