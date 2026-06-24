@@ -42,6 +42,7 @@ const toolGroups = [
     title: "Core and geo",
     tools: [
       ["get_city", "City master data"],
+      ["get_city_overview", "One-call overview: catalog of all data types per city with coverage status + live highlights (discovery entry point)"],
       ["geo", "Geo data"],
       ["demographics", "Demographics"],
     ],
@@ -138,7 +139,7 @@ const faq = [
   },
   {
     q: "What data does the InfraNode MCP server provide?",
-    a: "45 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, plus a cities and a sources overview, and a multi-city comparison.",
+    a: "48 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, plus a cities and a sources overview, and a multi-city comparison.",
   },
   {
     q: "My MCP client only supports local stdio servers. How do I connect InfraNode?",
@@ -157,7 +158,7 @@ const faq = [
 
 <Docs
   title="Open Data MCP Server for Germany (AI agents)"
-  description="Open data MCP server for German cities: 45 tools for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
+  description="Open data MCP server for German cities: 48 tools for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
   current="mcp"
   lang="en"
   altLangPath="/mcp/"
@@ -166,7 +167,7 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP server"
-    description="Hosted MCP server with 45 tools for open city data of 84 major German cities, key-free and free of charge."
+    description="Hosted MCP server with 48 tools for open city data of 84 major German cities, key-free and free of charge."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
@@ -294,7 +295,7 @@ const faq = [
 
   <h2>Tool overview</h2>
   <p>
-    The server provides 45 tools in total. Most expect a city slug (for example
+    The server provides 48 tools in total. Most expect a city slug (for example
     <code>berlin</code> or <code>hamburg</code>); <code>pois</code> also requires
     a <code>type</code> parameter (e.g. <code>hospital</code>,
     <code>school</code>, <code>pharmacy</code>), and

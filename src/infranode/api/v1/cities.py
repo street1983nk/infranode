@@ -17,6 +17,8 @@ selbst-korrigierendem Hint, der ``GET /api/v1/health`` nennt (DX-06).
 
 from __future__ import annotations
 
+import asyncio
+import os
 from datetime import UTC, datetime
 
 from asgi_correlation_id import correlation_id
@@ -143,6 +145,7 @@ from infranode.normalization.mappers.uba import map_air_uba
 from infranode.normalization.mappers.unfallatlas import map_accidents
 from infranode.normalization.mappers.wikidata import map_wikidata_city
 from infranode.registry import get_city, list_cities
+from infranode.registry.catalog import CITY_DATA_CATALOG
 from infranode.registry.coverage import PARTIAL_COVERAGE, covered_cities, is_covered
 
 router = APIRouter()
@@ -516,6 +519,156 @@ async def city_weather(slug: str, request: Request) -> dict:
             "correlation_id": correlation_id.get(),
             "source_status": "ok",
             "cache_status": status,
+        },
+    }
+
+
+# --- City-Overview (Owner 2026-06-24): EIN Aufruf zeigt die ganze Breite ----------
+# Stufe 1 = statischer Katalog ALLER Datenarten je Stadt (aus CITY_DATA_CATALOG +
+# Coverage, kein Upstream-Call). Stufe 2 = schlanker Live-Highlight-Snapshot
+# (Wetter + Luft), parallel und zeitgedeckelt, damit eine langsame/leere Quelle den
+# Overview nie blockiert. Nicht-abgedeckte Datenarten werden nicht verschwiegen,
+# sondern vorwaerts gewandt dargestellt (wo gibt es sie schon + Roadmap), weil
+# InfraNode laufend mehr Daten und Staedte bekommt (Owner-Botschaft).
+
+# Highlight-Quellen des Snapshots: (source, fetch_fn, mapper, toggle), gleiche Form
+# wie compare.RESOURCE_MAP. Bewusst keylos + flaechendeckend (alle 84) -> liefern
+# fast immer einen Wert. Additiv erweiterbar (weitere Highlights folgen).
+_SNAPSHOT_SOURCES: dict[str, tuple] = {
+    "weather": ("dwd", fetch_weather, map_weather, "enable_dwd"),
+    "air": ("uba", fetch_air_uba, map_air_uba, "enable_uba"),
+}
+
+# Zeitdeckel fuer den GESAMTEN Snapshot-Fan-out. Gecachte Werte kommen sofort; eine
+# langsame Quelle darf den Overview nie ueber diese Schranke hinaus aufhalten.
+_SNAPSHOT_BUDGET_SECONDS = 3.0
+
+# Eine Botschaft, ueberall gleich: InfraNode waechst. Steht im Overview-Envelope
+# (und gespiegelt in docs-site/README/Registries).
+OVERVIEW_GROWTH_NOTE = (
+    "InfraNode wächst laufend: weitere Datenarten und Städte kommen regelmäßig dazu."
+)
+
+
+async def _snapshot_one(entry, request: Request, name: str) -> tuple[str, dict]:
+    """Holt EINE Highlight-Quelle fuer den Overview-Snapshot; degradiert graceful.
+
+    Wirft NIE: Toggle aus -> ``disabled``, toter Upstream ohne Cache -> ``error``,
+    leere Antwort -> ``no_data``, Mapper-Defekt -> ``error``, sonst ``ok`` (D-06-
+    Muster wie compare._one). So verdirbt eine haengende/leere Quelle den Overview
+    nicht.
+    """
+    source, fetch_adapter, mapper, toggle = _SNAPSHOT_SOURCES[name]
+    if not getattr(Settings(), toggle):
+        return name, {"data": None, "source_status": "disabled"}
+
+    client = request.app.state.resilient_client
+    cache_key = build_cache_key(source, city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_adapter(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+        )
+
+    try:
+        raw, status = await client.fetch(source, cache_key, fetch_fn)
+    except Exception:  # noqa: BLE001 - Snapshot degradiert still (Overview haengt nie)
+        return name, {"data": None, "source_status": "error"}
+    if raw is None:
+        return name, {"data": None, "source_status": "error"}
+    if not raw:
+        return name, {"data": None, "source_status": "no_data"}
+    try:
+        record = mapper(
+            raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+        )
+    except Exception:  # noqa: BLE001 - defekter Datensatz einer Quelle -> error
+        return name, {"data": None, "source_status": "error"}
+    return name, {
+        "data": record.model_dump(mode="json"),
+        "source_status": "ok",
+        "cache_status": status,
+    }
+
+
+@router.get("/cities/{slug}/overview")
+async def city_overview(slug: str, request: Request) -> dict:
+    """Ein-Aufruf-Ueberblick: Basis + Katalog ALLER Datenarten + Live-Highlights.
+
+    Einstiegspunkt fuer jede Stadt-Frage. Liefert (1) die Basisdaten der Stadt,
+    (2) einen Katalog aller verfuegbaren Datenarten mit Abdeckungsstatus und dem
+    passenden MCP-Tool je Datenart (Discovery: zeigt die ganze Breite, nicht nur
+    Wetter) und (3) einen kleinen Live-Highlight-Snapshot (Wetter + Luft), parallel
+    + zeitgedeckelt. Eine nicht-abgedeckte Datenart wird ehrlich, aber vorwaerts
+    gewandt dargestellt (abgedeckte Staedte + Roadmap). Unbekannter Slug -> 404
+    (zentraler Handler). Read-only; der Snapshot wirft nie 5xx.
+    """
+    entry = get_city(slug)
+
+    # Stufe 1: Katalog (statisch, kein Upstream). Verfuegbarkeit guenstig aus der
+    # Coverage-Karte; nicht-abgedeckte Datenarten tragen Pivot + Roadmap-Hinweis.
+    catalog: list[dict] = []
+    available = 0
+    for dt in CITY_DATA_CATALOG:
+        covered = is_covered(dt.key, entry.slug)
+        item = {
+            "type": dt.key,
+            "label": dt.label,
+            "label_en": dt.label_en,
+            "tool": dt.tool,
+            "path": f"/api/v1/cities/{entry.slug}/{dt.key}",
+            "available": covered,
+        }
+        if covered:
+            available += 1
+        else:
+            cov = covered_cities(dt.key)
+            item["covered_cities"] = cov
+            item["note"] = (
+                f"Für {entry.slug} noch nicht verfügbar (aktuell {len(cov)} Städte). "
+                "Wir bauen die Abdeckung laufend aus."
+            )
+        catalog.append(item)
+
+    # Stufe 2: Live-Highlights parallel + zeitgedeckelt (haengt nie). Bei
+    # Budget-Ueberschreitung liefern noch offene Highlights ehrlich "error".
+    # Budget per INFRANODE_OVERVIEW_SNAPSHOT_BUDGET ueberschreibbar (Default 3s);
+    # bei Ueberschreitung liefern noch offene Highlights ehrlich "error", der
+    # Overview antwortet trotzdem sofort (haengt nie).
+    budget = float(
+        os.environ.get("INFRANODE_OVERVIEW_SNAPSHOT_BUDGET", _SNAPSHOT_BUDGET_SECONDS)
+    )
+    highlights: dict[str, dict] = {}
+    try:
+        async with asyncio.timeout(budget):
+            results = await asyncio.gather(
+                *[_snapshot_one(entry, request, name) for name in _SNAPSHOT_SOURCES]
+            )
+        highlights = dict(results)
+    except TimeoutError:
+        highlights = {
+            name: highlights.get(name, {"data": None, "source_status": "error"})
+            for name in _SNAPSHOT_SOURCES
+        }
+
+    return {
+        "data": {
+            "city": entry.model_dump(mode="json"),
+            "data_types": catalog,
+            "highlights": highlights,
+            "summary": {
+                "data_types_total": len(catalog),
+                "data_types_available": available,
+                "cities_total": len(list_cities()),
+                "note": OVERVIEW_GROWTH_NOTE,
+            },
+        },
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
         },
     }
 

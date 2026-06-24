@@ -508,6 +508,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/overview:
+    get:
+      tags: [cities]
+      summary: Stadt-Überblick (Katalog aller Datenarten + Live-Highlights)
+      x-summary-en: City overview (catalog of all data types + live highlights)
+      description: >-
+        Ein-Aufruf-Überblick einer Stadt: Basisdaten, ein Katalog ALLER
+        verfügbaren Datenarten (je mit Abdeckungsstatus und dem passenden
+        MCP-Tool) sowie ein kleiner Live-Highlight-Snapshot (Wetter + Luft),
+        parallel und zeitgedeckelt. Ideal als Einstieg, um die ganze Breite je
+        Stadt zu sehen (nicht nur Wetter). Eine noch nicht abgedeckte Datenart
+        wird ehrlich, aber vorwärts gewandt dargestellt (sie nennt die bereits
+        abgedeckten Städte plus einen Roadmap-Hinweis, weil InfraNode laufend
+        mehr Daten und Städte bekommt). Unbekannte Stadt liefert 404.
+      x-description-en: >-
+        One-call overview of a city: base data, a catalog of ALL available data
+        types (each with its coverage status and the matching MCP tool), and a
+        small live highlights snapshot (weather + air), fetched in parallel and
+        time-capped. Ideal as an entry point to see the full breadth per city,
+        not just weather. A data type that is not yet covered is shown honestly
+        but forward-looking (it lists the cities where it IS available plus a
+        roadmap note, because InfraNode keeps adding more data types and cities).
+        An unknown city returns 404.
+      operationId: getCityOverview
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Überblick-Envelope (Basis + Katalog + Highlights + Summary)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      city:
+                        type: object
+                        description: Basisdaten der Stadt (slug, Lage, Einwohner).
+                      data_types:
+                        type: array
+                        description: >-
+                          Katalog aller Datenarten je mit type, label, label_en,
+                          tool (MCP-Tool), path und available; nicht abgedeckte
+                          tragen zusätzlich covered_cities und einen note-Hinweis.
+                        items:
+                          type: object
+                      highlights:
+                        type: object
+                        description: >-
+                          Live-Snapshot je Highlight-Quelle (weather, air) mit
+                          eigenem source_status (ok/no_data/disabled/error).
+                      summary:
+                        type: object
+                        description: >-
+                          data_types_total, data_types_available, cities_total und
+                          ein Roadmap-Hinweis (note).
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/weather:
     get:
       tags: [cities]

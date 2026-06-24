@@ -126,12 +126,13 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-45 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+48 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
 | --- | --- | --- | --- |
 | `get_city` | `slug` | Base data for a German city (population, area, coordinates) | Wikidata |
+| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all ~40 data types with coverage status and the matching tool, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
 | `air_quality` | `slug` | Official air quality (PM10, NO2 and more) | UBA |
 | `air_quality_live` | `slug` | Live air quality readings (live-only, no history) | OpenAQ |
 | `weather` | `slug` | Current weather observations (not a forecast) | DWD |

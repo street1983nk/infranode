@@ -55,6 +55,10 @@ def _register(fn, *, open_world: bool = True) -> None:
 
 
 _register(tools.get_city)
+# Owner 2026-06-24: Ein-Aufruf-Ueberblick (Basis + Katalog aller Datenarten +
+# Live-Highlights). Discovery-Einstieg, damit Agenten die ganze Breite je Stadt
+# sehen (nicht nur Wetter). Zieht Live-Highlights -> open_world=True.
+_register(tools.get_city_overview)
 _register(tools.air_quality)
 _register(tools.air_quality_live)
 _register(tools.weather)

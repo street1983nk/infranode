@@ -71,7 +71,7 @@ export const GET: APIRoute = async ({ site }) => {
   lines.push(`- [Städte](${base}/staedte/): Durchsuchbare Liste aller 84 abgedeckten Großstädte mit Slug, Bundesland, Einwohnern und Abdeckung.`);
   lines.push(`- [Daten-API](${base}/daten/): Daten-API und Datenanalyse-API für deutsche Städte, Hub über alle Datenarten, Datensatz (CSV/Parquet) und MCP-Zugang.`);
   lines.push(`- [Abdeckung & Status](${base}/abdeckung/): Welche Endpunkte für welche Städte Daten liefern (flächendeckend vs. teilabgedeckt: flood, webcams, traffic, road-events), source_status-Werte inkl. not_covered, Live-Status-Page für Störungen.`);
-  lines.push(`- [MCP-Server](${base}/mcp/): Gehosteter MCP-Server unter https://mcp.infranode.dev/mcp (Remote, Streamable HTTP, keylos) mit 44 Tools inkl. Echtzeit-Abfahrten, Städte- und Quellenübersicht. Als Connector in Claude/ChatGPT verbinden, keine Installation.`);
+  lines.push(`- [MCP-Server](${base}/mcp/): Gehosteter MCP-Server unter https://mcp.infranode.dev/mcp (Remote, Streamable HTTP, keylos) mit 48 Tools inkl. Stadt-Überblick (Katalog aller Datenarten), Echtzeit-Abfahrten, Städte- und Quellenübersicht. Als Connector in Claude/ChatGPT verbinden, keine Installation.`);
   lines.push(`- [Über](${base}/ueber/): Hintergrund zum Projekt, kostenlose Open-Data-API (Quellcode öffentlich auf GitHub, Apache-2.0), Betrieb in Deutschland, Kontakt.`);
   lines.push(`- [Impressum](${base}/impressum/): Anbieterangaben nach DDG.`);
   lines.push(`- [Datenschutz](${base}/datenschutz/): Keine Cookies, kein Tracking, DSGVO-Rechte.`);
@@ -83,7 +83,7 @@ export const GET: APIRoute = async ({ site }) => {
   lines.push(`- [Cities](${base}/en/cities/): Searchable list of all 84 covered cities with slug, state, population and coverage.`);
   lines.push(`- [Data API](${base}/en/data/): Data API and data analysis API for German cities, hub over all data types, dataset (CSV/Parquet) and MCP access.`);
   lines.push(`- [Coverage & status](${base}/en/coverage/): Which endpoints serve which cities (fully vs. partially covered: flood, webcams, traffic, road-events), source_status values incl. not_covered, live status page for outages.`);
-  lines.push(`- [MCP server](${base}/en/mcp/): Hosted MCP server at https://mcp.infranode.dev/mcp (remote, Streamable HTTP, key-free) with 44 tools incl. live departures, cities and sources overview. Add as a connector in Claude/ChatGPT, no install.`);
+  lines.push(`- [MCP server](${base}/en/mcp/): Hosted MCP server at https://mcp.infranode.dev/mcp (remote, Streamable HTTP, key-free) with 48 tools incl. city overview (catalog of all data types), live departures, cities and sources overview. Add as a connector in Claude/ChatGPT, no install.`);
   lines.push(`- [About](${base}/en/about/): Background, free open-data API (source code on GitHub, Apache-2.0), contact.`);
   lines.push("");
 

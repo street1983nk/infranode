@@ -57,6 +57,8 @@ _MCP_SOURCE_HEADER = "X-Infranode-Mcp"
 ALLOWED_RESOURCES: frozenset[str] = frozenset(
     {
         "base",
+        # Ein-Aufruf-Ueberblick: Basis + Katalog aller Datenarten + Live-Highlights.
+        "overview",
         "air",
         "air-uba",
         "weather",

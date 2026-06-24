@@ -54,6 +54,21 @@ async def get_city(slug: _Slug) -> ToolEnvelope:
     return await client.get_resource(slug, "base")
 
 
+async def get_city_overview(slug: _Slug) -> ToolEnvelope:
+    """Get a ONE-CALL overview of everything InfraNode knows about a German city.
+
+    Start here for any city question. Returns: the city's base data, a CATALOG of
+    all ~40 available data types (weather, air quality, public transit, trains,
+    traffic, charging, parking-adjacent, solar, energy, demographics, taxes,
+    accidents, tourism and many more), each with its coverage status and the exact
+    tool to call next, plus a small live highlights snapshot (current weather and
+    air quality). Data types not yet covered for this city list where they ARE
+    available so you can pivot. InfraNode keeps adding more data types and cities,
+    so the catalog grows over time. Read-only.
+    """
+    return await client.get_resource(slug, "overview")
+
+
 async def air_quality(slug: _Slug) -> ToolEnvelope:
     """Get official air quality for a German city (PM10, NO2 and more).
 
