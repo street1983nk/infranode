@@ -409,6 +409,14 @@ class MonitoringSettings(BaseSettings):
     smtp_from: str | None = None
     smtp_to: str | None = None
     smtp_ssl: bool = False
+    # Benachrichtigungs-Drossel (Flut-/Crash-Schutz): max. Anzahl NICHT-kritischer
+    # Pushes (INFO/WARNING) je Zeitfenster und Prozess. Wird der Cap ueberschritten,
+    # werden weitere Pushes unterdrueckt (genau EIN Hinweis pro Fenster geht
+    # raus); CRITICAL ist ausgenommen und kommt immer durch. Schuetzt vor ntfy-/SMTP-
+    # Floods (Thread-/Socket-Stau, Mail-Provider-Sperre) bei Erstkontakt-/MCP-Bursts.
+    # 0 oder negativ = Drossel aus.
+    notify_max_per_window: int = 20
+    notify_window_seconds: int = 60
     # Dead-Man-Ping (Kuma-Push bzw. Healthchecks.io) je Timer-Job; per systemd-Drop-in
     # ueberschreibbar. None = kein Ping.
     deadman_url: str | None = None
