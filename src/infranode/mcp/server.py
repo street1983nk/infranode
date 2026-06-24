@@ -24,8 +24,28 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 from infranode.mcp import tools
+from infranode.registry.catalog import CITY_DATA_CATALOG
 
-mcp = FastMCP("infranode")
+# Server-Instructions: werden beim initialize an den Client/Agenten ausgeliefert und
+# sind der groesste Discovery-Hebel. Sie sagen dem Agenten, WO er anfangen soll
+# (get_city_overview) und wie alles zusammenhaengt, damit er schnell und ohne Raten
+# an alle Daten kommt (Owner-Wunsch 2026-06-24).
+_INSTRUCTIONS = (
+    "InfraNode is a keyless, read-only open-data API for 84 German cities, exposed "
+    "as MCP tools. To answer ANY city question, START with get_city_overview(slug): "
+    "it returns the city's base data, a catalog of ALL available data types (each "
+    "with its coverage status and the exact tool to call next) and a small live "
+    "snapshot (weather, air, train departures). Find valid city slugs with "
+    "list_cities (or the infranode://cities resource); browse every data type with "
+    "the infranode://catalog resource; see sources and licenses with sources. "
+    "Compare one metric across many cities in one call with compare. Every tool "
+    "returns a canonical {data, meta} envelope; meta.source_status tells you whether "
+    "a source delivered data (ok / no_data / not_covered / disabled / error), so a "
+    "missing source degrades gracefully instead of failing. Coverage keeps growing: "
+    "more data types and cities are added regularly."
+)
+
+mcp = FastMCP("infranode", instructions=_INSTRUCTIONS)
 
 
 # Verhaltens-Hinweise (MCP Tool Annotations): Jedes InfraNode-Tool ist ein
@@ -140,7 +160,43 @@ async def sources_resource() -> dict:
     return await tools.sources()
 
 
+@mcp.resource("infranode://catalog")
+async def catalog_resource() -> dict:
+    """The catalog of all per-city data types: label, matching tool and REST path.
+
+    Lets an agent browse the full breadth of InfraNode (every data type and the tool
+    that fetches it) without a tool call. For a live, per-city view with coverage
+    status and highlights, call get_city_overview(slug).
+    """
+    return {
+        "data_types": [
+            {
+                "type": dt.key,
+                "label": dt.label_en,
+                "tool": dt.tool,
+                "path": f"/api/v1/cities/{{slug}}/{dt.key}",
+            }
+            for dt in CITY_DATA_CATALOG
+        ],
+        "note": (
+            "InfraNode keeps adding more data types and cities. Start with "
+            "get_city_overview(slug) for a live, per-city view."
+        ),
+    }
+
+
 # MCP Prompts: a few ready-made prompts that showcase common multi-tool flows.
+@mcp.prompt()
+def city_overview(slug: str) -> str:
+    """Get a complete picture of a German city and what InfraNode offers for it."""
+    return (
+        f"Give me an overview of the German city '{slug}'. Call get_city_overview "
+        "first to see its base data, every available data type (with the tool to "
+        "fetch each) and a live snapshot, then pull the most relevant data types in "
+        "full and summarize the situation."
+    )
+
+
 @mcp.prompt()
 def city_briefing(slug: str) -> str:
     """A concise live briefing (weather, air, transit) for a German city."""

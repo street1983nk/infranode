@@ -526,8 +526,9 @@ async def city_weather(slug: str, request: Request) -> dict:
 # --- City-Overview (Owner 2026-06-24): EIN Aufruf zeigt die ganze Breite ----------
 # Stufe 1 = statischer Katalog ALLER Datenarten je Stadt (aus CITY_DATA_CATALOG +
 # Coverage, kein Upstream-Call). Stufe 2 = schlanker Live-Highlight-Snapshot
-# (Wetter + Luft), parallel und zeitgedeckelt, damit eine langsame/leere Quelle den
-# Overview nie blockiert. Nicht-abgedeckte Datenarten werden nicht verschwiegen,
+# (Wetter + Luft + Bahn-Abfahrten am Hauptbahnhof), parallel und zeitgedeckelt,
+# damit eine langsame/leere Quelle den Overview nie blockiert. Nicht-abgedeckte
+# Datenarten werden nicht verschwiegen,
 # sondern vorwaerts gewandt dargestellt (wo gibt es sie schon + Roadmap), weil
 # InfraNode laufend mehr Daten und Staedte bekommt (Owner-Botschaft).
 
@@ -594,6 +595,75 @@ async def _snapshot_one(entry, request: Request, name: str) -> tuple[str, dict]:
     }
 
 
+async def _snapshot_departures(entry, request: Request) -> tuple[str, dict]:
+    """Holt die Live-Abfahrtstafel des Stadt-Hauptbahnhofs fuer den Overview-Snapshot.
+
+    Eigener Helfer (andere Signatur als die lat/lon-Quellen): braucht DB-Timetables-
+    Credentials + EVA-Aufloesung. Degradiert graceful wie ``_snapshot_one``: fehlende
+    Credentials/Toggle -> ``disabled``, keine EVAs/leer -> ``no_data``, toter
+    Upstream/Defekt -> ``error``, sonst ``ok``. Wirft NIE in den Fan-out (der
+    Overview haengt nie); die EVA-Aufloesung kann auf kaltem Cache langsam sein,
+    der Zeitdeckel der Route faengt das ab.
+    """
+    name = "departures"
+    settings = Settings()
+    cid_secret = settings.db_client_id
+    key = settings.db_api_key
+    if (
+        not settings.enable_db_timetables
+        or cid_secret is None
+        or key is None
+        or not cid_secret.get_secret_value()
+        or not key.get_secret_value()
+    ):
+        return name, {"data": None, "source_status": "disabled"}
+
+    client_id = cid_secret.get_secret_value()
+    api_key = key.get_secret_value()
+    client = request.app.state.resilient_client
+    cache_key = build_cache_key("db_timetables", city_slug=entry.slug)
+
+    try:
+        evas = await _resolve_city_station_evas(
+            request,
+            slug=entry.slug,
+            ags=entry.ags,
+            client_id=client_id,
+            api_key=api_key,
+        )
+        if not evas:
+            return name, {"data": None, "source_status": "no_data"}
+
+        async def fetch_fn():
+            return await fetch_station_departures(
+                request.app.state.http,
+                slug=entry.slug,
+                evas=evas,
+                client_id=client_id,
+                api_key=api_key,
+                now=datetime.now(UTC),
+            )
+
+        raw, status = await client.fetch("db_timetables", cache_key, fetch_fn)
+    except Exception:  # noqa: BLE001 - Snapshot degradiert still (Overview haengt nie)
+        return name, {"data": None, "source_status": "error"}
+    if raw is None:
+        return name, {"data": None, "source_status": "error"}
+    if not raw:
+        return name, {"data": None, "source_status": "no_data"}
+    try:
+        record = map_station_departures(
+            raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+        )
+    except Exception:  # noqa: BLE001 - defekter Datensatz -> error statt 5xx
+        return name, {"data": None, "source_status": "error"}
+    return name, {
+        "data": record.model_dump(mode="json"),
+        "source_status": "ok",
+        "cache_status": status,
+    }
+
+
 @router.get("/cities/{slug}/overview")
 async def city_overview(slug: str, request: Request) -> dict:
     """Ein-Aufruf-Ueberblick: Basis + Katalog ALLER Datenarten + Live-Highlights.
@@ -601,8 +671,9 @@ async def city_overview(slug: str, request: Request) -> dict:
     Einstiegspunkt fuer jede Stadt-Frage. Liefert (1) die Basisdaten der Stadt,
     (2) einen Katalog aller verfuegbaren Datenarten mit Abdeckungsstatus und dem
     passenden MCP-Tool je Datenart (Discovery: zeigt die ganze Breite, nicht nur
-    Wetter) und (3) einen kleinen Live-Highlight-Snapshot (Wetter + Luft), parallel
-    + zeitgedeckelt. Eine nicht-abgedeckte Datenart wird ehrlich, aber vorwaerts
+    Wetter) und (3) einen kleinen Live-Highlight-Snapshot (Wetter, Luft,
+    Bahn-Abfahrten am Hauptbahnhof), parallel + zeitgedeckelt. Eine
+    nicht-abgedeckte Datenart wird ehrlich, aber vorwaerts
     gewandt dargestellt (abgedeckte Staedte + Roadmap). Unbekannter Slug -> 404
     (zentraler Handler). Read-only; der Snapshot wirft nie 5xx.
     """
@@ -641,18 +712,22 @@ async def city_overview(slug: str, request: Request) -> dict:
     budget = float(
         os.environ.get("INFRANODE_OVERVIEW_SNAPSHOT_BUDGET", _SNAPSHOT_BUDGET_SECONDS)
     )
-    highlights: dict[str, dict] = {}
-    try:
-        async with asyncio.timeout(budget):
-            results = await asyncio.gather(
-                *[_snapshot_one(entry, request, name) for name in _SNAPSHOT_SOURCES]
-            )
-        highlights = dict(results)
-    except TimeoutError:
-        highlights = {
-            name: highlights.get(name, {"data": None, "source_status": "error"})
-            for name in _SNAPSHOT_SOURCES
-        }
+
+    async def _bounded(name: str, coro) -> tuple[str, dict]:
+        # PER-QUELLE gedeckelt (nicht global): eine langsame/haengende Quelle wird
+        # NUR selbst zu "error" und reisst die schnellen, gecachten Highlights nicht
+        # mit. wait_for cancelt die Coroutine bei Budget-Ueberschreitung.
+        try:
+            return await asyncio.wait_for(coro, budget)
+        except Exception:  # noqa: BLE001 - Timeout/Fehler -> nur diese Quelle "error"
+            return name, {"data": None, "source_status": "error"}
+
+    tasks = [
+        _bounded(name, _snapshot_one(entry, request, name))
+        for name in _SNAPSHOT_SOURCES
+    ]
+    tasks.append(_bounded("departures", _snapshot_departures(entry, request)))
+    highlights: dict[str, dict] = dict(await asyncio.gather(*tasks))
 
     return {
         "data": {

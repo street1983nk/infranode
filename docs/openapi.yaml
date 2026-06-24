@@ -516,8 +516,8 @@ paths:
       description: >-
         Ein-Aufruf-Überblick einer Stadt: Basisdaten, ein Katalog ALLER
         verfügbaren Datenarten (je mit Abdeckungsstatus und dem passenden
-        MCP-Tool) sowie ein kleiner Live-Highlight-Snapshot (Wetter + Luft),
-        parallel und zeitgedeckelt. Ideal als Einstieg, um die ganze Breite je
+        MCP-Tool) sowie ein kleiner Live-Highlight-Snapshot (Wetter, Luft,
+        Bahn-Abfahrten), parallel und zeitgedeckelt. Ideal als Einstieg, um die ganze Breite je
         Stadt zu sehen (nicht nur Wetter). Eine noch nicht abgedeckte Datenart
         wird ehrlich, aber vorwärts gewandt dargestellt (sie nennt die bereits
         abgedeckten Städte plus einen Roadmap-Hinweis, weil InfraNode laufend

@@ -61,9 +61,9 @@ async def get_city_overview(slug: _Slug) -> ToolEnvelope:
     all ~40 available data types (weather, air quality, public transit, trains,
     traffic, charging, parking-adjacent, solar, energy, demographics, taxes,
     accidents, tourism and many more), each with its coverage status and the exact
-    tool to call next, plus a small live highlights snapshot (current weather and
-    air quality). Data types not yet covered for this city list where they ARE
-    available so you can pivot. InfraNode keeps adding more data types and cities,
+    tool to call next, plus a small live highlights snapshot (current weather, air
+    quality and train departures). Data types not yet covered for this city show
+    where they ARE available so you can pivot. InfraNode keeps adding data and cities,
     so the catalog grows over time. Read-only.
     """
     return await client.get_resource(slug, "overview")
