@@ -91,13 +91,13 @@ const py = [
   <h2>Rate limits</h2>
   <p>
     The API is open and needs no API key. Calls are limited per IP (abuse
-    protection): up to <strong>120 requests per minute</strong> (short bursts)
-    and <strong>3000 per hour</strong> (sustained). Every response carries the
+    protection): up to <strong>300 requests per minute</strong> (short bursts)
+    and <strong>6000 per hour</strong> (sustained). Every response carries the
     standard headers <code>RateLimit-Limit</code>,
     <code>RateLimit-Remaining</code> and <code>RateLimit-Reset</code>. On
     overrun the API answers with status <code>429</code> and a
     <code>Retry-After</code> header. The MCP endpoint
-    (<code>mcp.infranode.dev</code>) is rate limited separately to 60 requests
+    (<code>mcp.infranode.dev</code>) is rate limited separately to 480 requests
     per minute per IP.
   </p>
 

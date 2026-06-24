@@ -33,13 +33,14 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 logger = logging.getLogger(__name__)
 
 # Default-Budget pro IP fuer den MCP-Endpunkt. Per INFRANODE_MCP_RATE_LIMIT
-# (limits-Format "<zahl>/<einheit>") ueberschreibbar. Owner 2026-06-24: von 60 auf
-# 240/min angehoben, damit Discovery-Flows (get_city_overview -> mehrere gezielte
-# Tool-Calls) fluessig laufen, ohne ans Limit zu stossen (Zielgroesse bis Jahresende
-# klar < 1000 Nutzer, daher unkritisch). Der Overview-Snapshot buendelt seine
-# Highlights serverseitig in EINEN API-Aufruf (kein Vervielfachen der Upstream-Last)
-# und ist parallel + zeitgedeckelt. Bleibt bewusst ein Schutz-Limit gegen Hammering.
-_DEFAULT_LIMIT = "240/minute"
+# (limits-Format "<zahl>/<einheit>") ueberschreibbar. Historie Owner 2026-06-24:
+# zuerst 60 -> 240/min (Discovery-Flows get_city_overview -> mehrere gezielte
+# Tool-Calls), dann 240 -> 480/min (mehr Luft fuer KI-Agenten-Sitzungen). Zielgroesse
+# bis Jahresende klar < 1000 Nutzer, Box mit grosser Reserve -> unkritisch. Der
+# Overview-Snapshot buendelt seine Highlights serverseitig in EINEN API-Aufruf (kein
+# Vervielfachen der Upstream-Last) und ist parallel + zeitgedeckelt. Bleibt bewusst
+# ein Schutz-Limit gegen Hammering.
+_DEFAULT_LIMIT = "480/minute"
 
 
 def _make_storage():

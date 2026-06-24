@@ -62,14 +62,18 @@ class RateLimitSettings(BaseSettings):
     # IP-Budget gilt fuer ALLE Clients (DoS-/Scraping-Schutz). Gestaffelt
     # (Security-Haertung 2026-06-21): ein BURST-Budget pro Minute fuer kurze
     # Data-Science-/Dashboard-Spitzen UND ein nachhaltiges STUNDEN-Budget gegen
-    # Dauer-Scraping. Frueher pauschal 300/min (= 18.000/h pro IP), was
-    # nachhaltiges Abgrasen kaum bremste; jetzt 120/min Burst + 3000/h nachhaltig
-    # (Schnitt 50/min). Beide gelten gleichzeitig: ANON_LIMIT kombiniert sie
+    # Dauer-Scraping. Beide gelten gleichzeitig: ANON_LIMIT kombiniert sie
     # semikolon-getrennt, slowapi/limits ``parse_many`` liest das als MEHRERE
     # Limits. Per INFRANODE_LIMIT_ANON ueberschreibbar (z.B. Tests).
-    limit_anon: str = "120/minute"
+    # Historie: frueher pauschal 300/min (=18.000/h), dann 120/min + 3000/h
+    # (Haertung 2026-06-21). Owner 2026-06-24 auf 300/min Burst + 6000/h nachhaltig
+    # angehoben (Schnitt 100/min), damit KI-Agenten/Power-User-Flows nicht in 429
+    # laufen. Unkritisch: Box mit grosser Reserve (~30% Load, 6 freie Kerne) +
+    # CF-Edge-Cache/SWR + Breaker; das Limit ist Missbrauchs-Schutz, kein
+    # Kapazitaetsregler (Zielgroesse bis Jahresende klar < 1000 Nutzer/Tag).
+    limit_anon: str = "300/minute"
     # Nachhaltiges Zweit-Limit ueber ein laengeres Fenster (leer = nur limit_anon).
-    limit_anon_sustained: str = "3000/hour"
+    limit_anon_sustained: str = "6000/hour"
     # Striktes Budget am Admin-Login gegen Passwort-Brute-Force (Security-Audit
     # 2026-06-10, HIGH-1). Eigener strenger @limiter.limit-Decorator auf der Route.
     limit_admin_login: str = "5/minute"
@@ -81,11 +85,14 @@ class RateLimitSettings(BaseSettings):
     # Aggregiertes Subnetz-Limit gegen VERTEILTE Bots (Scraping-Haertung): das
     # IP-Limit oben fasst nur eine einzelne IP; ein Botnet/Cloud-Range mit vielen
     # IPs umgeht es. Dieses Zweit-Limit bremst pro /24 (IPv4) bzw. /64 (IPv6).
-    # BEWUSST hoch (Default 1200/min = ~10x das IP-Burst-Budget), damit legitime
+    # BEWUSST hoch (Default 3000/min = ~10x das IP-Burst-Budget), damit legitime
     # NAT-/Campus-Nutzer hinter einer gemeinsamen IP NICHT getroffen werden; es
     # greift erst, wenn aus EINEM Subnetz untypisch viele Anfragen kommen. Leer
     # ("") = deaktiviert. Per INFRANODE_LIMIT_SUBNET ueberschreibbar.
-    limit_subnet: str = "1200/minute"
+    # Owner 2026-06-24 von 1200 auf 3000/min mitgezogen (proportional zum auf
+    # 300/min angehobenen IP-Burst, Verhaeltnis ~10x bleibt -> keine Luecke fuer
+    # Bot-Schwaerme, NAT-Schutz erhalten).
+    limit_subnet: str = "3000/minute"
     subnet_ipv4_prefix: int = 24
     subnet_ipv6_prefix: int = 64
     # Optionaler Cloudflare-Bot-Score-Schwellwert (1-99; 0 = deaktiviert). Greift

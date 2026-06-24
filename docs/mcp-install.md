@@ -47,7 +47,7 @@ Konkrete Schutzmechanismen im Code (`src/infranode/mcp/client.py`):
 - **Endlicher Timeout:** 30 s pro Aufruf, kein hängender Agent.
 - **Rate-Limit (Remote, `src/infranode/mcp/ratelimit.py`):** Der öffentliche
   Streamable-HTTP-Endpunkt drosselt pro echter Client-IP (CF-Connecting-IP) mit
-  einem Moving-Window (Default 60/Minute, per `INFRANODE_MCP_RATE_LIMIT`
+  einem Moving-Window (Default 480/Minute, per `INFRANODE_MCP_RATE_LIMIT`
   einstellbar). Überschreitung liefert HTTP 429 mit `Retry-After`. Der lokale
   stdio-Transport ist davon unberührt (kein offener Port).
 
