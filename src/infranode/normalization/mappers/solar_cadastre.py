@@ -78,9 +78,10 @@ def map_solar_roofs(
     bleibt ``None`` (Stadtebene), ``observed_at`` bleibt ``None`` (Stichtags-/
     Stammdaten, kein Mess-Zeitstempel; ``reference_date`` traegt den Stand im
     Payload). ``exploitation_pct`` = installed_kwp/potential_kwp*100 wird hier
-    deterministisch abgeleitet (Ausschoepfungsgrad). Lizenz DL-DE/Zero 2.0 = Tier A;
-    Attribution ``modified=True`` (Aggregation + Einheiten-Umrechnung kWh->MWh +
-    abgeleiteter Ausschoepfungsgrad).
+    deterministisch abgeleitet (Ausschoepfungsgrad). Lizenz je Bundesland aus dem
+    states-Block (NRW/Berlin DL-DE/Zero 2.0, Bayern CC BY 4.0, Hamburg DL-DE/BY 2.0),
+    alle Tier A; Attribution ``modified=True`` (Aggregation + Einheiten-Umrechnung
+    kWh->MWh + abgeleiteter Ausschoepfungsgrad).
     """
     potential_kwp = raw.get("potential_kwp")
     installed_kwp = raw.get("installed_kwp")

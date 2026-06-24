@@ -97,7 +97,7 @@ _LAND_VALUES_CITIES: frozenset[str] = frozenset(
 # BORIS). NRW-Pilot aus dem amtlichen Gemeinde-Aggregat (Seed) -> abgedeckt sind
 # die Register-Staedte in NRW. Ein weiteres Land erweitert die Abdeckung, sobald
 # sein Seed vorliegt (dann hier um das Kuerzel ergaenzen).
-_SOLAR_CADASTRE_STATES = {"NW", "BY"}
+_SOLAR_CADASTRE_STATES = {"NW", "BY", "BE", "HH"}
 _SOLAR_ROOFS_CITIES: frozenset[str] = frozenset(
     c.slug for c in CITY_REGISTRY if c.state in _SOLAR_CADASTRE_STATES
 )

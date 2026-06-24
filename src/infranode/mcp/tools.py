@@ -325,12 +325,12 @@ async def solar(slug: _Slug) -> ToolEnvelope:
 async def solar_roofs(slug: _Slug) -> ToolEnvelope:
     """Get rooftop solar cadastre potential and installed PV for a German city.
 
-    Sourced from the official municipal solar cadastre aggregate (NRW pilot:
-    Solarkataster NRW / MaStR / LANUK / Geobasis NRW). Returns the total
-    installable rooftop PV potential (kWp and annual yield in MWh), the already
-    installed rooftop PV, the exploitation ratio and a per-building-category
-    breakdown. Distinct from ``solar`` (PVGIS irradiation/yield per kWp). Coverage
-    is partial (currently NRW cities). Read-only.
+    Sourced from the official state solar cadastre aggregates (NRW, Bavaria,
+    Berlin and Hamburg). Returns the total installable rooftop PV potential (kWp
+    and annual yield in MWh), the already installed rooftop PV, the exploitation
+    ratio and a per-building-category breakdown (scope varies by source).
+    Distinct from ``solar`` (PVGIS irradiation/yield per kWp). Coverage is partial
+    (federated per state). Read-only.
     """
     return await client.get_resource(slug, "solar-roofs")
 
