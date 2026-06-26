@@ -1,15 +1,16 @@
-"""Reiner Koeln-Verkehrs-Mapper map_koeln_road_events (DATA-15, Tier A DL-DE/BY).
+"""Reiner Koeln-Verkehrs-Mapper map_koeln_road_events (DATA-15, Tier A DL-DE/Zero).
 
 Uebersetzt das rohe Adapter-dict (``slug``/``events``) deterministisch in einen
 ``CanonicalRecord`` mit ``RoadEventPayload``. Die Funktion ist rein: kein HTTP,
 keine Log-Aufrufe, keine Systemuhr. Der ``retrieved_at``-Zeitstempel wird
 keyword-only injiziert, damit Tests deterministisch bleiben.
 
-Die Koeln-Verkehrsdaten (Stadt Koeln) sind unter der Datenlizenz Deutschland
-Namensnennung 2.0 verfuegbar: ``license_id=DL_DE_BY_2_0``, ``license_tier=A``
-(kennzeichnet die permissive Lizenz zur korrekten Attribution und Weiternutzung,
-T-9-03) und die wortgenaue Attribution der Stadt (mit Umlaut, der Attributions-
-Text darf echte Umlaute tragen). Die Einzel-Events tragen ihre Zeit und
+Die Koeln-Verkehrsdaten (Stadt Koeln) stehen unter der Datenlizenz Deutschland
+Zero 2.0 (verifiziert 2026-06-26 gegen den Datensatz "Verkehrsbeeintraechtigungen
+Stadt Koeln" auf offenedaten-koeln.de, dl-zero-de/2.0; Koeln stellt seit Mitte
+2022 standardmaessig unter DL-DE/Zero bereit): ``license_id=DL_DE_ZERO_2_0``,
+``license_tier=A`` (permissiv, KEINE Namensnennungspflicht; Attribution
+"Stadt Köln" bleibt informativ erhalten). Die Einzel-Events tragen ihre Zeit und
 Geometrie im Payload, daher ``observed_at=None`` und ``geo=None``.
 """
 
@@ -26,7 +27,7 @@ from infranode.normalization import (
     SourceId,
 )
 
-_DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
+_DL_DE_ZERO_URL = "https://www.govdata.de/dl-de/zero-2-0"
 
 
 def map_koeln_road_events(
@@ -52,13 +53,13 @@ def map_koeln_road_events(
         observed_at=None,
         retrieved_at=retrieved_at,
         source=SourceId.KOELN_VERKEHR,
-        license_id=LicenseId.DL_DE_BY_2_0,
+        license_id=LicenseId.DL_DE_ZERO_2_0,
         license_tier=LicenseTier.A,
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text="Stadt Köln",
-            license_url=_DL_DE_BY_URL,
+            license_url=_DL_DE_ZERO_URL,
         ),
         payload=RoadEventPayload(
             city_source="koeln_verkehr",

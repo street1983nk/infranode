@@ -1,10 +1,11 @@
-"""Keyloser Koeln-Events-Adapter fetch_events (DATA-16, D-06, Tier A DL-DE/BY).
+"""Keyloser Koeln-Events-Adapter fetch_events (DATA-16, D-06, Tier A DL-DE/Zero).
 
 Die Stadt Koeln stellt einen direkten Open-Data-Events-Feed (events-od.php, JSON)
 bereit. Der Feed ist keylos, liefert nativ nur die Zukunft (aktuelles Datum + 7
-Tage) und steht uniform unter der Datenlizenz Deutschland Namensnennung 2.0
-(DL-DE/BY-2.0). Damit loest der Feed den D-07-Zukunftsfilter ohne eigene
-Heuristik (RESEARCH Zeile 11/97; A4).
+Tage) und steht uniform unter der Datenlizenz Deutschland Zero 2.0
+(DL-DE/Zero-2.0, verifiziert 2026-06-26 gegen "Veranstaltungen der Stadt Koeln").
+Damit loest der Feed den D-07-Zukunftsfilter ohne eigene Heuristik (RESEARCH
+Zeile 11/97; A4).
 
 Antwortstruktur [VERIFIED 2026-06-10]: ``{"success": true, "count": <n>,
 "items": [...]}`` (Top-Key ``items``, NICHT ``events``). Je Item: ``title``,
@@ -26,7 +27,7 @@ STALE-ON-ERROR-Pfad greift.
 Datenfehler-Schutz (Phase-7/8/9-Konvention): Alle Felder werden defensiv per
 ``.get()`` mit None-Fallback gelesen (kein ``KeyError``); die String-Koordinaten
 laufen durch ein try/except-``float()``. Je Event liefert der Adapter ein
-``license_raw="dl-de-by-2.0"``-Feld mit, damit der Mapper dieselbe
+``license_raw="dl-de-zero-2.0"``-Feld mit, damit der Mapper dieselbe
 ``map_license``-Logik wie destination.one nutzen kann (D-06, single source of
 truth).
 """
@@ -39,9 +40,9 @@ import httpx
 # roher User-/Upstream-Host; es gibt keine dynamische Ziel-URL.
 _BASE = "https://www.stadt-koeln.de/externe-dienste/open-data/events-od.php"
 
-# Koeln-Feed ist uniform DL-DE/BY-2.0 (A4). Das license_raw je Event laeuft durch
+# Koeln-Feed ist uniform DL-DE/Zero-2.0 (A4). Das license_raw je Event laeuft durch
 # dieselbe map_license-Funktion wie destination.one (D-06, Konsistenz).
-_LICENSE_RAW = "dl-de-by-2.0"
+_LICENSE_RAW = "dl-de-zero-2.0"
 
 # Feldnamen [VERIFIED 2026-06-10] gegen den Live-Feed. Defensiv per .get()
 # gelesen -> None-Fallback statt KeyError (Phase-7/8/9-Konvention).

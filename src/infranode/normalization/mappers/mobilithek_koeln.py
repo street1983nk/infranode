@@ -1,4 +1,4 @@
-"""Reine Koeln-Mobilithek-Mapper (LIVE-06/07, Tier A DL-DE/BY, Phase 20).
+"""Reine Koeln-Mobilithek-Mapper (LIVE-06/07, Tier A DL-DE/Zero, Phase 20).
 
 Uebersetzt die rohen Adapter-dicts aus ``adapters/mobilithek_datex2.py``
 deterministisch in einen ``CanonicalRecord``:
@@ -9,10 +9,13 @@ deterministisch in einen ``CanonicalRecord``:
 
 Schablone ist ``mappers/mobidata_bw.py`` (exakt): rein (kein HTTP, kein XML-Parse,
 keine Systemuhr), ``retrieved_at`` keyword-only injiziert (deterministisch). Die
-Koeln-Feeds stehen unter der Datenlizenz Deutschland Namensnennung 2.0:
-``license_id=DL_DE_BY_2_0``, ``license_tier=A`` (verifiziert, T-20-TIER: KEIN
-pauschales Tier-A ueber alle Quellen, nur Koeln = DL-DE/BY). Attribution
-"Stadt Köln" (wortgenau wie SOURCE_LICENSE / DATA-LICENSES.md).
+Koeln-Feeds stehen unter der Datenlizenz Deutschland Zero 2.0 (verifiziert
+2026-06-26: Koeln stellt seine Verkehrs-/Umweltzonen-Daten auf
+offenedaten-koeln.de durchgaengig unter DL-DE/Zero bereit, z.B.
+"Verkehrsbeeintraechtigungen Stadt Koeln" und "Umweltzone Koeln"):
+``license_id=DL_DE_ZERO_2_0``, ``license_tier=A`` (permissiv, KEINE
+Namensnennungspflicht). Attribution "Stadt Köln" bleibt informativ erhalten
+(wortgenau wie SOURCE_LICENSE / DATA-LICENSES.md).
 
 Reine Live-Daten -> ``geo=None`` (der dynamische Feed traegt nur ID-Referenzen
 bzw. Geo je Event); ``observed_at`` aus der DATEX-II ``publicationTime`` (``as_of``)
@@ -33,7 +36,7 @@ from infranode.normalization import (
     TrafficFlowPayload,
 )
 
-_DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
+_DL_DE_ZERO_URL = "https://www.govdata.de/dl-de/zero-2-0"
 _KOELN_ATTRIBUTION = "Stadt Köln"
 
 
@@ -74,13 +77,13 @@ def map_koeln_traffic_flow(
         observed_at=_parse_as_of(raw),
         retrieved_at=retrieved_at,
         source=SourceId.KOELN_TRAFFIC_FLOW,
-        license_id=LicenseId.DL_DE_BY_2_0,
+        license_id=LicenseId.DL_DE_ZERO_2_0,
         license_tier=LicenseTier.A,
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text=_KOELN_ATTRIBUTION,
-            license_url=_DL_DE_BY_URL,
+            license_url=_DL_DE_ZERO_URL,
         ),
         payload=TrafficFlowPayload(
             station_id=station_id,
@@ -112,13 +115,13 @@ def map_koeln_road_events(
         observed_at=_parse_as_of(raw),
         retrieved_at=retrieved_at,
         source=source,
-        license_id=LicenseId.DL_DE_BY_2_0,
+        license_id=LicenseId.DL_DE_ZERO_2_0,
         license_tier=LicenseTier.A,
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text=_KOELN_ATTRIBUTION,
-            license_url=_DL_DE_BY_URL,
+            license_url=_DL_DE_ZERO_URL,
         ),
         payload=RoadEventPayload(
             city_source="koeln",

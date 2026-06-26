@@ -13,7 +13,7 @@ Schablone ist ``mappers/mobilithek_koeln.py`` (exakt: rein, kein HTTP/Parse, kei
 Systemuhr, ``retrieved_at`` keyword-only injiziert), ABER mit dem entscheidenden
 Unterschied der Lizenzklasse: gtfs.de/DELFI-Realtime steht unter CC-BY-SA 4.0 =
 ``license_tier=B`` (copyleft, getrennt vom Tier-A-Archiv halten, CONTEXT LOCKED),
-NICHT Tier A wie der Koeln-Mapper (DL-DE/BY). Attribution "gtfs.de" (Primaerquelle)
+NICHT Tier A wie der Koeln-Mapper (DL-DE/Zero). Attribution "gtfs.de" (Primaerquelle)
 bzw. "DELFI e.V." (Mobilithek), Lizenz-URL CC-BY-SA.
 
 ``geo=None`` (die geschaetzte Position liegt im Payload, nicht im Envelope-Geo);

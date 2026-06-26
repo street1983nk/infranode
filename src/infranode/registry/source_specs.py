@@ -199,7 +199,7 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         cooldown=1800.0,
     ),
     SourceSpec(
-        name="koeln_verkehr", license_id="dl_de_by_2_0", attribution="Stadt Köln"
+        name="koeln_verkehr", license_id="dl_de_zero_2_0", attribution="Stadt Köln"
     ),
     SourceSpec(
         name="muenchen_baustellen",
@@ -220,23 +220,23 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         name="destination_one", license_id="mixed", attribution="destination.one"
     ),
     SourceSpec(
-        name="koeln_events", license_id="dl_de_by_2_0", attribution="Stadt Köln"
+        name="koeln_events", license_id="dl_de_zero_2_0", attribution="Stadt Köln"
     ),
     SourceSpec(
-        name="koeln_traffic_flow", license_id="dl_de_by_2_0", attribution="Stadt Köln"
+        name="koeln_traffic_flow", license_id="dl_de_zero_2_0", attribution="Stadt Köln"
     ),
     SourceSpec(
         name="koeln_baustellen_live",
-        license_id="dl_de_by_2_0",
+        license_id="dl_de_zero_2_0",
         attribution="Stadt Köln",
     ),
     SourceSpec(
         name="koeln_ereignisse_live",
-        license_id="dl_de_by_2_0",
+        license_id="dl_de_zero_2_0",
         attribution="Stadt Köln",
     ),
     SourceSpec(
-        name="koeln_lez_live", license_id="dl_de_by_2_0", attribution="Stadt Köln"
+        name="koeln_lez_live", license_id="dl_de_zero_2_0", attribution="Stadt Köln"
     ),
     SourceSpec(
         name="berlin_verkehrsmeldungen",

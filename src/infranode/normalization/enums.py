@@ -88,10 +88,10 @@ class SourceId(StrEnum):
     MOBIDATA_BW = "mobidata_bw"
     # Phase 10: Stadt-Events/Veranstaltungen. DESTINATION_ONE ist die account-
     # gated eT4.META-Quelle (licensekey, gemischte Lizenzen pro Record, GOV-04),
-    # KOELN_EVENTS der keylose Koeln-Direkt-Feed (fix DL-DE/BY, D-06). Alle Werte
+    # KOELN_EVENTS der keylose Koeln-Direkt-Feed (fix DL-DE/Zero, D-06). Alle Werte
     # ASCII (StrEnum), kein Umlaut (Slug koeln). Toggle-Name == SourceId-Wert ==
     # _KNOWN_SOURCES-Eintrag. Kein neuer LicenseId-Wert noetig (CC0/CC_BY_4_0/
-    # CC_BY_SA_4_0/DL_DE_BY_2_0/UNKNOWN existieren bereits).
+    # CC_BY_SA_4_0/DL_DE_ZERO_2_0/UNKNOWN existieren bereits).
     DESTINATION_ONE = "destination_one"
     KOELN_EVENTS = "koeln_events"
     # Phase 20: Live-Quellen ueber den Mobilithek-mTLS-Pull (getrennte /live-
