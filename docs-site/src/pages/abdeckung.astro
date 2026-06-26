@@ -88,6 +88,22 @@ const PARTIAL = [
     reason: "amtliches Solarkataster je Bundesland (NRW + Bayern)",
     note: "",
   },
+  {
+    key: "heritage",
+    label: "Denkmäler",
+    path: "/api/v1/cities/{slug}/heritage",
+    op: "getCityHeritage",
+    reason: "Denkmalliste je Bundesland (Landessache; verifizierter offener WFS)",
+    note: "Bayern (CC-BY-ND) ausgeschlossen",
+  },
+  {
+    key: "tree-cadastre",
+    label: "Baumkataster",
+    path: "/api/v1/cities/{slug}/tree-cadastre",
+    op: "getCityTreeCadastre",
+    reason: "kommunales Baumkataster je Stadt (verifizierter offener WFS)",
+    note: "gedeckelte Stichprobe (sehr große Kataster)",
+  },
 ];
 
 const total = coverage.total_cities;

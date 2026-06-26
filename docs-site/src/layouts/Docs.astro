@@ -197,34 +197,38 @@ const sortedTags = [...groups.keys()].sort();
                   </a>
                 </li>
               </ul>
-              <p class="nav__title">Data by topic</p>
-              <ul class="nav__list">
-                {topics.map((topic) => (
-                  <li>
-                    <a
-                      class="nav__link"
-                      href={`/en/data/${topic.en.slug}/`}
-                      aria-current={current === `daten-${topic.id}` ? "page" : undefined}
-                    >
-                      {topic.en.h1}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-              <p class="nav__title">MCP by topic</p>
-              <ul class="nav__list">
-                {mcpTopics.map((topic) => (
-                  <li>
-                    <a
-                      class="nav__link"
-                      href={`/en/mcp/${topic.en.slug}/`}
-                      aria-current={current === `mcp-${topic.id}` ? "page" : undefined}
-                    >
-                      {topic.en.h1}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <details class="nav__cat" open={current?.startsWith("daten-")}>
+                <summary class="nav__cat-title">Data by topic</summary>
+                <ul class="nav__list">
+                  {topics.map((topic) => (
+                    <li>
+                      <a
+                        class="nav__link"
+                        href={`/en/data/${topic.en.slug}/`}
+                        aria-current={current === `daten-${topic.id}` ? "page" : undefined}
+                      >
+                        {topic.en.h1}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+              <details class="nav__cat" open={current?.startsWith("mcp-")}>
+                <summary class="nav__cat-title">MCP by topic</summary>
+                <ul class="nav__list">
+                  {mcpTopics.map((topic) => (
+                    <li>
+                      <a
+                        class="nav__link"
+                        href={`/en/mcp/${topic.en.slug}/`}
+                        aria-current={current === `mcp-${topic.id}` ? "page" : undefined}
+                      >
+                        {topic.en.h1}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </div>
           ) : (
             <div class="nav__group">
@@ -275,34 +279,38 @@ const sortedTags = [...groups.keys()].sort();
                   </a>
                 </li>
               </ul>
-              <p class="nav__title">Daten nach Thema</p>
-              <ul class="nav__list">
-                {topics.map((topic) => (
-                  <li>
-                    <a
-                      class="nav__link"
-                      href={`/daten/${topic.de.slug}/`}
-                      aria-current={current === `daten-${topic.id}` ? "page" : undefined}
-                    >
-                      {topic.de.h1}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-              <p class="nav__title">MCP nach Thema</p>
-              <ul class="nav__list">
-                {mcpTopics.map((topic) => (
-                  <li>
-                    <a
-                      class="nav__link"
-                      href={`/mcp/${topic.de.slug}/`}
-                      aria-current={current === `mcp-${topic.id}` ? "page" : undefined}
-                    >
-                      {topic.de.h1}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <details class="nav__cat" open={current?.startsWith("daten-")}>
+                <summary class="nav__cat-title">Daten nach Thema</summary>
+                <ul class="nav__list">
+                  {topics.map((topic) => (
+                    <li>
+                      <a
+                        class="nav__link"
+                        href={`/daten/${topic.de.slug}/`}
+                        aria-current={current === `daten-${topic.id}` ? "page" : undefined}
+                      >
+                        {topic.de.h1}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+              <details class="nav__cat" open={current?.startsWith("mcp-")}>
+                <summary class="nav__cat-title">MCP nach Thema</summary>
+                <ul class="nav__list">
+                  {mcpTopics.map((topic) => (
+                    <li>
+                      <a
+                        class="nav__link"
+                        href={`/mcp/${topic.de.slug}/`}
+                        aria-current={current === `mcp-${topic.id}` ? "page" : undefined}
+                      >
+                        {topic.de.h1}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </div>
           )
         }
@@ -310,8 +318,14 @@ const sortedTags = [...groups.keys()].sort();
           <summary class="nav__sect-title">{isEn ? "API reference" : "API-Referenz"}</summary>
         {
           sortedTags.map((tag) => (
-            <div class="nav__group nav__group--sub">
-              <p class="nav__title">{tag}</p>
+            <details
+              class="nav__cat nav__group--sub"
+              open={groups.get(tag)!.some((ep) => ep.id === current)}
+            >
+              <summary class="nav__cat-title">
+                {tag}
+                <span class="nav__cat-count">{groups.get(tag)!.length}</span>
+              </summary>
               <ul class="nav__list">
                 {groups.get(tag)!.map((ep) => (
                   <li>
@@ -325,7 +339,7 @@ const sortedTags = [...groups.keys()].sort();
                   </li>
                 ))}
               </ul>
-            </div>
+            </details>
           ))
         }
         </details>

@@ -86,6 +86,22 @@ const PARTIAL = [
     reason: "official rooftop solar cadastre per federal state (NRW + Bavaria)",
     note: "",
   },
+  {
+    key: "heritage",
+    label: "Heritage monuments",
+    path: "/api/v1/cities/{slug}/heritage",
+    op: "getCityHeritage",
+    reason: "heritage register per federal state (state matter; verified open WFS)",
+    note: "Bavaria (CC-BY-ND) excluded",
+  },
+  {
+    key: "tree-cadastre",
+    label: "Tree cadastre",
+    path: "/api/v1/cities/{slug}/tree-cadastre",
+    op: "getCityTreeCadastre",
+    reason: "municipal tree cadastre per city (verified open WFS)",
+    note: "capped sample (very large registers)",
+  },
 ];
 
 const total = coverage.total_cities;

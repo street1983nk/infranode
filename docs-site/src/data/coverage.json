@@ -24,6 +24,9 @@
    "muenchen",
    "nuernberg"
   ],
+  "heritage": [
+   "berlin"
+  ],
   "land-values": [
    "aachen",
    "bergisch-gladbach",
@@ -180,6 +183,9 @@
    "hamburg",
    "koeln",
    "muenchen"
+  ],
+  "tree-cadastre": [
+   "berlin"
   ],
   "webcams": [
    "berlin",

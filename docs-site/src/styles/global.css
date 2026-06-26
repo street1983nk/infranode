@@ -294,6 +294,58 @@ code {
   margin-bottom: 0.9rem;
 }
 
+/* Klappbare Nav-Kategorien (Themen + API-Tags): Titel klickbar, Rest oeffnet.
+   Reduziert die Unuebersichtlichkeit langer Listen (z.B. alle City-Endpunkte). */
+.nav__cat {
+  margin-bottom: 0.5rem;
+}
+.nav__cat-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-muted);
+  padding: 0.25rem 0;
+}
+.nav__cat-title::-webkit-details-marker {
+  display: none;
+}
+.nav__cat-title::after {
+  content: "";
+  flex: none;
+  margin-left: 0.3rem;
+  width: 0.36rem;
+  height: 0.36rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+}
+.nav__cat-title:hover {
+  color: var(--fg);
+}
+.nav__cat[open] > .nav__cat-title {
+  margin-bottom: 0.4rem;
+  color: var(--fg);
+}
+.nav__cat[open] > .nav__cat-title::after {
+  transform: rotate(-135deg);
+}
+.nav__cat-count {
+  margin-left: auto;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--fg-muted);
+  background: var(--bg-soft);
+  border-radius: 999px;
+  padding: 0.02rem 0.42rem;
+}
+
 /* Mittiger Content */
 .content {
   min-width: 0;
