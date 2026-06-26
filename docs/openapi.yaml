@@ -696,6 +696,617 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/playgrounds:
+    get:
+      tags: [cities]
+      summary: Spielplätze je Stadt (OSM, Tier B)
+      x-summary-en: Playgrounds per city (OSM, Tier B)
+      description: >-
+        Öffentliche Spielplätze (OSM leisure=playground) im kanonischen Envelope. Tier B (copyleft, ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Public playgrounds (OSM leisure=playground) in the canonical envelope. Tier B (copyleft, ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityPlaygrounds
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/drinking-water:
+    get:
+      tags: [cities]
+      summary: Trinkwasserbrunnen je Stadt (OSM, Tier B)
+      x-summary-en: Public drinking water fountains per city (OSM, Tier B)
+      description: >-
+        Öffentliche Trinkwasserbrunnen (OSM amenity=drinking_water). Die OSM-Abdeckung ist je Stadt unterschiedlich vollständig. Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Public drinking water fountains (OSM amenity=drinking_water). OSM coverage varies per city. Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityDrinkingWater
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/markets:
+    get:
+      tags: [cities]
+      summary: Wochenmärkte/Marktplätze je Stadt (OSM, Tier B)
+      x-summary-en: Markets per city (OSM, Tier B)
+      description: >-
+        Marktplätze (OSM amenity=marketplace). Markttage/Zeiten kommen als optionales opening_hours je Element (häufig leer). Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Marketplaces (OSM amenity=marketplace). Market days/times come as optional opening_hours per element (often empty). Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityMarkets
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/parcel-lockers:
+    get:
+      tags: [cities]
+      summary: Paketstationen je Stadt (OSM, Tier B)
+      x-summary-en: Parcel lockers per city (OSM, Tier B)
+      description: >-
+        Paketstationen/Locker (OSM amenity=parcel_locker) mit optionalem operator/brand (DHL/Amazon/DPD/Hermes/GLS). Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Parcel lockers (OSM amenity=parcel_locker) with optional operator/brand (DHL/Amazon/DPD/Hermes/GLS). Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityParcelLockers
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/post-offices:
+    get:
+      tags: [cities]
+      summary: Postfilialen je Stadt (OSM, Tier B)
+      x-summary-en: Post offices per city (OSM, Tier B)
+      description: >-
+        Postfilialen (OSM amenity=post_office) mit optionalem opening_hours/operator. Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Post offices (OSM amenity=post_office) with optional opening_hours/operator. Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityPostOffices
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/post-boxes:
+    get:
+      tags: [cities]
+      summary: Briefkästen je Stadt, mit Leerungszeiten (OSM, Tier B)
+      x-summary-en: Post boxes per city, with collection times (OSM, Tier B)
+      description: >-
+        Öffentliche Briefkästen (OSM amenity=post_box). Leerungszeiten als optionales collection_times je Element (ca. drei Viertel getaggt; fehlend = Datenpunkt-Lücke). Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Public post boxes (OSM amenity=post_box). Collection times as optional collection_times per element (~75% tagged; missing = data gap). Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityPostBoxes
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/public-wifi:
+    get:
+      tags: [cities]
+      summary: Öffentliche WLAN-Standorte je Stadt (OSM, Tier B)
+      x-summary-en: Public Wi-Fi locations per city (OSM, Tier B)
+      description: >-
+        Öffentliche WLAN-Standorte (OSM internet_access=wlan) mit optionalem operator. Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Public Wi-Fi locations (OSM internet_access=wlan) with optional operator. Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityPublicWifi
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/recycling-centres:
+    get:
+      tags: [cities]
+      summary: Recycling-/Wertstoffhöfe je Stadt (OSM, Tier B)
+      x-summary-en: Recycling centres per city (OSM, Tier B)
+      description: >-
+        Recycling-/Wertstoffhöfe (OSM amenity=recycling + recycling_type=centre) mit optionalem opening_hours. Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Recycling centres (OSM amenity=recycling + recycling_type=centre) with optional opening_hours. Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityRecyclingCentres
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/government-offices:
+    get:
+      tags: [cities]
+      summary: Behörden/Ämter je Stadt (OSM, Tier B)
+      x-summary-en: Government offices per city (OSM, Tier B)
+      description: >-
+        Behörden/Ämter (OSM office=government + amenity=townhall), konsolidiert Bürgerämter, Verwaltungs- und sonstige Ämter. Subtyp je Element als optionales government-Tag. Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Government offices (OSM office=government + amenity=townhall), consolidating citizen, administrative and other offices. Subtype per element as optional government tag. Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityGovernmentOffices
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/education:
+    get:
+      tags: [cities]
+      summary: Bildungseinrichtungen je Stadt (OSM, Tier B)
+      x-summary-en: Education facilities per city (OSM, Tier B)
+      description: >-
+        Bildungseinrichtungen (OSM amenity=school/college/university/kindergarten). Tier B (ODbL).
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Education facilities (OSM amenity=school/college/university/kindergarten). Tier B (ODbL).
+        Disabled -> 200 source_status="disabled".
+      operationId: getCityEducation
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/population-density:
+    get:
+      tags: [cities]
+      summary: Einwohnerdichte je Stadt (Zensus-2022-Gitter, Tier A)
+      x-summary-en: Population density per city (Census 2022 grid, Tier A)
+      description: >-
+        Einwohnerdichte einer Stadt aus dem amtlichen Zensus-2022-100m-Gitter,
+        exakt aggregiert über die Gitterzellen mit der Stadt-AGS: Summe Einwohner,
+        Zahl bewohnter 100m-Zellen, bewohnte Fläche (km²) und Dichte (Einwohner/km²
+        über die bewohnte Fläche, nicht die Gesamtfläche). Flächendeckend (alle
+        Städte); ohne Gitterzellen -> 200 source_status="no_data". DL-DE/BY 2.0.
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        A city's population density from the official Census 2022 100m grid,
+        aggregated exactly over the grid cells with the city's AGS: total
+        inhabitants, populated 100m cells, populated area (km²) and density
+        (inhabitants/km² over the populated area, not the total area). Full
+        coverage (all cities); no grid cells -> 200 source_status="no_data".
+        DL-DE/BY 2.0. Disabled -> 200 source_status="disabled".
+      operationId: getCityPopulationDensity
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Einwohnerdichte-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/tree-cadastre:
+    get:
+      tags: [cities]
+      summary: Baumkataster je Stadt (kommunaler WFS, Tier A)
+      x-summary-en: Street-tree cadastre per city (municipal WFS, Tier A)
+      description: >-
+        Das städtische Baumkataster (Straßenbäume) aus dem kommunalen WFS, je Baum
+        Punkt plus Attribute (Art, Pflanzjahr, Höhe, Straße, Bezirk). Kataster sind
+        sehr groß: die Antwort ist eine gedeckelte Stichprobe (count = ausgelieferte
+        Bäume, nicht der Gesamtbestand). Teilabdeckung (kommunal, nur Städte mit
+        verifiziertem offenem WFS, aktuell Berlin, DL-DE/Zero 2.0); andere Städte
+        antworten mit 200 source_status="not_covered" + meta.covered_cities.
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        A city's street-tree cadastre from the municipal WFS, each tree as a point
+        plus attributes (species, planting year, height, street, district). Registers
+        are very large: the response is a capped sample (count = returned trees, not
+        the full stock). Partial coverage (municipal, only cities with a verified
+        open WFS, currently Berlin, DL-DE/Zero 2.0); other cities return 200
+        source_status="not_covered" + meta.covered_cities. Disabled -> 200
+        source_status="disabled".
+      operationId: getCityTreeCadastre
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Baumkataster-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/heritage:
+    get:
+      tags: [cities]
+      summary: Denkmäler/Baudenkmale je Stadt (Land-WFS, Tier A)
+      x-summary-en: Heritage/listed monuments per city (state WFS, Tier A)
+      description: >-
+        Bau- und Denkmalobjekte einer Stadt aus der Denkmalliste des jeweiligen
+        Bundeslandes (WFS), je Objekt ein Repräsentativpunkt plus Typ/Link.
+        Denkmalschutz ist Ländersache: Teilabdeckung, nur Städte in Ländern mit
+        verifiziertem offenem WFS (aktuell Berlin, DL-DE/Zero 2.0). Andere Städte
+        antworten ehrlich mit 200 source_status="not_covered", data=null und
+        meta.covered_cities. Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        A city's listed/heritage objects from the respective federal state's
+        heritage register (WFS), each as a representative point plus type/link.
+        Heritage protection is a state matter: partial coverage, only cities in
+        states with a verified open WFS (currently Berlin, DL-DE/Zero 2.0). Other
+        cities honestly return 200 source_status="not_covered", data=null and
+        meta.covered_cities. Disabled -> 200 source_status="disabled".
+      operationId: getCityHeritage
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Denkmal-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/traffic:
     get:
       tags: [cities]

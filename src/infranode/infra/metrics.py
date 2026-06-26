@@ -42,6 +42,13 @@ _REQ_ENDPOINT_KEY = "metrics:req:endpoint"
 _CONSUMER_PREFIX = "metrics:consumers:"
 _CONSUMER_TTL = 10800  # 3 h: deckt die stuendliche Auswertung + Verzug sicher ab.
 
+# Tages-Request-Zaehler je Kanal (api|mcp): ein einzelner Counter-Key pro UTC-Tag
+# (metrics:daily:<channel>:<YYYY-MM-DD>) fuer den taeglichen 00:05-Digest. Bewusst
+# NICHT per-IP wie die Consumer-Buckets: genau 2 Keys/Tag, daher kein Redis-OOM
+# bei einer IP-Flut. Selbst-ablaufend (TTL deckt Vortag + Verzug bis zum Digest).
+_DAILY_PREFIX = "metrics:daily:"
+_DAILY_TTL = 172800  # 48 h: Vortag bleibt bis weit nach dem 00:05-Digest lesbar.
+
 # Die vier Cache-Status-Buckets (Quelle: CacheStatus StrEnum). Bucket-Name ist der
 # kleingeschriebene Status mit "-" -> "_" (STALE-ON-ERROR -> stale_on_error).
 _CACHE_BUCKETS = ("hit", "miss", "stale", "stale_on_error")
@@ -197,6 +204,43 @@ async def read_consumers(redis, hour: str) -> list[dict]:
             }
         )
     out.sort(key=lambda c: c["count"], reverse=True)
+    return out
+
+
+async def incr_daily(redis, *, channel: str, now) -> None:
+    """Zaehlt einen Request in den Tages-Counter des Kanals (``api``|``mcp``).
+
+    Ein einzelner Counter-Key je Kanal und UTC-Tag
+    (``metrics:daily:<channel>:<YYYY-MM-DD>``) mit Selbst-Ablauf (``_DAILY_TTL``).
+    Anders als die per-IP-Consumer-Buckets waechst das NICHT mit der Zahl der
+    Clients (genau zwei Keys pro Tag), daher kein OOM-Risiko bei einer IP-Flut.
+    Speist den taeglichen 00:05-ntfy-Digest. Graceful: jeder Redis-Fehler
+    degradiert still (Metrik-Verlust), crasht aber NIE den Request-Pfad.
+    """
+    try:
+        key = f"{_DAILY_PREFIX}{channel}:{now.strftime('%Y-%m-%d')}"
+        pipe = redis.pipeline()
+        pipe.incr(key)
+        pipe.expire(key, _DAILY_TTL)
+        await pipe.execute()
+    except Exception as exc:
+        log.debug("incr_daily_failed", channel=channel, error=str(exc))
+
+
+async def read_daily(redis, *, day: str) -> dict[str, int]:
+    """Liest die Tages-Counter beider Kanaele (``api``|``mcp``) fuer ``day``.
+
+    ``day`` ist ein UTC-Datum ``YYYY-MM-DD``. Fehlende Keys -> 0. Graceful: bei
+    einem Redis-Fehler -> beide 0 (nie ein Crash im Digest).
+    """
+    out = {"api": 0, "mcp": 0}
+    try:
+        for channel in out:
+            raw = await redis.get(f"{_DAILY_PREFIX}{channel}:{day}")
+            if raw is not None:
+                out[channel] = int(raw)
+    except Exception:
+        return {"api": 0, "mcp": 0}
     return out
 
 

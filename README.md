@@ -31,7 +31,7 @@ Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
 flowchart LR
     SRC["German open-data sources<br/>DWD, UBA, SMARD, BORIS,<br/>Mobilithek, GovData, ..."] --> CORE["InfraNode<br/>normalize, license-gate, cache"]
     CORE --> API["REST API<br/>infranode.dev/api/v1"]
-    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 48 tools"]
+    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 61 tools"]
     API --> APPS["Your apps &amp; dashboards"]
     MCP --> AGENTS["AI agents (Claude &amp; co.)"]
 ```

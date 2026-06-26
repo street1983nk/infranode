@@ -13,9 +13,18 @@ interface Props {
 const { lang = "de" } = Astro.props;
 const isEn = lang === "en";
 const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
+// Lokalisierte Leerzustands-Texte (D-09): werden zur Laufzeit aus Daten-
+// Attributen gelesen, damit das Skript sprachunabhaengig bleibt.
+const msgEmpty = isEn ? "No results for" : "Keine Treffer für";
+const msgLoading = isEn ? "Search is still loading…" : "Suche lädt noch …";
 ---
 
-<div class="search" data-search>
+<div
+  class="search"
+  data-search
+  data-msg-empty={msgEmpty}
+  data-msg-loading={msgLoading}
+>
   <div class="search__field">
     <svg
       width="16"
@@ -53,6 +62,8 @@ const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
   if (root) {
     const input = root.querySelector<HTMLInputElement>("[data-search-input]")!;
     const out = root.querySelector<HTMLElement>("[data-search-results]")!;
+    const msgEmpty = root.dataset.msgEmpty || "Keine Treffer für";
+    const msgLoading = root.dataset.msgLoading || "Suche lädt noch …";
     let pagefind: Pagefind | null = null;
     let loading = false;
     let timer: number | undefined;
@@ -79,6 +90,15 @@ const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
       out.replaceChildren();
     }
 
+    // Leerzustands-/Statusmeldung (D-09): reiner Text via textContent, damit der
+    // Ergebnis-Container nicht leer ist (:empty-Regel greift dann nicht mehr).
+    function showMsg(text: string): void {
+      const p = document.createElement("p");
+      p.className = "search__msg";
+      p.textContent = text;
+      out.replaceChildren(p);
+    }
+
     async function run(query: string): Promise<void> {
       const q = query.trim();
       if (q.length < 2) {
@@ -87,12 +107,16 @@ const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
       }
       const pf = await ensurePagefind();
       if (!pf) {
-        clear();
+        showMsg(msgLoading);
         return;
       }
       const search = await pf.search(q);
       clear();
       const top = search.results.slice(0, 8);
+      if (top.length === 0) {
+        showMsg(`${msgEmpty} „${q}“`);
+        return;
+      }
       for (const result of top) {
         const data = await result.data();
         const link = document.createElement("a");

@@ -33,7 +33,9 @@ Alle uebrigen city-/live-Endpunkte sind flaechendeckend (84/84).
 from __future__ import annotations
 
 from infranode.adapters.autobahn import _CITY_ROADS
+from infranode.adapters.baumkataster import BAUM_WFS
 from infranode.adapters.boris import BORIS_SHAPEFILE, BORIS_WFS
+from infranode.adapters.denkmal import DENKMAL_WFS
 from infranode.adapters.lhp import _CITY_PEGEL
 from infranode.adapters.parkendd import PARKENDD_CITIES
 from infranode.registry.cities import CITY_REGISTRY
@@ -118,6 +120,20 @@ _BIKE_COUNTS_CITIES: frozenset[str] = frozenset(
     {"muenchen", "leipzig", "hamburg", "berlin", "stuttgart"}
 )
 
+# heritage (DATA-OSM-Tier-2): Denkmallisten sind LANDESsache -> foederiert per WFS
+# (wie BORIS/solar-roofs). Abgedeckt sind die Register-Staedte, deren Bundesland
+# (``state``) einen verifizierten, offen lizenzierten Denkmal-WFS hat
+# (``DENKMAL_WFS``). Ein neues Land erweitert die Abdeckung automatisch.
+_HERITAGE_STATES = set(DENKMAL_WFS)
+_HERITAGE_CITIES: frozenset[str] = frozenset(
+    c.slug for c in CITY_REGISTRY if c.state in _HERITAGE_STATES
+)
+
+# tree-cadastre (DATA-OSM-Tier-2): Baumkataster sind kommunales Open Data -> per
+# Stadt konfiguriert (``BAUM_WFS``). Abgedeckt sind genau die konfigurierten,
+# verifiziert offen lizenzierten Staedte. Eine neue Stadt erweitert automatisch.
+_TREE_CADASTRE_CITIES: frozenset[str] = frozenset(BAUM_WFS)
+
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
 # Die Kennung entspricht dem letzten Pfadsegment der Route (``/cities/{slug}/<key>``).
 PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
@@ -130,6 +146,8 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "solar-roofs": _SOLAR_ROOFS_CITIES,
     "parking": _PARKING_CITIES,
     "bike-counts": _BIKE_COUNTS_CITIES,
+    "heritage": _HERITAGE_CITIES,
+    "tree-cadastre": _TREE_CADASTRE_CITIES,
 }
 
 

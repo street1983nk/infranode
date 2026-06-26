@@ -118,4 +118,41 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Business registrations",
     ),
     DataType("events", "events", "Veranstaltungen", "Public events"),
+    # DATA-OSM (Tier 1): dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
+    DataType("playgrounds", "playgrounds", "Spielplätze", "Playgrounds"),
+    DataType(
+        "drinking-water",
+        "drinking_water",
+        "Trinkwasserbrunnen",
+        "Drinking water fountains",
+    ),
+    DataType("markets", "markets", "Wochenmärkte", "Markets"),
+    DataType("parcel-lockers", "parcel_lockers", "Paketstationen", "Parcel lockers"),
+    DataType("post-offices", "post_offices", "Postfilialen", "Post offices"),
+    DataType("post-boxes", "post_boxes", "Briefkästen", "Post boxes"),
+    DataType("public-wifi", "public_wifi", "Öffentliches WLAN", "Public Wi-Fi"),
+    DataType(
+        "recycling-centres",
+        "recycling_centres",
+        "Recyclinghöfe",
+        "Recycling centres",
+    ),
+    DataType(
+        "government-offices",
+        "government_offices",
+        "Behörden & Ämter",
+        "Government offices",
+    ),
+    DataType("education", "education", "Bildungseinrichtungen", "Education facilities"),
+    # DATA-OSM-Tier-2: Denkmallisten je Bundesland (Land-WFS, coverage-gated).
+    DataType("heritage", "heritage", "Denkmäler", "Heritage monuments"),
+    # DATA-OSM-Tier-2: Baumkataster je Stadt (kommunaler WFS, coverage-gated).
+    DataType("tree-cadastre", "tree_cadastre", "Baumkataster", "Tree cadastre"),
+    # DATA-OSM-Tier-2: Einwohnerdichte aus dem Zensus-2022-100m-Gitter (alle Städte).
+    DataType(
+        "population-density",
+        "population_density",
+        "Einwohnerdichte",
+        "Population density",
+    ),
 )

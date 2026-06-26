@@ -110,6 +110,23 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "station-arrivals",
         # DATA-36: StaDa Bahnhofs-Katalog je Stadt (alle Bahnhoefe mit EVA, Tier A).
         "stations",
+        # DATA-OSM (Tier 1): 10 dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
+        "playgrounds",
+        "drinking-water",
+        "markets",
+        "parcel-lockers",
+        "post-offices",
+        "post-boxes",
+        "public-wifi",
+        "recycling-centres",
+        "government-offices",
+        "education",
+        # DATA-OSM-Tier-2: Denkmallisten je Bundesland (Land-WFS, coverage-gated).
+        "heritage",
+        # DATA-OSM-Tier-2: Baumkataster je Stadt (kommunaler WFS, coverage-gated).
+        "tree-cadastre",
+        # DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Städte).
+        "population-density",
     }
 )
 

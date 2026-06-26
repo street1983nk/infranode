@@ -144,6 +144,23 @@ _register(tools.list_cities, open_world=False)
 _register(tools.sources, open_world=False)
 # API-05/D-06: Multi-City-Compare einer Ressource (weather/air) in einer Antwort.
 _register(tools.compare)
+# DATA-OSM (Tier 1): 10 dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
+_register(tools.playgrounds)
+_register(tools.drinking_water)
+_register(tools.markets)
+_register(tools.parcel_lockers)
+_register(tools.post_offices)
+_register(tools.post_boxes)
+_register(tools.public_wifi)
+_register(tools.recycling_centres)
+_register(tools.government_offices)
+_register(tools.education)
+# DATA-OSM-Tier-2: Denkmallisten je Bundesland (Land-WFS, coverage-gated).
+_register(tools.heritage)
+# DATA-OSM-Tier-2: Baumkataster je Stadt (kommunaler WFS, coverage-gated).
+_register(tools.tree_cadastre)
+# DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Staedte).
+_register(tools.population_density)
 
 
 # MCP Resources: expose the coverage catalog as browsable resources, so clients

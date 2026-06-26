@@ -58,9 +58,10 @@ async def get_city_overview(slug: _Slug) -> ToolEnvelope:
     """Get a ONE-CALL overview of everything InfraNode knows about a German city.
 
     Start here for any city question. Returns: the city's base data, a CATALOG of
-    all ~40 available data types (weather, air quality, public transit, trains,
-    traffic, charging, parking-adjacent, solar, energy, demographics, taxes,
-    accidents, tourism and many more), each with its coverage status and the exact
+    all ~53 available data types (weather, air quality, public transit, trains,
+    traffic, charging, parking, solar, energy, demographics, taxes, accidents,
+    tourism, heritage, trees, population density, playgrounds, post boxes and many
+    more), each with its coverage status and the exact
     tool to call next, plus a small live highlights snapshot (current weather, air
     quality and train departures). Data types not yet covered for this city show
     where they ARE available so you can pivot. InfraNode keeps adding data and cities,
@@ -547,3 +548,105 @@ async def compare(
     return await client.get_collection(
         "compare", params={"resource": resource, "cities": cities}
     )
+
+
+# DATA-OSM (Tier 1): dedizierte OSM-Overpass-Datenarten (ODbL, Tier B copyleft).
+# Duenne Wrapper wie oben; Tag-Whitelist + Overpass-QL liegen in der Live-API.
+async def playgrounds(slug: _Slug) -> ToolEnvelope:
+    """List public playgrounds in a city (OpenStreetMap). Read-only."""
+    return await client.get_resource(slug, "playgrounds")
+
+
+async def drinking_water(slug: _Slug) -> ToolEnvelope:
+    """List public drinking-water fountains in a city (OpenStreetMap). Read-only.
+
+    OSM coverage varies by city; a sparse result is a data gap, not an error.
+    """
+    return await client.get_resource(slug, "drinking-water")
+
+
+async def markets(slug: _Slug) -> ToolEnvelope:
+    """List marketplaces in a city (OpenStreetMap). Read-only.
+
+    Market days/times come as optional opening_hours per item (often empty).
+    """
+    return await client.get_resource(slug, "markets")
+
+
+async def parcel_lockers(slug: _Slug) -> ToolEnvelope:
+    """List parcel lockers in a city (OpenStreetMap). Read-only.
+
+    operator/brand (DHL/Amazon/DPD/Hermes/GLS) per item where tagged.
+    """
+    return await client.get_resource(slug, "parcel-lockers")
+
+
+async def post_offices(slug: _Slug) -> ToolEnvelope:
+    """List post offices in a city (OpenStreetMap). Read-only."""
+    return await client.get_resource(slug, "post-offices")
+
+
+async def post_boxes(slug: _Slug) -> ToolEnvelope:
+    """List public post boxes in a city (OpenStreetMap). Read-only.
+
+    collection_times per item where tagged (~75%); missing = data gap.
+    """
+    return await client.get_resource(slug, "post-boxes")
+
+
+async def public_wifi(slug: _Slug) -> ToolEnvelope:
+    """List public Wi-Fi locations in a city (OpenStreetMap). Read-only."""
+    return await client.get_resource(slug, "public-wifi")
+
+
+async def recycling_centres(slug: _Slug) -> ToolEnvelope:
+    """List recycling centres (Wertstoffhoefe) in a city (OpenStreetMap). Read-only."""
+    return await client.get_resource(slug, "recycling-centres")
+
+
+async def government_offices(slug: _Slug) -> ToolEnvelope:
+    """List government offices in a city (OpenStreetMap). Read-only.
+
+    Consolidates citizen, administrative and other offices; subtype per item as
+    an optional government tag.
+    """
+    return await client.get_resource(slug, "government-offices")
+
+
+async def education(slug: _Slug) -> ToolEnvelope:
+    """List education facilities in a city (schools, universities, kindergartens).
+
+    Sourced from OpenStreetMap. Read-only.
+    """
+    return await client.get_resource(slug, "education")
+
+
+async def heritage(slug: _Slug) -> ToolEnvelope:
+    """List heritage/listed monuments in a city (state heritage registers).
+
+    Sourced from federal-state heritage WFS (e.g. Berlin, DL-DE/Zero). Coverage is
+    partial (heritage protection is a state matter); ``source_status`` is
+    ``not_covered`` for cities in states without a verified open WFS. Read-only.
+    """
+    return await client.get_resource(slug, "heritage")
+
+
+async def tree_cadastre(slug: _Slug) -> ToolEnvelope:
+    """List a city's street-tree cadastre (species, planting year, height).
+
+    Sourced from the municipal tree register WFS (e.g. Berlin, DL-DE/Zero). The
+    response is a capped sample (registers are very large; ``count`` is the number
+    of returned trees, not the full stock). Coverage is partial; ``source_status``
+    is ``not_covered`` for cities without a verified open WFS. Read-only.
+    """
+    return await client.get_resource(slug, "tree-cadastre")
+
+
+async def population_density(slug: _Slug) -> ToolEnvelope:
+    """Get a city's population density from the Census 2022 100m grid.
+
+    Aggregated exactly over the grid cells with the city's AGS (sum of inhabitants,
+    populated 100m cells, populated area, inhabitants per km2 over the populated
+    area). Sourced from the official Zensus 2022 grid (DL-DE/BY). Read-only.
+    """
+    return await client.get_resource(slug, "population-density")

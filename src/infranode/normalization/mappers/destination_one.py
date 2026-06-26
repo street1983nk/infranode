@@ -42,7 +42,9 @@ _LICENSE_URLS: dict[LicenseId, str] = {
     LicenseId.DL_DE_ZERO_2_0: "https://www.govdata.de/dl-de/zero-2-0",
 }
 
-_ATTRIBUTION_TEXT = "destination.one"
+# destination.one verlangt UNABHAENGIG von der CC-Lizenz die wortgenaue Nennung
+# "powered by open.destination.one" inkl. Backlink je Datensatz.
+_ATTRIBUTION_TEXT = "powered by open.destination.one (https://open.destination.one)"
 
 
 def _parse_iso_date(value: object) -> date | None:
@@ -108,6 +110,13 @@ def map_destination_one_events(
     for event in events:
         if not _is_future(event, today=today):
             continue
+        # CC-*-ND (No Derivatives): InfraNode normalisiert (= Bearbeitung), was ND
+        # untersagt. Solche Events werden gar nicht ausgeliefert (nicht nur Tier-C).
+        raw_lic = (event.get("license_raw") or "").lower()
+        raw_lic = raw_lic.replace("-", " ").replace("_", " ")
+        is_cc_raw = "cc" in raw_lic or "creativecommons" in raw_lic
+        if is_cc_raw and "by nd" in raw_lic:
+            continue
         license_id, license_tier = map_license(event.get("license_raw"))
         if license_tier not in groups:
             groups[license_tier] = (license_id, [])
@@ -129,6 +138,7 @@ def map_destination_one_events(
                 attribution=Attribution(
                     text=_ATTRIBUTION_TEXT,
                     license_url=_LICENSE_URLS.get(license_id),
+                    modified=True,  # InfraNode normalisiert die Events (Bearbeitung)
                 ),
                 payload=EventPayload(
                     city_source="destination_one",

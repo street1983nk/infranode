@@ -96,6 +96,7 @@ const sortedTags = [...groups.keys()].sort();
     <slot name="jsonld" />
   </head>
   <body>
+    <a class="skip-link" href="#main">{isEn ? "Skip to content" : "Zum Inhalt springen"}</a>
     <header class="topbar">
       <a class="topbar__brand" href={isEn ? "/en/" : "/"} aria-label={isEn ? "InfraNode home" : "InfraNode Startseite"}>
         <img
@@ -332,7 +333,7 @@ const sortedTags = [...groups.keys()].sort();
         </details>
       </nav>
 
-      <main class="content">
+      <main class="content" id="main">
         {isEndpointPage && <PageActions mdUrl={mdUrl} prompt={actionPrompt} lang={lang} />}
         <article data-pagefind-body data-content-root>
           <slot />

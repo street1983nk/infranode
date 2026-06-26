@@ -3,8 +3,11 @@
 Laedt Demografie-Stammwerte (Bevoelkerungsstand je Gemeinde) von der
 Regionalstatistik-GENESIS-API ueber den gepoolten httpx-Client. Der Dienst ist
 account-gated: Nutzername/Passwort kommen als ``SecretStr``-Parameter aus den
-Settings rein (NIE im Modul hartkodiert) und gelangen ausschliesslich in den
-POST-Body, NIE in das zurueckgegebene raw-dict (T-08-CRED, Negativtest).
+Settings rein (NIE im Modul hartkodiert) und gelangen ausschliesslich in die
+HTTP-Header (``username``/``password``), NIE in das zurueckgegebene raw-dict
+(T-08-CRED, Negativtest). Seit dem GENESIS-Update (Header-Auth-Pflicht, sonst
+Code 15 "nicht berechtigt") gehoeren die Credentials NICHT mehr in den Body
+(identisch zu ``fetch_genesis_table`` und dem regionalstatistik-Ingest).
 
 Sicherheit (T-08-SSRF, Tampering): Der Default-Host ist in ``_BASE`` hartkodiert.
 Der ``base_url``-Parameter (Wiederverwendungs-Vertrag fuer Plan 08-07 GENESIS
@@ -80,9 +83,10 @@ async def fetch_demographics(
     Postet AUSSCHLIESSLICH an ``f"{base_url}/data/table"`` (kein GET, T-08-GET).
     Der ``base_url`` MUSS in ``_ALLOWED_HOSTS`` liegen, sonst ``ValueError``
     (SSRF-Guard T-08-SSRF, Wiederverwendungs-Vertrag fuer Plan 08-07/Zensus).
-    Die Credentials gehen NUR in den POST-Body (``username`` /
-    ``password.get_secret_value()``) und erscheinen NIE im Rueckgabe-dict
-    (T-08-CRED, Negativtest ``str(raw)``).
+    Die Credentials gehen NUR in die HTTP-Header (``username`` /
+    ``password.get_secret_value()``; Header-Auth-Pflicht seit dem GENESIS-Update,
+    sonst Code 15) und erscheinen NIE im Rueckgabe-dict (T-08-CRED, Negativtest
+    ``str(raw)``).
 
     Die Antwort-Felder sind [ASSUMED] (Live-Abgleich Manual-Only); der Adapter
     liest defensiv ``.get()``/``[]`` aus der GENESIS-JSON-Struktur
@@ -96,13 +100,13 @@ async def fetch_demographics(
     if base_url not in _ALLOWED_HOSTS:
         raise ValueError(f"base_url nicht in der GENESIS-Allowlist: {base_url!r}")
 
-    # Credentials NUR im POST-Body. Body-Feldnamen sind [ASSUMED]-Konstanten
-    # (Live-Abgleich Manual-Only, Plan 08-01 Task 3).
+    # Credentials NUR in den HTTP-Headern (Header-Auth-Pflicht seit GENESIS-Update,
+    # sonst Code 15 "nicht berechtigt"; identisch zu fetch_genesis_table/Ingest).
+    # Body-Feldnamen sind [ASSUMED]-Konstanten (Live-Abgleich Manual-Only).
     resp = await http.post(
         f"{base_url}/data/table",
+        headers={"username": username, "password": password.get_secret_value()},
         data={
-            "username": username,
-            "password": password.get_secret_value(),
             "name": table,
             "area": "all",
             "regionalschluessel": ags,

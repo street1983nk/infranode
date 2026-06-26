@@ -27,6 +27,8 @@ gesamte Resilienz steckt in dieser Fassade.
 
 from __future__ import annotations
 
+import asyncio
+import time
 from collections.abc import Awaitable, Callable
 
 import httpx
@@ -77,6 +79,59 @@ _DEFAULT_TTL: tuple[float, float] = (60.0, 120.0)
 # (registry/source_specs.py). Quellen ohne Eintrag nutzen _DEFAULT_TTL.
 _SOURCE_TTL: dict[str, tuple[float, float]] = dict(_REGISTRY_TTL)
 
+# --- Outbound-Limits je Upstream (ToS-Compliance) -----------------------------
+# Obergrenze gleichzeitiger Upstream-Calls je Quelle. Geteilte VM-IP -> der
+# Wikidata-WDQS-Endpoint erlaubt nur ~5 parallele Queries/IP. Quellen ohne
+# Eintrag: unbegrenzt (Verhalten unveraendert).
+_SOURCE_MAX_CONCURRENCY: dict[str, int] = {"wikidata": 5}
+# Mindestabstand (Sekunden) zwischen Upstream-Calls je Quelle (Aggregat-Rate).
+# DB-Timetables-ToS: <=60 Aufrufe/Minute -> >=1.0s. Quellen ohne Eintrag: kein
+# Limit. Alle InfraNode-Nutzer teilen sich den DB-Key, daher Aggregat begrenzen.
+_SOURCE_MIN_INTERVAL_S: dict[str, float] = {"db_timetables": 1.0}
+
+_semaphores: dict[str, asyncio.Semaphore] = {}
+_rate_locks: dict[str, asyncio.Lock] = {}
+_last_call_monotonic: dict[str, float] = {}
+
+
+def _source_semaphore(source: str) -> asyncio.Semaphore | None:
+    """Lazy per-Source-Semaphore (None = unbegrenzt). Single-Loop-App: prozessweit."""
+    limit = _SOURCE_MAX_CONCURRENCY.get(source)
+    if limit is None:
+        return None
+    sem = _semaphores.get(source)
+    if sem is None:
+        sem = asyncio.Semaphore(limit)
+        _semaphores[source] = sem
+    return sem
+
+
+async def _pace(source: str) -> None:
+    """Erzwingt den Mindestabstand zwischen Calls einer Quelle (no-op ohne Eintrag)."""
+    interval = _SOURCE_MIN_INTERVAL_S.get(source)
+    if not interval:
+        return
+    lock = _rate_locks.get(source)
+    if lock is None:
+        lock = asyncio.Lock()
+        _rate_locks[source] = lock
+    async with lock:
+        wait = interval - (time.monotonic() - _last_call_monotonic.get(source, 0.0))
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _last_call_monotonic[source] = time.monotonic()
+
+
+async def _run_limited(source: str, fetch_fn: Callable[[], Awaitable]):
+    """Fuehrt ``fetch_fn`` unter Per-Source-Concurrency + Mindestabstand aus."""
+    sem = _source_semaphore(source)
+    if sem is None:
+        await _pace(source)
+        return await fetch_fn()
+    async with sem:
+        await _pace(source)
+        return await fetch_fn()
+
 
 class ResilientSourceClient:
     """Fassade: kombiniert Pool + Cache + SWR + Single-Flight + Breaker zu fetch().
@@ -109,12 +164,21 @@ class ResilientSourceClient:
         source: str,
         key: str,
         fetch_fn: Callable[[], Awaitable],
+        *,
+        store: bool = True,
     ):
         """Hole Daten der Quelle ``source`` unter ``key`` (resilient, nie blockierend).
 
         Reihenfolge: Cache (HIT/STALE/MISS) um eine Breaker-geschuetzte
         Upstream-Coroutine. Bei OPEN-Breaker oder Upstream-Fehler -> last-cache-
         Fallback (STALE-ON-ERROR) bzw. ``(None, STALE-ON-ERROR)``.
+
+        Args:
+            store: Wenn ``False``, laeuft der Call ON-DEMAND: KEIN Redis-Read/Write,
+                kein Stale-Fallback, kein SWR-Background-Refresh; nur der
+                Breaker-Schutz um den Live-Call bleibt. Fuer Quellen, deren ToS
+                das Spiegeln/Vorhalten verbieten (Tankerkoenig/MTS-K): Daten nur
+                live bei Useraktion, nie zwischengespeichert (T-08-CRED-Folge).
 
         Returns:
             ``(payload, status)``-Tupel (nie None). ``status`` ist ein
@@ -135,7 +199,7 @@ class ResilientSourceClient:
             if not breaker.allow_request():
                 raise BreakerOpen(source)
             try:
-                result = await fetch_fn()
+                result = await _run_limited(source, fetch_fn)
             except Exception:
                 breaker.record_failure()
                 if persist is not None:
@@ -145,6 +209,25 @@ class ResilientSourceClient:
             if persist is not None:
                 await persist(source, breaker)
             return result
+
+        if not store:
+            # ON-DEMAND (kein Redis-Read/Write, kein Stale, kein SWR-Refresh): nur
+            # der Live-Call hinter dem Breaker. Anbieter-ToS, die Spiegeln/Vorhalten
+            # verbieten (Tankerkoenig/MTS-K), erlauben nur Live-Abruf bei Useraktion.
+            try:
+                result = await refresh()
+                await incr_cache_status(self._redis, CacheStatus.MISS)
+                return result, CacheStatus.MISS
+            except (BreakerOpen, httpx.HTTPError) as exc:
+                log.info(
+                    "resilient_fetch_fallback",
+                    source=source,
+                    key=key,
+                    has_stale=False,
+                    error=type(exc).__name__,
+                )
+                await incr_cache_status(self._redis, CacheStatus.STALE_ON_ERROR)
+                return None, CacheStatus.STALE_ON_ERROR
 
         try:
             ttl_fresh, ttl_stale = _SOURCE_TTL.get(source, _DEFAULT_TTL)

@@ -25,12 +25,14 @@ from asgi_correlation_id import correlation_id
 from fastapi import APIRouter, Request, Response
 
 from infranode.adapters.autobahn import fetch_traffic, fetch_webcams
+from infranode.adapters.baumkataster import fetch_trees
 from infranode.adapters.berlin_radzaehl import fetch_berlin_radzaehl
 from infranode.adapters.berlin_viz import fetch_berlin_road_events
 from infranode.adapters.db_timetables import (
     fetch_station_arrivals,
     fetch_station_departures,
 )
+from infranode.adapters.denkmal import fetch_heritage
 from infranode.adapters.destination_one import fetch_events
 from infranode.adapters.divi_live import fetch_icu_live
 from infranode.adapters.dwd import fetch_weather
@@ -56,7 +58,11 @@ from infranode.adapters.muenchen_opendata import (
 )
 from infranode.adapters.muenchen_radzaehl import fetch_muenchen_radzaehl
 from infranode.adapters.openaq import fetch_air
-from infranode.adapters.overpass import _ALLOWED_TYPES, fetch_pois
+from infranode.adapters.overpass import (
+    _ALLOWED_TYPES,
+    fetch_osm_feature,
+    fetch_pois,
+)
 from infranode.adapters.parkendd import PARKENDD_CITIES, fetch_parkendd
 from infranode.adapters.pegelonline import fetch_water_level
 from infranode.adapters.smard import fetch_smard
@@ -66,6 +72,7 @@ from infranode.adapters.stuttgart_radzaehl import fetch_stuttgart_radzaehl
 from infranode.adapters.tankerkoenig import fetch_fuel_prices
 from infranode.adapters.uba import fetch_air_uba
 from infranode.adapters.wikidata import fetch_city_base
+from infranode.adapters.zensus_grid import fetch_population_density
 from infranode.api.errors import UnprocessableError, UpstreamError
 from infranode.archive.boris_db import read_land_values
 from infranode.archive.inkar_db import read_indicators
@@ -84,6 +91,7 @@ from infranode.normalization.mappers.autobahn import (
     map_autobahn_traffic,
     map_autobahn_webcams,
 )
+from infranode.normalization.mappers.baumkataster import map_trees
 from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
 from infranode.normalization.mappers.bike_counts import (
     map_berlin_radzaehl,
@@ -96,6 +104,7 @@ from infranode.normalization.mappers.db_timetables import (
     map_station_arrivals,
     map_station_departures,
 )
+from infranode.normalization.mappers.denkmal import map_heritage
 from infranode.normalization.mappers.destination_one import (
     map_destination_one_events,
 )
@@ -126,7 +135,7 @@ from infranode.normalization.mappers.muenchen_opendata import (
 )
 from infranode.normalization.mappers.muenchen_radzaehl import map_muenchen_radzaehl
 from infranode.normalization.mappers.openaq import map_openaq_air
-from infranode.normalization.mappers.overpass import map_overpass_pois
+from infranode.normalization.mappers.overpass import map_osm_feature, map_overpass_pois
 from infranode.normalization.mappers.parkendd import map_parkendd
 from infranode.normalization.mappers.pegelonline import map_water_level
 from infranode.normalization.mappers.regionalstatistik import (
@@ -144,6 +153,7 @@ from infranode.normalization.mappers.tankerkoenig import map_fuel_prices
 from infranode.normalization.mappers.uba import map_air_uba
 from infranode.normalization.mappers.unfallatlas import map_accidents
 from infranode.normalization.mappers.wikidata import map_wikidata_city
+from infranode.normalization.mappers.zensus_grid import map_population_density
 from infranode.registry import get_city, list_cities
 from infranode.registry.catalog import CITY_DATA_CATALOG
 from infranode.registry.coverage import PARTIAL_COVERAGE, covered_cities, is_covered
@@ -1478,6 +1488,7 @@ async def city_pois(slug: str, request: Request, type: str) -> dict:
             slug=entry.slug,
             osm_relation=entry.osm_relation,
             poi_type=type,
+            base_url=Settings().overpass_base_url,
         )
 
     raw, status = await client.fetch("overpass", key, fetch_fn)
@@ -1495,6 +1506,333 @@ async def city_pois(slug: str, request: Request, type: str) -> dict:
         raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
     )
     await append_record(record, source="osm")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+async def _osm_feature_response(request: Request, entry, feature: str) -> dict:
+    """Geteilte Logik aller OSM-Feature-Endpunkte (Overpass, Tier B copyleft).
+
+    Identischer Ablauf wie ``/pois`` (DATA-04/06): Quellen-Toggle (deaktiviert ->
+    200 ``source_status=disabled``, nie 5xx), resilienter Fetch ueber die Fassade
+    (``feature`` fliesst per ``params`` als sha256-Hash in den Cache-Key, Cache-
+    Poisoning-Schutz T-05-10), None-Guard (toter Upstream ohne Cache -> 503), dann
+    Mapping mit ODbL-Attribution und Daten-Envelope. ``feature`` ist stets ein
+    festes, intern gesetztes Literal aus ``_OSM_FEATURES`` (kein User-Input)."""
+    if not Settings().enable_overpass:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    # feature als params -> sha256-Hash im Cache-Key (Cache-Poisoning-Schutz).
+    key = build_cache_key("overpass", city_slug=entry.slug, params={"feature": feature})
+
+    async def fetch_fn():
+        return await fetch_osm_feature(
+            request.app.state.http,
+            slug=entry.slug,
+            osm_relation=entry.osm_relation,
+            feature=feature,
+            base_url=Settings().overpass_base_url,
+        )
+
+    raw, status = await client.fetch("overpass", key, fetch_fn)
+
+    # Pitfall 4: raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper
+    # geprueft werden, sonst 500. 503 mit selbst-korrigierendem Hint (DX-06).
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'overpass' voruebergehend nicht erreichbar, kein gecachter "
+            "Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_osm_feature(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="osm")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/playgrounds")
+async def city_playgrounds(slug: str, request: Request) -> dict:
+    """Liefert oeffentliche Spielplaetze (OSM ``leisure=playground``, Tier B)."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "playgrounds")
+
+
+@router.get("/cities/{slug}/drinking-water")
+async def city_drinking_water(slug: str, request: Request) -> dict:
+    """Liefert oeffentliche Trinkwasserbrunnen (OSM ``amenity=drinking_water``).
+
+    Hinweis: Die OSM-Abdeckung ist je Stadt unterschiedlich vollstaendig."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "drinking-water")
+
+
+@router.get("/cities/{slug}/markets")
+async def city_markets(slug: str, request: Request) -> dict:
+    """Liefert Wochen-/Marktplaetze (OSM ``amenity=marketplace``, Tier B).
+
+    Markttage/Zeiten kommen als optionales ``opening_hours`` je Element (oft leer)."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "markets")
+
+
+@router.get("/cities/{slug}/parcel-lockers")
+async def city_parcel_lockers(slug: str, request: Request) -> dict:
+    """Liefert Paketstationen/Locker (OSM ``amenity=parcel_locker``, Tier B).
+
+    ``operator``/``brand`` (DHL/Amazon/DPD/Hermes/GLS) je Element, wenn getaggt."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "parcel-lockers")
+
+
+@router.get("/cities/{slug}/post-offices")
+async def city_post_offices(slug: str, request: Request) -> dict:
+    """Liefert Postfilialen (OSM ``amenity=post_office``, Tier B)."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "post-offices")
+
+
+@router.get("/cities/{slug}/post-boxes")
+async def city_post_boxes(slug: str, request: Request) -> dict:
+    """Liefert oeffentliche Briefkaesten (OSM ``amenity=post_box``, Tier B).
+
+    Leerungszeiten kommen als optionales ``collection_times`` je Element (~3/4
+    der Briefkaesten getaggt; ``null``/fehlend = Datenpunkt-Luecke, kein Fehler)."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "post-boxes")
+
+
+@router.get("/cities/{slug}/public-wifi")
+async def city_public_wifi(slug: str, request: Request) -> dict:
+    """Liefert oeffentliche WLAN-Standorte (OSM ``internet_access=wlan``, Tier B)."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "public-wifi")
+
+
+@router.get("/cities/{slug}/recycling-centres")
+async def city_recycling_centres(slug: str, request: Request) -> dict:
+    """Liefert Recycling-/Wertstoffhoefe (OSM ``amenity=recycling`` +
+    ``recycling_type=centre``, Tier B). ``opening_hours`` je Element, wenn getaggt."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "recycling-centres")
+
+
+@router.get("/cities/{slug}/government-offices")
+async def city_government_offices(slug: str, request: Request) -> dict:
+    """Liefert Behoerden/Aemter (OSM ``office=government`` + ``amenity=townhall``).
+
+    Konsolidiert Buergeraemter, Verwaltungs- und sonstige Aemter; der Subtyp steht
+    je Element als optionales ``government``-Tag."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "government-offices")
+
+
+@router.get("/cities/{slug}/education")
+async def city_education(slug: str, request: Request) -> dict:
+    """Liefert Bildungseinrichtungen (OSM ``amenity=school/college/university/
+    kindergarten``, Tier B)."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "education")
+
+
+@router.get("/cities/{slug}/heritage")
+async def city_heritage(slug: str, request: Request) -> dict:
+    """Liefert Bau-/Denkmal-Objekte je Stadt (Denkmalliste, Land-WFS).
+
+    Ablauf (DATA-OSM-Tier-2): Register-Lookup (unbekannter Slug -> 404), Coverage-
+    Guard (Denkmalschutz ist Landessache -> nur Staedte in Laendern mit
+    verifiziertem offenem WFS, sonst 200 ``not_covered`` + covered_cities),
+    Quellen-Toggle (deaktiviert -> 200 ``disabled``), resilienter WFS-Fetch
+    (GeoJSON, Repraesentativpunkt je Objekt), Mapping mit landesabhaengiger Lizenz
+    (Berlin DL-DE/Zero 2.0), dann der Daten-Envelope. Toter Upstream ohne Cache
+    -> 503 mit Hint auf GET /api/v1/health."""
+    entry = get_city(slug)
+
+    # Coverage-Guard (foederiert je Bundesland): nicht abgedeckte Stadt -> ehrlich
+    # not_covered (200) + covered_cities, klar unterscheidbar von no_data.
+    if not is_covered("heritage", entry.slug):
+        return _not_covered("heritage")
+
+    # Quellen-Toggle frisch lesen (Env-Override-tauglich). DATA-06.
+    if not Settings().enable_denkmal:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("denkmal", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_heritage(
+            request.app.state.http,
+            slug=entry.slug,
+            state=entry.state,
+        )
+
+    raw, status = await client.fetch("denkmal", key, fetch_fn)
+
+    # Pitfall 4: raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper
+    # geprueft werden, sonst 500. 503 mit selbst-korrigierendem Hint (DX-06).
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'denkmal' voruebergehend nicht erreichbar, kein gecachter "
+            "Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_heritage(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="denkmal")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/tree-cadastre")
+async def city_tree_cadastre(slug: str, request: Request) -> dict:
+    """Liefert das staedtische Baumkataster (kommunaler WFS, Tier A).
+
+    Ablauf (DATA-OSM-Tier-2): Register-Lookup (unbekannter Slug -> 404), Coverage-
+    Guard (Baumkataster ist kommunal -> nur Staedte mit verifiziertem offenem WFS,
+    sonst 200 ``not_covered`` + covered_cities), Quellen-Toggle (deaktiviert -> 200
+    ``disabled``), resilienter WFS-Fetch (GeoJSON-Punkte, gedeckelte Stichprobe),
+    Mapping mit stadtabhaengiger Lizenz (Berlin DL-DE/Zero 2.0), dann der Daten-
+    Envelope. HINWEIS: Kataster sind sehr gross; die Antwort ist eine gedeckelte
+    Stichprobe (``count`` = ausgelieferte Baeume, nicht der Gesamtbestand). Toter
+    Upstream ohne Cache -> 503 mit Hint auf GET /api/v1/health."""
+    entry = get_city(slug)
+
+    # Coverage-Guard (per Stadt): nicht abgedeckt -> ehrlich not_covered (200).
+    if not is_covered("tree-cadastre", entry.slug):
+        return _not_covered("tree-cadastre")
+
+    if not Settings().enable_baumkataster:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("baumkataster", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_trees(request.app.state.http, slug=entry.slug)
+
+    raw, status = await client.fetch("baumkataster", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'baumkataster' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_trees(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="baumkataster")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/population-density")
+async def city_population_density(slug: str, request: Request) -> dict:
+    """Liefert die Einwohnerdichte je Stadt aus dem Zensus-2022-100m-Gitter.
+
+    Ablauf (DATA-OSM-Tier-2): Register-Lookup (unbekannter Slug -> 404), Quellen-
+    Toggle (deaktiviert -> 200 ``disabled``), resilienter Fetch (server-seitige
+    Aggregation ueber die Gitterzellen mit der Stadt-AGS: Summe Einwohner + Zahl
+    bewohnter Zellen), Mapping (bewohnte Flaeche + Dichte je km2). Flaechendeckend
+    (jede Stadt hat eine AGS); liefert eine Stadt keine Gitterzellen, ist
+    ``source_status="no_data"`` (data=null). Toter Upstream ohne Cache -> 503 mit
+    Hint auf GET /api/v1/health."""
+    entry = get_city(slug)
+
+    if not Settings().enable_zensus_grid:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("zensus_grid", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_population_density(
+            request.app.state.http, slug=entry.slug, ags=entry.ags
+        )
+
+    raw, status = await client.fetch("zensus_grid", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'zensus_grid' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # Keine bewohnten Zellen -> ehrlich no_data (data=null), kein leeres "ok".
+    if not raw.get("populated_cells"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "no_data",
+                "cache_status": status,
+            },
+        }
+
+    record = map_population_density(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="zensus_grid")
 
     return {
         "data": record.model_dump(mode="json"),
@@ -3213,7 +3551,10 @@ async def city_fuel_prices(slug: str, request: Request) -> dict:
             apikey=apikey,
         )
 
-    raw, status = await client.fetch("tankerkoenig", cache_key, fetch_fn)
+    # ON-DEMAND (store=False): Tankerkoenig/MTS-K-ToS verbieten Spiegeln/Vorhalten
+    # ("nur aktuelle Preise auf Useraktion"). Daher KEIN Redis-Cache, kein Stale,
+    # kein SWR-Refresh und kein persistenter Schreibpfad (auch kein Hintergrund-Job).
+    raw, status = await client.fetch("tankerkoenig", cache_key, fetch_fn, store=False)
     if raw is None:
         raise UpstreamError(
             "Quelle 'tankerkoenig' voruebergehend nicht erreichbar, kein Cache.",
@@ -3239,7 +3580,9 @@ async def city_fuel_prices(slug: str, request: Request) -> dict:
         lat=entry.geo.lat,
         lon=entry.geo.lon,
     )
-    await append_record(record, source="tankerkoenig")
+    # KEIN append_record: Tankerkoenig-ToS untersagen das Vorhalten/Archivieren der
+    # Preise (on-demand, nur Live-Anzeige). Die Quelle wird daher nirgends
+    # persistiert, sondern ausschliesslich live bei Useraktion ausgeliefert.
     return {
         "data": record.model_dump(mode="json"),
         "meta": {

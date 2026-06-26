@@ -228,3 +228,16 @@ class SourceId(StrEnum):
     # heterogen je Stadt -> UNKNOWN/Tier C (OpenAQ-Muster), Attribution "ParkenDD".
     # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
     PARKENDD = "parkendd"
+    # DATA-OSM-Tier-2: Denkmallisten je Bundesland (Landessache, foederiert wie
+    # BORIS). On-demand-WFS (GeoJSON), Repraesentativpunkt je Objekt. Berlin
+    # verifiziert (DL-DE/Zero 2.0 = Tier A); Bayern CC-BY-ND = NICHT nutzbar
+    # (fail-closed). Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    DENKMAL = "denkmal"
+    # DATA-OSM-Tier-2: Baumkataster je Stadt (kommunales Open Data, On-demand-WFS,
+    # Punkte). Berlin verifiziert (DL-DE/Zero 2.0 = Tier A, ~900k Strassenbaeume,
+    # gedeckelte Stichprobe). Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    BAUMKATASTER = "baumkataster"
+    # DATA-OSM-Tier-2: Zensus-2022-100m-Gitter (keyloser ArcGIS-FeatureServer, NICHT
+    # die account-gated GENESIS-ZENSUS-POST-API). Einwohnerdichte je Stadt exakt per
+    # AGS-Aggregation. DL-DE/BY 2.0 = Tier A. Toggle == SourceId == _KNOWN_SOURCES.
+    ZENSUS_GRID = "zensus_grid"

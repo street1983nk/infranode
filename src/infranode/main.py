@@ -33,7 +33,7 @@ from .api.v1.ratelimit import limiter, real_client_ip
 from .config import get_settings
 from .infra.etag import cache_control_for, compute_etag
 from .infra.http import close_http_client, create_http_client
-from .infra.metrics import incr_request, push_log, record_consumer
+from .infra.metrics import incr_daily, incr_request, push_log, record_consumer
 from .infra.mobilithek import close_mobilithek_client, create_mobilithek_client
 from .infra.redis import close_redis_pool, create_redis_pool
 from .logging import configure_logging
@@ -257,6 +257,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             if p.startswith("/api/v1/") and not p.startswith(
                 ("/api/v1/health", "/api/v1/openapi")
             ):
+                now = datetime.now(UTC)
                 ident = "mcp" if mcp_resource else real_client_ip(request)
                 await record_consumer(
                     redis,
@@ -264,7 +265,13 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                     user_agent=request.headers.get("user-agent", ""),
                     path=request.url.path,
                     status_code=response.status_code,
-                    now=datetime.now(UTC),
+                    now=now,
+                )
+                # Tages-Counter je Kanal (api|mcp) fuer den taeglichen 00:05-Digest.
+                # Gleiche Abgrenzung wie das Consumer-Tracking (nur echte Datenabrufe
+                # unter /api/v1/, ohne Health/OpenAPI); MCP getrennt via Header.
+                await incr_daily(
+                    redis, channel="mcp" if mcp_resource else "api", now=now
                 )
         except Exception as exc:  # noqa: BLE001 - Metrik-Verlust crasht nie den Request
             # Graceful Degradation: ein Metrik-/Redis-Fehler darf den Request-Pfad

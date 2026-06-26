@@ -48,6 +48,12 @@ def map_license(raw: str | None) -> tuple[LicenseId, LicenseTier]:
         return LicenseId.DL_DE_BY_2_0, LicenseTier.A
     if "cc0" in s or "zero" in s or "publicdomain" in s:
         return LicenseId.CC0, LicenseTier.A
-    if is_cc and "by" in s:  # CC-BY (ohne SA) -> Tier A
+    # CC-*-ND (No Derivatives) VOR cc-by: InfraNode normalisiert (= Bearbeitung),
+    # was ND untersagt. Daher NIE Tier A, sondern Fail-safe Tier C (der aufrufende
+    # Mapper schliesst ND-Records zusaetzlich ganz aus). ND ist stets "by-nd" ->
+    # Substring "by nd" matcht Kuerzel und URL, ohne falsche "nd"-Teiltreffer.
+    if is_cc and "by nd" in s:
+        return LicenseId.UNKNOWN, LicenseTier.C
+    if is_cc and "by" in s:  # CC-BY (ohne SA/ND) -> Tier A
         return LicenseId.CC_BY_4_0, LicenseTier.A
     return LicenseId.UNKNOWN, LicenseTier.C  # Fail-safe: unbekannt -> NIE Tier A

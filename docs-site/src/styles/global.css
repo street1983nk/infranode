@@ -66,6 +66,26 @@ code {
   font-size: 0.9em;
 }
 
+/* Skip-Link (A11y): offscreen, wird bei Tastatur-Fokus sichtbar oben links.
+   Footer wirbt mit "barrierefrei" -> Tastatur-Nutzer ueberspringen Topbar/Nav. */
+.skip-link {
+  position: absolute;
+  left: 0.5rem;
+  top: -3rem;
+  z-index: 100;
+  padding: 0.5rem 0.85rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  transition: top 0.15s ease;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+  text-decoration: none;
+}
+
 /* Topbar */
 .topbar {
   position: sticky;
@@ -642,6 +662,14 @@ code {
   padding: 0 0.1rem;
 }
 
+/* Leerzustand/Status der Suche (D-09): unaufdringliche Meldung statt leerer Box */
+.search__msg {
+  margin: 0;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.88rem;
+  color: var(--fg-muted);
+}
+
 /* Responsive: einspaltig auf kleinen Viewports */
 @media (max-width: 1080px) {
   .layout {
@@ -973,6 +1001,17 @@ code {
   .content table code {
     overflow-wrap: break-word;
     word-break: break-word;
+  }
+  /* AUSNAHME Parameter-/Tool-Tabellen (.params): Bezeichner wie
+     get_city_overview, demographics, air_quality_live oder data[].attribution
+     duerfen NIE mitten im Wort brechen (sah aus wie "demo graph ics"). Jeder
+     Code-Token bleibt als Ganzes; die Namensspalte nimmt ihre Breite, die
+     Beschreibung wrappt daneben, und falls es doch zu breit wird, scrollt die
+     Tabelle horizontal (overflow-x:auto, s.u.) statt den Namen zu zerhacken. */
+  .content .params code {
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
   }
   /* Tabellen ohne eigenes Mobil-Layout (alle ausser .cov) scrollen intern,
      statt die ganze Seite zu verbreitern. */

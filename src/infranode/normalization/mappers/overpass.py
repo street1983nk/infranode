@@ -75,3 +75,55 @@ def map_overpass_pois(
             items=items,
         ),
     )
+
+
+def map_osm_feature(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet eine generische OSM-Feature-Datenart auf einen ``CanonicalRecord`` ab.
+
+    Wie ``map_overpass_pois``, aber mit zusaetzlichen, je Feature konfigurierten
+    OSM-Tag-Feldern (``raw["extra_tags"]``, z.B. ``collection_times`` am Briefkasten
+    oder ``opening_hours`` am Markt). Ein Extra-Tag wird nur gesetzt, wenn das
+    Element es traegt (kein ``null``-Rauschen). Rein, deterministisch (kein
+    ``datetime.now()``), ODbL/Tier B wie der POI-Mapper.
+    """
+    extra_tags = raw.get("extra_tags", [])
+    items = []
+    for element in raw["elements"]:
+        tags = element.get("tags", {})
+        item = {
+            "name": tags.get("name"),
+            # node: lat/lon direkt; way/relation (out center): aus center.
+            "lat": element.get("lat") or (element.get("center") or {}).get("lat"),
+            "lon": element.get("lon") or (element.get("center") or {}).get("lon"),
+        }
+        for tag in extra_tags:
+            value = tags.get(tag)
+            if value is not None:
+                item[tag] = value
+        items.append(item)
+    return CanonicalRecord(
+        city_slug=raw["slug"],
+        geo=None,
+        observed_at=None,
+        retrieved_at=retrieved_at,
+        source=SourceId.OSM,
+        license_id=LicenseId.ODBL,
+        license_tier=LicenseTier.B,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        attribution=Attribution(
+            text="© OpenStreetMap contributors",
+            license_url=_ODBL_URL,
+        ),
+        payload=PoiPayload(
+            poi_type=raw["poi_type"],
+            count=len(items),
+            items=items,
+        ),
+    )

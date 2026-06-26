@@ -354,6 +354,24 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="ParkenDD",
         ttl=(300.0, 3600.0),
     ),
+    SourceSpec(
+        name="denkmal",
+        license_id="dl_de_zero_2_0",
+        attribution="Geoportal Berlin / Landesdenkmalamt Berlin, Denkmaldatenbank",
+        ttl=(86400.0, 2592000.0),
+    ),
+    SourceSpec(
+        name="baumkataster",
+        license_id="dl_de_zero_2_0",
+        attribution="Geoportal Berlin / Straßen- und Anlagenbaumbestand",
+        ttl=(86400.0, 2592000.0),
+    ),
+    SourceSpec(
+        name="zensus_grid",
+        license_id="dl_de_by_2_0",
+        attribution="© Statistische Ämter des Bundes und der Länder, Zensus 2022",
+        ttl=(604800.0, 2592000.0),
+    ),
 )
 
 # --- Abgeleitete Sichten (Rueckwaerts-kompatibel zu den alten Strukturen) ---

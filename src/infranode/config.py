@@ -146,6 +146,12 @@ class SourceToggleSettings(BaseSettings):
     enable_openaq: bool = False
     enable_dwd: bool = True
     enable_overpass: bool = True
+    # Overpass-Endpunkt operator-konfigurierbar (INFRANODE_OVERPASS_BASE_URL). Die
+    # oeffentliche Instanz untersagt Drittnutzer-Backends im Dauerbetrieb (Fair-Use);
+    # fuer Produktion auf eine eigene Instanz (Planet-Dump) oder einen kommerziellen
+    # Dienst (z.B. Geofabrik) umstellen. Env = Operator-Input (kein User-Input) ->
+    # SSRF-Invariante bleibt gewahrt.
+    overpass_base_url: str = "https://overpass-api.de/api/interpreter"
     enable_autobahn: bool = True
     enable_hvv: bool = False
     enable_delfi: bool = False
@@ -219,6 +225,15 @@ class SourceToggleSettings(BaseSettings):
     # DATA-40: ParkenDD-Aggregator (keylos) = bevorzugte Live-Parkbelegung fuer
     # viele Staedte. Default True (keylos). Loest /live/dortmund/parking ab (Dedup).
     enable_parkendd: bool = True
+    # DATA-OSM-Tier-2: Denkmallisten je Bundesland (On-demand-WFS, keylos). Default
+    # True. Coverage-gated (registry.coverage), nur verifizierte offene Laender.
+    enable_denkmal: bool = True
+    # DATA-OSM-Tier-2: Baumkataster je Stadt (kommunaler On-demand-WFS, keylos).
+    # Default True. Coverage-gated, nur verifizierte offen lizenzierte Staedte.
+    enable_baumkataster: bool = True
+    # DATA-OSM-Tier-2: Zensus-2022-100m-Gitter (keyloser ArcGIS-FeatureServer) fuer
+    # die Einwohnerdichte je Stadt. Default True (keylos, DL-DE/BY).
+    enable_zensus_grid: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True

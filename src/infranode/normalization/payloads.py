@@ -699,6 +699,27 @@ class LandValuesPayload(BaseModel):
     bbox_radius_deg: float | None = None
 
 
+class PopulationDensityPayload(BaseModel):
+    """Einwohnerdichte je Stadt aus dem Zensus-2022-100m-Gitter (Tier A).
+
+    Aggregiert EXAKT ueber die Gitterzellen mit der Stadt-AGS (kein Bounding-Box-
+    Schnitt): ``population`` (Summe der Einwohner ueber alle bewohnten Zellen),
+    ``populated_cells`` (Zahl der bewohnten 100m-Zellen), ``populated_area_km2``
+    (= ``populated_cells`` * 0.01) und ``density_per_km2`` (Einwohner je km2 ueber
+    die BEWOHNTE Flaeche, nicht die Gesamtflaeche der Stadt; ehrliche Methoden-
+    Transparenz, da Wald/Wasser/unbewohnte Zellen ausgeklammert sind). ``grid``
+    nennt die Aufloesung, ``reference_year`` das Zensus-Jahr.
+    """
+
+    kind: Literal["population_density"] = "population_density"
+    population: int | None = None
+    populated_cells: int = 0
+    populated_area_km2: float | None = None
+    density_per_km2: float | None = None
+    grid: str = "100m"
+    reference_year: int = 2022
+
+
 class TaxRatesPayload(BaseModel):
     """Realsteuer-Hebesaetze einer Gemeinde (Regionalstatistik 71231, Tier A, DATA-37).
 
@@ -821,6 +842,7 @@ PayloadUnion = Annotated[
     | SolarRoofsPayload
     | IndicatorsPayload
     | LandValuesPayload
+    | PopulationDensityPayload
     | TaxRatesPayload
     | BusinessRegistrationsPayload
     | StationCatalogPayload
