@@ -161,6 +161,9 @@ _register(tools.heritage)
 _register(tools.tree_cadastre)
 # DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Staedte).
 _register(tools.population_density)
+# TENDER-05/06: Oeffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
+# OCDS, CC0/Tier A). Zieht Live-/Store-Daten von der API -> open_world=True.
+_register(tools.public_tenders)
 
 
 # MCP Resources: expose the coverage catalog as browsable resources, so clients

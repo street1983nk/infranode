@@ -1201,6 +1201,109 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/public-tenders:
+    get:
+      tags: [cities]
+      summary: Öffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de, Tier A)
+      x-summary-en: Public procurement notices per city (oeffentlichevergabe.de, Tier A)
+      description: >-
+        Öffentliche Auftragsbekanntmachungen einer Stadt aus dem
+        Bekanntmachungsdienst des Bundes (oeffentlichevergabe.de, OCDS): laufende
+        Ausschreibungen und vergebene Aufträge, je Bekanntmachung Titel, Status,
+        Auftraggeber, Wert, Fristen und Quell-Link. Read-only aus dem
+        deduplizierten Store (kein Live-Pull im Request-Pfad). Filter status
+        (active/complete) und match (buyer_city/place_of_performance), mit
+        Pagination (limit/offset). Abdeckung wächst: Oberschwelle vollständig,
+        Unterschwelle ab 2024 schrittweise. Keine Bekanntmachungen -> 200
+        source_status="no_data", data=null (ehrlich). CC0 (Tier A). Deaktiviert
+        -> 200 source_status="disabled".
+      x-description-en: >-
+        A city's public procurement notices from the German federal procurement
+        publication service (oeffentlichevergabe.de, OCDS): running tenders and
+        awarded contracts, each with title, status, buyer, value, deadlines and a
+        source link. Read-only from the deduplicated store (no live pull in the
+        request path). Filter by status (active/complete) and match
+        (buyer_city/place_of_performance), with pagination (limit/offset).
+        Coverage is growing: above-threshold complete, below-threshold
+        incrementally from 2024. No notices -> 200 source_status="no_data",
+        data=null (honest). CC0 (Tier A). Disabled -> 200
+        source_status="disabled".
+      operationId: getCityPublicTenders
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          description: OCDS-Status-Filter (active = laufend, complete = vergeben).
+          schema:
+            type: string
+            enum: [active, complete]
+        - name: match
+          in: query
+          required: false
+          description: >-
+            Stadt-Zuordnung (buyer_city = Sitz des Amts, place_of_performance =
+            Erfüllungsort).
+          schema:
+            type: string
+            enum: [buyer_city, place_of_performance]
+        - name: limit
+          in: query
+          required: false
+          description: Seitengröße (Default 50, Cap 200).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          description: Seiten-Offset (>= 0); Overflow -> leere Seite, no_data.
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: >-
+            Auftragsvergabe-Envelope (aggregierte notices-Liste + count, oder null
+            bei no_data/disabled)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - type: object
+                        properties:
+                          notices:
+                            type: array
+                            items:
+                              type: object
+                          count:
+                            type: integer
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "422":
+          description: Ungültiger Query-Parameter (status/match/limit/offset)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/tree-cadastre:
     get:
       tags: [cities]

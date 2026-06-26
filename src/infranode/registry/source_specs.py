@@ -365,6 +365,15 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="© Statistische Ämter des Bundes und der Länder, Zensus 2022",
         ttl=(604800.0, 2592000.0),
     ),
+    SourceSpec(
+        name="oeffentlichevergabe",
+        license_id="cc0",
+        attribution=(
+            "Datenservice Oeffentlicher Einkauf (oeffentlichevergabe.de) / "
+            "Beschaffungsamt des BMI"
+        ),
+        ttl=(86400.0, 2592000.0),
+    ),
 )
 
 # --- Abgeleitete Sichten (Rueckwaerts-kompatibel zu den alten Strukturen) ---

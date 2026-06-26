@@ -82,6 +82,7 @@ from infranode.archive.regionalstatistik_db import (
     read_tax_rates,
 )
 from infranode.archive.store import append_record, read_records
+from infranode.archive.tender_db import read_public_tenders
 from infranode.archive.transit_store import read_stops
 from infranode.archive.unfallatlas_db import read_accidents
 from infranode.config import Settings
@@ -4054,5 +4055,146 @@ async def city_icu_live(slug: str, request: Request) -> dict:
             "correlation_id": correlation_id.get(),
             "source_status": "ok",
             "cache_status": status,
+        },
+    }
+
+
+# OCDS-Status-Allowlist (T-21-INPUT): nur diese Werte gelangen ueberhaupt in den
+# parametrisierten Reader. "active" = laufende Ausschreibung, "complete" = bereits
+# vergeben (OCDS-tender.status). Ein unbekannter Wert -> 422, BEVOR roher Input in
+# die Query geht (kein f-string/%-SQL am Aufrufort, alle Werte ?-gebunden).
+_TENDER_STATUS_ALLOWED = frozenset({"active", "complete"})
+
+# match-Allowlist (T-21-INPUT): Bezug der Stadt-Zuordnung. "buyer_city" = Sitz des
+# auftraggebenden Amts, "place_of_performance" = Erfuellungsort der Leistung.
+_TENDER_MATCH_ALLOWED = frozenset({"buyer_city", "place_of_performance"})
+
+# Pagination-Cap: schuetzt vor unbeschraenkten Seiten (Best-Practice #8).
+_TENDER_LIMIT_DEFAULT = 50
+_TENDER_LIMIT_MAX = 200
+
+
+def _tender_int_param(
+    raw: str | None, *, name: str, default: int, minimum: int, maximum: int
+) -> int:
+    """Parst einen int-Query-Parameter mit Default + Cap (422 bei Unsinn).
+
+    Nicht-numerisch -> 422 (UnprocessableError, T-21-INPUT). Negativ -> 422.
+    Ueber dem Cap -> auf den Cap geklemmt (kein Fehler, Best-Practice #8).
+    """
+    if raw is None:
+        return default
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise UnprocessableError(
+            f"Query-Parameter '{name}' muss eine ganze Zahl sein.",
+            hint=f"Beispiel: ?{name}={default}",
+        ) from exc
+    if value < minimum:
+        raise UnprocessableError(
+            f"Query-Parameter '{name}' darf nicht kleiner als {minimum} sein.",
+        )
+    return min(value, maximum)
+
+
+@router.get("/cities/{slug}/public-tenders")
+async def city_public_tenders(slug: str, request: Request) -> dict:
+    """Liefert oeffentliche Auftragsvergaben EINER Stadt (TENDER-01/05, CC0/Tier A).
+
+    Ablauf (analog ``city_energy``, API-01, GOV-02/03): Register-Lookup
+    (unbekannter Slug -> 404 ueber den zentralen Handler), Quellen-Toggle-Pruefung
+    (deaktiviert -> 200 ``source_status=disabled``, nie 5xx), Query-Validierung
+    (status/match gegen Allowlist, sonst 422; limit/offset int + Cap), dann ein
+    parametrisierter, read-only Read ueber ``read_public_tenders`` aus dem
+    deduplizierten SQLite-Store (Plan 21-04).
+
+    KRITISCH (T-21-REQINGEST, kein Live-ZIP im Request-Pfad): Diese Route liest
+    AUSSCHLIESSLICH aus dem vorverarbeiteten Store, ruft NIE ``fetch_notice_export``
+    /``resilient_client`` und schreibt NIE ``append_record``. Die OCDS-ZIPs werden
+    offline vom Batch-Ingest (``ingest.oeffentlichevergabe``) gezogen.
+
+    Optionale Query-Filter (parametrisiert in den Reader, T-21-INPUT/T-08-SQLI):
+    - ``status``: ``active`` (laufend) | ``complete`` (vergeben)
+    - ``match``: ``buyer_city`` | ``place_of_performance``
+    - ``limit`` (Default 50, Cap 200) / ``offset`` (>=0) fuer Pagination
+
+    Drei ``source_status``-Werte:
+    - ``disabled``: ``enable_oeffentlichevergabe`` per Env-Toggle aus -> data None
+    - ``no_data``: Quelle aktiv, aber keine Bekanntmachungen fuer die Stadt
+      (Store/Tabelle/Zeilen fehlen -> ``read_public_tenders`` liefert []) ->
+      data None, KEIN 5xx
+    - ``ok``: Bekanntmachungen vorhanden -> aggregierter Envelope
+      (``notices``-Liste + ``count``)
+    """
+    entry = get_city(slug)
+
+    # Quellen-Toggle frisch lesen (Settings() statt app.state.settings, damit der
+    # per-Test gesetzte Env-Override greift). DATA-06: aus -> 200 disabled.
+    s = Settings()
+    if not s.enable_oeffentlichevergabe:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    # Query-Validierung VOR der Store-Lesung (T-21-INPUT): status/match gegen
+    # Allowlist (sonst 422, kein roher Input in die Query), limit/offset int+Cap.
+    status_filter = request.query_params.get("status")
+    if status_filter is not None and status_filter not in _TENDER_STATUS_ALLOWED:
+        raise UnprocessableError(
+            "Query-Parameter 'status' ist unzulaessig.",
+            hint="Erlaubt: active (laufend), complete (vergeben).",
+        )
+
+    match_filter = request.query_params.get("match")
+    if match_filter is not None and match_filter not in _TENDER_MATCH_ALLOWED:
+        raise UnprocessableError(
+            "Query-Parameter 'match' ist unzulaessig.",
+            hint="Erlaubt: buyer_city, place_of_performance.",
+        )
+
+    limit = _tender_int_param(
+        request.query_params.get("limit"),
+        name="limit",
+        default=_TENDER_LIMIT_DEFAULT,
+        minimum=1,
+        maximum=_TENDER_LIMIT_MAX,
+    )
+    offset = _tender_int_param(
+        request.query_params.get("offset"),
+        name="offset",
+        default=0,
+        minimum=0,
+        maximum=2_000_000_000,
+    )
+
+    # Read-only Store-Lesung (NIE Live-ZIP, T-21-REQINGEST). Fehlender Store/Tabelle
+    # -> [] -> no_data, kein 5xx. Alle Filterwerte ?-gebunden im Reader (T-08-SQLI).
+    rows = read_public_tenders(
+        entry.slug,
+        status=status_filter,
+        match=match_filter,
+        limit=limit,
+        offset=offset,
+    )
+
+    if not rows:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "no_data",
+            },
+        }
+
+    return {
+        "data": {"notices": rows, "count": len(rows)},
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
         },
     }

@@ -818,6 +818,39 @@ class SolarPayload(BaseModel):
     monthly: list[dict] = Field(default_factory=list)
 
 
+class PublicTenderPayload(BaseModel):
+    """Oeffentliche Auftragsvergabe je Stadt (OCDS, Tier A, DATA-21).
+
+    Bildet eine OCDS-1.1-Bekanntmachung (Notice) auf das kanonische Schema ab.
+    ``notice_id`` + ``notice_version`` bilden den fachlichen Dedup-Schluessel
+    (juengste Version gewinnt). ``match`` weist aus, ueber welchen Pfad die
+    Bekanntmachung der Stadt zugeordnet wurde ("buyer_city" = Auftraggeber-Sitz,
+    "place_of_performance" = Erfuellungsort): eine Bekanntmachung kann beide
+    Pfade tragen. ``buyer_city`` traegt den (slugifizierten) Stadt-Bezug, ``nuts``
+    den NUTS-3-Code des Auftraggebers/Erfuellungsorts. Mutable Liste IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["public_tender"] = "public_tender"
+    notice_id: str
+    notice_version: str
+    notice_type: str | None = None
+    status: str | None = None
+    title: str | None = None
+    buyer_name: str | None = None
+    buyer_city: str | None = None
+    buyer_postal_code: str | None = None
+    nuts: str | None = None
+    cpv: str | None = None
+    value: float | None = None
+    currency: str | None = None
+    publication_date: str | None = None
+    deadline: str | None = None
+    award_date: str | None = None
+    match: list[str] = Field(default_factory=list)
+    source_url: str | None = None
+
+
 PayloadUnion = Annotated[
     CityBaseDataPayload
     | AirQualityPayload
@@ -862,6 +895,7 @@ PayloadUnion = Annotated[
     | ChargingStatusPayload
     | TransitDeparturePayload
     | TransitTripPayload
-    | TransitRouteStatusPayload,
+    | TransitRouteStatusPayload
+    | PublicTenderPayload,
     Field(discriminator="kind"),
 ]

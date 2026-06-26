@@ -233,6 +233,9 @@ class SourceToggleSettings(BaseSettings):
     # DATA-OSM-Tier-2: Zensus-2022-100m-Gitter (keyloser ArcGIS-FeatureServer) fuer
     # die Einwohnerdichte je Stadt. Default True (keylos, DL-DE/BY).
     enable_zensus_grid: bool = True
+    # Phase 21: Oeffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de OCDS,
+    # CC0 = Tier A). Bulk-Download, keylos. Default True.
+    enable_oeffentlichevergabe: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True

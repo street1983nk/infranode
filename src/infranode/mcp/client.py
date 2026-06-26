@@ -127,6 +127,9 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "tree-cadastre",
         # DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Städte).
         "population-density",
+        # TENDER-05/06: Oeffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
+        # OCDS, CC0/Tier A). Read-only aus dem deduplizierten Store (Plan 21-04/05).
+        "public-tenders",
     }
 )
 

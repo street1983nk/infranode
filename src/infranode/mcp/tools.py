@@ -650,3 +650,13 @@ async def population_density(slug: _Slug) -> ToolEnvelope:
     area). Sourced from the official Zensus 2022 grid (DL-DE/BY). Read-only.
     """
     return await client.get_resource(slug, "population-density")
+
+
+async def public_tenders(slug: _Slug) -> ToolEnvelope:
+    """Get public procurement notices for a German city.
+
+    Running tenders and awarded contracts, sourced from the German federal
+    procurement publication service (oeffentlichevergabe.de, OCDS, CC0).
+    Read-only.
+    """
+    return await client.get_resource(slug, "public-tenders")

@@ -155,4 +155,12 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Einwohnerdichte",
         "Population density",
     ),
+    # TENDER-01/05: oeffentliche Auftragsvergabe (oeffentlichevergabe.de, CC0 = Tier A).
+    # key/tool ASCII (Pfadsegment + MCP-Tool), Label mit korrektem Umlaut.
+    DataType(
+        "public-tenders",
+        "public_tenders",
+        "Öffentliche Auftragsvergabe",
+        "Public procurement",
+    ),
 )

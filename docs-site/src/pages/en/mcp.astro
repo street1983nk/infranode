@@ -105,6 +105,7 @@ const toolGroups = [
       ["land_values", "Official land values per city, aggregated (BORIS, building land)"],
       ["tax_rates", "Local tax multipliers per municipality: trade tax and property tax A/B/C (Regionalstatistik)"],
       ["business_registrations", "Business registrations/deregistrations and net per district (Regionalstatistik)"],
+      ["public_tenders", "Public procurement per city: running tenders and awarded contracts (German public procurement data service, OCDS/CC0)"],
     ],
   },
   {
@@ -157,7 +158,7 @@ const faq = [
   },
   {
     q: "What data does the InfraNode MCP server provide?",
-    a: "61 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, plus a cities and a sources overview, and a multi-city comparison.",
+    a: "62 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, bike and scooter sharing, POIs, events, elections and holidays, station departures and arrivals, public procurement, plus a cities and a sources overview, and a multi-city comparison.",
   },
   {
     q: "My MCP client only supports local stdio servers. How do I connect InfraNode?",
@@ -176,7 +177,7 @@ const faq = [
 
 <Docs
   title="Open Data MCP Server for Germany (AI agents)"
-  description="Open data MCP server for German cities: 61 tools for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
+  description="Open data MCP server for German cities: 62 tools for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
   current="mcp"
   lang="en"
   altLangPath="/mcp/"
@@ -185,14 +186,14 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP server"
-    description="Hosted MCP server with 61 tools for open city data of 84 major German cities, key-free and free of charge."
+    description="Hosted MCP server with 62 tools for open city data of 84 major German cities, key-free and free of charge."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
   <h1>Open data MCP server for German cities</h1>
   <p>
     The InfraNode MCP server is a free, hosted Model Context Protocol server that
-    gives AI agents access to open data for 84 major German cities through 45
+    gives AI agents access to open data for 84 major German cities through 62
     tools, with no API key. It exposes the city data as tools an agent calls
     directly, so you do not write HTTP calls by hand. The server is listed in the
     official <a href="https://registry.modelcontextprotocol.io">MCP Registry</a>
@@ -276,7 +277,7 @@ const faq = [
     lang="en"
   />
   <p>
-    Once added, the 45 InfraNode tools are available in the agent. Access is
+    Once added, the 62 InfraNode tools are available in the agent. Access is
     read-only and key-free.
   </p>
 
@@ -313,7 +314,7 @@ const faq = [
 
   <h2>Tool overview</h2>
   <p>
-    The server provides 61 tools in total. Most expect a city slug (for example
+    The server provides 62 tools in total. Most expect a city slug (for example
     <code>berlin</code> or <code>hamburg</code>); <code>pois</code> also requires
     a <code>type</code> parameter (e.g. <code>hospital</code>,
     <code>school</code>, <code>pharmacy</code>), and

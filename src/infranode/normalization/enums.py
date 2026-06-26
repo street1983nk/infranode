@@ -240,3 +240,9 @@ class SourceId(StrEnum):
     # die account-gated GENESIS-ZENSUS-POST-API). Einwohnerdichte je Stadt exakt per
     # AGS-Aggregation. DL-DE/BY 2.0 = Tier A. Toggle == SourceId == _KNOWN_SOURCES.
     ZENSUS_GRID = "zensus_grid"
+    # Phase 21: Oeffentliche Auftragsvergabe je Stadt (Datenservice Oeffentlicher
+    # Einkauf, oeffentlichevergabe.de, OCDS-1.1-Bekanntmachungen, CC0 = Tier A).
+    # Bulk-Download (OCDS-ZIP), Stadt-Zuordnung ueber den Geo-Crosswalk-Seed
+    # (NUTS-3/PLZ). Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag:
+    # getattr(settings, f"enable_{name}"). Wert ASCII (StrEnum), kein Umlaut.
+    OEFFENTLICHEVERGABE = "oeffentlichevergabe"

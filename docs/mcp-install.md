@@ -14,8 +14,8 @@ InfraNode-Live-API. Jedes Tool ruft einen festen API-Endpunkt auf und gibt
 dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
-deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie und mehr) als 45
-MCP-Tools.
+deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie, öffentliche
+Auftragsvergabe und mehr) als 62 MCP-Tools.
 
 ## Berechtigungen und Sicherheitsmodell
 
@@ -126,7 +126,7 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-61 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+62 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
@@ -168,6 +168,7 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `land_values` | `slug` | Official land values, aggregated (building land, partial coverage) | BORIS |
 | `tax_rates` | `slug` | Local tax multipliers per municipality: trade tax, property tax A/B/C | Regionalstatistik |
 | `business_registrations` | `slug` | Business registrations/deregistrations and net per district | Regionalstatistik |
+| `public_tenders` | `slug` | Public procurement: running tenders and awarded contracts per city (running + awarded, coverage growing) | oeffentlichevergabe.de (OCDS) |
 | `station_departures` | `slug` | Live long-distance train departures (metro hubs) | DB Timetables |
 | `station_arrivals` | `slug` | Live long-distance train arrivals (metro hubs) | DB Timetables |
 | `stations` | `slug` | Catalog of all DB stations in a city (with EVA numbers) | DB StaDa |
@@ -231,6 +232,28 @@ Live-API.
     }
   },
   "meta": { "source_status": "ok", "cache_status": "HIT" }
+}
+```
+
+`public_tenders(slug="koeln")`:
+
+```json
+{
+  "data": {
+    "city_slug": "koeln",
+    "source": "oeffentlichevergabe",
+    "license_id": "cc0",
+    "license_tier": "A",
+    "attribution": { "text": "Datenservice Öffentlicher Einkauf" },
+    "payload": {
+      "kind": "public_tenders",
+      "count": 2,
+      "notices": [
+        { "notice_type": "tender", "status": "active", "buyer_city": "Köln", "cpv": "45000000", "value": null }
+      ]
+    }
+  },
+  "meta": { "source_status": "ok", "cache_status": "MISS" }
 }
 ```
 

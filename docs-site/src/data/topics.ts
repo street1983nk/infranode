@@ -394,6 +394,57 @@ export const topics: Topic[] = [
       datasetDesc: "Real-time departures and arrivals at stops in major German cities from DELFI, GTFS and transit association data, free and keyless via a JSON REST API.",
     },
   },
+  {
+    id: "public-tenders",
+    endpointId: "getCityPublicTenders",
+    examplePath: "/api/v1/cities/koeln/public-tenders",
+    // Bundesweite OCDS-Quelle (Datenservice Oeffentlicher Einkauf), daher "all".
+    coverageKey: "all",
+    de: {
+      slug: "vergabe-api",
+      metaTitle: "Vergabe-API Deutschland: oeffentliche Auftraege je Stadt, keylos",
+      h1: "API fuer oeffentliche Auftragsvergabe deutscher Staedte",
+      lead: "Laufende Ausschreibungen und vergebene Auftraege deutscher Staedte ueber eine kostenlose, keylose REST-API. Quelle ist der Datenservice Oeffentlicher Einkauf (oeffentlichevergabe.de) im OCDS-Standard, einheitlich als JSON mit Quelle, Lizenz und Zeitstempel je Antwort.",
+      dataDesc:
+        "Pro Stadt liefert der Endpunkt die oeffentlichen Vergabebekanntmachungen: Bekanntmachungstyp (Ausschreibung oder Zuschlag), Status, Auftraggeber-Ort, Region (NUTS), Leistungsgegenstand (CPV) und, soweit veroeffentlicht, der Auftragswert. Filtern laesst sich nach Status (active fuer laufende, complete fuer vergebene Auftraege).",
+      sourceName: "Datenservice Oeffentlicher Einkauf",
+      sourceUrl: "https://www.oeffentlichevergabe.de/",
+      license: "CC0",
+      licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+      vars: ["Bekanntmachungstyp (Ausschreibung/Zuschlag)", "Status", "Auftraggeber-Ort", "Region (NUTS)", "Leistungsgegenstand (CPV)", "Auftragswert"],
+      keywords: ["Vergabe API Deutschland", "oeffentliche Auftraege API", "Ausschreibungen API", "OCDS API Deutschland", "Auftragsvergabe Daten API", "public procurement API Germany"],
+      coverageNote: "Die Abdeckung waechst: Oberschwellige Bekanntmachungen sind vollstaendig, unterschwellige werden ab 2024 schrittweise ergaenzt.",
+      faq: [
+        { q: "Ist die Vergabe-API kostenlos und ohne Schluessel nutzbar?", a: "Ja. Die API ist keylos und kostenlos, ein GET-Request ohne Anmeldung genuegt. Das Rate-Limit betraegt 300 Anfragen pro Minute und IP." },
+        { q: "Welche Vergabedaten sind enthalten?", a: "Laufende Ausschreibungen und bereits vergebene Auftraege je Stadt mit Bekanntmachungstyp, Status, Auftraggeber-Ort, Region (NUTS), Leistungsgegenstand (CPV) und, soweit veroeffentlicht, dem Auftragswert." },
+        { q: "Welche Lizenz gilt fuer die Vergabedaten?", a: "Die Daten stammen aus dem Datenservice Oeffentlicher Einkauf und werden unter CC0 durchgereicht. Lizenz-URL und Attribution stehen in jeder API-Antwort im attribution-Block." },
+      ],
+      datasetName: "InfraNode Vergabedaten deutscher Staedte (Datenservice Oeffentlicher Einkauf)",
+      datasetDesc: "Laufende Ausschreibungen und vergebene Auftraege deutscher Staedte aus dem Datenservice Oeffentlicher Einkauf (OCDS, CC0), kostenlos und keylos ueber eine REST-API als JSON.",
+    },
+    en: {
+      slug: "public-procurement-api",
+      metaTitle: "Germany Public Procurement API: tenders per city, keyless",
+      h1: "Public procurement API for German cities",
+      lead: "Running tenders and awarded contracts for German cities through a free, keyless REST API. The source is the German public procurement data service (oeffentlichevergabe.de) in the OCDS standard, delivered as consistent JSON with source, license and timestamp on every response.",
+      dataDesc:
+        "For each city the endpoint returns public procurement notices: notice type (tender or award), status, buyer city, region (NUTS), subject of the contract (CPV) and, where published, the contract value. Results can be filtered by status (active for running tenders, complete for awarded contracts).",
+      sourceName: "German public procurement data service",
+      sourceUrl: "https://www.oeffentlichevergabe.de/",
+      license: "CC0",
+      licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+      vars: ["Notice type (tender/award)", "Status", "Buyer city", "Region (NUTS)", "Contract subject (CPV)", "Contract value"],
+      keywords: ["public procurement API Germany", "public tenders API", "tenders API Germany", "OCDS API Germany", "procurement data API", "government contracts API Germany"],
+      coverageNote: "Coverage is growing: above-threshold notices are complete, below-threshold notices are added gradually from 2024 onward.",
+      faq: [
+        { q: "Is the public procurement API free and usable without a key?", a: "Yes. The API is keyless and free; a GET request without sign-up is enough. The rate limit is 300 requests per minute per IP." },
+        { q: "Which procurement data is included?", a: "Running tenders and already awarded contracts per city with notice type, status, buyer city, region (NUTS), contract subject (CPV) and, where published, the contract value." },
+        { q: "Which license applies to the procurement data?", a: "Data comes from the German public procurement data service and is passed through under CC0. The license URL and attribution are included in every API response in the attribution block." },
+      ],
+      datasetName: "InfraNode public procurement data for German cities (German procurement data service)",
+      datasetDesc: "Running tenders and awarded contracts for German cities from the German public procurement data service (OCDS, CC0), free and keyless via a JSON REST API.",
+    },
+  },
 ];
 
 export function topicCityCount(
