@@ -44,13 +44,6 @@ class SourceSpec:
 SOURCE_SPECS: tuple[SourceSpec, ...] = (
     SourceSpec(name="wikidata", license_id="cc0", attribution="Wikidata"),
     SourceSpec(
-        name="openaq",
-        license_id="unknown",
-        attribution="OpenAQ",
-        ttl=(900.0, 21600.0),
-        cooldown=900.0,
-    ),
-    SourceSpec(
         name="dwd",
         license_id="geonutzv",
         attribution="Datenbasis: Deutscher Wetterdienst, eigene Elemente ergänzt",

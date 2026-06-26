@@ -64,7 +64,8 @@ def per_source_timeout(settings, *, source: str) -> httpx.Timeout:
     """Liefert den per-Source-Timeout, der den Client-Default je Request ueberschreibt.
 
     Der Pool bleibt EIN Singleton; nur der Timeout variiert je Quelle (eine
-    traege Quelle wie Wikidata-SPARQL darf laenger lesen als OpenAQ, Pitfall 5).
+    traege Quelle wie Wikidata-SPARQL darf laenger lesen als eine schnelle
+    REST-Quelle, Pitfall 5).
     Quellenspezifische Werte kommen ab Phase 4 aus ``SourceConfig``; bis dahin
     gilt der konservative Default.
     """

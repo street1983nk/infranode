@@ -57,7 +57,6 @@ from infranode.adapters.muenchen_opendata import (
     fetch_muenchen_road_events,
 )
 from infranode.adapters.muenchen_radzaehl import fetch_muenchen_radzaehl
-from infranode.adapters.openaq import fetch_air
 from infranode.adapters.overpass import (
     _ALLOWED_TYPES,
     fetch_osm_feature,
@@ -134,7 +133,6 @@ from infranode.normalization.mappers.muenchen_opendata import (
     map_muenchen_road_events,
 )
 from infranode.normalization.mappers.muenchen_radzaehl import map_muenchen_radzaehl
-from infranode.normalization.mappers.openaq import map_openaq_air
 from infranode.normalization.mappers.overpass import map_osm_feature, map_overpass_pois
 from infranode.normalization.mappers.parkendd import map_parkendd
 from infranode.normalization.mappers.pegelonline import map_water_level
@@ -948,18 +946,19 @@ async def city_charging(slug: str) -> dict:
 
 @router.get("/cities/{slug}/air", deprecated=True)
 async def city_air(slug: str, request: Request, response: Response) -> dict:
-    """Liefert normalisierte OpenAQ-Luftdaten im kanonischen Envelope (DATA-02).
+    """Liefert normalisierte UBA-Luftqualitaet im kanonischen Envelope (DATA-10).
 
-    Ablauf (DATA-02/06, API-01, GOV-02): Register-Lookup (unbekannter Slug -> 404
-    mit Hint ueber den zentralen Handler), Quellen-Toggle-Pruefung (deaktiviert ->
-    200 ``source_status=disabled``, nie 5xx), Key-Guard (Quelle aktiv aber kein Key
-    -> 200 disabled, Graceful Degradation), resilienter Fetch ueber die Fassade
-    gegen die keyabhaengige OpenAQ-v3-API (lat/lon aus dem Register-Geo), Mapping,
-    dann der Daten-Envelope mit Attribution.
+    Ablauf (DATA-10/06, API-01, GOV-02/03): Register-Lookup (unbekannter Slug ->
+    404 mit Hint ueber den zentralen Handler), Quellen-Toggle-Pruefung
+    (deaktiviert -> 200 ``source_status=disabled``, nie 5xx), resilienter Fetch
+    ueber die Fassade gegen die keylose UBA-Air-Data-API (lat/lon aus dem
+    Register-Geo), Mapping mit DL-DE/BY-2.0-Attribution, dann der Daten-Envelope.
 
-    KRITISCH (GOV-02, Pattern 4/Pitfall 1): OpenAQ ist Tier C live-only. Diese
-    Route leitet die Daten ausschliesslich live durch (bewusste Tier-C-
-    Entscheidung, kein Versehen).
+    KRITISCH (Pitfall 2 / Lizenz-Klassifikation GOV-02): UBA ist der Tier-A-
+    Luftpfad (offene Lizenz, 84/84 flaechendeckend). Diese Route liefert direkt
+    UBA (keine Quellen-Verzweigung, kein Fallback-Zweig) und persistiert Tier A.
+    Der Deprecation-Pointer zeigt auf den Altpfad-Nachfolger
+    ``/api/v1/live/{slug}/air`` (NICHT /air-uba).
     """
     entry = get_city(slug)
     # LIVE-03: Altpfad ist deprecated -> /live-Nachfolger (kein Breaking Change).
@@ -967,10 +966,7 @@ async def city_air(slug: str, request: Request, response: Response) -> dict:
 
     # Quellen-Toggle frisch lesen (Settings() statt app.state.settings, damit der
     # per-Test gesetzte Env-Override greift). DATA-06: deaktiviert -> 200 disabled.
-    settings = Settings()
-    settings_key = settings.openaq_api_key
-    # Key-Guard (DATA-06): Quelle aktiviert, aber kein Key -> 200 disabled, kein 5xx.
-    if not settings.enable_openaq or settings_key is None:
+    if not Settings().enable_uba:
         return {
             "data": None,
             "meta": {
@@ -980,77 +976,31 @@ async def city_air(slug: str, request: Request, response: Response) -> dict:
         }
 
     client = request.app.state.resilient_client
-    key = build_cache_key("openaq", city_slug=entry.slug)
+    key = build_cache_key("uba", city_slug=entry.slug)
 
     async def fetch_fn():
-        return await fetch_air(
+        return await fetch_air_uba(
             request.app.state.http,
             slug=entry.slug,
             lat=entry.geo.lat,
             lon=entry.geo.lon,
-            api_key=settings_key.get_secret_value(),
         )
 
-    raw, status = await client.fetch("openaq", key, fetch_fn)
+    raw, status = await client.fetch("uba", key, fetch_fn)
 
-    # OpenAQ (Tier C) liefert keine nutzbaren Daten? Entweder toter Upstream ohne
-    # Cache (raw is None) ODER keine Messstation im Umkreis (Sentinel
-    # location_id=None). Beide Faelle: UBA-Fallback (Tier A, offene Lizenz, 84/84
-    # flaechendeckend). KEINE Tier-Vermischung (GOV-02): der zurueckgegebene Record
-    # ist sortenrein UBA (eigene DL-DE/BY-2.0-Attribution + license_tier A);
-    # meta.fallback="uba" macht die genutzte Quelle transparent.
-    openaq_usable = raw is not None and raw.get("location_id") is not None
-    if not openaq_usable and Settings().enable_uba:
-        uba_key = build_cache_key("uba", city_slug=entry.slug)
-
-        async def uba_fetch_fn():
-            return await fetch_air_uba(
-                request.app.state.http,
-                slug=entry.slug,
-                lat=entry.geo.lat,
-                lon=entry.geo.lon,
-            )
-
-        uba_raw, uba_status = await client.fetch("uba", uba_key, uba_fetch_fn)
-        if uba_raw is not None:
-            uba_record = map_air_uba(
-                uba_raw,
-                retrieved_at=datetime.now(UTC),
-                ags=entry.ags,
-                wikidata_qid=entry.qid,
-            )
-            return {
-                "data": uba_record.model_dump(mode="json"),
-                "meta": {
-                    "correlation_id": correlation_id.get(),
-                    "source_status": "ok",
-                    "cache_status": uba_status,
-                    "fallback": "uba",
-                },
-            }
-
-    # Kein OpenAQ UND kein UBA-Fallback verfuegbar.
+    # Pitfall 4: raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper
+    # geprueft werden, sonst 500. 503 mit selbst-korrigierendem Hint (DX-06).
     if raw is None:
         raise UpstreamError(
-            "Quelle 'openaq' voruebergehend nicht erreichbar, kein gecachter "
+            "Quelle 'uba' voruebergehend nicht erreichbar, kein gecachter "
             "Wert vorhanden.",
             hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
         )
-    if raw.get("location_id") is None:
-        return {
-            "data": None,
-            "meta": {
-                "correlation_id": correlation_id.get(),
-                "source_status": "no_data",
-                "cache_status": status,
-            },
-        }
 
-    record = map_openaq_air(
+    record = map_air_uba(
         raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
     )
-    # KRITISCH (GOV-02, Pattern 4/Pitfall 1): Tier C live-only. Der Envelope wird
-    # direkt zurueckgegeben.
+    await append_record(record, source="uba")
 
     return {
         "data": record.model_dump(mode="json"),
@@ -1074,8 +1024,8 @@ async def city_air_uba(slug: str, request: Request, response: Response) -> dict:
     Attribution, dann der Daten-Envelope mit Attribution.
 
     KRITISCH (Pitfall 2 / Lizenz-Klassifikation GOV-02): UBA ist der Tier-A-
-    Luftpfad (offene Lizenz). Die bestehende Tier-C-OpenAQ-Route ``/air`` (oben)
-    bleibt unveraendert -> die beiden Pfade duerfen nie vermischt werden.
+    Luftpfad (offene Lizenz). Diese Route ``/air-uba`` persistiert Tier A; der
+    aeltere Pfad ``/air`` (oben) liefert dieselbe UBA-Quelle live ohne Persistenz.
     Graceful Degradation: toter Upstream ohne Cache -> 503 mit Hint (DX-06).
     """
     entry = get_city(slug)

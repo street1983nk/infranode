@@ -6,16 +6,17 @@ Air-Data-API ueber den gepoolten httpx-Client. Zwei-Schritt-Flow:
 1. ``GET /stations/json`` liefert alle Messstationen; der Adapter waehlt die
    geografisch naechste Station zu (``lat``, ``lon``) per einfacher Grad-Distanz
    (kein Haversine, vgl. ``autobahn._within_bbox``: Don't-Hand-Roll).
-2. ``GET /measures/json`` liefert je v3-Komponente (PM10/PM2.5/NO2/O3) die
+2. ``GET /measures/json`` liefert je v3-Komponente (PM10/PM2.5/NO2/O3/SO2) die
    Stundenwerte; der Adapter nimmt je Komponente den juengsten Messzeitpunkt.
 
 Rueckgabe ist ein flaches raw-dict, das auf das bestehende ``AirQualityPayload``
 passt: ``slug``/``station_id``/``lat``/``lon``/``observed_at``/``pm10``/``pm25``/
-``no2``/``o3`` (fehlender Wert -> ``None``, T-07-IN).
+``no2``/``o3``/``so2`` (fehlender Wert -> ``None``, T-07-IN).
 
 KRITISCH (Lizenz-Klassifikation): UBA ist Tier A (offene Lizenz) und wird ueber
-eine eigene Route ``/air-uba`` ausgeliefert. Der bestehende Tier-C-OpenAQ-Pfad
-``/air`` bleibt unveraendert.
+die Route ``/air-uba`` (archivierter Tier-A-Bestand) sowie ueber den aelteren,
+nicht persistierten Pfad ``/air`` ausgeliefert. UBA ist die einzige
+Luftqualitaetsquelle und liefert alle fuenf Schadstoffe.
 
 Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` (das macht der Mapper in der Route) und kennt KEIN
@@ -44,9 +45,14 @@ import httpx
 # daher lief er ins Leere. Neue Basis verifiziert: stations/components/measures = 200.
 _BASE = "https://luftdaten.umweltbundesamt.de/api/air-data/v3"
 
-# v3-Komponenten-IDs (Adapter-lokal, vgl. Fixture-Probe-Note):
-# 1=PM10, 5=PM2.5, 3=NO2, 7=O3. Wert-Key im raw-dict je Komponente.
-_COMPONENTS: dict[str, int] = {"pm10": 1, "pm25": 5, "no2": 3, "o3": 7}
+# v3-Komponenten-IDs (Adapter-lokal). Korrektes Schema: 1=PM10, 9=PM2,5,
+# 5=NO2, 3=O3, 4=SO2. Wert-Key im raw-dict je Komponente. Am 2026-06-26 live gegen
+# components/json (autoritativ) und measures/json verifiziert (Station 143).
+# Das frühere Mapping (pm25=5, no2=3, o3=7) war falsch und lieferte systematisch
+# vertauschte Werte (pm25 zog NO2, no2 zog O3, o3 zog den leeren BaP-Kanal).
+# SO2 (component 4) wird an vielen Stationen stuendlich nicht gemessen
+# (scope 2 leer) -> so2=None ist dort ehrlich korrekt, kein Bug.
+_COMPONENTS: dict[str, int] = {"pm10": 1, "pm25": 9, "no2": 5, "o3": 3, "so2": 4}
 
 # Stunden-Mittelwert-Scope (UBA scope-id 2). Adapter-lokal hartkodiert.
 _SCOPE = 2
@@ -150,12 +156,12 @@ async def fetch_air_uba(
 
     Schritt 1 ``GET {_BASE}/stations/json`` (``lang=de``): naechste Station zu
     (``lat``, ``lon``). Schritt 2 ``GET {_BASE}/measures/json`` je v3-Komponente
-    (PM10/PM2.5/NO2/O3) mit Tagesfenster: juengster Stundenwert je Komponente.
+    (PM10/PM2.5/NO2/O3/SO2) mit Tagesfenster: juengster Stundenwert je Komponente.
 
     Rueckgabe-Keys (exakt das, was ``map_air_uba`` erwartet): ``slug``,
     ``station_id`` (UBA-Station-ID als ``str``), ``lat``, ``lon`` (Station-Geo),
     ``observed_at`` (juengster Messzeitpunkt) sowie ``pm10``/``pm25``/``no2``/
-    ``o3`` (fehlender Wert -> ``None``). Der Host ist hartkodiert (SSRF-Schutz,
+    ``o3``/``so2`` (fehlender Wert -> ``None``). Der Host ist hartkodiert (SSRF-Schutz,
     T-07-IN); ``resp.raise_for_status()`` ist Pflicht (STALE-ON-ERROR-Pfad).
     """
     stations_resp = await http.get(f"{_BASE}/stations/json", params={"lang": "de"})
@@ -175,6 +181,7 @@ async def fetch_air_uba(
         "pm25": None,
         "no2": None,
         "o3": None,
+        "so2": None,
     }
 
     latest_observed: str | None = None

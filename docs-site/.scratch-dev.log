@@ -1,0 +1,33 @@
+
+> infranode-docs@0.0.0 dev
+> astro dev
+
+[vite] connected.
+[2m22:10:54[22m [34m[types][39m Generated [2m1ms[22m
+[vite] connected.
+[2m22:10:54[22m [34m[content][39m Syncing content
+[2m22:10:54[22m [34m[content][39m Astro config changed
+[2m22:10:54[22m [34m[content][39m Content config changed
+[2m22:10:54[22m [34m[content][39m Clearing content store
+[2m22:10:54[22m [34m[content][39m Synced content
+[2m22:10:54[22m [34m[vite][39m Re-optimizing dependencies because vite config has changed
+[2m22:10:54[22m [34m[vite][39m Port 4321 is in use, trying another one...
+[42m[1m astro [22m[49m [32mv6.4.5[39m [2mready in[22m 2332 [2mms[22m
+[2m┃[22m Local    [36mhttp://localhost:4322/[39m
+[2m┃[22m Network  [2muse --host to expose[22m
+[2m22:10:54[22m [32mwatching for file changes...[39m
+
+[43m[30m update [39m[49m [33m▶ New version of Astro available: 7.0.2[39m
+  Run [36mnpx @astrojs/upgrade[39m to update
+
+[2m22:11:16[22m [34m[200][39m /mcp/ [2m118ms[22m
+[2m22:12:38[22m [34m[200][39m /quickstart/ [2m15ms[22m
+[2m22:13:46[22m [34m[200][39m /quickstart/ [2m22ms[22m
+[2m17:02:23[22m [34m[watch][39m src/layouts/Docs.astro
+[2m17:02:23[22m [34m[watch][39m src/layouts/Docs.astro
+[2m17:02:39[22m [34m[watch][39m src/layouts/Docs.astro
+[2m17:02:39[22m [34m[watch][39m src/layouts/Docs.astro
+[2m17:02:49[22m [34m[watch][39m src/layouts/Docs.astro
+[2m17:02:49[22m [34m[watch][39m src/layouts/Docs.astro
+[2m17:03:37[22m [34m[watch][39m /src/styles/global.css
+[2m17:03:37[22m [34m[watch][39m /src/styles/global.css

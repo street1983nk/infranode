@@ -7,8 +7,8 @@ Air-Payload). Die Funktion ist rein: kein HTTP, kein Logging, kein
 damit Tests deterministisch bleiben.
 
 KRITISCH (Lizenz-Klassifikation GOV-02): UBA ist Tier A (offene Lizenz),
-``license_id=DL_DE_BY_2_0``, ``license_tier=A``. Im Gegensatz zum Tier-C-OpenAQ
-wird der UBA-Record ueber die Route ``/air-uba`` ausgeliefert.
+``license_id=DL_DE_BY_2_0``, ``license_tier=A``. Der UBA-Record wird ueber die
+Route ``/air-uba`` (Tier-A-Bestand) ausgeliefert.
 
 KRITISCH (GOV-03): UBA-Daten unter Datenlizenz Deutschland Namensnennung 2.0 sind
 NICHT aufbereitet (anders als DWD-Wetter), daher traegt die Attribution KEIN
@@ -70,5 +70,6 @@ def map_air_uba(
             pm25=raw.get("pm25"),
             no2=raw.get("no2"),
             o3=raw.get("o3"),
+            so2=raw.get("so2"),
         ),
     )

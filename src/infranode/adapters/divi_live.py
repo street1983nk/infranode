@@ -23,7 +23,7 @@ automatisch), daher ist der www-Host hartkodiert.
 
 KRITISCH (Datenbank-Schutzrecht, RESEARCH Pitfall 4, T-08-DBR): Die klinikscharfe
 DIVI-Live-Lage ist KEINE offene Lizenz. Sie wird ausschliesslich live
-durchgeleitet (Tier C, wie OpenAQ). Dieser Adapter baut KEINEN ``CanonicalRecord``
+durchgeleitet (Tier C, live-only). Dieser Adapter baut KEINEN ``CanonicalRecord``
 (das macht ``map_icu_live`` in der Route).
 
 Sicherheit (T-08-SSRF, Tampering): Der Host ist in ``_BASE`` hartkodiert; der

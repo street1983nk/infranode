@@ -21,7 +21,7 @@ class LicenseTier(StrEnum):
 
     A = "A"  # permissiv (CC0, CC-BY, DL-DE/BY, DL-DE/Zero, GeoNutzV)
     B = "B"  # copyleft (ODbL, CC-BY-SA): getrennt kennzeichnen
-    C = "C"  # live-only (OpenAQ): nur Live-Anzeige
+    C = "C"  # live-only (z.B. ParkenDD, DIVI): nur Live-Anzeige
 
 
 class LicenseId(StrEnum):
@@ -39,7 +39,7 @@ class LicenseId(StrEnum):
     # die Quelle genannt wird ("PVGIS © European Communities"). Permissiv = Tier A.
     EC_REUSE = "ec_reuse"
     # Ehrlicher Tag fuer Quellen mit heterogener/unbekannter Lizenz je Datensatz
-    # (konkret OpenAQ, dessen Lizenz pro Provider variiert): verhindert ein
+    # (z.B. ParkenDD, dessen Lizenz pro Stadt variiert): verhindert ein
     # falsches pauschales CC-BY-Tag im Envelope (GOV-01/03-Compliance).
     UNKNOWN = "unknown"
 
@@ -48,7 +48,6 @@ class SourceId(StrEnum):
     """Bekannte Upstream-Quellen, die in das kanonische Schema abgebildet werden."""
 
     WIKIDATA = "wikidata"
-    OPENAQ = "openaq"
     DWD = "dwd"
     OSM = "osm"
     AUTOBAHN = "autobahn"
@@ -225,7 +224,7 @@ class SourceId(StrEnum):
     STUTTGART_RADZAEHL = "stuttgart_radzaehl"
     # DATA-40: ParkenDD-Aggregator (api.parkendd.de, keylos) = bevorzugte Live-
     # Parkhaus-Belegung fuer viele Staedte (EIN Adapter, Dedup-Prinzip). Lizenz
-    # heterogen je Stadt -> UNKNOWN/Tier C (OpenAQ-Muster), Attribution "ParkenDD".
+    # heterogen je Stadt -> UNKNOWN/Tier C (Tier-C-Muster), Attribution "ParkenDD".
     # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
     PARKENDD = "parkendd"
     # DATA-OSM-Tier-2: Denkmallisten je Bundesland (Landessache, foederiert wie

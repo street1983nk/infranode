@@ -23,9 +23,9 @@ class CityBaseDataPayload(BaseModel):
 
 
 class AirQualityPayload(BaseModel):
-    """Luftqualitaets-Messwerte je Stadt (OpenAQ, Tier C live-only).
+    """Luftqualitaets-Messwerte je Stadt (UBA, Tier A).
 
-    Erweitert um die real von OpenAQ gelieferten Schadstoff-Parameter. Alle
+    Erweitert um die real von UBA gelieferten Schadstoff-Parameter. Alle
     Felder optional, da nicht jede Messstation jeden Parameter liefert.
     ``station_id`` traegt die stabile Mess-/Detektor-ID je Messpunkt (ARCH-02)
     und dient als fachlicher Schluessel fuer die deterministische ``record_id``.

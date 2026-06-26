@@ -1126,7 +1126,7 @@ async def live_transit_route_status(city: str, route_id: str, request: Request) 
 
 @router.get("/{slug}/air")
 async def live_air(slug: str, request: Request) -> dict:
-    """Live-Alias fuer den OpenAQ-Luft-Endpunkt (LIVE-03)."""
+    """Live-Alias fuer den UBA-Luft-Endpunkt (LIVE-03)."""
     return await cities.city_air(slug, request, Response())
 
 

@@ -459,21 +459,23 @@ paths:
   /api/v1/cities/{slug}/air:
     get:
       tags: [cities]
-      summary: Luftqualität je Stadt (OpenAQ)
-      x-summary-en: Air quality per city (OpenAQ)
+      summary: Luftqualität je Stadt (Umweltbundesamt)
+      x-summary-en: Air quality per city (Federal Environment Agency)
       description: >-
-        Aktuelle Luftqualitäts-Messwerte einer Stadt aus OpenAQ im kanonischen
-        Envelope. Die Schadstoff-Messwerte stehen in data, Quelle und
-        source_status in meta. Werte sind live (kein Zwischenbestand).
-        Sonderfälle: deaktivierte Quelle liefert 200 mit data=null und
-        source_status="disabled"; toter Upstream ohne Cache liefert 503 mit Hint
-        auf GET /api/v1/health.
+        Aktuelle Luftqualitäts-Messwerte einer Stadt aus der Luftdaten-API des
+        Umweltbundesamts im kanonischen Envelope. Die fünf Schadstoff-Messwerte
+        (PM10, PM2.5, NO2, O3, SO2) stehen in data, Quelle und source_status in
+        meta. Werte sind live (kein Zwischenbestand). Sonderfälle: deaktivierte
+        Quelle liefert 200 mit data=null und source_status="disabled"; toter
+        Upstream ohne Cache liefert 503 mit Hint auf GET /api/v1/health.
       x-description-en: >-
-        Current air-quality readings for a city from OpenAQ in the canonical
-        envelope. The pollutant readings are in data, source and source_status in
-        meta. Values are live (no intermediate store). Special cases: a disabled
-        source returns 200 with data=null and source_status="disabled"; a dead
-        upstream with no cache returns 503 with a hint to GET /api/v1/health.
+        Current air-quality readings for a city from the German Federal
+        Environment Agency (UBA) air-data API in the canonical envelope. The five
+        pollutant readings (PM10, PM2.5, NO2, O3, SO2) are in data, source and
+        source_status in meta. Values are live (no intermediate store). Special
+        cases: a disabled source returns 200 with data=null and
+        source_status="disabled"; a dead upstream with no cache returns 503 with
+        a hint to GET /api/v1/health.
       operationId: getCityAir
       parameters:
         - name: slug
@@ -1478,18 +1480,18 @@ paths:
       x-summary-en: Air quality per city (Federal Environment Agency)
       description: >-
         Luftqualitäts-Messwerte einer Stadt aus der Luftdaten-API des
-        Umweltbundesamts im kanonischen Envelope. Amtlicher Pfad, klar getrennt
-        vom OpenAQ-Endpunkt (/air): wähle diesen für behördlich validierte Werte.
-        Sonderfälle: deaktivierte Quelle liefert 200 mit
-        source_status="disabled"; toter Upstream ohne Cache liefert 503 mit Hint
-        auf GET /api/v1/health.
+        Umweltbundesamts im kanonischen Envelope. Amtlicher Tier-A-Pfad für
+        behördlich validierte Werte. Liefert dieselbe UBA-Quelle wie der ältere,
+        nicht persistierte Pfad (/air). Sonderfälle: deaktivierte Quelle liefert
+        200 mit source_status="disabled"; toter Upstream ohne Cache liefert 503
+        mit Hint auf GET /api/v1/health.
       x-description-en: >-
         Air-quality readings for a city from the German Federal Environment
-        Agency (UBA) air-data API in the canonical envelope. The official path,
-        clearly separated from the OpenAQ endpoint (/air): use this one for
-        authority-validated values. Special cases: a disabled source returns 200
-        with source_status="disabled"; a dead upstream with no cache returns 503
-        with a hint to GET /api/v1/health.
+        Agency (UBA) air-data API in the canonical envelope. The official Tier-A
+        path for authority-validated values. Serves the same UBA source as the
+        older, non-persisted path (/air). Special cases: a disabled source
+        returns 200 with source_status="disabled"; a dead upstream with no cache
+        returns 503 with a hint to GET /api/v1/health.
       operationId: getCityAirUba
       parameters:
         - name: slug
@@ -4277,15 +4279,15 @@ paths:
   /api/v1/live/{slug}/air:
     get:
       tags: [Live]
-      summary: Live-Alias für Luftqualität OpenAQ
-      x-summary-en: Live alias for OpenAQ air quality
+      summary: Live-Alias für Luftqualität (Umweltbundesamt)
+      x-summary-en: Live alias for air quality (Federal Environment Agency)
       description: >-
-        Spiegelt den bestehenden OpenAQ-Luft-Endpunkt unter der Live-Kategorie.
+        Spiegelt den bestehenden UBA-Luft-Endpunkt unter der Live-Kategorie.
         Gleicher Envelope-Kontrakt wie /api/v1/cities/{slug}/air, derselbe
         Handler. Der alte Pfad bleibt als Alias erhalten und ist als veraltet
         markiert (Deprecation-Header und deprecated=true).
       x-description-en: >-
-        Mirrors the existing OpenAQ air endpoint under the live category. Same
+        Mirrors the existing UBA air endpoint under the live category. Same
         envelope contract as /api/v1/cities/{slug}/air, same handler. The old
         path remains as an alias and is marked deprecated (Deprecation header and
         deprecated=true).
@@ -5100,7 +5102,7 @@ components:
           format: date-time
         source:
           type: string
-          enum: [wikidata, openaq, dwd, osm, autobahn, bnetza, uba, delfi, hvv, pegelonline, hochwasser, dwd_pollen, genesis, zensus, mastr, bkg, bundeswahl, divi, feiertage, berlin_viz, hamburg_baustellen, koeln_verkehr, muenchen_baustellen, mobidata_bw]
+          enum: [wikidata, dwd, osm, autobahn, bnetza, uba, delfi, hvv, pegelonline, hochwasser, dwd_pollen, genesis, zensus, mastr, bkg, bundeswahl, divi, feiertage, berlin_viz, hamburg_baustellen, koeln_verkehr, muenchen_baustellen, mobidata_bw]
         license_id:
           type: string
           enum: [cc0, cc_by_4_0, dl_de_by_2_0, dl_de_zero_2_0, geonutzv, odbl, cc_by_sa_4_0, unknown]

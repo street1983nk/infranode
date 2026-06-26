@@ -143,7 +143,6 @@ class SourceToggleSettings(BaseSettings):
 
     # Phase 4/6: Basis-Quellen.
     enable_wikidata: bool = True
-    enable_openaq: bool = False
     enable_dwd: bool = True
     enable_overpass: bool = True
     # Overpass-Endpunkt operator-konfigurierbar (INFRANODE_OVERPASS_BASE_URL). Die
@@ -292,7 +291,6 @@ class CredentialSettings(BaseSettings):
     Log. Werte stammen aus der gitignored .env (Env-Namen ueber den Prefix).
     """
 
-    openaq_api_key: SecretStr | None = None
     # Phase 8 GENESIS/Zensus (account-gated POST-API). Feldname genesis_username,
     # weil der Owner genau INFRANODE_GENESIS_USERNAME (+ _PASSWORD) in der .env
     # gesetzt hat. Zensus nutzt evtl. einen getrennten Account (eigene Felder).

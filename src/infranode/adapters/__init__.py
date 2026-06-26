@@ -11,12 +11,10 @@ from __future__ import annotations
 
 from infranode.adapters.autobahn import fetch_traffic
 from infranode.adapters.dwd import fetch_weather
-from infranode.adapters.openaq import fetch_air
 from infranode.adapters.overpass import fetch_pois
 from infranode.adapters.wikidata import fetch_city_base
 
 __all__ = [
-    "fetch_air",
     "fetch_city_base",
     "fetch_pois",
     "fetch_traffic",

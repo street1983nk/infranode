@@ -82,8 +82,8 @@ async def air_quality(slug: _Slug) -> ToolEnvelope:
 async def air_quality_live(slug: _Slug) -> ToolEnvelope:
     """Get live air quality readings for a German city.
 
-    Sourced from OpenAQ (live-only, no history). Read-only. For official,
-    archived values use ``air_quality``.
+    Sourced from the Umweltbundesamt (UBA), nearest-station hourly readings.
+    Read-only. For official, archived values use ``air_quality``.
     """
     return await client.get_resource(slug, "air")
 

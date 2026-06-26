@@ -3,7 +3,7 @@
   "name": "dev.infranode/infranode",
   "title": "InfraNode",
   "description": "Keyless open-data MCP for 84 German cities: 61 tools (weather, transit, trains, energy, more).",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "repository": {
     "url": "https://github.com/street1983nk/infranode",
     "source": "github"

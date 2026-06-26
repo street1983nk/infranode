@@ -8,7 +8,7 @@ damit Tests deterministisch bleiben.
 
 KRITISCH (DB-Schutzrecht, RESEARCH Pitfall 4, T-08-DBR): Die klinikscharfe
 DIVI-Live-Lage ist KEINE offene Lizenz (Datenbank-Schutzrecht). Daher
-``license_tier=LicenseTier.C`` (live-only, analog OpenAQ) und
+``license_tier=LicenseTier.C`` (live-only) und
 ``license_id=LicenseId.UNKNOWN`` (ehrlicher Tag statt eines falschen pauschalen
 CC-BY/DL-DE). Die Route ``/icu-live`` leitet diese Records ausschliesslich live
 durch. Die Kreis-Aggregat-CSV (CC-BY 4.0, Tier A) laeuft getrennt ueber
