@@ -16,7 +16,7 @@ departures), traffic, electricity price (SMARD), land values (BORIS), parking,
 charging, water levels, demographics, energy and more, for **84+ German cities**
 behind **one** interface. **No API key, no account.** Every response uses one
 canonical `{ data, meta }` envelope with per-record license and attribution. The
-same data is also exposed as an MCP server (64 read-only tools) for AI agents.
+same data is also exposed as an MCP server (65 read-only tools) for AI agents.
 Start with the one-call `get_city_overview`: it returns a catalog of every data
 type available for a city plus a live highlights snapshot, so agents discover the
 full breadth, not just weather. InfraNode is actively growing, with more data
@@ -31,7 +31,7 @@ Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
 flowchart LR
     SRC["German open-data sources<br/>DWD, UBA, SMARD, BORIS,<br/>Mobilithek, GovData, ..."] --> CORE["InfraNode<br/>normalize, license-gate, cache"]
     CORE --> API["REST API<br/>infranode.dev/api/v1"]
-    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 64 tools"]
+    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 65 tools"]
     API --> APPS["Your apps &amp; dashboards"]
     MCP --> AGENTS["AI agents (Claude &amp; co.)"]
 ```
@@ -101,7 +101,7 @@ See [SECURITY.md](./SECURITY.md) for the security model.
 
 ## Use it as an MCP server
 
-The same API is exposed as a remote MCP server, so AI agents can call all 64
+The same API is exposed as a remote MCP server, so AI agents can call all 65
 endpoints as tools. One line with Claude Code:
 
 ```bash

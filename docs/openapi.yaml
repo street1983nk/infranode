@@ -1993,6 +1993,59 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/crime-stats:
+    get:
+      tags: [cities]
+      summary: Polizeiliche Kriminalstatistik je Stadt (BKA PKS, Tier A)
+      x-summary-en: Police crime statistics per city (BKA PKS, Tier A)
+      description: >-
+        Liefert die polizeiliche Kriminalstatistik je Kreis aus dem offline
+        aufbereiteten BKA-PKS-SQLite-Store im kanonischen Envelope: je
+        Hauptstraftatengruppe (z.B. Straftaten insgesamt, Gewaltkriminalitaet,
+        Wohnungseinbruchdiebstahl) die erfassten Faelle, die Haeufigkeitszahl je
+        100.000 Einwohner und die Aufklaerungsquote in Prozent, dazu Berichtsjahr
+        (reference_year) und Version. Lizenz DL-DE/BY 2.0 (Tier A). Regionale
+        Aufloesung Kreis/kreisfreie Stadt. Kein Upstream im Request-Pfad.
+        Sperr-/Leerwerte -> null. Deaktiviert -> 200 source_status="disabled".
+        Batch noch nicht gelaufen -> 200 source_status="not_ingested" (nie 5xx).
+      x-description-en: >-
+        Returns a city's police crime statistics per county from the offline-
+        prepared BKA PKS SQLite store in the canonical envelope: per main offence
+        group (e.g. total offences, violent crime, residential burglary) the
+        recorded cases, the frequency per 100,000 inhabitants and the clearance
+        rate in percent, plus the reporting year (reference_year) and version.
+        Licence DL-DE/BY 2.0 (Tier A). Spatial resolution county/county-free
+        city. No upstream in the request path. Blocked/empty values -> null.
+        Disabled -> 200 source_status="disabled". Batch not yet run -> 200
+        source_status="not_ingested" (never 5xx).
+      operationId: getCityCrimeStats
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Kriminalstatistik-Envelope (CanonicalRecord mit CrimeStatsPayload oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/unemployment:
     get:
       tags: [cities]

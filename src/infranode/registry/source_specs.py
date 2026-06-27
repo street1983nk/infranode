@@ -131,6 +131,11 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Statistische Ämter des Bundes und der Länder, Unfallatlas",
     ),
     SourceSpec(
+        name="bka_pks",
+        license_id="dl_de_by_2_0",
+        attribution="Polizeiliche Kriminalstatistik (PKS) - Bundeskriminalamt",
+    ),
+    SourceSpec(
         name="inkar",
         license_id="dl_de_by_2_0",
         attribution="Bundesinstitut für Bau-, Stadt- und Raumforschung (BBSR), INKAR",

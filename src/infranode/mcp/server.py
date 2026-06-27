@@ -109,6 +109,8 @@ _register(tools.unemployment)
 _register(tools.tourism)
 _register(tools.construction)
 _register(tools.accidents)
+# PKS-01: BKA Polizeiliche Kriminalstatistik (Tier A, Kreis-Jahreswerte).
+_register(tools.crime_stats)
 # DATA-30: Tankerkoenig Spritpreise (Tier A, aggregiert je Stadt).
 _register(tools.fuel_prices)
 # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).

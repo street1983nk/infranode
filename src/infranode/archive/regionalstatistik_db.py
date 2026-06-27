@@ -8,3 +8,7 @@ def read_tax_rates(*args, **kwargs):
 
 def read_business_registrations(*args, **kwargs):
     return None
+
+
+def read_insolvencies(*args, **kwargs):
+    return None

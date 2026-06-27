@@ -171,6 +171,11 @@ class SourceId(StrEnum):
     # KBA/UNFALLATLAS), kein resilient_client. Toggle-Name == SourceId-Wert ==
     # _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
     INKAR = "inkar"
+    # PKS-01: BKA Polizeiliche Kriminalstatistik je Kreis (keylose Bulk-XLSX,
+    # DL-DE/BY 2.0, Tier A). Read-only Store-Lesung im Request-Pfad (wie KBA/
+    # UNFALLATLAS), kein resilient_client. Toggle-Name == SourceId-Wert ==
+    # _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    BKA_PKS = "bka_pks"
     # DATA-34: DB Timetables (Live-Abfahrtstafel Metropolen-Hbf inkl. Fernverkehr +
     # Echtzeit-Verspaetung). Keyed Live-Quelle (resilient_client, Header-Auth),
     # CC-BY 4.0 = Tier A. Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag;

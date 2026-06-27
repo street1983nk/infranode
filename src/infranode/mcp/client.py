@@ -89,6 +89,8 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "tourism",
         "construction",
         "accidents",
+        # PKS-01: BKA Polizeiliche Kriminalstatistik (Tier A, Kreis-Jahreswerte).
+        "crime-stats",
         # DATA-30: Tankerkoenig Spritpreise (Tier A, aggregiert je Stadt).
         "fuel-prices",
         # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).

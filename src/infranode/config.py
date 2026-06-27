@@ -184,6 +184,8 @@ class SourceToggleSettings(BaseSettings):
     enable_unfallatlas: bool = True
     # INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Bulk, keylos DL-DE/BY).
     enable_inkar: bool = True
+    # BKA-PKS Kriminalstatistik je Kreis (Bulk-XLSX, keylos DL-DE/BY, Tier A).
+    enable_bka_pks: bool = True
     # Tankerkoenig Spritpreise (MTS-K, CC BY 4.0). KEYED: Default True, aber ohne
     # tankerkoenig_key liefert die Route 200 disabled. Toggle-Name == SourceId.
     enable_tankerkoenig: bool = True
@@ -398,6 +400,8 @@ class BulkPathSettings(BaseSettings):
     unfallatlas_source_path: str | None = None
     # INKAR-Bulk (DATA-32): None = Batch holt die Indikatoren live von www.inkar.de.
     inkar_source_path: str | None = None
+    # BKA-PKS-Bulk (PKS-02): None = Batch probt das juengste Jahr live von www.bka.de.
+    bka_pks_source_path: str | None = None
     # BORIS-Bulk (DATA-35): None = Batch holt die Bodenrichtwerte live vom Landes-WFS.
     boris_source_path: str | None = None
     # Regionalstatistik-Bulk (DATA-37): None = Batch holt die Tabellen live vom

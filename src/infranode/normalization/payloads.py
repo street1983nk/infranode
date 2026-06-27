@@ -612,6 +612,28 @@ class IndicatorsPayload(BaseModel):
     indicators: list[dict] = Field(default_factory=list)
 
 
+class CrimeStatsPayload(BaseModel):
+    """Polizeiliche Kriminalstatistik je Kreis (BKA PKS, Tier A, PKS-01).
+
+    Buendelt je Hauptstraftatengruppe die amtlichen Kennzahlen der Kreis-
+    Falltabelle des Bundeskriminalamts zu einer Liste schlanker dicts. ``groups``
+    traegt je Gruppe ``key`` (Straftatenschluessel, z.B. "------" =
+    "Straftaten insgesamt"), ``label`` (Klartext), ``cases`` (erfasste Faelle),
+    ``frequency_per_100k`` (Haeufigkeitszahl HZ je 100.000 Einwohner) und
+    ``clearance_rate_pct`` (Aufklaerungsquote in Prozent). Regionale Aufloesung
+    ist der Kreis (kreisfreie Staedte stadtgenau, sonst der umgebende Kreis).
+    ``reference_year`` (Berichtsjahr) und ``version`` (PKS-Stand) sind
+    Attributionspflicht-Felder: das BKA verlangt die Angabe von Berichtsjahr und
+    Version. Sperr-/Leerwerte werden zu ``null`` (nie 0 erfunden). Mutable
+    Default via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["crime_stats"] = "crime_stats"
+    reference_year: int | None = None
+    version: str | None = None
+    groups: list[dict] = Field(default_factory=list)
+
+
 class StationDeparturesPayload(BaseModel):
     """Live-Abfahrtstafel des Stadt-Hauptbahnhofs (DB Timetables, Tier A, DATA-34).
 
@@ -900,6 +922,7 @@ PayloadUnion = Annotated[
     | SolarPayload
     | SolarRoofsPayload
     | IndicatorsPayload
+    | CrimeStatsPayload
     | LandValuesPayload
     | PopulationDensityPayload
     | TaxRatesPayload

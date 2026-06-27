@@ -88,6 +88,7 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
     ),
     DataType("construction", "construction", "Baugenehmigungen", "Building permits"),
     DataType("accidents", "accidents", "Verkehrsunfälle", "Road accidents"),
+    DataType("crime-stats", "crime_stats", "Kriminalität", "Crime statistics"),
     DataType(
         "vehicle-registrations",
         "vehicle_registrations",

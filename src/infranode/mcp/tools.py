@@ -308,6 +308,15 @@ async def accidents(slug: _Slug) -> ToolEnvelope:
     return await client.get_resource(slug, "accidents")
 
 
+async def crime_stats(slug: _Slug) -> ToolEnvelope:
+    """Get police crime statistics for a German city (per main offence group).
+
+    Sourced from the BKA Polizeiliche Kriminalstatistik (PKS): cases, frequency
+    per 100k inhabitants and clearance rate per main offence group. Read-only.
+    """
+    return await client.get_resource(slug, "crime-stats")
+
+
 async def fuel_prices(slug: _Slug) -> ToolEnvelope:
     """Get current fuel prices for a German city, aggregated per fuel type.
 

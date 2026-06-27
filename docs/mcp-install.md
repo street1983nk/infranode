@@ -15,7 +15,7 @@ dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
 deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie, öffentliche
-Auftragsvergabe und mehr) als 64 MCP-Tools.
+Auftragsvergabe und mehr) als 65 MCP-Tools.
 
 ## Berechtigungen und Sicherheitsmodell
 
@@ -126,7 +126,7 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-64 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+65 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
@@ -162,6 +162,7 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `tourism` | `slug` | Guest overnight stays and arrivals (district) | Regionalstatistik |
 | `construction` | `slug` | Building permits (district) | Regionalstatistik |
 | `accidents` | `slug` | Road-traffic accidents (district, yearly) | Unfallatlas |
+| `crime_stats` | `slug` | Police crime statistics per main offence group: cases, frequency per 100k, clearance rate (district, yearly) | BKA Polizeiliche Kriminalstatistik (PKS) |
 | `fuel_prices` | `slug` | Current fuel prices, aggregated per fuel type | Tankerkönig |
 | `sharing` | `slug` | Bike/scooter sharing availability, aggregated (partial) | GBFS |
 | `bike_counts` | `slug` | Bike counter / continuous cycling-count stations per city (partial coverage) | municipal cycling open data (DL-DE/CC-BY) |

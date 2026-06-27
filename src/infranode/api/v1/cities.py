@@ -73,6 +73,7 @@ from infranode.adapters.uba import fetch_air_uba
 from infranode.adapters.wikidata import fetch_city_base
 from infranode.adapters.zensus_grid import fetch_population_density
 from infranode.api.errors import UnprocessableError, UpstreamError
+from infranode.archive.bka_pks_db import read_crime_stats
 from infranode.archive.boris_db import read_land_values
 from infranode.archive.inkar_db import read_indicators
 from infranode.archive.kba_db import read_vehicle_registrations
@@ -100,6 +101,7 @@ from infranode.normalization.mappers.bike_counts import (
     map_leipzig_radzaehl,
     map_stuttgart_radzaehl,
 )
+from infranode.normalization.mappers.bka_pks import map_crime_stats
 from infranode.normalization.mappers.boris import map_land_values
 from infranode.normalization.mappers.db_timetables import (
     map_station_arrivals,
@@ -2911,6 +2913,61 @@ async def city_accidents(slug: str, request: Request) -> dict:
         wikidata_qid=entry.qid,
     )
     await append_record(record, source="unfallatlas")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
+@router.get("/cities/{slug}/crime-stats")
+async def city_crime_stats(slug: str, request: Request) -> dict:
+    """Liefert die BKA-PKS-Kriminalstatistik je Stadt im Envelope (PKS-01).
+
+    Ablauf wie ``city_accidents`` (Store-read, KEIN resilient_client): Register-
+    Lookup (unbekannt -> 404), Toggle-Pruefung (aus -> 200 disabled),
+    parametrisierter Read ueber ``read_crime_stats`` aus der offline befuellten
+    SQLite-Kreis-Falltabelle (je 5-stelligem Kreisschluessel). Geliefert werden je
+    Hauptstraftatengruppe Faelle, Haeufigkeitszahl (HZ, Faelle je 100.000
+    Einwohner) und Aufklaerungsquote (AQ in Prozent). Drei ``source_status``:
+    disabled / not_ingested (kein Snapshot fuer den Kreis) / ok. Der ok-Record
+    wird zusaetzlich ins Tier-A-Archiv geschrieben (Analyst-Speisung, wie
+    ``accidents``).
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_bka_pks:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    row = read_crime_stats(entry.slug, ags=entry.ags)
+    if row is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_crime_stats(
+        entry.slug,
+        row["groups"],
+        reference_year=row["jahr"],
+        version=row["version"],
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    await append_record(record, source="bka_pks")
 
     return {
         "data": record.model_dump(mode="json"),
