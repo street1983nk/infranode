@@ -660,3 +660,14 @@ async def public_tenders(slug: _Slug) -> ToolEnvelope:
     Read-only.
     """
     return await client.get_resource(slug, "public-tenders")
+
+
+async def bike_counts(slug: _Slug) -> ToolEnvelope:
+    """Get municipal bike-counter (continuous cycling-count) stations for a city.
+
+    Permanent cycling-count stations operated by the city, sourced from municipal
+    cycling open data per city (DL-DE/CC-BY, varying by source). Read-only.
+    Coverage is partial (selected cities only). This is NOT bike sharing: for
+    rental bikes/scooters use the ``sharing`` tool instead.
+    """
+    return await client.get_resource(slug, "bike-counts")

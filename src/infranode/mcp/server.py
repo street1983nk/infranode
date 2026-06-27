@@ -164,6 +164,10 @@ _register(tools.population_density)
 # TENDER-05/06: Oeffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
 # OCDS, CC0/Tier A). Zieht Live-/Store-Daten von der API -> open_world=True.
 _register(tools.public_tenders)
+# DATA-40: Kommunale Radzaehlstellen je Stadt (Dauerzaehlstellen, Tier A,
+# Teilabdeckung). Zieht Zaehldaten von externen kommunalen Quellen -> open_world=True.
+# NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
+_register(tools.bike_counts)
 
 
 # MCP Resources: expose the coverage catalog as browsable resources, so clients

@@ -15,7 +15,7 @@ dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
 deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie, öffentliche
-Auftragsvergabe und mehr) als 62 MCP-Tools.
+Auftragsvergabe und mehr) als 63 MCP-Tools.
 
 ## Berechtigungen und Sicherheitsmodell
 
@@ -126,7 +126,7 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-62 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+63 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
@@ -164,6 +164,7 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `accidents` | `slug` | Road-traffic accidents (district, yearly) | Unfallatlas |
 | `fuel_prices` | `slug` | Current fuel prices, aggregated per fuel type | Tankerkönig |
 | `sharing` | `slug` | Bike/scooter sharing availability, aggregated (partial) | GBFS |
+| `bike_counts` | `slug` | Bike counter / continuous cycling-count stations per city (partial coverage) | municipal cycling open data (DL-DE/CC-BY) |
 | `indicators` | `slug` | Socioeconomic indicators (district, latest year) | INKAR/BBSR |
 | `land_values` | `slug` | Official land values, aggregated (building land, partial coverage) | BORIS |
 | `tax_rates` | `slug` | Local tax multipliers per municipality: trade tax, property tax A/B/C | Regionalstatistik |

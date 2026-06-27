@@ -130,6 +130,9 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         # TENDER-05/06: Oeffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
         # OCDS, CC0/Tier A). Read-only aus dem deduplizierten Store (Plan 21-04/05).
         "public-tenders",
+        # DATA-40: Kommunale Radzaehlstellen je Stadt (Dauerzaehlstellen, Tier A,
+        # Teilabdeckung). NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
+        "bike-counts",
     }
 )
 

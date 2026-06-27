@@ -163,4 +163,13 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Öffentliche Auftragsvergabe",
         "Public procurement",
     ),
+    # DATA-40: kommunale Radzaehl-Open-Data je Stadt (Dauerzaehlstellen, Tier A,
+    # Teilabdeckung muenchen/leipzig/hamburg/berlin/stuttgart). key/tool ASCII,
+    # Label mit korrektem Umlaut. NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
+    DataType(
+        "bike-counts",
+        "bike_counts",
+        "Radzählstellen",
+        "Bike counters",
+    ),
 )
