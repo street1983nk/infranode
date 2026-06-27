@@ -15,7 +15,7 @@ dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
 deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie, öffentliche
-Auftragsvergabe und mehr) als 63 MCP-Tools.
+Auftragsvergabe und mehr) als 64 MCP-Tools.
 
 ## Berechtigungen und Sicherheitsmodell
 
@@ -126,7 +126,7 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-63 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
+64 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
 gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
@@ -169,6 +169,7 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | `land_values` | `slug` | Official land values, aggregated (building land, partial coverage) | BORIS |
 | `tax_rates` | `slug` | Local tax multipliers per municipality: trade tax, property tax A/B/C | Regionalstatistik |
 | `business_registrations` | `slug` | Business registrations/deregistrations and net per district | Regionalstatistik |
+| `insolvencies` | `slug` | Insolvency filings per district: corporate and other debtors (incl. consumers), annual | Regionalstatistik |
 | `public_tenders` | `slug` | Public procurement: running tenders and awarded contracts per city (running + awarded, coverage growing) | oeffentlichevergabe.de (OCDS) |
 | `station_departures` | `slug` | Live long-distance train departures (metro hubs) | DB Timetables |
 | `station_arrivals` | `slug` | Live long-distance train arrivals (metro hubs) | DB Timetables |

@@ -397,6 +397,18 @@ async def business_registrations(slug: _Slug) -> ToolEnvelope:
     return await client.get_resource(slug, "business-registrations")
 
 
+async def insolvencies(slug: _Slug) -> ToolEnvelope:
+    """Get insolvency filings for a German city (district level, annual).
+
+    Sourced from Regionalstatistik (German insolvency statistics, tables 52411-02
+    ISV006 + 52411-03 ISV007, annual total), district-level: unternehmensinsolvenzen
+    (corporate insolvencies) and uebrige_schuldner_insolvenzen (other debtors,
+    including consumers and former self-employed) plus the reporting year (jahr). A
+    measure of regional economic distress. Read-only.
+    """
+    return await client.get_resource(slug, "insolvencies")
+
+
 async def station_departures(slug: _Slug) -> ToolEnvelope:
     """Get live train departures from a city's main station, all train categories.
 

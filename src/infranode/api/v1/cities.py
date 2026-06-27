@@ -79,6 +79,7 @@ from infranode.archive.kba_db import read_vehicle_registrations
 from infranode.archive.mastr_db import read_energy
 from infranode.archive.regionalstatistik_db import (
     read_business_registrations,
+    read_insolvencies,
     read_tax_rates,
 )
 from infranode.archive.store import append_record, read_records
@@ -139,6 +140,7 @@ from infranode.normalization.mappers.parkendd import map_parkendd
 from infranode.normalization.mappers.pegelonline import map_water_level
 from infranode.normalization.mappers.regionalstatistik import (
     map_business_registrations,
+    map_insolvencies,
     map_tax_rates,
 )
 from infranode.normalization.mappers.smard import map_smard
@@ -3156,6 +3158,66 @@ async def city_business_registrations(slug: str, request: Request) -> dict:
     # Eigener Archiv-Quellenname (siehe city_tax_rates): getrennt von tax-rates,
     # damit die Tages-Aggregation des Analysten beide Metriken behaelt.
     await append_record(record, source="regionalstatistik_business")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
+@router.get("/cities/{slug}/insolvencies")
+async def city_insolvencies(slug: str, request: Request) -> dict:
+    """Liefert die beantragten Insolvenzen einer Stadt im Envelope (DATA-37, 52411).
+
+    Ablauf wie ``city_business_registrations`` (Store-read, KEIN resilient_client):
+    Register-Lookup (unbekannt -> 404), Konfig-Pruefung (Toggle aus ODER keine
+    GENESIS-Credentials -> 200 disabled), parametrisierter Read ueber
+    ``read_insolvencies`` (je 5-stelligem Kreisschluessel; Tabelle 52411-02 ISV006
+    Unternehmen + 52411-03 ISV007 uebrige Schuldner, in einen Record gemergt).
+    Drei ``source_status``:
+    - ``disabled``: ``enable_regionalstatistik`` aus ODER regio_user/pass fehlt
+    - ``not_ingested``: kein Snapshot fuer den Kreis -> data None, kein 5xx
+    - ``ok``: gemappte Insolvenzlage (Unternehmens- + uebrige-Schuldner-
+      Insolvenzen, letztere inkl. Verbraucher/ehem. Selbststaendige, + Jahr)
+
+    KRITISCH (kein Bulk-Upstream im Request-Pfad): liest AUSSCHLIESSLICH aus dem
+    vorverarbeiteten Datensatz; der GENESIS-Pull laeuft offline als Batch.
+    """
+    entry = get_city(slug)
+
+    if not _regio_configured():
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    row = read_insolvencies(entry.slug)
+    if row is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = map_insolvencies(
+        entry.slug,
+        row,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    # Eigener Archiv-Quellenname (siehe city_tax_rates / city_business_registrations):
+    # getrennt von tax-rates und business, sonst verliert die Tages-Aggregation des
+    # Analysten (letzter Record je Tag gewinnt) eine der Regionalstatistik-Metriken.
+    await append_record(record, source="regionalstatistik_insolvency")
 
     return {
         "data": record.model_dump(mode="json"),

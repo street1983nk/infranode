@@ -117,6 +117,9 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Gewerbe-An- & Abmeldungen",
         "Business registrations",
     ),
+    # DATA-37: Regionalstatistik.de beantragte Insolvenzen je Kreis (52411-02
+    # Unternehmen + 52411-03 uebrige Schuldner), Tier A. key/tool ASCII.
+    DataType("insolvencies", "insolvencies", "Insolvenzen", "Insolvencies"),
     DataType("events", "events", "Veranstaltungen", "Public events"),
     # DATA-OSM (Tier 1): dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
     DataType("playgrounds", "playgrounds", "Spielplätze", "Playgrounds"),

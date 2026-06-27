@@ -105,6 +105,9 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         # Gewerbean-/-abmeldungen (Kreis), Tier A.
         "tax-rates",
         "business-registrations",
+        # DATA-37: Regionalstatistik.de beantragte Insolvenzen je Kreis (52411-02
+        # Unternehmen + 52411-03 uebrige Schuldner), Tier A.
+        "insolvencies",
         # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
         "station-departures",
         "station-arrivals",

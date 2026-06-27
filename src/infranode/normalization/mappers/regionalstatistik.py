@@ -22,6 +22,7 @@ from infranode.normalization import (
     Attribution,
     BusinessRegistrationsPayload,
     CanonicalRecord,
+    InsolvenciesPayload,
     LicenseId,
     LicenseTier,
     SourceId,
@@ -98,6 +99,31 @@ def map_business_registrations(
         anmeldungen=row.get("anmeldungen"),
         abmeldungen=row.get("abmeldungen"),
         saldo=row.get("saldo"),
+        jahr=row.get("jahr"),
+    )
+    return _record(
+        slug, payload, retrieved_at=retrieved_at, ags=ags, wikidata_qid=wikidata_qid
+    )
+
+
+def map_insolvencies(
+    slug: str,
+    row: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet die Insolvenz-Zeile einer Stadt auf einen ``CanonicalRecord`` ab.
+
+    ``row`` ist das vom Reader gelieferte dict (``unternehmensinsolvenzen``/
+    ``uebrige_schuldner_insolvenzen``/``jahr``, Tabellen 52411-02 ISV006 + 52411-03
+    ISV007). ``retrieved_at`` wird injiziert (kein ``datetime.now()`` im Mapper).
+    Die Join-Keys ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht.
+    """
+    payload = InsolvenciesPayload(
+        unternehmensinsolvenzen=row.get("unternehmensinsolvenzen"),
+        uebrige_schuldner_insolvenzen=row.get("uebrige_schuldner_insolvenzen"),
         jahr=row.get("jahr"),
     )
     return _record(

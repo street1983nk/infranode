@@ -761,6 +761,32 @@ class BusinessRegistrationsPayload(BaseModel):
     jahr: int | None = None
 
 
+class InsolvenciesPayload(BaseModel):
+    """Beantragte Insolvenzen je Kreis (Regionalstatistik 52411, Tier A, INSO-01).
+
+    Aus der Insolvenzstatistik der Statistischen Aemter (Tabelle 52411,
+    Jahressumme, KREIS-genau): ``unternehmensinsolvenzen`` (beantragte
+    Unternehmensinsolvenzen, Tabelle 52411-02, Measure ISV006) und
+    ``uebrige_schuldner_insolvenzen`` (beantragte Insolvenzen uebriger Schuldner,
+    Tabelle 52411-03, Measure ISV007). ``jahr`` ist das Berichtsjahr (neuester
+    Jahrgang, fuer den BEIDE Kennzahlen vorliegen).
+
+    Ehrliche Benennung (RESEARCH Pitfall 2): die uebrigen Schuldner sind NICHT
+    deckungsgleich mit Verbrauchern. Sie umfassen Verbraucher, ehemalige
+    Selbststaendige und sonstige natuerliche Personen; reine Verbraucher
+    (ISV004) sind nur eine Teilmenge und auf Kreisebene nicht durchgaengig
+    verfuegbar. Daher traegt der Payload bewusst ``uebrige_schuldner_insolvenzen``
+    statt eines irrefuehrenden ``verbraucherinsolvenzen``. Regionale Aufloesung ist
+    der Kreis/die kreisfreie Stadt (kreisfreie Staedte stadtgenau, sonst der
+    umgebende Kreis).
+    """
+
+    kind: Literal["insolvencies"] = "insolvencies"
+    unternehmensinsolvenzen: int | None = None
+    uebrige_schuldner_insolvenzen: int | None = None
+    jahr: int | None = None
+
+
 class SolarRoofsPayload(BaseModel):
     """Dach-Solarkataster je Stadt: installiertes + Potenzial Dach-PV (DATA-39).
 
@@ -878,6 +904,7 @@ PayloadUnion = Annotated[
     | PopulationDensityPayload
     | TaxRatesPayload
     | BusinessRegistrationsPayload
+    | InsolvenciesPayload
     | StationCatalogPayload
     | StationDeparturesPayload
     | StationArrivalsPayload
