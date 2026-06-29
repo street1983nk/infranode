@@ -1,15 +1,15 @@
-"""Statischer Katalog aller Stadt-Datenarten (Discovery-Schicht fuer /overview).
+"""Statischer Katalog aller Stadt-Datenarten (Discovery-Schicht für /overview).
 
 Owner-Wunsch (2026-06-24): MCP-Agenten und Endnutzer sollen auf einen Blick sehen,
 wie VIELE Datenarten es pro Stadt gibt, nicht nur das meistgenutzte Wetter. Dieser
-Katalog ist die EINZIGE Quelle der Datenart-Labels + zugehoeriger MCP-Tool-Namen
-fuer den ``GET /cities/{slug}/overview``-Endpunkt.
+Katalog ist die EINZIGE Quelle der Datenart-Labels + zugehöriger MCP-Tool-Namen
+für den ``GET /cities/{slug}/overview``-Endpunkt.
 
-Reine statische Metadaten (keine Upstream-Calls). Die Verfuegbarkeit je Stadt wird
-zur Laufzeit guenstig aus ``registry.coverage`` abgeleitet. Eine Assertion im Test
-``tests/integration/test_city_overview.py`` haelt die Schluessel deckungsgleich mit
+Reine statische Metadaten (keine Upstream-Calls). Die Verfügbarkeit je Stadt wird
+zur Laufzeit günstig aus ``registry.coverage`` abgeleitet. Eine Assertion im Test
+``tests/integration/test_city_overview.py`` hält die Schlüssel deckungsgleich mit
 der MCP-Allowlist (``mcp.client.ALLOWED_RESOURCES``), damit der Katalog beim
-Hinzufuegen einer neuen Datenart nicht still zurueckfaellt.
+Hinzufügen einer neuen Datenart nicht still zurückfällt.
 """
 
 from __future__ import annotations
@@ -18,11 +18,11 @@ from typing import NamedTuple
 
 
 class DataType(NamedTuple):
-    """Eine Stadt-Datenart fuer den Overview-Katalog.
+    """Eine Stadt-Datenart für den Overview-Katalog.
 
     ``key`` ist das letzte Pfadsegment (``/cities/{slug}/<key>``) und zugleich der
-    Coverage-Schluessel (``registry.coverage.is_covered``). ``tool`` ist der Name
-    des zugehoerigen MCP-Tools, damit ein Agent direkt weiterspringen kann.
+    Coverage-Schlüssel (``registry.coverage.is_covered``). ``tool`` ist der Name
+    des zugehörigen MCP-Tools, damit ein Agent direkt weiterspringen kann.
     """
 
     key: str
@@ -31,7 +31,7 @@ class DataType(NamedTuple):
     label_en: str
 
 
-# Genau die City-Sub-Ressourcen aus ``mcp.client.ALLOWED_RESOURCES`` (Test haelt
+# Genau die City-Sub-Ressourcen aus ``mcp.client.ALLOWED_RESOURCES`` (Test hält
 # die Mengen deckungsgleich). Labels mit echten Umlauten (deutsche Schreibweise).
 CITY_DATA_CATALOG: tuple[DataType, ...] = (
     DataType("base", "get_city", "Basisdaten", "Base data"),
@@ -119,7 +119,7 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Business registrations",
     ),
     # DATA-37: Regionalstatistik.de beantragte Insolvenzen je Kreis (52411-02
-    # Unternehmen + 52411-03 uebrige Schuldner), Tier A. key/tool ASCII.
+    # Unternehmen + 52411-03 übrige Schuldner), Tier A. key/tool ASCII.
     DataType("insolvencies", "insolvencies", "Insolvenzen", "Insolvencies"),
     DataType("events", "events", "Veranstaltungen", "Public events"),
     # DATA-OSM (Tier 1): dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
@@ -159,7 +159,7 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Einwohnerdichte",
         "Population density",
     ),
-    # TENDER-01/05: oeffentliche Auftragsvergabe (oeffentlichevergabe.de, CC0 = Tier A).
+    # TENDER-01/05: öffentliche Auftragsvergabe (oeffentlichevergabe.de, CC0 = Tier A).
     # key/tool ASCII (Pfadsegment + MCP-Tool), Label mit korrektem Umlaut.
     DataType(
         "public-tenders",
@@ -167,7 +167,7 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Öffentliche Auftragsvergabe",
         "Public procurement",
     ),
-    # DATA-40: kommunale Radzaehl-Open-Data je Stadt (Dauerzaehlstellen, Tier A,
+    # DATA-40: kommunale Radzähl-Open-Data je Stadt (Dauerzählstellen, Tier A,
     # Teilabdeckung muenchen/leipzig/hamburg/berlin/stuttgart). key/tool ASCII,
     # Label mit korrektem Umlaut. NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
     DataType(

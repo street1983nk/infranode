@@ -2,11 +2,11 @@
 
 FastAPI serviert das generierte Schema intern nur als JSON unter /openapi.json.
 Die stabile, design-first gepflegte Spec liegt als ``docs/openapi.yaml`` im Repo
-(REST-Regel 11) und wird hier unveraendert als ``application/yaml`` ausgeliefert.
+(REST-Regel 11) und wird hier unverändert als ``application/yaml`` ausgeliefert.
 
 Sicherheit (T-04-10): ``_SPEC`` ist eine hartkodierte Konstante ohne
 User-Input-Anteil (kein Pfad-Parameter -> kein Path-Traversal). ``include_in_schema
-=False`` haelt die Route aus dem generierten Schema heraus (keine Rekursion in
+=False`` hält die Route aus dem generierten Schema heraus (keine Rekursion in
 /openapi.json bzw. den Drift-Detektor).
 """
 
@@ -21,7 +21,7 @@ router = APIRouter()
 
 # Hartkodierter Pfad zur design-first-Spec (kein User-Input, T-04-10). Die Spec
 # ist statisch; sie wird einmal beim Import gelesen (kein blockierendes
-# Datei-I/O je Request, ruff ASYNC240) und unveraendert ausgeliefert.
+# Datei-I/O je Request, ruff ASYNC240) und unverändert ausgeliefert.
 _SPEC_PATH = Path("docs/openapi.yaml")
 _SPEC_TEXT = _SPEC_PATH.read_text(encoding="utf-8")
 

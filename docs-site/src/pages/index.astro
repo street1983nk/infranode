@@ -6,7 +6,7 @@
 import Docs from "../layouts/Docs.astro";
 import JsonLd from "../components/JsonLd.astro";
 
-// FAQ fuer die Landing (GEO): konversationelle Dev-Fragen plus FAQPage-JSON-LD.
+// FAQ für die Landing (GEO): konversationelle Dev-Fragen plus FAQPage-JSON-LD.
 // Single Source: eine Liste speist sowohl die sichtbare Sektion als auch das
 // strukturierte Markup, damit beide deckungsgleich bleiben.
 const faqs = [
@@ -36,7 +36,7 @@ const faqs = [
   },
 ];
 
-// FAQPage nach schema.org. JSON.stringify erzeugt gueltiges, escaptes JSON.
+// FAQPage nach schema.org. JSON.stringify erzeugt gültiges, escaptes JSON.
 const faqJsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "FAQPage",

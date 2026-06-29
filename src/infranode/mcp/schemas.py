@@ -4,12 +4,12 @@ Jedes Tool gibt zur Laufzeit weiterhin den rohen API-Envelope als ``dict`` 1:1
 durch (Blocker-4-Aufrufvertrag, keine Mapping-Logik hier). Die Tool-Funktionen
 sind aber mit ``-> ToolEnvelope`` annotiert, damit FastMCP daraus ein
 ``outputSchema`` generiert: Verzeichnis-Scanner (Smithery/Glama) bewerten Tools
-mit Output-Schema deutlich hoeher, und MCP-Clients erhalten zusaetzlich
+mit Output-Schema deutlich höher, und MCP-Clients erhalten zusätzlich
 strukturierten Inhalt (``structuredContent``) statt nur Text.
 
 WICHTIG (Robustheit vor Striktheit): ``data`` ist ``Any`` (die Nutzlast variiert
-je Ressource ueber ~47 Payload-Typen) und ``meta`` erlaubt Zusatzfelder
-(``extra="allow"``), damit FastMCPs Rueckgabe-Validierung (``model_validate`` in
+je Ressource über ~47 Payload-Typen) und ``meta`` erlaubt Zusatzfelder
+(``extra="allow"``), damit FastMCPs Rückgabe-Validierung (``model_validate`` in
 func_metadata.convert_result) NIE an einer realen Antwort scheitert. ``source_
 status`` ist bewusst ``str`` statt ``Literal``: die API kennt heute ok/disabled/
 no_data/not_covered/error/not_found/not_ingested, und ein neuer Wert darf einen

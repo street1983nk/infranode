@@ -1,6 +1,6 @@
 """Reiner BKG-Verwaltungsgrenzen-Mapper map_admin_boundary (DATA-19, GOV-03).
 
-Uebersetzt das flache BKG-Attributtabellen-raw-dict (AGS/GEN/area_km2) deterministisch
+Übersetzt das flache BKG-Attributtabellen-raw-dict (AGS/GEN/area_km2) deterministisch
 in einen ``CanonicalRecord`` mit ``AdminBoundaryPayload`` (kind=admin_boundary). Die
 Funktion ist rein: kein HTTP, kein Logging, kein ``datetime.now()``. Der
 ``retrieved_at``-Zeitstempel wird keyword-only injiziert, damit Tests deterministisch
@@ -10,12 +10,12 @@ KRITISCH (Lizenz-Klassifikation GOV-02): BKG-Verwaltungsgrenzen sind Tier A
 (offene Lizenz), ``source=SourceId.BKG``, ``license_id=DL_DE_BY_2_0``,
 ``license_tier=A`` (DL-DE/BY 2.0).
 
-KRITISCH (GOV-03, RESEARCH DATA-19, Pflicht-Wortlaut): Die Attribution traegt PFLICHT
+KRITISCH (GOV-03, RESEARCH DATA-19, Pflicht-Wortlaut): Die Attribution trägt PFLICHT
 den exakten Wortlaut ``"(c) GeoBasis-DE / BKG (<jahr>)"``. Der Mapper- und Routen-Test
 asserted den Substring ``"(c) GeoBasis-DE / BKG"``.
 
 NUR Grenzen + Namen + Flaeche: ``geo`` bleibt ``None`` (KEIN Geometrie-/Geocoding-
-Output), KEIN PLZ-Geocoding (Schema ``AdminBoundaryPayload`` traegt keine PLZ-/
+Output), KEIN PLZ-Geocoding (Schema ``AdminBoundaryPayload`` trägt keine PLZ-/
 Geocoder-Felder). ``observed_at`` bleibt ``None`` (das Bezugsjahr steht im Payload
 ``reference_year``).
 """
@@ -36,8 +36,8 @@ from infranode.normalization import (
 # DL-DE/BY 2.0 (Datenlizenz Deutschland Namensnennung 2.0, govdata.de).
 _DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
 
-# Fallback-Bezugsjahr fuer den Pflicht-Quellvermerk, falls das raw-dict kein
-# reference_year traegt (defensiv; der Ingest setzt es aus dem VG250-Jahrgang).
+# Fallback-Bezugsjahr für den Pflicht-Quellvermerk, falls das raw-dict kein
+# reference_year trägt (defensiv; der Ingest setzt es aus dem VG250-Jahrgang).
 _FALLBACK_JAHR = datetime.now().year
 
 
@@ -56,7 +56,7 @@ def map_admin_boundary(
     ``None``). ``geo`` bleibt ``None`` (NUR Grenzen/Namen/Flaeche, KEIN Geometrie-/
     Geocoding-Output); ``observed_at`` bleibt ``None`` (Bezugsjahr im Payload).
 
-    KRITISCH (GOV-03, Pflicht-Wortlaut): Die Attribution traegt PFLICHT den exakten
+    KRITISCH (GOV-03, Pflicht-Wortlaut): Die Attribution trägt PFLICHT den exakten
     Wortlaut ``"(c) GeoBasis-DE / BKG (<jahr>)"`` (DL-DE/BY 2.0); der Mapper- und
     Routen-Test asserted den Substring ``"(c) GeoBasis-DE / BKG"``.
     """

@@ -6,14 +6,14 @@
 // nur Strings gebaut, nie ein Request abgesetzt.
 import type { Endpoint } from "./openapi";
 
-// Basis-URL der Live-API fuer die Snippets. Kommt aus der Env, sodass die
+// Basis-URL der Live-API für die Snippets. Kommt aus der Env, sodass die
 // Try-it-Konsole weiterhin lokal/konfigurierbar bleibt; das Produktions-
-// Beispiel zeigt die oeffentliche Domain. ASCII-only (CLAUDE.md: Code/URLs).
+// Beispiel zeigt die öffentliche Domain. ASCII-only (CLAUDE.md: Code/URLs).
 export const API_BASE: string =
   (typeof process !== "undefined" && process.env?.INFRANODE_DOCS_API_BASE) ||
   "https://infranode.dev";
 
-// Beispiel-Stadt-Slug fuer {slug}-Pfadparameter (registrierte Stadt).
+// Beispiel-Stadt-Slug für {slug}-Pfadparameter (registrierte Stadt).
 const SLUG_EXAMPLE = "hamburg";
 
 // OpenAPI-Parameter-Form, soweit wir sie defensiv brauchen. Der Loader liefert
@@ -30,7 +30,7 @@ function asParam(value: unknown): OpenApiParameter {
   return value != null && typeof value === "object" ? (value as OpenApiParameter) : {};
 }
 
-// Liefert einen Beispielwert fuer einen Parameter. Reihenfolge: expliziter
+// Liefert einen Beispielwert für einen Parameter. Reihenfolge: expliziter
 // example -> schema.example -> schema.default -> erster enum-Wert -> typbasiert.
 // Spezialfall slug -> hamburg. Alles ASCII.
 function exampleFor(param: OpenApiParameter): string {
@@ -53,12 +53,12 @@ function exampleFor(param: OpenApiParameter): string {
   if (schema.type === "integer" || schema.type === "number") {
     return "1";
   }
-  // Generischer Fallback fuer freie String-Parameter (z.B. POI type).
+  // Generischer Fallback für freie String-Parameter (z.B. POI type).
   return "example";
 }
 
 // Ersetzt alle {param}-Platzhalter im Pfad durch Beispielwerte aus parameters
-// (NICHT nur {slug}). Unbekannte Platzhalter fallen auf "example" zurueck.
+// (NICHT nur {slug}). Unbekannte Platzhalter fallen auf "example" zurück.
 function resolvePath(endpoint: Endpoint): string {
   const params = endpoint.parameters.map(asParam);
   return endpoint.path.replace(/\{([^}]+)\}/g, (_match, rawName: string) => {
@@ -80,7 +80,7 @@ function requiredQuery(endpoint: Endpoint): Array<[string, string]> {
     .map((p) => [p.name as string, exampleFor(p)] as [string, string]);
 }
 
-// Baut die vollstaendige Beispiel-URL inkl. required Query-String.
+// Baut die vollständige Beispiel-URL inkl. required Query-String.
 export function urlFor(endpoint: Endpoint): string {
   const path = resolvePath(endpoint);
   const query = requiredQuery(endpoint);

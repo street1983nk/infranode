@@ -1,19 +1,19 @@
-"""Berlin-Radzaehldaten-Adapter ``fetch_berlin_radzaehl`` (DATA-40, Tier A).
+"""Berlin-Radzähldaten-Adapter ``fetch_berlin_radzaehl`` (DATA-40, Tier A).
 
-Liefert den juengsten Stundenwert je Berliner Radzaehlstelle (~30 Stationen)
+Liefert den jüngsten Stundenwert je Berliner Radzählstelle (~30 Stationen)
 keylos aus der offenen Gesamtdatei (DL-DE/Zero 2.0, SenMVKU, [VERIFIED 2026-06-23]):
 
   berlin.de/.../zaehlstellen-und-fahrradbarometer/gesamtdatei-stundenwerte.xlsx
 
-Die XLSX (~18 MB) hat ein Sheet "Standortdaten" (Zaehlstelle-ID, Beschreibung,
+Die XLSX (~18 MB) hat ein Sheet "Standortdaten" (Zählstelle-ID, Beschreibung,
 Breiten-/Laengengrad) und je Jahr ein Sheet "Jahresdatei JJJJ" (Spalte 0 =
-Stundenzeitstempel, Spalten 1..N = Zaehlwert je Station; Header traegt
-"ID\nInbetriebnahme"). Es wird das Sheet mit dem GROESSTEN Jahr gelesen und daraus
+Stundenzeitstempel, Spalten 1..N = Zählwert je Station; Header trägt
+"ID\nInbetriebnahme"). Es wird das Sheet mit dem GRÖSSTEN Jahr gelesen und daraus
 die LETZTE Zeile mit Daten (= frischster Stundenwert) je Station genommen, gejoint
-mit den Koordinaten aus "Standortdaten" ueber die Zaehlstelle-ID.
+mit den Koordinaten aus "Standortdaten" über die Zählstelle-ID.
 
 Performance: openpyxl ``read_only``/``data_only`` streamt; der 18-MB-Fetch+Parse
-laeuft nur bei Cache-Miss (sehr lange TTL, ``_SOURCE_TTL["berlin_radzaehl"]``).
+läuft nur bei Cache-Miss (sehr lange TTL, ``_SOURCE_TTL["berlin_radzaehl"]``).
 
 Sicherheit (T-9-02 SSRF): Host hartkodiert. DoS-/Datenfehler-Schutz:
 ``raise_for_status()`` (5xx -> STALE-ON-ERROR der Fassade); Felder defensiv.
@@ -60,7 +60,7 @@ def _standorte(wb) -> dict[str, dict]:
 
 
 def _latest_year_sheet(wb) -> str | None:
-    """Name des ``Jahresdatei``-Sheets mit dem groessten Jahr (oder None)."""
+    """Name des ``Jahresdatei``-Sheets mit dem größten Jahr (oder None)."""
     best: tuple[int, str] | None = None
     for name in wb.sheetnames:
         if not name.startswith(_YEAR_SHEET_PREFIX):
@@ -80,7 +80,7 @@ def _latest_counts(wb, sheet_name: str) -> tuple[dict[str, int], str | None]:
     header = next(rows, None)
     if not header:
         return {}, None
-    # Spaltenindex (>=1) -> Zaehlstelle-ID (Header "ID\nInbetriebnahme").
+    # Spaltenindex (>=1) -> Zählstelle-ID (Header "ID\nInbetriebnahme").
     col_id: dict[int, str] = {}
     for idx, cell in enumerate(header):
         if idx == 0 or not cell:
@@ -109,14 +109,14 @@ async def fetch_berlin_radzaehl(
     lon: float,
     radius_km: float = 30.0,
 ) -> dict:
-    """Holt die juengsten Berliner Rad-Stundenwerte (XLSX-Gesamtdatei).
+    """Holt die jüngsten Berliner Rad-Stundenwerte (XLSX-Gesamtdatei).
 
     GET der XLSX, openpyxl read_only: Standorte (Koordinaten) + neuestes
-    Jahres-Sheet (letzte Datenzeile je Station). Join ueber die Zaehlstelle-ID.
+    Jahres-Sheet (letzte Datenzeile je Station). Join über die Zählstelle-ID.
     ``lat``/``lon``/``radius_km`` sind vertragskonform Teil der Signatur (ungenutzt;
     Berlin liefert den kompletten Stadt-Datensatz).
 
-    Rueckgabe-Keys (exakt das, was ``map_berlin_radzaehl`` erwartet): ``slug``,
+    Rückgabe-Keys (exakt das, was ``map_berlin_radzaehl`` erwartet): ``slug``,
     ``stations`` (je Station name/id/lat/lon/value/period) und ``as_of``.
     """
     resp = await http.get(_XLSX_URL)

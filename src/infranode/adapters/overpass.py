@@ -1,31 +1,43 @@
 """Keyloser Overpass-Adapter fetch_pois (DATA-04).
 
-Laedt POIs einer Stadt ueber die oeffentliche Overpass-Instanz per POST. Der
+Lädt POIs einer Stadt über die öffentliche Overpass-Instanz per POST. Der
 Adapter baut die Overpass-QL deterministisch auf:
 
-- die Suchflaeche ist ``area(3600000000 + osm_relation)`` (Overpass leitet eine
+- die Suchfläche ist ``area(3600000000 + osm_relation)`` (Overpass leitet eine
   Area-ID aus der OSM-Relation ab, indem es ``3600000000`` addiert),
-- der POI-Typ wird ueber eine Whitelist (``_ALLOWED_TYPES``) auf ein festes
+- der POI-Typ wird über eine Whitelist (``_ALLOWED_TYPES``) auf ein festes
   ``amenity``-Tag gemappt.
 
 Sicherheit (T-05-09 Injection / T-05-12 SSRF): Der Host stammt aus ``_BASE`` bzw.
 dem operator-gesetzten ``base_url`` (Env ``INFRANODE_OVERPASS_BASE_URL``, KEIN
-User-Input) -> SSRF-Invariante bleibt gewahrt. Hintergrund: Die oeffentliche
-Overpass-Instanz untersagt Drittnutzer-Backends im Dauerbetrieb (Fair-Use); fuer
+User-Input) -> SSRF-Invariante bleibt gewahrt. Hintergrund: Die öffentliche
+Overpass-Instanz untersagt Drittnutzer-Backends im Dauerbetrieb (Fair-Use); für
 Produktion auf eine eigene Instanz (Planet-Dump) oder Geofabrik umstellen. Der
 User-kontrollierte ``poi_type`` gelangt NIE roh in die QL: ein
-unbekannter Typ loest beim Whitelist-Lookup ein ``KeyError`` aus, das die Route
-auf 422 mappt (BEVOR ein Request laeuft). Nur die aus dem validierten Register
+unbekannter Typ löst beim Whitelist-Lookup ein ``KeyError`` aus, das die Route
+auf 422 mappt (BEVOR ein Request läuft). Nur die aus dem validierten Register
 stammende ``osm_relation`` (int > 0) und das Whitelist-amenity-Tag werden in den
 Body interpoliert.
 
 DoS-Schutz (T-05-11, Pitfall 2): ``[out:json][timeout:25]`` begrenzt die
-Server-Laufzeit, ``out body 200`` cappt die Antwortgroesse gegen Riesen-Antworten.
+Server-Laufzeit, ``out center <max_elements>`` cappt die Antwortgröße gegen
+Riesen-Antworten. Das Element-Limit ist KONFIGURIERBAR (``max_elements``, Default
+``_DEFAULT_MAX_ELEMENTS`` = 2000) statt hart 200 (Audit K9: das alte Cap 200 hat
+~67-87% aller Objekte still gekappt, z.B. Köln Spielplätze 200 statt 1540).
 
-Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
+Ehrlichkeit bei Truncation (Audit K9): jede QL führt ZUSÄTZLICH ein
+``out count;`` auf demselben Ergebnis-Set, BEVOR die (gedeckelte) Element-Ausgabe
+folgt. Overpass liefert dann ein Element ``type=="count"`` mit dem ECHTEN
+Gesamtbestand (``tags.total``) plus die auf ``max_elements`` gedeckelte
+Stichprobe. Der Adapter trennt das count-Element heraus und reicht
+``total_available`` (echter Gesamtbestand) ans raw-dict durch; der Mapper leitet
+daraus ``count`` (gelieferte Stichprobe), ``total_available`` und ``truncated``
+ab. KEIN zweiter Netz-Call nötig (beides in EINER Query).
+
+Der Adapter ist rein gegenüber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` (das macht der Mapper in der Route) und kennt KEIN
 Cache/Breaker (das liefert die Fassade). ``resp.raise_for_status()`` ist Pflicht,
-damit ein 5xx als ``httpx.HTTPError`` an die Fassade durchschlaegt und der
+damit ein 5xx als ``httpx.HTTPError`` an die Fassade durchschlägt und der
 STALE-ON-ERROR-Pfad greift.
 """
 
@@ -35,14 +47,21 @@ from typing import NamedTuple
 
 import httpx
 
-# Host hartkodiert (T-05-12 SSRF): nur diese eine oeffentliche Overpass-Instanz.
+# Host hartkodiert (T-05-12 SSRF): nur diese eine öffentliche Overpass-Instanz.
 _BASE = "https://overpass-api.de/api/interpreter"
 
 # Offset, mit dem Overpass aus einer OSM-Relation eine Area-ID bildet.
 _AREA_OFFSET = 3600000000
 
+# Default-Element-Limit (Audit K9): die ausgelieferte Stichprobe wird auf diesen
+# Wert gedeckelt (statt hart 200). Operator-konfigurierbar über das Setting
+# ``overpass_max_elements`` (Env INFRANODE_OVERPASS_MAX_ELEMENTS), das die Routen
+# als ``max_elements`` durchreichen. Der ECHTE Gesamtbestand kommt unabhängig
+# davon über ``out count;`` (siehe Modul-Docstring) als ``total_available``.
+_DEFAULT_MAX_ELEMENTS = 2000
+
 # Typ-Whitelist (T-05-09 Injection): jeder erlaubte ``poi_type`` wird auf ein
-# festes, gueltiges ``amenity``-Tag gemappt. Ein unbekannter Typ loest beim
+# festes, gültiges ``amenity``-Tag gemappt. Ein unbekannter Typ löst beim
 # Lookup ein KeyError aus (kein roher User-Input in die Overpass-QL).
 _ALLOWED_TYPES: dict[str, str] = {
     "hospital": "hospital",
@@ -54,6 +73,30 @@ _ALLOWED_TYPES: dict[str, str] = {
 }
 
 
+def _split_count_element(elements: list[dict]) -> tuple[int | None, list[dict]]:
+    """Trennt das Overpass-``out count``-Element von den echten POI-Elementen.
+
+    ``out count;`` hängt der Antwort ein Pseudo-Element ``type=="count"`` mit dem
+    echten Gesamtbestand in ``tags.total`` voran (Audit K9, Ehrlichkeit bei
+    Truncation). Rueckgabe: ``(total_available, poi_elements)``. ``total_available``
+    ist ``None``, wenn keine count-Zeile vorliegt (alte Mocks/Fixtures ohne count
+    bleiben damit kompatibel); ``poi_elements`` ist die Liste OHNE das count-Element.
+    """
+    total: int | None = None
+    pois: list[dict] = []
+    for element in elements:
+        if element.get("type") == "count":
+            raw_total = element.get("tags", {}).get("total")
+            if raw_total is not None:
+                try:
+                    total = int(raw_total)
+                except (TypeError, ValueError):
+                    total = None
+            continue
+        pois.append(element)
+    return total, pois
+
+
 async def fetch_pois(
     http: httpx.AsyncClient,
     *,
@@ -61,37 +104,47 @@ async def fetch_pois(
     osm_relation: int,
     poi_type: str,
     base_url: str = _BASE,
+    max_elements: int = _DEFAULT_MAX_ELEMENTS,
 ) -> dict:
     """Holt OSM-POIs eines Typs in einer Stadt und liefert das flache raw-dict.
 
-    Die Suchflaeche ist ``area(3600000000 + osm_relation)``; ``poi_type`` wird
-    ueber ``_ALLOWED_TYPES`` auf ein ``amenity``-Tag gemappt. Ein unbekannter
-    ``poi_type`` loest ein ``KeyError`` aus (Injection-Schutz, T-05-09): roher
+    Die Suchfläche ist ``area(3600000000 + osm_relation)``; ``poi_type`` wird
+    über ``_ALLOWED_TYPES`` auf ein ``amenity``-Tag gemappt. Ein unbekannter
+    ``poi_type`` löst ein ``KeyError`` aus (Injection-Schutz, T-05-09): roher
     User-Input gelangt NIE in die QL, die Route mappt das KeyError auf 422.
 
-    Rueckgabe-Keys (exakt das, was ``map_overpass_pois`` erwartet): ``slug``,
-    ``poi_type`` und ``elements`` (die rohe Overpass-Elementliste).
+    ``max_elements`` deckelt die ausgelieferte Stichprobe (Default
+    ``_DEFAULT_MAX_ELEMENTS``); der vorgeschaltete ``out count;`` liefert den
+    echten Gesamtbestand (Audit K9).
+
+    Rückgabe-Keys (exakt das, was ``map_overpass_pois`` erwartet): ``slug``,
+    ``poi_type``, ``elements`` (die rohe Overpass-Elementliste OHNE count-Zeile)
+    und ``total_available`` (echter Gesamtbestand laut Quelle, ggf. ``None``).
     """
     # Whitelist-Lookup VOR jeglichem QL-Aufbau: unbekannter Typ -> KeyError.
     amenity = _ALLOWED_TYPES[poi_type]
     area_id = _AREA_OFFSET + osm_relation
 
-    # out center 200 cappt (nwr+center: auch way/relation-POIs) die Antwort
-    # (DoS-Schutz, Pitfall 2); timeout begrenzt die Server-Laufzeit. Nur die
-    # validierte area_id und das Whitelist-amenity werden interpoliert.
+    # Ergebnis-Set zwischenspeichern (->.r), darauf erst out count; (echter
+    # Gesamtbestand) und dann out center <max_elements> (gedeckelte Stichprobe,
+    # auch way/relation-POIs). DoS-Schutz Pitfall 2 + Audit-K9-Ehrlichkeit. Nur die
+    # validierte area_id, das Whitelist-amenity und das int-Limit werden interpoliert.
     ql = (
         f"[out:json][timeout:25];"
         f"area({area_id})->.a;"
-        f'nwr["amenity"="{amenity}"](area.a);'
-        f"out center 200;"
+        f'nwr["amenity"="{amenity}"](area.a)->.r;'
+        f".r out count;"
+        f".r out center {max_elements};"
     )
 
     resp = await http.post(base_url, data={"data": ql})
     resp.raise_for_status()
+    total, pois = _split_count_element(resp.json().get("elements", []))
     return {
         "slug": slug,
         "poi_type": poi_type,
-        "elements": resp.json().get("elements", []),
+        "elements": pois,
+        "total_available": total,
     }
 
 
@@ -99,10 +152,10 @@ class _Feature(NamedTuple):
     """Definition einer OSM-Feature-Datenart (DATA-OSM, Tier B copyleft).
 
     ``groups`` ist eine Liste von Selektor-Gruppen; jede Gruppe ist eine Liste von
-    ``(key, value)``-Tags, die innerhalb EINER ``nwr``-Zeile UND-verknuepft werden
+    ``(key, value)``-Tags, die innerhalb EINER ``nwr``-Zeile UND-verknüpft werden
     (z.B. ``amenity=recycling`` + ``recycling_type=centre``). Mehrere Gruppen
     bilden eine Vereinigung (mehrere ``nwr``-Zeilen in einer Union). ``extra_tags``
-    nennt OSM-Tag-Schluessel, die ueber name/lat/lon hinaus je Element ausgeliefert
+    nennt OSM-Tag-Schlüssel, die über name/lat/lon hinaus je Element ausgeliefert
     werden (z.B. ``collection_times`` am Briefkasten, ``opening_hours``).
     """
 
@@ -110,9 +163,9 @@ class _Feature(NamedTuple):
     extra_tags: tuple[str, ...]
 
 
-# Feature-Whitelist (T-05-09 Injection): jeder Feature-Schluessel mappt auf feste,
-# hartkodierte Tag-Selektoren. Ein unbekannter Schluessel loest beim Lookup ein
-# KeyError aus (kein roher User-Input in die Overpass-QL). Die Schluessel sind
+# Feature-Whitelist (T-05-09 Injection): jeder Feature-Schlüssel mappt auf feste,
+# hartkodierte Tag-Selektoren. Ein unbekannter Schlüssel löst beim Lookup ein
+# KeyError aus (kein roher User-Input in die Overpass-QL). Die Schlüssel sind
 # zugleich die letzten Pfadsegmente der dedizierten Endpunkte.
 _OSM_FEATURES: dict[str, _Feature] = {
     "playgrounds": _Feature(((("leisure", "playground"),),), ()),
@@ -146,20 +199,27 @@ _OSM_FEATURES: dict[str, _Feature] = {
 }
 
 
-def _build_feature_ql(area_id: int, feature: _Feature) -> str:
-    """Baut die Overpass-QL fuer ein Feature deterministisch (Union der Gruppen).
+def _build_feature_ql(
+    area_id: int, feature: _Feature, max_elements: int = _DEFAULT_MAX_ELEMENTS
+) -> str:
+    """Baut die Overpass-QL für ein Feature deterministisch (Union der Gruppen).
 
-    Nur die validierte ``area_id`` (int) und die hartkodierten Tag-Schluessel/
-    -Werte aus ``_OSM_FEATURES`` werden interpoliert (kein User-Input, T-05-09).
-    ``out center 200`` cappt die Antwort (DoS-Schutz, Pitfall 2), ``timeout:25``
-    begrenzt die Server-Laufzeit.
+    Nur die validierte ``area_id`` (int), die hartkodierten Tag-Schluessel/-Werte
+    aus ``_OSM_FEATURES`` und das int-Limit ``max_elements`` werden interpoliert
+    (kein User-Input, T-05-09). Die Union wird über ``->.r`` zwischengespeichert;
+    darauf laufen ``out count;`` (echter Gesamtbestand, Audit K9) und
+    ``out center <max_elements>`` (gedeckelte Stichprobe, DoS-Schutz Pitfall 2).
+    ``timeout:25`` begrenzt die Server-Laufzeit.
     """
     lines = []
     for group in feature.groups:
         filt = "".join(f'["{key}"="{value}"]' for key, value in group)
         lines.append(f"nwr{filt}(area.a);")
-    union = "(" + "".join(lines) + ");"
-    return f"[out:json][timeout:25];area({area_id})->.a;{union}out center 200;"
+    union = "(" + "".join(lines) + ")->.r;"
+    return (
+        f"[out:json][timeout:25];area({area_id})->.a;{union}"
+        f".r out count;.r out center {max_elements};"
+    )
 
 
 async def fetch_osm_feature(
@@ -169,27 +229,32 @@ async def fetch_osm_feature(
     osm_relation: int,
     feature: str,
     base_url: str = _BASE,
+    max_elements: int = _DEFAULT_MAX_ELEMENTS,
 ) -> dict:
     """Holt eine OSM-Feature-Datenart in einer Stadt und liefert das raw-dict.
 
-    ``feature`` wird ueber ``_OSM_FEATURES`` auf feste Tag-Selektoren gemappt; ein
-    unbekannter ``feature`` loest ein ``KeyError`` aus (Injection-Schutz T-05-09,
-    die Route mappt das auf 422). Die Suchflaeche ist ``area(3600000000 +
-    osm_relation)``.
+    ``feature`` wird über ``_OSM_FEATURES`` auf feste Tag-Selektoren gemappt; ein
+    unbekannter ``feature`` löst ein ``KeyError`` aus (Injection-Schutz T-05-09,
+    die Route mappt das auf 422). Die Suchfläche ist ``area(3600000000 +
+    osm_relation)``. ``max_elements`` deckelt die Stichprobe (Default
+    ``_DEFAULT_MAX_ELEMENTS``); ``out count;`` liefert den echten Gesamtbestand.
 
-    Rueckgabe-Keys (exakt das, was ``map_osm_feature`` erwartet): ``slug``,
-    ``poi_type`` (= ``feature``), ``extra_tags`` und ``elements`` (rohe
-    Overpass-Elementliste).
+    Rückgabe-Keys (exakt das, was ``map_osm_feature`` erwartet): ``slug``,
+    ``poi_type`` (= ``feature``), ``extra_tags``, ``elements`` (rohe Overpass-
+    Elementliste OHNE count-Zeile) und ``total_available`` (echter Gesamtbestand
+    laut Quelle, ggf. ``None``).
     """
     feature_def = _OSM_FEATURES[feature]
     area_id = _AREA_OFFSET + osm_relation
-    ql = _build_feature_ql(area_id, feature_def)
+    ql = _build_feature_ql(area_id, feature_def, max_elements)
 
     resp = await http.post(base_url, data={"data": ql})
     resp.raise_for_status()
+    total, pois = _split_count_element(resp.json().get("elements", []))
     return {
         "slug": slug,
         "poi_type": feature,
         "extra_tags": list(feature_def.extra_tags),
-        "elements": resp.json().get("elements", []),
+        "elements": pois,
+        "total_available": total,
     }

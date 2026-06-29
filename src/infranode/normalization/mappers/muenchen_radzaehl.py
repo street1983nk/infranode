@@ -1,11 +1,11 @@
-"""Mapper ``map_muenchen_radzaehl`` (DATA-40, Muenchner Rad-Tageszaehlwerte, Tier A).
+"""Mapper ``map_muenchen_radzaehl`` (DATA-40, Münchner Rad-Tageszählwerte, Tier A).
 
-Uebersetzt das rohe Adapter-dict (``slug``/``stations``/``as_of``) deterministisch
-in einen ``CanonicalRecord`` mit ``CountStationPayload`` (kanonische Zaehlstellen-
-Huelle, wiederverwendet fuer alle bike-counts-Quellen). Rein: kein HTTP, keine
+Übersetzt das rohe Adapter-dict (``slug``/``stations``/``as_of``) deterministisch
+in einen ``CanonicalRecord`` mit ``CountStationPayload`` (kanonische Zählstellen-
+Hülle, wiederverwendet für alle bike-counts-Quellen). Rein: kein HTTP, keine
 Systemuhr (``retrieved_at`` keyword-only injiziert).
 
-LIZENZ (GOV-01): Landeshauptstadt Muenchen, Open-Data-Portal, Datenlizenz
+LIZENZ (GOV-01): Landeshauptstadt München, Open-Data-Portal, Datenlizenz
 Deutschland Namensnennung 2.0 (``DL_DE_BY_2_0`` -> Tier A), [VERIFIED 2026-06-23
 via package_show license_id ``dl-by-de/2.0``]. Attribution mit Namensnennung.
 """
@@ -30,7 +30,7 @@ _ATTRIBUTION = "Landeshauptstadt München"
 
 
 def _parse_datum(value: object) -> datetime | None:
-    """Parst das Muenchner ``datum`` (Format ``JJJJ.MM.TT``) defensiv zu datetime."""
+    """Parst das Münchner ``datum`` (Format ``JJJJ.MM.TT``) defensiv zu datetime."""
     if not isinstance(value, str) or not value:
         return None
     try:
@@ -65,11 +65,11 @@ def map_muenchen_radzaehl(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet rohe Muenchner Rad-Tageszaehlwerte auf einen ``CanonicalRecord`` ab.
+    """Bildet rohe Münchner Rad-Tageszählwerte auf einen ``CanonicalRecord`` ab.
 
-    Je Station ein schlankes Zaehl-dict (``station``/``lat``/``lon``/``value`` =
+    Je Station ein schlankes Zähl-dict (``station``/``lat``/``lon``/``value`` =
     Tagessumme/``granularity`` "day"/``period`` ISO-Tag/``directions``) im
-    ``CountStationPayload``. ``observed_at`` ist der juengste Zaehltag (``as_of``);
+    ``CountStationPayload``. ``observed_at`` ist der jüngste Zähltag (``as_of``);
     ``geo=None`` (Koordinaten je Station im Payload). Tier A (DL-DE/BY 2.0).
     """
     counts: list[dict] = []

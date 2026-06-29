@@ -1,1 +1,1 @@
-"""API-Schicht: Router, zentrale Fehler, Abhaengigkeiten."""
+"""API-Schicht: Router, zentrale Fehler, Abhängigkeiten."""

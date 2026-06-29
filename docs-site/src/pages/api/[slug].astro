@@ -1,9 +1,9 @@
 ---
 // Per-Endpunkt-Seite je OpenAPI-Operation (D-04, SEO Longtail). getStaticPaths
-// baut ueber ALLE Operationen der endpoints-Collection (params.slug =
+// baut über ALLE Operationen der endpoints-Collection (params.slug =
 // operationId). Rendert Titel (Methode + Pfad), summary/description, eine
 // Parameter-Tabelle aus endpoint.parameters, die umschaltbaren CodeTabs
-// (curl/JS/Python) und, NUR fuer aufrufbare Endpunkte, die Try-it-Konsole.
+// (curl/JS/Python) und, NUR für aufrufbare Endpunkte, die Try-it-Konsole.
 import { getCollection } from "astro:content";
 import Docs from "../../layouts/Docs.astro";
 import CodeTabs from "../../components/CodeTabs.astro";
@@ -29,7 +29,7 @@ interface OpenApiParameter {
 
 const { endpoint } = Astro.props;
 
-// Try-it nur fuer aufrufbare Endpunkte (Blocker 2): kind === "city" deckt
+// Try-it nur für aufrufbare Endpunkte (Blocker 2): kind === "city" deckt
 // getSources/getCities/compareCities und alle /cities/{slug}/... ab. meta
 // (insb. getBoom = _boom, 503; Health; Spec) bekommt kein Try-it,
 // sondern einen kurzen Hinweis.

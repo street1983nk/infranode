@@ -1,8 +1,8 @@
 """Reiner Denkmal-Mapper map_heritage (DATA-OSM-Tier-2, Denkmallisten).
 
-Uebersetzt rohe Denkmal-WFS-Features (GeoJSON) deterministisch in einen
+Übersetzt rohe Denkmal-WFS-Features (GeoJSON) deterministisch in einen
 ``CanonicalRecord`` mit ``PoiPayload`` (``poi_type="heritage"``). Je Objekt ein
-Repraesentativpunkt (lat/lon) plus die je Land konfigurierten Property-Felder
+Repräsentativpunkt (lat/lon) plus die je Land konfigurierten Property-Felder
 (z.B. ``typ``, ``link``). Lizenz/Attribution kommen pro Bundesland aus dem
 raw-dict (Berlin: DL-DE/Zero 2.0, Tier A). Rein: kein HTTP/Logging/now().
 """
@@ -33,8 +33,8 @@ def map_heritage(
 ) -> CanonicalRecord:
     """Bildet rohe Denkmal-WFS-Features auf einen ``CanonicalRecord`` ab.
 
-    Jedes Feature wird auf ein schlankes dict (Repraesentativpunkt + konfigurierte
-    Felder) reduziert; ein Feld wird nur gesetzt, wenn das Objekt es traegt (kein
+    Jedes Feature wird auf ein schlankes dict (Repräsentativpunkt + konfigurierte
+    Felder) reduziert; ein Feld wird nur gesetzt, wenn das Objekt es trägt (kein
     null-Rauschen). ``count`` ist immer ``len(items)``. Denkmale sind statisch,
     daher ``observed_at=None``; der ``retrieved_at``-Zeitstempel wird injiziert.
     """

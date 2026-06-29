@@ -1,4 +1,4 @@
-// Single Source fuer die MCP-Datennischen-Landingpages (SEO-Dominanz "MCP-Server
+// Single Source für die MCP-Datennischen-Landingpages (SEO-Dominanz "MCP-Server
 // Deutschland"). Jede Datenachse bekommt eine eigene Seite, die gezielt auf
 // "{Datentyp} MCP-Server [Deutschland]" optimiert ist: was das MCP-Tool macht,
 // wie man es in Claude/ChatGPT nutzt. DE+EN. Routen: src/pages/mcp/[topic].astro

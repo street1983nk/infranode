@@ -1,9 +1,9 @@
-"""Multi-City-Compare (API-05): EINE Ressource ueber mehrere Staedte faechern.
+"""Multi-City-Compare (API-05): EINE Ressource über mehrere Städte fächern.
 
-D-06: ein Endpunkt liefert eine Ressource ueber mehrere Staedte in EINER Response;
+D-06: ein Endpunkt liefert eine Ressource über mehrere Städte in EINER Response;
 je Stadt ein ``source_status`` (ok/disabled/no_data/error/not_found). Eine fehlende
 oder tote Stadt-Quelle erzeugt KEIN Gesamt-5xx (per-Stadt Graceful Degradation):
-der Fan-out laeuft ueber ``asyncio.gather`` gegen die resiliente Fassade
+der Fan-out läuft über ``asyncio.gather`` gegen die resiliente Fassade
 (``request.app.state.resilient_client.fetch``), die nie blockiert und keinen
 ungemappten Upstream-Fehler raised.
 
@@ -36,8 +36,8 @@ from infranode.registry import get_city
 router = APIRouter()
 
 # Ressource -> (source, fetch_fn, mapper, toggle). Additiv erweiterbar (analog
-# CONNECTOR_MAP in cities.py). Die Schluessel definieren die erlaubten resource-
-# Werte (Whitelist, T-11-FILTER-INJ); ein Wert ausserhalb -> 400. Genau die hier
+# CONNECTOR_MAP in cities.py). Die Schlüssel definieren die erlaubten resource-
+# Werte (Whitelist, T-11-FILTER-INJ); ein Wert außerhalb -> 400. Genau die hier
 # eingetragenen, bestehenden Adapter/Mapper werden wiederverwendet (keine neuen
 # Quellen): "weather" -> DWD (keylos), "air" -> UBA (Tier-A-Luftpfad).
 RESOURCE_MAP: dict[str, tuple] = {
@@ -45,9 +45,9 @@ RESOURCE_MAP: dict[str, tuple] = {
     "air": ("uba", fetch_air_uba, map_air_uba, "enable_uba"),
 }
 
-# Obergrenze fuer die Anzahl verglichener Staedte (T-11-CMP-DOS): begrenzt den
-# Fan-out unabhaengig von der Register-Groesse, damit ein langer cities-String
-# nicht beliebig viele parallele Upstream-Calls ausloest.
+# Obergrenze für die Anzahl verglichener Städte (T-11-CMP-DOS): begrenzt den
+# Fan-out unabhängig von der Register-Größe, damit ein langer cities-String
+# nicht beliebig viele parallele Upstream-Calls auslöst.
 _MAX_CITIES = 28
 
 # Whitelist der sortierbaren Felder der Compare-Liste (T-11-FILTER-INJ).
@@ -55,16 +55,16 @@ _COMPARE_SORT_WHITELIST = {"city", "source_status"}
 
 
 async def _one(slug: str, request: Request, resource: str) -> dict:
-    """Holt eine Ressource fuer EINE Stadt; degradiert per-Stadt graceful (D-06).
+    """Holt eine Ressource für EINE Stadt; degradiert per-Stadt graceful (D-06).
 
     Wirft NIE in den Fan-out hinein: unbekannter Slug -> ``not_found``, Toggle aus
     -> ``disabled``, toter Upstream ohne Cache (raw is None) -> ``error``, leere
-    Antwort -> ``no_data``, sonst Mapper -> ``ok``. Jeder Zweig traegt seinen
-    eigenen ``source_status``; kein Zweig fuehrt zu einem Gesamt-5xx.
+    Antwort -> ``no_data``, sonst Mapper -> ``ok``. Jeder Zweig trägt seinen
+    eigenen ``source_status``; kein Zweig führt zu einem Gesamt-5xx.
     """
     source, fetch_fn_adapter, mapper, toggle = RESOURCE_MAP[resource]
 
-    # Unbekannter Slug -> per-Stadt not_found als Teilergebnis (D-06: kein 404 fuer
+    # Unbekannter Slug -> per-Stadt not_found als Teilergebnis (D-06: kein 404 für
     # die gesamte Vergleichs-Antwort, eine schlechte Stadt verdirbt nicht die Batch).
     try:
         entry = get_city(slug)
@@ -87,10 +87,10 @@ async def _one(slug: str, request: Request, resource: str) -> dict:
             lon=entry.geo.lon,
         )
 
-    # D-06: der Fan-out raised NIE. Die Fassade faengt httpx-Fehler/Breaker-Open
-    # bereits ab (-> (None, STALE-ON-ERROR)); ein darueber hinaus durchschlagender
+    # D-06: der Fan-out raised NIE. Die Fassade fängt httpx-Fehler/Breaker-Open
+    # bereits ab (-> (None, STALE-ON-ERROR)); ein darüber hinaus durchschlagender
     # Fehler (z.B. ein Adapter-/Mapper-Defekt einer einzelnen Stadt) wird hier
-    # zusaetzlich zu per-Stadt "error" degradiert, damit eine kaputte Stadt nicht
+    # zusätzlich zu per-Stadt "error" degradiert, damit eine kaputte Stadt nicht
     # die gesamte Vergleichs-Antwort mit 5xx verdirbt.
     try:
         raw, status = await client.fetch(source, key, fetch_fn)
@@ -129,11 +129,11 @@ async def compare(
     resource: str,
     page: PageParams = Depends(page_params),  # noqa: B008 - FastAPI-Dependency-Idiom
 ) -> dict:
-    """Faechert ``resource`` ueber mehrere ``cities`` (API-05, D-06).
+    """Faechert ``resource`` über mehrere ``cities`` (API-05, D-06).
 
     ``cities`` ist eine kommaseparierte Slug-Liste; ``resource`` muss in
-    ``RESOURCE_MAP`` liegen (sonst 400). Der Fan-out laeuft per ``asyncio.gather``
-    ueber die resiliente Fassade; je Stadt ein ``source_status``, eine
+    ``RESOURCE_MAP`` liegen (sonst 400). Der Fan-out läuft per ``asyncio.gather``
+    über die resiliente Fassade; je Stadt ein ``source_status``, eine
     fehlende/tote Quelle erzeugt KEIN Gesamt-5xx. Das Ergebnis ist paginierbar
     (API-04, Whitelist {city, source_status}).
     """
@@ -151,7 +151,7 @@ async def compare(
             "Parameter 'cities' darf nicht leer sein.",
             hint="Beispiel: cities=berlin,koeln,hamburg.",
         )
-    # Fan-out-Groesse begrenzen (T-11-CMP-DOS).
+    # Fan-out-Größe begrenzen (T-11-CMP-DOS).
     slugs = slugs[:_MAX_CITIES]
 
     results = await asyncio.gather(*[_one(s, request, resource) for s in slugs])

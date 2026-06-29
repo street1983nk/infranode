@@ -1,13 +1,13 @@
 """Reiner Pro-Record-Event-Mapper map_destination_one_events (DATA-16, GOV-04).
 
-Uebersetzt rohe destination.one-Events in eine LISTE von ``CanonicalRecord``s mit
+Übersetzt rohe destination.one-Events in eine LISTE von ``CanonicalRecord``s mit
 ``EventPayload``. ABWEICHUNG vom Phase-5/7/9-Muster (D-05/GOV-04): license_id und
 license_tier werden NICHT pauschal hartkodiert, sondern PRO Record aus
 ``map_license(event["license_raw"])`` abgeleitet. Die Events werden nach dem
 ``map_license``-Ergebnis nach Tier GRUPPIERT; je Tier-Gruppe entsteht EIN
 ``CanonicalRecord`` (ein Record mit gemischter Liste kann nicht zwei Tiers tragen,
 Open Question 1). ``license_tier`` am Record kennzeichnet die jeweilige Lizenz:
-ein CC-BY-SA-Event traegt Tier B, ein CC0/CC-BY-Event Tier A (GOV-04, korrekte
+ein CC-BY-SA-Event trägt Tier B, ein CC0/CC-BY-Event Tier A (GOV-04, korrekte
 Attribution und Weiternutzung je Record).
 
 Zukunftsfilter (D-07, Pitfall 6): Events mit ``date_to`` vor dem
@@ -33,7 +33,7 @@ from infranode.normalization import (
 )
 from infranode.normalization.mappers.licensing import map_license
 
-# Lizenz-URL je license_id fuer die Attribution (wortgenau zur DATA-LICENSES.md).
+# Lizenz-URL je license_id für die Attribution (wortgenau zur DATA-LICENSES.md).
 _LICENSE_URLS: dict[LicenseId, str] = {
     LicenseId.CC0: "https://creativecommons.org/publicdomain/zero/1.0/",
     LicenseId.CC_BY_4_0: "https://creativecommons.org/licenses/by/4.0/",
@@ -42,13 +42,13 @@ _LICENSE_URLS: dict[LicenseId, str] = {
     LicenseId.DL_DE_ZERO_2_0: "https://www.govdata.de/dl-de/zero-2-0",
 }
 
-# destination.one verlangt UNABHAENGIG von der CC-Lizenz die wortgenaue Nennung
+# destination.one verlangt UNABHÄNGIG von der CC-Lizenz die wortgenaue Nennung
 # "powered by open.destination.one" inkl. Backlink je Datensatz.
 _ATTRIBUTION_TEXT = "powered by open.destination.one (https://open.destination.one)"
 
 
 def _parse_iso_date(value: object) -> date | None:
-    """Parst ein ISO-Datum (YYYY-MM-DD oder vollstaendiger Zeitstempel) defensiv.
+    """Parst ein ISO-Datum (YYYY-MM-DD oder vollständiger Zeitstempel) defensiv.
 
     Liefert ``None`` bei fehlendem/unparsbarem Wert (kein Crash, [ASSUMED]-Felder).
     """
@@ -64,7 +64,7 @@ def _parse_iso_date(value: object) -> date | None:
 def _is_future(event: dict, *, today: date) -> bool:
     """True, wenn das Event noch nicht abgeschlossen ist (date_to >= today).
 
-    Faellt auf ``date_from`` zurueck, wenn ``date_to`` fehlt. Ein Event ohne jedes
+    Fällt auf ``date_from`` zurück, wenn ``date_to`` fehlt. Ein Event ohne jedes
     verwertbare Datum gilt als historisch (D-07) und wird ausgeschlossen.
     """
     end = _parse_iso_date(event.get("date_to")) or _parse_iso_date(
@@ -89,9 +89,9 @@ def map_destination_one_events(
     direkt eine Event-Liste; in letzterem Fall muss ``slug`` als Keyword gesetzt
     sein. Der Zukunftsfilter (D-07) verwirft Vergangenheits-/Statistik-Events
     anhand des injizierten ``retrieved_at`` (kein ``datetime.now()``). Die
-    ueberlebenden Events werden je ``map_license``-Tier gruppiert; je Tier ein
-    Record (Tier aus ``map_license``, GOV-04). Gibt eine leere Liste zurueck, wenn
-    keine Events ueberleben.
+    überlebenden Events werden je ``map_license``-Tier gruppiert; je Tier ein
+    Record (Tier aus ``map_license``, GOV-04). Gibt eine leere Liste zurück, wenn
+    keine Events überleben.
     """
     if isinstance(raw, dict):
         events = raw.get("events", []) or []
@@ -105,7 +105,7 @@ def map_destination_one_events(
     today = retrieved_at.date()
 
     # Pro Tier eine Gruppe (Tier + license_id aus map_license PRO Record). Nur
-    # Zukunfts-Events ueberleben den D-07-Filter.
+    # Zukunfts-Events überleben den D-07-Filter.
     groups: dict[LicenseTier, tuple[LicenseId, list[dict]]] = {}
     for event in events:
         if not _is_future(event, today=today):
@@ -128,7 +128,7 @@ def map_destination_one_events(
             CanonicalRecord(
                 city_slug=city_slug,
                 geo=None,
-                observed_at=None,  # Event traegt seine Zeit im Payload
+                observed_at=None,  # Event trägt seine Zeit im Payload
                 retrieved_at=retrieved_at,
                 source=SourceId.DESTINATION_ONE,
                 license_id=license_id,

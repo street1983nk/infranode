@@ -1,19 +1,19 @@
-"""Abuse-Guard gegen VERTEILTE Bots (Scraping-Haertung).
+"""Abuse-Guard gegen VERTEILTE Bots (Scraping-Härtung).
 
 Das slowapi-IP-Limit (``ratelimit.py``, 120/min + 3000/h pro IP) bremst eine
 EINZELNE IP. Ein Botnet oder Cloud-Range mit vielen IPs umgeht es. Diese
-Middleware ergaenzt zwei billige, fruehe Schutzschichten VOR dem feinen IP-Limit:
+Middleware ergänzt zwei billige, frühe Schutzschichten VOR dem feinen IP-Limit:
 
 1. **Aggregiertes Subnetz-Limit** pro /24 (IPv4) bzw. /64 (IPv6): bremst, wenn aus
    EINEM Subnetz untypisch viel Verkehr kommt. Bewusst hoch (Default 1200/min =
    ~10x das IP-Burst), damit legitime NAT-/Campus-Nutzer hinter einer gemeinsamen
-   IP nicht getroffen werden. Storage in Redis (ueber Replicas geteilt; Fallback
+   IP nicht getroffen werden. Storage in Redis (über Replicas geteilt; Fallback
    In-Memory, falls Redis nicht erreichbar) wie beim MCP-Limiter.
 2. **Optionaler Cloudflare-Bot-Score-Block**: lehnt Anfragen mit ``cf-bot-score``
    unter einem Schwellwert (``bot_score_min``, 0 = aus) mit 403 ab. Der Header
    existiert nur mit Cloudflare Bot Management/Enterprise; bei Free/Pro fehlt er,
    dann ist der Check ein No-op-Hook, der automatisch wirksam wird, sobald Scores
-   verfuegbar sind.
+   verfügbar sind.
 
 Die echte Client-IP kommt aus ``real_client_ip`` (CF-Connecting-IP -> XFF[0] ->
 Peer), identisch zum slowapi-Limiter (Vertrauen unter der CF-only-Firewall).
@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 
 def subnet_of(ip_str: str, v4_prefix: int, v6_prefix: int) -> str:
-    """Subnetz-Schluessel der IP (/v4_prefix bzw. /v6_prefix); IP selbst bei Fehler."""
+    """Subnetz-Schlüssel der IP (/v4_prefix bzw. /v6_prefix); IP selbst bei Fehler."""
     try:
         ip = ipaddress.ip_address(ip_str)
     except ValueError:
@@ -48,12 +48,12 @@ def subnet_of(ip_str: str, v4_prefix: int, v6_prefix: int) -> str:
 
 
 def _make_storage(settings: Settings):
-    """Redis-Storage (ueber Replicas geteilt); Fallback In-Memory, s. mcp/ratelimit."""
+    """Redis-Storage (über Replicas geteilt); Fallback In-Memory, s. mcp/ratelimit."""
     uri = settings.limit_storage_uri or settings.redis_url
     try:
         # Kurze Connect-/Read-Timeouts: sonst kann check() bei nicht erreichbarem
         # Redis (lokaler Start ohne Redis, DNS-Hijack des Compose-Servicenamens)
-        # bis zum OS-Default blockieren -> App-Start haengt, statt auf den
+        # bis zum OS-Default blockieren -> App-Start hängt, statt auf den
         # In-Memory-Fallback zu fallen. memory:// ignoriert die kwargs (kein Netz).
         storage = storage_from_string(
             uri, socket_connect_timeout=0.5, socket_timeout=0.5
@@ -73,7 +73,7 @@ def _make_storage(settings: Settings):
 
 
 class AbuseGuardMiddleware(BaseHTTPMiddleware):
-    """Subnetz-Rate-Limit + optionaler CF-Bot-Score-Block (laeuft vor dem IP-Limit)."""
+    """Subnetz-Rate-Limit + optionaler CF-Bot-Score-Block (läuft vor dem IP-Limit)."""
 
     def __init__(self, app) -> None:  # noqa: ANN001 - Starlette-App
         super().__init__(app)

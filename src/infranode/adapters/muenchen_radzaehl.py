@@ -1,18 +1,18 @@
-"""Muenchen-Raddauerzaehlstellen-Adapter ``fetch_muenchen_radzaehl`` (DATA-40, Tier A).
+"""Muenchen-Raddauerzählstellen-Adapter ``fetch_muenchen_radzaehl`` (DATA-40, Tier A).
 
-Liefert die Tages-Radzaehlwerte der Muenchner Dauerzaehlstellen (6 Stationen,
-z.B. Erhardt/Olympia/Hirsch) keylos als kanonisches Zaehlstellen-dict. Zwei
-Open-Data-Quellen der Landeshauptstadt Muenchen werden gejoint (beide
+Liefert die Tages-Radzählwerte der Münchner Dauerzählstellen (6 Stationen,
+z.B. Erhardt/Olympia/Hirsch) keylos als kanonisches Zählstellen-dict. Zwei
+Open-Data-Quellen der Landeshauptstadt München werden gejoint (beide
 DL-DE/BY 2.0, [VERIFIED 2026-06-23]):
 
 1. Standort-WFS (``geoportal.muenchen.de``, ``mor_wfs:raddauerzaehlstellen``):
    Stationsname (``zaehlstelle``), Lang-Name/Adresse, ``latitude``/``longitude``,
    Richtungslabels (``richtung_1``/``richtung_2``). Eine GeoJSON-Anfrage.
 2. Tageswert-CSV (CKAN ``opendata.muenchen.de``, Paket
-   ``daten-der-raddauerzaehlstellen-muenchen-<JAHR>``): je Monat eine
-   ``rad_JJJJ_MM_tage.csv`` mit Spalten ``datum,...,zaehlstelle,richtung_1,
-   richtung_2,gesamt,...``. Es wird die lexikografisch JUENGSTE ``*_tage``-CSV
-   gewaehlt und daraus je Station die Zeile des juengsten ``datum`` (= frischster
+   ``daten-der-raddauerzählstellen-muenchen-<JAHR>``): je Monat eine
+   ``rad_JJJJ_MM_tage.csv`` mit Spalten ``datum,...,zählstelle,richtung_1,
+   richtung_2,gesamt,...``. Es wird die lexikografisch JÜNGSTE ``*_tage``-CSV
+   gewählt und daraus je Station die Zeile des jüngsten ``datum`` (= frischster
    Tageswert) genommen. Jahres-Rollover-robust: das aktuelle Jahr steckt im
    CKAN-Paketnamen, daher wird das Paket aus dem ``retrieved_at``-Jahr abgeleitet
    (Adapter bleibt rein: das Jahr kommt als Parameter, nicht aus der Systemuhr).
@@ -40,7 +40,7 @@ _WFS_HOST = "geoportal.muenchen.de"
 _WFS_URL = "https://geoportal.muenchen.de/geoserver/mor_wfs/ows"
 _ALLOWED_RESOURCE_HOSTS = {"opendata.muenchen.de"}
 
-# CKAN-Paketname der jaehrlichen Raddauerzaehl-Tageswerte (Jahr wird angehaengt).
+# CKAN-Paketname der jährlichen Raddauerzähl-Tageswerte (Jahr wird angehängt).
 _PACKAGE_PREFIX = "daten-der-raddauerzaehlstellen-muenchen-"
 
 
@@ -93,7 +93,7 @@ async def _fetch_stations(http: httpx.AsyncClient) -> list[dict]:
 
 
 async def _latest_daily_csv_url(http: httpx.AsyncClient, *, year: int) -> str | None:
-    """Ermittelt die URL der juengsten ``*_tage``-CSV des Jahres-CKAN-Pakets."""
+    """Ermittelt die URL der jüngsten ``*_tage``-CSV des Jahres-CKAN-Pakets."""
     resp = await http.get(
         f"{_CKAN_BASE}/api/3/action/package_show",
         params={"id": f"{_PACKAGE_PREFIX}{year}"},
@@ -108,7 +108,7 @@ async def _latest_daily_csv_url(http: httpx.AsyncClient, *, year: int) -> str | 
     if not isinstance(resources, list):
         return None
     # Kandidaten: Ressourcen, deren Download-URL auf "_tage.csv" endet. Die
-    # lexikografisch groesste rad_JJJJ_MM_tage.csv ist der juengste Monat.
+    # lexikografisch größte rad_JJJJ_MM_tage.csv ist der jüngste Monat.
     candidates: list[str] = []
     for resource in resources:
         if not isinstance(resource, dict):
@@ -122,7 +122,7 @@ async def _latest_daily_csv_url(http: httpx.AsyncClient, *, year: int) -> str | 
 
 
 def _parse_latest_day(text: str) -> dict[str, dict]:
-    """Parst die Tages-CSV und liefert je Station die Zeile des juengsten Datums.
+    """Parst die Tages-CSV und liefert je Station die Zeile des jüngsten Datums.
 
     Rueckgabe: ``{zaehlstelle: {value, direction_1_value, direction_2_value,
     datum}}``. ``gesamt``/``richtung_*`` werden defensiv zu int geparst (sonst
@@ -139,7 +139,7 @@ def _parse_latest_day(text: str) -> dict[str, dict]:
             latest_datum = datum
     if not latest_datum:
         return {}
-    # zweiter Durchlauf: nur die Zeilen des juengsten Datums (CSV ist klein).
+    # zweiter Durchlauf: nur die Zeilen des jüngsten Datums (CSV ist klein).
     reader = csv.DictReader(io.StringIO(text))
     for row in reader:
         if (row.get("datum") or "").strip() != latest_datum:
@@ -172,31 +172,36 @@ async def fetch_muenchen_radzaehl(
     radius_km: float = 30.0,
     year: int,
 ) -> dict:
-    """Holt die Muenchner Rad-Tageszaehlwerte (WFS-Standorte + juengste Tages-CSV).
+    """Holt die Münchner Rad-Tageszählwerte (WFS-Standorte + jüngste Tages-CSV).
 
-    Step 1: WFS-Standorte (Name/Koordinaten/Richtungslabels). Step 2a: juengste
-    ``*_tage``-CSV-URL aus dem Jahres-CKAN-Paket ermitteln (SSRF-Allowlist-Pruefung
-    der entdeckten URL), Step 2b: CSV laden und je Station die Zeile des juengsten
-    ``datum`` extrahieren. Join ueber den Stationsnamen (``zaehlstelle``). Fehlt der
+    Step 1: WFS-Standorte (Name/Koordinaten/Richtungslabels). Step 2a: jüngste
+    ``*_tage``-CSV-URL aus dem Jahres-CKAN-Paket ermitteln (SSRF-Allowlist-Prüfung
+    der entdeckten URL), Step 2b: CSV laden und je Station die Zeile des jüngsten
+    ``datum`` extrahieren. Join über den Stationsnamen (``zaehlstelle``). Fehlt der
     CSV-Wert (nicht erreichbar/Station nicht in CSV), bleibt ``value=None``.
 
     ``lat``/``lon``/``radius_km`` sind vertragskonform Teil der Signatur (alle
-    Stadt-Adapter teilen sie), Muenchen liefert den kompletten Stadt-Datensatz.
-    ``year`` (keyword-only) waehlt das Jahres-CKAN-Paket (kommt aus ``retrieved_at``,
+    Stadt-Adapter teilen sie), München liefert den kompletten Stadt-Datensatz.
+    ``year`` (keyword-only) wählt das Jahres-CKAN-Paket (kommt aus ``retrieved_at``,
     damit der Adapter rein bleibt).
 
-    Rueckgabe-Keys (exakt das, was ``map_muenchen_radzaehl`` erwartet): ``slug``,
-    ``stations`` (je Station Stammdaten + Tageswert) und ``as_of`` (juengstes
+    Rückgabe-Keys (exakt das, was ``map_muenchen_radzaehl`` erwartet): ``slug``,
+    ``stations`` (je Station Stammdaten + Tageswert) und ``as_of`` (jüngstes
     Datum als ISO-String oder None).
     """
     stations = await _fetch_stations(http)
-    # Ohne Stationen (WFS leer) gibt es nichts zu joinen -> kein CSV-Fetch noetig
+    # Ohne Stationen (WFS leer) gibt es nichts zu joinen -> kein CSV-Fetch nötig
     # (der Endpunkt liefert dann ehrlich no_data).
     if not stations:
         return {"slug": slug, "stations": [], "as_of": None}
 
     daily: dict[str, dict] = {}
     csv_url = await _latest_daily_csv_url(http, year=year)
+    if csv_url is None:
+        # MITTEL-Fix (Audit 2026-06-29): Am Jahresanfang existiert das neue
+        # Jahres-CKAN-Paket evtl. noch nicht -> ohne Fallback lieferten ALLE
+        # Stationen null. Auf das Vorjahrespaket zurückfallen.
+        csv_url = await _latest_daily_csv_url(http, year=year - 1)
     if csv_url:
         discovered_host = urlsplit(csv_url).hostname
         if discovered_host not in _ALLOWED_RESOURCE_HOSTS:

@@ -1,9 +1,9 @@
 """Diskriminierte Payload-Union der Normalisierungs-Library (CORE-01).
 
-Die domaenenspezifischen Nutzdaten variieren je Quelle. Ein ``kind``-Literal
-diskriminiert die Union; pydantic waehlt damit effizient das korrekte Modell und
+Die domänenspezifischen Nutzdaten variieren je Quelle. Ein ``kind``-Literal
+diskriminiert die Union; pydantic wählt damit effizient das korrekte Modell und
 erzeugt einen sauberen OpenAPI-Discriminator. Neue Quellen (Phase 7 bis 9)
-ergaenzen nur ein weiteres Payload-Modell mit eigenem ``kind`` und ein
+ergänzen nur ein weiteres Payload-Modell mit eigenem ``kind`` und ein
 Union-Mitglied, ohne Breaking Change am Envelope.
 """
 
@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 
 class CityBaseDataPayload(BaseModel):
-    """Stammdaten je Stadt (Einwohner, Flaeche)."""
+    """Stammdaten je Stadt (Einwohner, Fläche)."""
 
     kind: Literal["city_base"] = "city_base"
     population: int | None = None
@@ -27,8 +27,8 @@ class AirQualityPayload(BaseModel):
 
     Erweitert um die real von UBA gelieferten Schadstoff-Parameter. Alle
     Felder optional, da nicht jede Messstation jeden Parameter liefert.
-    ``station_id`` traegt die stabile Mess-/Detektor-ID je Messpunkt (ARCH-02)
-    und dient als fachlicher Schluessel fuer die deterministische ``record_id``.
+    ``station_id`` trägt die stabile Mess-/Detektor-ID je Messpunkt (ARCH-02)
+    und dient als fachlicher Schlüssel für die deterministische ``record_id``.
     """
 
     kind: Literal["air_quality"] = "air_quality"
@@ -44,15 +44,20 @@ class WeatherPayload(BaseModel):
     """Wetter-Messwerte je Stadt (DWD/Bright Sky, Tier A).
 
     Erweitert um Luftfeuchte, Windgeschwindigkeit und Wetterlage. Alle Felder
-    optional, da Bright Sky je Station unterschiedlich vollstaendig liefert.
-    ``station_id`` traegt die stabile Mess-/Detektor-ID je Messpunkt (ARCH-02)
-    und dient als fachlicher Schluessel fuer die deterministische ``record_id``.
+    optional, da Bright Sky je Station unterschiedlich vollständig liefert.
+    ``station_id`` trägt die stabile Mess-/Detektor-ID je Messpunkt (ARCH-02)
+    und dient als fachlicher Schlüssel für die deterministische ``record_id``.
+
+    Einheiten: ``temperature_c`` in Grad Celsius, ``humidity`` in Prozent,
+    ``wind_speed`` in km/h (Bright Sky liefert die Windgeschwindigkeit in km/h;
+    Quelle ist das aktuellste Mittelungs-Fenster ``wind_speed_10``, siehe Audit K3).
     """
 
     kind: Literal["weather"] = "weather"
     station_id: str | None = None
     temperature_c: float | None = None
     humidity: float | None = None
+    # Windgeschwindigkeit in km/h (Bright-Sky-Einheit), aus wind_speed_10/30/60.
     wind_speed: float | None = None
     condition: str | None = None
 
@@ -60,13 +65,22 @@ class WeatherPayload(BaseModel):
 class PoiPayload(BaseModel):
     """POIs je Stadt, gefiltert nach Typ (OSM/Overpass, Tier B copyleft).
 
-    ``items`` traegt je POI ein schlankes dict (z.B. name, lat, lon). Mutable
-    Default ueber ``Field(default_factory=list)`` (kein ``=[]``, ruff B006).
+    ``items`` trägt je POI ein schlankes dict (z.B. name, lat, lon). Mutable
+    Default über ``Field(default_factory=list)`` (kein ``=[]``, ruff B006).
+
+    Ehrlichkeit bei Truncation (Audit K9): ``count`` ist IMMER die Anzahl der
+    tatsächlich ausgelieferten ``items`` (die ggf. gedeckelte Stichprobe).
+    ``total_available`` ist der ECHTE Gesamtbestand laut Quelle (Overpass
+    ``out count;``); ``truncated`` ist True, wenn die Stichprobe gedeckelt wurde
+    (``total_available`` > ``count``). Liefert die Quelle keinen Gesamtbestand,
+    bleibt ``total_available`` ``None`` und ``truncated`` ``False``.
     """
 
     kind: Literal["poi"] = "poi"
     poi_type: str
     count: int
+    total_available: int | None = None
+    truncated: bool = False
     items: list[dict] = Field(default_factory=list)
 
 
@@ -74,9 +88,9 @@ class TrafficEventPayload(BaseModel):
     """Verkehrsereignisse je Stadt/Region (Autobahn-API, Tier A).
 
     Trennt Baustellen (``roadworks``) von Verkehrswarnungen (``warnings``).
-    Mutable Defaults ueber ``Field(default_factory=list)`` (ruff B006).
-    ``station_id`` traegt die stabile Detektor-/Abschnitts-ID je Messpunkt
-    (ARCH-02) und dient als fachlicher Schluessel fuer die deterministische
+    Mutable Defaults über ``Field(default_factory=list)`` (ruff B006).
+    ``station_id`` trägt die stabile Detektor-/Abschnitts-ID je Messpunkt
+    (ARCH-02) und dient als fachlicher Schlüssel für die deterministische
     ``record_id``; die feingranularen Einzel-Event-IDs liegen weiterhin je Event
     als ``identifier`` in ``roadworks``/``warnings``.
     """
@@ -92,8 +106,8 @@ class TransitStopPayload(BaseModel):
 
     Bildet eine GTFS-``stops.txt``-Zeile auf das kanonische Schema ab. Die
     Koordinaten wandern in ``CanonicalRecord.geo``; hier verbleiben die
-    haltestellen-spezifischen GTFS-Felder. Alle Felder ausser ``stop_id`` und
-    ``stop_name`` sind optional, da GTFS-Feeds sie nicht durchgaengig fuellen.
+    haltestellen-spezifischen GTFS-Felder. Alle Felder außer ``stop_id`` und
+    ``stop_name`` sind optional, da GTFS-Feeds sie nicht durchgängig füllen.
     Keine mutable Listen-Felder (kein B006-Risiko).
     """
 
@@ -107,13 +121,13 @@ class TransitStopPayload(BaseModel):
 
 
 class ChargingStationPayload(BaseModel):
-    """E-Ladesaeulen-Standorte je Stadt (BNetzA, Tier A, nur Stammdaten).
+    """E-Ladesäulen-Standorte je Stadt (BNetzA, Tier A, nur Stammdaten).
 
     Bildet die stadt-gefilterte Teilmenge des CSV-Bulk-Downloads ab (Batch-
-    Ingest ``ingest.bnetza``). ``stations`` traegt je Standort ein schlankes
+    Ingest ``ingest.bnetza``). ``stations`` trägt je Standort ein schlankes
     dict (operator, power_kw, lat, lon; additiv station_id/status/charging_type/
     points/plz/ort/connectors). Keine Belegung/Auslastung (bundesweit keine
-    freie Tier-A-Echtzeitquelle). Mutable Default ueber
+    freie Tier-A-Echtzeitquelle). Mutable Default über
     ``Field(default_factory=list)`` (ruff B006).
     """
 
@@ -125,7 +139,7 @@ class ChargingStationPayload(BaseModel):
 class WaterLevelPayload(BaseModel):
     """Pegelstand je Stadt (PEGELONLINE, Tier A, Teilabdeckung).
 
-    Nur Staedte an Bundeswasserstrassen liefern eine nahe Station. Binnenstaedte
+    Nur Städte an Bundeswasserstraßen liefern eine nahe Station. Binnenstädte
     ohne nahe Station tragen ``station=None`` (ehrliche Teilabdeckung, kein
     Fehler). Alle Felder optional.
     """
@@ -157,23 +171,32 @@ class PowerPayload(BaseModel):
 class WeatherWarningPayload(BaseModel):
     """Amtliche DWD-Wetterwarnungen je Stadt (GeoNutzV, Tier A).
 
-    ``max_level`` ist die hoechste aktive Warnstufe (0 = keine Warnung, 1-4 = DWD-
-    Warnstufe); ``count`` die Anzahl aktiver Warnungen; ``warnings`` je Warnung ein
-    dict (event/level/headline/start/end).
+    ``max_level`` ist die höchste aktive REGULÄRE Warnstufe (0 = keine reguläre
+    Warnung, 1-4 = DWD-Warnstufe); ``count`` die Anzahl aller aktiven Warnungen;
+    ``warnings`` je Warnung ein dict (event/level/headline/start/end).
+
+    KRITISCH (Audit K5): Der DWD führt Hitze-/UV-/Sonderwarnungen auf einer
+    EIGENEN Skala (Code >= 50, z.B. 51 = starke Wärmebelastung). Diese fließen
+    NICHT in ``max_level`` ein (sonst überstrahlt eine Hitzewarnung jede echte
+    Sturm-Stufe), sondern werden separat in ``special_warnings`` mit ihrem echten
+    Code geführt (Teilmenge von ``warnings``). Mutable Default via
+    ``Field(default_factory=list)`` (ruff B006).
     """
 
     kind: Literal["weather_warning"] = "weather_warning"
     count: int = 0
+    # Höchste reguläre Warnstufe 0-4; Sondercodes >= 50 sind hier ausgeschlossen.
     max_level: int | None = None
     warnings: list[dict] = Field(default_factory=list)
+    special_warnings: list[dict] = Field(default_factory=list)
 
 
 class FloodWarningPayload(BaseModel):
     """Hochwasser-Warnungen je Stadt (LHP, Tier A, Event-Layer).
 
-    ``warnings`` traegt je kuratiertem Pegel ein dict (z.B. Warnstufe, Pegel).
-    ``stand`` haelt den Stand-Zeitstempel-Text der LHP-Antwort (Attributions-
-    Pflicht, siehe Mapper). Mutable Default ueber ``Field(default_factory=list)``
+    ``warnings`` trägt je kuratiertem Pegel ein dict (z.B. Warnstufe, Pegel).
+    ``stand`` hält den Stand-Zeitstempel-Text der LHP-Antwort (Attributions-
+    Pflicht, siehe Mapper). Mutable Default über ``Field(default_factory=list)``
     (ruff B006).
     """
 
@@ -183,12 +206,12 @@ class FloodWarningPayload(BaseModel):
 
 
 class PollenUvPayload(BaseModel):
-    """Pollenflug + UV-Index je Stadt (DWD opendata, Tier A, taeglich).
+    """Pollenflug + UV-Index je Stadt (DWD opendata, Tier A, täglich).
 
-    Daten sind nach DWD-Grossregionen gegliedert, NICHT stadtgenau:
-    ``region_id``/``region_name`` weisen die Grossregion ehrlich aus. ``pollen``
-    traegt je Pollenart die Belastungsstufen (today/tomorrow/dayafter). Mutable
-    Default ueber ``Field(default_factory=dict)`` (ruff B006).
+    Daten sind nach DWD-Großregionen gegliedert, NICHT stadtgenau:
+    ``region_id``/``region_name`` weisen die Großregion ehrlich aus. ``pollen``
+    trägt je Pollenart die Belastungsstufen (today/tomorrow/dayafter). Mutable
+    Default über ``Field(default_factory=dict)`` (ruff B006).
     """
 
     kind: Literal["pollen_uv"] = "pollen_uv"
@@ -201,9 +224,9 @@ class PollenUvPayload(BaseModel):
 class DemographicsPayload(BaseModel):
     """Demografie-Zeitreihen je Stadt (GENESIS/Zensus, Tier A, DATA-17).
 
-    Stammwerte (Einwohner, Haushalte, Gebaeude, Durchschnittsmiete) plus eine
+    Stammwerte (Einwohner, Haushalte, Gebäude, Durchschnittsmiete) plus eine
     optionale Zeitreihe je Stichjahr in ``series``. Mutable Liste IMMER via
-    ``Field(default_factory=list)`` (ruff B006). ``reference_year`` traegt das
+    ``Field(default_factory=list)`` (ruff B006). ``reference_year`` trägt das
     Stichjahr der Stammwerte, die Punkte in ``series`` ihre eigenen Jahre.
     """
 
@@ -219,7 +242,7 @@ class DemographicsPayload(BaseModel):
 class EnergyAssetPayload(BaseModel):
     """Energie-Anlagen je Stadt (MaStR, Tier A, DATA-18).
 
-    Aggregierte Anlagenzahl plus Aufschluesselung je Typ (pv/wind/speicher/
+    Aggregierte Anlagenzahl plus Aufschlüsselung je Typ (pv/wind/speicher/
     biogas) und die schlanken Einzel-Anlagen-dicts in ``assets``. Mutable
     Defaults IMMER via ``Field(default_factory=...)`` (ruff B006).
     """
@@ -227,6 +250,11 @@ class EnergyAssetPayload(BaseModel):
     kind: Literal["energy_asset"] = "energy_asset"
     count: int
     by_type: dict = Field(default_factory=dict)
+    # Aggregierte installierte Nettonennleistung in kW (Summe ``leistung_kw`` über
+    # alle Anlagen) plus Aufschlüsselung je Typ. ``None``/leer, wenn keine Anlage
+    # eine Leistung trägt (ehrliche Null statt 0.0). Wichtigste MaStR-Kennzahl.
+    total_power_kw: float | None = None
+    power_by_type: dict = Field(default_factory=dict)
     assets: list[dict] = Field(default_factory=list)
 
 
@@ -234,12 +262,12 @@ class AccidentPayload(BaseModel):
     """Strassenverkehrsunfaelle je Kreis (Unfallatlas, Tier A, DATA-29).
 
     Jahres-Aggregat der amtlichen Unfallstatistik mit Personenschaden je Kreis/
-    kreisfreie Stadt (``district_key`` = 5-stelliger Kreisschluessel). ``total``
-    = Unfaelle gesamt; ``fatal``/``serious``/``light`` = nach Unfallkategorie
-    (1=mit Getoeteten, 2=mit Schwerverletzten, 3=mit Leichtverletzten);
+    kreisfreie Stadt (``district_key`` = 5-stelliger Kreisschlüssel). ``total``
+    = Unfälle gesamt; ``fatal``/``serious``/``light`` = nach Unfallkategorie
+    (1=mit Getöteten, 2=mit Schwerverletzten, 3=mit Leichtverletzten);
     ``with_bicycle``/``with_pedestrian``/``with_car``/``with_motorcycle`` =
-    Anzahl Unfaelle mit Beteiligung der jeweiligen Verkehrsart. ``reference_year``
-    traegt das Berichtsjahr (Unfallatlas ist jaehrlich).
+    Anzahl Unfälle mit Beteiligung der jeweiligen Verkehrsart. ``reference_year``
+    trägt das Berichtsjahr (Unfallatlas ist jährlich).
     """
 
     kind: Literal["accident"] = "accident"
@@ -258,13 +286,13 @@ class AccidentPayload(BaseModel):
 class RegionalStatPayload(BaseModel):
     """Regionalstatistik-Kennzahl je Kreis (GENESIS, Tier A, DATA-28).
 
-    Generischer Traeger fuer das GENESIS-Trio (Arbeitslosenquote, Tourismus/
-    Uebernachtungen, Bautaetigkeit/Baugenehmigungen). ``dataset`` benennt den
-    Datensatz (unemployment/tourism/construction), ``values`` haelt je Kennzahl
-    einen Wert (z.B. arbeitslose/arbeitslosenquote). Regionale Aufloesung ist der
+    Generischer Träger für das GENESIS-Trio (Arbeitslosenquote, Tourismus/
+    Übernachtungen, Bautaetigkeit/Baugenehmigungen). ``dataset`` benennt den
+    Datensatz (unemployment/tourism/construction), ``values`` hält je Kennzahl
+    einen Wert (z.B. arbeitslose/arbeitslosenquote). Regionale Auflösung ist der
     Kreis/die kreisfreie Stadt; ``region_name`` weist ihn ehrlich aus. Die
-    Regionalstatistik fuehrt diese Tabellen je Kreis als Jahreswert ->
-    ``reference_year`` traegt das Berichtsjahr. Mutable Default via
+    Regionalstatistik führt diese Tabellen je Kreis als Jahreswert ->
+    ``reference_year`` trägt das Berichtsjahr. Mutable Default via
     ``Field(default_factory=dict)`` (ruff B006).
     """
 
@@ -279,12 +307,12 @@ class VehicleRegistrationPayload(BaseModel):
     """Pkw-Bestand + Elektro-Anteil je Stadt (KBA, Tier A, DATA-27).
 
     Quelle ist das Kraftfahrt-Bundesamt (FZ Pkw mit Elektroantrieb je
-    Zulassungsbezirk). Regionale Aufloesung ist der Zulassungsbezirk, der sich mit
+    Zulassungsbezirk). Regionale Auflösung ist der Zulassungsbezirk, der sich mit
     dem Kreis/der kreisfreien Stadt deckt (``district``/``district_key`` weisen
-    ihn ehrlich aus): fuer kreisfreie Staedte stadtgenau, fuer uebrige Staedte der
+    ihn ehrlich aus): für kreisfreie Städte stadtgenau, für übrige Städte der
     umgebende Kreis. ``electric_share``/``bev_share``/``plugin_hybrid_share`` sind
     Anteile in Prozent; ``bev_estimated`` ist die aus ``pkw_total`` und
-    ``bev_share`` abgeleitete absolute BEV-Zahl (das KBA fuehrt im Datensatz nur
+    ``bev_share`` abgeleitete absolute BEV-Zahl (das KBA führt im Datensatz nur
     Anteile, keine Absolutwerte). ``reference_period`` ist der Berichtszeitpunkt
     (Format JJJJ.MM).
     """
@@ -303,7 +331,7 @@ class VehicleRegistrationPayload(BaseModel):
 class AdminBoundaryPayload(BaseModel):
     """Verwaltungsgrenze je Stadt (BKG VG250, Tier A, DATA-19).
 
-    Attributtabellen-Auszug (AGS, Gemeindename, Flaeche) ohne Geometrie-Body
+    Attributtabellen-Auszug (AGS, Gemeindename, Fläche) ohne Geometrie-Body
     (kein GDAL/geopandas, RESEARCH Pitfall 3). Alle Felder optional.
     """
 
@@ -317,9 +345,11 @@ class AdminBoundaryPayload(BaseModel):
 class ElectionResultPayload(BaseModel):
     """Wahlergebnis je Stadt/Kreis (Bundeswahlleiterin, Tier A, DATA-20).
 
-    ``granularity`` weist die Abdeckung ehrlich aus (Default "teilweise":
-    Wahlkreis/Kreis, Stadt nur teilweise, RESEARCH Pitfall 7). Mutable Liste
-    IMMER via ``Field(default_factory=list)`` (ruff B006).
+    ``granularity`` weist die Abdeckung ehrlich aus: "stadt" = stadtgenau aus den
+    Wahlkreisen der Stadt aggregiert (saubere Wahlkreis-Vereinigung, Audit-Finding
+    47); "teilweise" (Default) = Wahlkreis/Kreis-Ebene, Stadt nur teilweise
+    (RESEARCH Pitfall 7). Mutable Liste IMMER via ``Field(default_factory=list)``
+    (ruff B006).
     """
 
     kind: Literal["election_result"] = "election_result"
@@ -328,7 +358,7 @@ class ElectionResultPayload(BaseModel):
     area_name: str | None = None
     # [VERIFIED 2026-06-10] Wahlbeteiligung aus der kerg2-Zeile
     # Gruppenname=="Wählende", Spalte Prozent (String mit Dezimal-KOMMA,
-    # z.B. "82,5122"); additiv ergaenzt, nicht brechend.
+    # z.B. "82,5122"); additiv ergänzt, nicht brechend.
     turnout: str | None = None
     results: list[dict] = Field(default_factory=list)
 
@@ -336,7 +366,7 @@ class ElectionResultPayload(BaseModel):
 class HolidayPayload(BaseModel):
     """Feiertage und Schulferien je Bundesland (Seed, gemeinfrei, DATA-21).
 
-    Aus dem eingebetteten Seed je ``state`` aufgeloest, NICHT permissiv lizenziert
+    Aus dem eingebetteten Seed je ``state`` aufgelöst, NICHT permissiv lizenziert
     (Gratis-Reichweiten-Feature). Mutable Listen IMMER via
     ``Field(default_factory=list)`` (ruff B006).
     """
@@ -363,13 +393,13 @@ class HospitalPayload(BaseModel):
 
 
 class IcuCapacityPayload(BaseModel):
-    """Intensivbetten-Kapazitaet je Kreis (DIVI, Tier C live-only, DATA-25b).
+    """Intensivbetten-Kapazität je Kreis (DIVI, Tier C live-only, DATA-25b).
 
     Klinikscharfes DB-Schutzrecht -> Tier C, nur Live-Anzeige (RESEARCH Pitfall 4).
-    Alle Felder optional. ``beds_free``/``beds_occupied`` traegt nur noch das
+    Alle Felder optional. ``beds_free``/``beds_occupied`` trägt nur noch das
     Tier-A-Kreis-Aggregat (RKI-DIVI-CSV, mappers/divi.py); die Live-API liefert
     [VERIFIED 2026-06-10] KEINE numerische Belegung mehr, sondern qualitative
-    Status-Einschaetzungen je Klinik in ``hospitals`` (bezeichnung, ort,
+    Status-Einschätzungen je Klinik in ``hospitals`` (bezeichnung, ort,
     letzte_meldung, status_high_care, status_ecmo). Additiv erweitert (nicht
     brechend); mutable Liste IMMER via ``Field(default_factory=list)``
     (ruff B006).
@@ -387,8 +417,8 @@ class IcuCapacityPayload(BaseModel):
 class RoadEventPayload(BaseModel):
     """Innerstaedtische Baustellen + Sperrungen je Stadt (DATA-15, Tier A).
 
-    Buendelt die Pro-Stadt-Verkehrsereignisse (Berlin VIZ, Hamburg, Koeln,
-    Muenchen, MobiData BW) zu einer einheitlichen Liste schlanker Event-dicts.
+    Bündelt die Pro-Stadt-Verkehrsereignisse (Berlin VIZ, Hamburg, Köln,
+    München, MobiData BW) zu einer einheitlichen Liste schlanker Event-dicts.
     ``city_source`` weist die konkrete Quelle aus (berlin_viz/hamburg_baustellen/
     koeln_verkehr/muenchen_baustellen/mobidata_bw). Keine strikte Geometry-
     Validierung im Schema (Berlin liefert GeometryCollection, RESEARCH Pitfall 6):
@@ -405,7 +435,7 @@ class WebcamPayload(BaseModel):
     """Autobahn-Webcams je Stadt (DATA-22, Tier A).
 
     Erweitert den keylosen Autobahn-Adapter um den webcam-Sub-Service:
-    Koordinaten + Bild-URLs der Webcams im BBox um die Stadt. ``count`` traegt die
+    Koordinaten + Bild-URLs der Webcams im BBox um die Stadt. ``count`` trägt die
     Anzahl, ``webcams`` je Cam ein schlankes dict (imageurl/coordinate/title).
     Mutable Liste IMMER via ``Field(default_factory=list)`` (ruff B006).
     """
@@ -418,11 +448,11 @@ class WebcamPayload(BaseModel):
 class EventPayload(BaseModel):
     """Stadt-Events und Veranstaltungen je Stadt (DATA-16, Tier A/B gemischt).
 
-    Buendelt die Pro-Stadt-Veranstaltungen (destination.one/eT4.META,
-    Koeln-Events-Feed) zu einer einheitlichen Liste schlanker Event-dicts.
+    Bündelt die Pro-Stadt-Veranstaltungen (destination.one/eT4.META,
+    Köln-Events-Feed) zu einer einheitlichen Liste schlanker Event-dicts.
     ``city_source`` weist die konkrete Quelle aus (destination_one/koeln_events).
     Das Lizenz-Tier wird je Record aus ``map_license`` abgeleitet (GOV-04), nicht
-    im Payload getragen: ein CC-BY-SA-Event traegt damit Tier B, ein
+    im Payload getragen: ein CC-BY-SA-Event trägt damit Tier B, ein
     CC0/CC-BY-Event Tier A. Je Event ein schlankes dict (title/date_from/
     date_to/location/...). Mutable Liste IMMER via ``Field(default_factory=list)``
     (ruff B006).
@@ -436,7 +466,7 @@ class EventPayload(BaseModel):
 class TrafficFlowPayload(BaseModel):
     """Live-Verkehrslage je Streckenabschnitt (Mobilithek DATEX-II V2, Phase 20).
 
-    Quelle: Koeln MeasuredDataPublication (minutenfrisch). ``station_id`` traegt
+    Quelle: Köln MeasuredDataPublication (minutenfrisch). ``station_id`` trägt
     die measurementSiteReference-ID; ``measurements`` je Messpunkt ein schlankes
     dict (z.B. speed/flow/observed_at). Reine Live-Daten (Tier C, kein Archiv).
     Mutable Liste IMMER via ``Field(default_factory=list)`` (ruff B006).
@@ -445,9 +475,9 @@ class TrafficFlowPayload(BaseModel):
     kind: Literal["traffic_flow"] = "traffic_flow"
     station_id: str | None = None
     measurements: list[dict] = Field(default_factory=list)
-    # Additiv (Phase 26): optionale Netz-Zusammenfassung fuer flaechige Quellen wie
-    # Hamburg-Verkehrslage (``total`` + ``by_state``-Zaehlung je Zustandsklasse).
-    # Default None -> die station-basierten Quellen (Koeln) bleiben unveraendert.
+    # Additiv (Phase 26): optionale Netz-Zusammenfassung für flächige Quellen wie
+    # Hamburg-Verkehrslage (``total`` + ``by_state``-Zählung je Zustandsklasse).
+    # Default None -> die station-basierten Quellen (Köln) bleiben unverändert.
     summary: dict | None = None
 
 
@@ -465,10 +495,10 @@ class ParkingPayload(BaseModel):
 
 
 class CountStationPayload(BaseModel):
-    """Live-Zaehlstellen-Daten je Stadt (Mobilithek DATEX-II V2, Phase 20).
+    """Live-Zählstellen-Daten je Stadt (Mobilithek DATEX-II V2, Phase 20).
 
-    Quelle: Kiel MIV-Dauerzaehlstellen + Radzaehler (stuendlich). ``counts`` je
-    Zaehlstelle ein schlankes dict (z.B. station, value, vehicle_type,
+    Quelle: Kiel MIV-Dauerzählstellen + Radzähler (stündlich). ``counts`` je
+    Zählstelle ein schlankes dict (z.B. station, value, vehicle_type,
     observed_at). Reine Live-Daten (kein Archiv). Mutable Liste IMMER via
     ``Field(default_factory=list)`` (ruff B006).
     """
@@ -478,11 +508,11 @@ class CountStationPayload(BaseModel):
 
 
 class ChargingStatusPayload(BaseModel):
-    """Live-Ladesaeulen-Belegung je Stadt (Mobilithek DATEX-II V3, Phase 20).
+    """Live-Ladesäulen-Belegung je Stadt (Mobilithek DATEX-II V3, Phase 20).
 
     Quelle: eRound AFIR-Recharging dynamisch (EnergyInfrastructureStatus-
-    Publication, V3). Schliesst die bekannte Luecke DATA-09 (bisher keine freie
-    Echtzeit-Ladesaeulenbelegung). ``points`` je Ladepunkt ein schlankes dict
+    Publication, V3). Schließt die bekannte Lücke DATA-09 (bisher keine freie
+    Echtzeit-Ladesäulenbelegung). ``points`` je Ladepunkt ein schlankes dict
     (z.B. refill_point_id, status, observed_at). Lizenz VOR Einbau verifizieren
     (Plan 07). Mutable Liste IMMER via ``Field(default_factory=list)`` (ruff B006).
     """
@@ -495,7 +525,7 @@ class TransitDeparturePayload(BaseModel):
     """Live-Abfahrten je Halt mit Verspätung (GTFS-RT, Phase 19).
 
     Quelle: gtfs.de bzw. Mobilithek-DELFI Trip Updates (protobuf). Tier B
-    (CC-BY-SA), reine Live-Daten, KEIN Archiv (T-20-ARCHIVE). ``stop_id`` traegt
+    (CC-BY-SA), reine Live-Daten, KEIN Archiv (T-20-ARCHIVE). ``stop_id`` trägt
     die GTFS-Halt-ID; ``departures`` je Abfahrt ein schlankes dict (z.B. route,
     trip_id, delay_s, planned, expected). Mutable Liste IMMER via
     ``Field(default_factory=list)`` (ruff B006).
@@ -514,7 +544,7 @@ class TransitTripPayload(BaseModel):
     Verspätung in Sekunden (positiv = verspätet); ``estimated_position`` ist die
     linear interpolierte Schätzung ({lat, lon, estimated=True, between}).
     ``unresolved`` ist True, wenn die trip_id nicht gegen das statische GTFS
-    aufloesbar war (ehrlich statt 500, RESEARCH Pitfall 4). Mutable Liste IMMER
+    auflösbar war (ehrlich statt 500, RESEARCH Pitfall 4). Mutable Liste IMMER
     via ``Field(default_factory=list)`` (ruff B006).
     """
 
@@ -550,11 +580,11 @@ class FuelPricePayload(BaseModel):
 
     Verdichtet die einzelnen Tankstellen im Umkreis (``radius_km``) der
     Stadtkoordinate zu einer Stadt-Kennzahl: ``avg_*``/``min_*`` sind Durchschnitt
-    bzw. Minimum je Sorte (e5/e10/diesel, EUR/Liter) ueber die geoeffneten
-    Tankstellen mit gueltigem Preis. ``station_count`` = Tankstellen im Radius,
-    ``open_count`` = davon geoeffnet. ``stations`` traegt je Tankstelle ein
+    bzw. Minimum je Sorte (e5/e10/diesel, EUR/Liter) über die geöffneten
+    Tankstellen mit gültigem Preis. ``station_count`` = Tankstellen im Radius,
+    ``open_count`` = davon geöffnet. ``stations`` trägt je Tankstelle ein
     schlankes dict (station_id/name/brand/e5/e10/diesel/is_open/dist_km). Quelle:
-    Markttransparenzstelle fuer Kraftstoffe (MTS-K) via Tankerkoenig. Mutable
+    Markttransparenzstelle für Kraftstoffe (MTS-K) via Tankerkönig. Mutable
     Default via ``Field(default_factory=list)`` (ruff B006).
     """
 
@@ -574,11 +604,11 @@ class FuelPricePayload(BaseModel):
 class SharingPayload(BaseModel):
     """Bike-/Scooter-Sharing-Snapshot je Stadt (GBFS, Tier A, DATA-33).
 
-    Verdichtet die offenen GBFS-Feeds der kuratierten Tier-A-Anbieter (Primaer
+    Verdichtet die offenen GBFS-Feeds der kuratierten Tier-A-Anbieter (Primär
     Nextbike, CC0) im Stadtgebiet zu einer Live-Kennzahl. ``vehicles_available`` =
-    insgesamt verfuegbare Fahrzeuge (``free_floating_available`` frei abgestellt +
+    insgesamt verfügbare Fahrzeuge (``free_floating_available`` frei abgestellt +
     ``docked_available`` an Stationen). ``station_count`` = Stationen im Stadtgebiet.
-    ``providers`` traegt je akzeptiertem GBFS-System ein schlankes dict (provider/
+    ``providers`` trägt je akzeptiertem GBFS-System ein schlankes dict (provider/
     operator/system_id/license_id/free_floating_available/docked_available/
     station_count/stations) - inkl. der pro System fail-closed verifizierten
     Tier-A-``license_id`` (GOV-02/04). Mutable Default via
@@ -595,15 +625,15 @@ class SharingPayload(BaseModel):
 
 
 class IndicatorsPayload(BaseModel):
-    """Kuratierte sozialoekonomische Indikatoren je Stadt (INKAR/BBSR, Tier A, DATA-32).
+    """Kuratierte sozialökonomische Indikatoren je Stadt (INKAR/BBSR, Tier A, DATA-32).
 
-    Buendelt ein breites Set INKAR-Kennzahlen (Arbeitsmarkt, Wirtschaft, Einkommen,
-    Demografie, Wohnen, Erreichbarkeit, Verkehr, Bildung, Gesundheit, Flaeche) je
-    Kreis/kreisfreie Stadt zu einer Liste schlanker dicts. ``indicators`` traegt je
+    Bündelt ein breites Set INKAR-Kennzahlen (Arbeitsmarkt, Wirtschaft, Einkommen,
+    Demografie, Wohnen, Erreichbarkeit, Verkehr, Bildung, Gesundheit, Fläche) je
+    Kreis/kreisfreie Stadt zu einer Liste schlanker dicts. ``indicators`` trägt je
     Indikator ``gruppe`` (INKAR-Variablen-ID), ``name`` (inkl. Einheit, z.B. "...
-    in %"), ``value`` (juengster Jahreswert), ``year`` und ``category``.
-    ``indicator_count`` = Anzahl gelieferter Indikatoren. Regionale Aufloesung ist
-    der Kreis (kreisfreie Staedte stadtgenau, sonst der umgebende Kreis). Mutable
+    in %"), ``value`` (jüngster Jahreswert), ``year`` und ``category``.
+    ``indicator_count`` = Anzahl gelieferter Indikatoren. Regionale Auflösung ist
+    der Kreis (kreisfreie Städte stadtgenau, sonst der umgebende Kreis). Mutable
     Default via ``Field(default_factory=list)`` (ruff B006).
     """
 
@@ -615,13 +645,13 @@ class IndicatorsPayload(BaseModel):
 class CrimeStatsPayload(BaseModel):
     """Polizeiliche Kriminalstatistik je Kreis (BKA PKS, Tier A, PKS-01).
 
-    Buendelt je Hauptstraftatengruppe die amtlichen Kennzahlen der Kreis-
+    Bündelt je Hauptstraftatengruppe die amtlichen Kennzahlen der Kreis-
     Falltabelle des Bundeskriminalamts zu einer Liste schlanker dicts. ``groups``
-    traegt je Gruppe ``key`` (Straftatenschluessel, z.B. "------" =
-    "Straftaten insgesamt"), ``label`` (Klartext), ``cases`` (erfasste Faelle),
-    ``frequency_per_100k`` (Haeufigkeitszahl HZ je 100.000 Einwohner) und
-    ``clearance_rate_pct`` (Aufklaerungsquote in Prozent). Regionale Aufloesung
-    ist der Kreis (kreisfreie Staedte stadtgenau, sonst der umgebende Kreis).
+    trägt je Gruppe ``key`` (Straftatenschlüssel, z.B. "------" =
+    "Straftaten insgesamt"), ``label`` (Klartext), ``cases`` (erfasste Fälle),
+    ``frequency_per_100k`` (Häufigkeitszahl HZ je 100.000 Einwohner) und
+    ``clearance_rate_pct`` (Aufklärungsquote in Prozent). Regionale Auflösung
+    ist der Kreis (kreisfreie Städte stadtgenau, sonst der umgebende Kreis).
     ``reference_year`` (Berichtsjahr) und ``version`` (PKS-Stand) sind
     Attributionspflicht-Felder: das BKA verlangt die Angabe von Berichtsjahr und
     Version. Sperr-/Leerwerte werden zu ``null`` (nie 0 erfunden). Mutable
@@ -637,9 +667,9 @@ class CrimeStatsPayload(BaseModel):
 class StationDeparturesPayload(BaseModel):
     """Live-Abfahrtstafel des Stadt-Hauptbahnhofs (DB Timetables, Tier A, DATA-34).
 
-    Buendelt die naechsten Zugabfahrten am Haupt-Bahnhof einer Stadt (alle
-    Gattungen inkl. Echtzeit-Verspaetung) zu einer Liste schlanker dicts.
-    ``departures`` traegt je
+    Bündelt die nächsten Zugabfahrten am Haupt-Bahnhof einer Stadt (alle
+    Gattungen inkl. Echtzeit-Verspätung) zu einer Liste schlanker dicts.
+    ``departures`` trägt je
     Abfahrt ``line`` (z.B. "ICE 73"/"RB22"), ``category`` (ICE/IC/RE/RB/S),
     ``train_number``, ``long_distance`` (Fernverkehr-Flag), ``destination``,
     ``planned_time`` (ISO), ``platform``, ``delay_minutes`` (None = keine Echtzeit),
@@ -659,8 +689,8 @@ class StationDeparturesPayload(BaseModel):
 class StationArrivalsPayload(BaseModel):
     """Live-Ankunftstafel des Stadt-Hauptbahnhofs (DB Timetables, Tier A, DATA-34).
 
-    Spiegelbild zu ``StationDeparturesPayload`` fuer ankommende Zuege. ``arrivals``
-    traegt je Ankunft ``line``, ``category``, ``train_number``, ``long_distance``,
+    Spiegelbild zu ``StationDeparturesPayload`` für ankommende Züge. ``arrivals``
+    trägt je Ankunft ``line``, ``category``, ``train_number``, ``long_distance``,
     ``origin`` (Startbahnhof = erstes ppth-Glied), ``planned_time`` (ISO),
     ``platform``, ``delay_minutes`` (None = keine Echtzeit), ``cancelled`` und
     ``messages`` (Stoerungen/Hinweise je Ankunft: Liste aus
@@ -678,13 +708,13 @@ class StationArrivalsPayload(BaseModel):
 class StationCatalogPayload(BaseModel):
     """Bahnhofs-Katalog einer Stadt (StaDa Station Data, Tier A, DATA-36).
 
-    Listet ALLE DB-Bahnhoefe im Stadtgebiet (Zuordnung ueber den amtlichen
+    Listet ALLE DB-Bahnhöfe im Stadtgebiet (Zuordnung über den amtlichen
     Gemeindeschluessel: StaDa ``municipalityCode`` == Stadt-``ags``), nicht nur
-    den Fernverkehrs-Hbf. Je Bahnhof traegt ``stations`` ein schlankes dict mit
-    ``eva`` (Haupt-EVA-Nummer, fuer die Per-Bahnhof-Boards
+    den Fernverkehrs-Hbf. Je Bahnhof trägt ``stations`` ein schlankes dict mit
+    ``eva`` (Haupt-EVA-Nummer, für die Per-Bahnhof-Boards
     ``/stations/{eva}/departures``), ``evas`` (ALLE EVA-Nummern des Bahnhofs;
-    Grossbahnhoefe haben mehrere Ebenen, deren Abfahrtstafel teils an einer
-    Ebenen-EVA haengt statt an der Haupt-EVA -> Fallback fuer Split-Bahnhoefe),
+    Großbahnhöfe haben mehrere Ebenen, deren Abfahrtstafel teils an einer
+    Ebenen-EVA hängt statt an der Haupt-EVA -> Fallback für Split-Bahnhöfe),
     ``name``, ``category`` (1-7, je kleiner desto
     groesser/wichtiger der Bahnhof), ``lat``/``lon`` (aus der EVA-Geokoordinate)
     und ``zip`` (PLZ). ``station_count`` = Anzahl. Quelle: DB StaDa (CC BY 4.0).
@@ -700,16 +730,16 @@ class LandValuesPayload(BaseModel):
     """Aggregierte Bodenrichtwerte je Stadt (BORIS, Tier A, DATA-35).
 
     Verdichtet die amtlichen Bodenrichtwert-Bauland-Zonen (BORIS, Bodenrichtwert-
-    Informationssystem der Gutachterausschuesse; Bauland = Wohnen/Misch/Gewerbe,
+    Informationssystem der Gutachterausschüsse; Bauland = Wohnen/Misch/Gewerbe,
     ohne Wald/Wasser/Landwirtschaft) im Stadtgebiet zu einer
     Kennzahl: ``brw_median_eur_m2`` (Median des Bodenrichtwerts in EUR/m2),
     ``brw_min_eur_m2``/``brw_max_eur_m2`` (Spanne) und ``zone_count`` (Anzahl der
-    beruecksichtigten Zonen). ``stichtag`` ist der Bewertungsstichtag des
+    berücksichtigten Zonen). ``stichtag`` ist der Bewertungsstichtag des
     Landes-WFS (ISO-Datum, z.B. "2026-01-01"). ``bbox_radius_deg`` dokumentiert
-    den Umkreis um das Stadtzentrum, ueber den aggregiert wurde (ehrliche
+    den Umkreis um das Stadtzentrum, über den aggregiert wurde (ehrliche
     Methoden-Transparenz: kein amtlicher Stadtgrenzen-Schnitt, sondern eine
-    Bounding-Box). Regionale Aufloesung ist das Stadtgebiet; BORIS ist pro
-    Bundesland foederiert (ein Landes-WFS deckt alle Staedte des Landes ab).
+    Bounding-Box). Regionale Auflösung ist das Stadtgebiet; BORIS ist pro
+    Bundesland föderiert (ein Landes-WFS deckt alle Städte des Landes ab).
     """
 
     kind: Literal["land_values"] = "land_values"
@@ -719,18 +749,26 @@ class LandValuesPayload(BaseModel):
     zone_count: int = 0
     stichtag: str | None = None
     bbox_radius_deg: float | None = None
+    # True, wenn die Werte NORMIERTE Bodenrichtwerte sind (auf 1000 m2/GFZ 1.0
+    # normiert, z.B. Hamburg): grober Indikator, NICHT cross-city-vergleichbar und
+    # nicht zur Wertermittlung geeignet (Methoden-Transparenz, Audit 2026-06-29).
+    normalized: bool = False
+    # True, wenn der WFS-Seiten-Cap erreicht wurde und die Aggregation NICHT alle
+    # Bauland-Zonen umfasst (nur Live-Pfad; Archiv-/Ingest-Zeilen führen das Feld
+    # nicht -> Default False). Methoden-Transparenz, Audit 2026-06-29.
+    truncated: bool = False
 
 
 class PopulationDensityPayload(BaseModel):
     """Einwohnerdichte je Stadt aus dem Zensus-2022-100m-Gitter (Tier A).
 
-    Aggregiert EXAKT ueber die Gitterzellen mit der Stadt-AGS (kein Bounding-Box-
-    Schnitt): ``population`` (Summe der Einwohner ueber alle bewohnten Zellen),
+    Aggregiert EXAKT über die Gitterzellen mit der Stadt-AGS (kein Bounding-Box-
+    Schnitt): ``population`` (Summe der Einwohner über alle bewohnten Zellen),
     ``populated_cells`` (Zahl der bewohnten 100m-Zellen), ``populated_area_km2``
-    (= ``populated_cells`` * 0.01) und ``density_per_km2`` (Einwohner je km2 ueber
-    die BEWOHNTE Flaeche, nicht die Gesamtflaeche der Stadt; ehrliche Methoden-
+    (= ``populated_cells`` * 0.01) und ``density_per_km2`` (Einwohner je km2 über
+    die BEWOHNTE Fläche, nicht die Gesamtfläche der Stadt; ehrliche Methoden-
     Transparenz, da Wald/Wasser/unbewohnte Zellen ausgeklammert sind). ``grid``
-    nennt die Aufloesung, ``reference_year`` das Zensus-Jahr.
+    nennt die Auflösung, ``reference_year`` das Zensus-Jahr.
     """
 
     kind: Literal["population_density"] = "population_density"
@@ -743,16 +781,16 @@ class PopulationDensityPayload(BaseModel):
 
 
 class TaxRatesPayload(BaseModel):
-    """Realsteuer-Hebesaetze einer Gemeinde (Regionalstatistik 71231, Tier A, DATA-37).
+    """Realsteuer-Hebesätze einer Gemeinde (Regionalstatistik 71231, Tier A, DATA-37).
 
-    Die amtlichen Hebesaetze der Realsteuern GEMEINDE-genau (Realsteuervergleich
-    der Statistischen Aemter, Tabelle 71231): ``gewerbesteuer_hebesatz`` (Hebesatz
+    Die amtlichen Hebesätze der Realsteuern GEMEINDE-genau (Realsteuervergleich
+    der Statistischen Ämter, Tabelle 71231): ``gewerbesteuer_hebesatz`` (Hebesatz
     der Gewerbesteuer in %), ``grundsteuer_a`` (land-/forstwirtschaftliche
-    Betriebe), ``grundsteuer_b`` (Grundstuecke) und ``grundsteuer_c`` (baureife,
-    unbebaute Grundstuecke; erst seit 2025 moeglich, daher oft ``None``). Alle
+    Betriebe), ``grundsteuer_b`` (Grundstücke) und ``grundsteuer_c`` (baureife,
+    unbebaute Grundstücke; erst seit 2025 möglich, daher oft ``None``). Alle
     Werte sind ganze Prozentpunkte; ein nicht festgesetzter Satz ist ``None``
     (Quelle-Sperrwert "-"). ``stichtag`` ist der Bewertungsstichtag (ISO-Datum,
-    Stand 31.12., neuester verfuegbarer Jahrgang). Standort-/immobilienrelevante
+    Stand 31.12., neuester verfügbarer Jahrgang). Standort-/immobilienrelevante
     Kennzahl, die kaum anderswo als API gemeindegenau vorliegt.
     """
 
@@ -767,12 +805,12 @@ class TaxRatesPayload(BaseModel):
 class BusinessRegistrationsPayload(BaseModel):
     """Gewerbean-/-abmeldungen je Kreis (Regionalstatistik 52311, Tier A, DATA-37).
 
-    Die Gruendungsdynamik aus der Gewerbeanzeigenstatistik (Tabelle 52311,
+    Die Gründungsdynamik aus der Gewerbeanzeigenstatistik (Tabelle 52311,
     Jahressumme, KREIS-genau, ohne Automatenaufsteller): ``anmeldungen``
     (Gewerbeanmeldungen), ``abmeldungen`` (Gewerbeabmeldungen) und ``saldo``
-    (anmeldungen - abmeldungen; positiv = Netto-Gruendungsplus). ``jahr`` ist das
-    Berichtsjahr (neuester Jahrgang, fuer den beide Kennzahlen vorliegen).
-    Regionale Aufloesung ist der Kreis/die kreisfreie Stadt (kreisfreie Staedte
+    (anmeldungen - abmeldungen; positiv = Netto-Gründungsplus). ``jahr`` ist das
+    Berichtsjahr (neuester Jahrgang, für den beide Kennzahlen vorliegen).
+    Regionale Auflösung ist der Kreis/die kreisfreie Stadt (kreisfreie Städte
     stadtgenau, sonst der umgebende Kreis).
     """
 
@@ -786,20 +824,20 @@ class BusinessRegistrationsPayload(BaseModel):
 class InsolvenciesPayload(BaseModel):
     """Beantragte Insolvenzen je Kreis (Regionalstatistik 52411, Tier A, INSO-01).
 
-    Aus der Insolvenzstatistik der Statistischen Aemter (Tabelle 52411,
+    Aus der Insolvenzstatistik der Statistischen Ämter (Tabelle 52411,
     Jahressumme, KREIS-genau): ``unternehmensinsolvenzen`` (beantragte
     Unternehmensinsolvenzen, Tabelle 52411-02, Measure ISV006) und
-    ``uebrige_schuldner_insolvenzen`` (beantragte Insolvenzen uebriger Schuldner,
+    ``uebrige_schuldner_insolvenzen`` (beantragte Insolvenzen übriger Schuldner,
     Tabelle 52411-03, Measure ISV007). ``jahr`` ist das Berichtsjahr (neuester
-    Jahrgang, fuer den BEIDE Kennzahlen vorliegen).
+    Jahrgang, für den BEIDE Kennzahlen vorliegen).
 
-    Ehrliche Benennung (RESEARCH Pitfall 2): die uebrigen Schuldner sind NICHT
+    Ehrliche Benennung (RESEARCH Pitfall 2): die übrigen Schuldner sind NICHT
     deckungsgleich mit Verbrauchern. Sie umfassen Verbraucher, ehemalige
-    Selbststaendige und sonstige natuerliche Personen; reine Verbraucher
-    (ISV004) sind nur eine Teilmenge und auf Kreisebene nicht durchgaengig
-    verfuegbar. Daher traegt der Payload bewusst ``uebrige_schuldner_insolvenzen``
-    statt eines irrefuehrenden ``verbraucherinsolvenzen``. Regionale Aufloesung ist
-    der Kreis/die kreisfreie Stadt (kreisfreie Staedte stadtgenau, sonst der
+    Selbstständige und sonstige natürliche Personen; reine Verbraucher
+    (ISV004) sind nur eine Teilmenge und auf Kreisebene nicht durchgängig
+    verfügbar. Daher trägt der Payload bewusst ``uebrige_schuldner_insolvenzen``
+    statt eines irreführenden ``verbraucherinsolvenzen``. Regionale Auflösung ist
+    der Kreis/die kreisfreie Stadt (kreisfreie Städte stadtgenau, sonst der
     umgebende Kreis).
     """
 
@@ -813,15 +851,15 @@ class SolarRoofsPayload(BaseModel):
     """Dach-Solarkataster je Stadt: installiertes + Potenzial Dach-PV (DATA-39).
 
     Aus dem amtlichen Gemeinde-Aggregat (NRW-Pilot: Solarkataster NRW,
-    MaStR/LANUK/Geobasis NRW, DL-DE/Zero 2.0 = Tier A; foederiert je Bundesland wie
+    MaStR/LANUK/Geobasis NRW, DL-DE/Zero 2.0 = Tier A; föderiert je Bundesland wie
     BORIS). ``potential_kwp``/``potential_yield_mwh`` = gesamtes installierbares
     Dach-PV-Potenzial (Leistung kWp bzw. Jahresertrag MWh);
     ``installed_kwp``/``installed_yield_mwh`` = bereits installierte Dach-PV
-    (Bestand, juengstes Jahr, kumuliert). ``exploitation_pct`` =
-    installed_kwp/potential_kwp*100 (Ausschoepfungsgrad). ``potential_by_category``
-    = Potenzial-Leistung kWp je Gebaeudekategorie (wohngebaeude/gewerbe_industrie/
+    (Bestand, jüngstes Jahr, kumuliert). ``exploitation_pct`` =
+    installed_kwp/potential_kwp*100 (Ausschöpfungsgrad). ``potential_by_category``
+    = Potenzial-Leistung kWp je Gebäudekategorie (wohngebaeude/gewerbe_industrie/
     oeffentliche/landwirtschaft/sonstige/nicht_zuordbar). ``reference_date`` = Stand
-    des Datensatzes. Anders als ``SolarPayload`` (PVGIS-Einstrahlung je kWp) traegt
+    des Datensatzes. Anders als ``SolarPayload`` (PVGIS-Einstrahlung je kWp) trägt
     dieser Payload das Dach-Kataster (Mengen je Stadt). Mutable Default via
     ``Field(default_factory=dict)`` (ruff B006).
     """
@@ -845,12 +883,17 @@ class SolarPayload(BaseModel):
     None; der Bezugszeitraum steht als ``period_start``/``period_end`` (Jahre des
     PVGIS-Strahlungs-Datensatzes). ``annual_yield_kwh_kwp`` ist der Jahresertrag in
     kWh je kWp (PVGIS ``E_y``, da peakpower=1), ``annual_irradiation_kwh_m2`` die
-    Globalstrahlung auf die geneigte Flaeche (``H(i)_y``). ``optimal_slope_deg``/
-    ``optimal_azimuth_deg`` der von PVGIS bestimmte optimale Aufstaenderungswinkel
-    bzw. Azimut (0 = Sued). ``radiation_db`` benennt den Strahlungs-Datensatz (z.B.
-    "PVGIS-SARAH3"). ``monthly`` traegt je Monat ein schlankes dict (``month`` 1-12,
-    ``irradiation_kwh_m2``, ``yield_kwh``). Mutable Default IMMER via
-    ``Field(default_factory=list)`` (ruff B006).
+    Globalstrahlung auf die geneigte Fläche (``H(i)_y``). ``optimal_slope_deg``/
+    ``optimal_azimuth_deg`` der von PVGIS bestimmte optimale Aufständerungswinkel
+    bzw. Azimut (0 = Süd). ``system_loss_pct`` = der konfigurierte (gewollte)
+    Systemverlust aus Verkabelung/Wechselrichter/Verschmutzung (an PVGIS übergebener
+    ``loss``-Parameter, i.d.R. 14 %); ``total_performance_delta_pct`` = PVGIS
+    ``l_total``, die GESAMTE Performance-Differenz inkl. Temperatur-/Einstrahlungs-/
+    Winkel-Effekten (negativ = Gesamtminderung, kann durch Spektral-/AOI-Gewinne
+    abweichen und ist ausdrücklich NICHT der Systemverlust). ``radiation_db``
+    benennt den Strahlungs-Datensatz (z.B. "PVGIS-SARAH3"). ``monthly`` trägt je
+    Monat ein schlankes dict (``month`` 1-12, ``irradiation_kwh_m2``, ``yield_kwh``).
+    Mutable Default IMMER via ``Field(default_factory=list)`` (ruff B006).
     """
 
     kind: Literal["solar"] = "solar"
@@ -860,6 +903,7 @@ class SolarPayload(BaseModel):
     optimal_azimuth_deg: float | None = None
     peakpower_kwp: float | None = None
     system_loss_pct: float | None = None
+    total_performance_delta_pct: float | None = None
     radiation_db: str | None = None
     period_start: int | None = None
     period_end: int | None = None
@@ -870,11 +914,11 @@ class PublicTenderPayload(BaseModel):
     """Oeffentliche Auftragsvergabe je Stadt (OCDS, Tier A, DATA-21).
 
     Bildet eine OCDS-1.1-Bekanntmachung (Notice) auf das kanonische Schema ab.
-    ``notice_id`` + ``notice_version`` bilden den fachlichen Dedup-Schluessel
-    (juengste Version gewinnt). ``match`` weist aus, ueber welchen Pfad die
+    ``notice_id`` + ``notice_version`` bilden den fachlichen Dedup-Schlüssel
+    (jüngste Version gewinnt). ``match`` weist aus, über welchen Pfad die
     Bekanntmachung der Stadt zugeordnet wurde ("buyer_city" = Auftraggeber-Sitz,
-    "place_of_performance" = Erfuellungsort): eine Bekanntmachung kann beide
-    Pfade tragen. ``buyer_city`` traegt den (slugifizierten) Stadt-Bezug, ``nuts``
+    "place_of_performance" = Erfüllungsort): eine Bekanntmachung kann beide
+    Pfade tragen. ``buyer_city`` trägt den (slugifizierten) Stadt-Bezug, ``nuts``
     den NUTS-3-Code des Auftraggebers/Erfuellungsorts. Mutable Liste IMMER via
     ``Field(default_factory=list)`` (ruff B006).
     """

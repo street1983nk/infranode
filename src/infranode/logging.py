@@ -24,7 +24,7 @@ def add_correlation(
 
 
 def configure_logging(level: str = "INFO") -> None:
-    """Konfiguriert structlog fuer JSON-Logs auf stdout (Docker-erfassbar)."""
+    """Konfiguriert structlog für JSON-Logs auf stdout (Docker-erfassbar)."""
     logging.basicConfig(
         format="%(message)s",
         level=getattr(logging, level.upper(), logging.INFO),

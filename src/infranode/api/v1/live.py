@@ -2,17 +2,17 @@
 
 Owner-Entscheid (LOCKED): alle Live-/Quasi-Live-Endpunkte erhalten einen eigenen
 Namespace ``/api/v1/live/...`` mit eigenem OpenAPI-Tag "Live" und einem additiv
-erweiterten Envelope-Kontrakt: der meta-Block traegt zusaetzlich ``as_of``
+erweiterten Envelope-Kontrakt: der meta-Block trägt zusätzlich ``as_of``
 (Datenstand, DATEX-II publicationTime) und ``refresh_seconds`` (Kadenz der
 Quelle), ohne den Bestands-Envelope zu brechen.
 
 Re-Exposition Bestand (LIVE-03, REST-Regel 6 = eine Quelle der Wahrheit): die
 bestehenden Live-/Quasi-Live-Handler aus ``cities.py`` (air, air-uba, water-level,
-traffic, webcams, flood) werden hier als DUENNE Alias-Wrapper unter ``/live``
+traffic, webcams, flood) werden hier als DÜNNE Alias-Wrapper unter ``/live``
 re-exponiert. Es wird KEIN Handler-Body dupliziert: die Wrapper rufen exakt den
 jeweiligen ``cities.py``-Handler auf. Die Altpfade in ``cities.py`` bleiben
-funktionsfaehig (kein Breaking Change, Envelope-Kontrakt stabil) und tragen
-zusaetzlich einen ``Deprecation``-Header sowie ``deprecated=True`` im OpenAPI.
+funktionsfähig (kein Breaking Change, Envelope-Kontrakt stabil) und tragen
+zusätzlich einen ``Deprecation``-Header sowie ``deprecated=True`` im OpenAPI.
 
 Der Prefix ``/live`` und der Tag "Live" werden beim ``include_router`` in
 ``__init__.py`` gesetzt (analog cities.py), NICHT hier im Router.
@@ -89,9 +89,9 @@ def _live_meta(
     """Baut den Live-Envelope-meta-Block (RESEARCH Pattern 5).
 
     Spiegelt den Bestands-meta-Block jedes ``cities.py``-Handlers
-    (``correlation_id`` + ``source_status`` [+ ``cache_status``]) und ergaenzt ihn
+    (``correlation_id`` + ``source_status`` [+ ``cache_status``]) und ergänzt ihn
     ADDITIV um die beiden Live-Kennzeichen ``as_of`` (Datenstand) und
-    ``refresh_seconds`` (Kadenz der Quelle). Beide Live-Keys sind IMMER praesent
+    ``refresh_seconds`` (Kadenz der Quelle). Beide Live-Keys sind IMMER präsent
     (auch bei ``disabled``/``no_data``), damit der Live-Kategorie-Kontrakt stabil
     ist; ein noch unbekannter Datenstand ist ``None`` (ehrlich), kein Weglassen.
     """
@@ -101,7 +101,7 @@ def _live_meta(
     }
     if cache_status is not None:
         meta["cache_status"] = cache_status
-    # Live-Erweiterung: as_of/refresh_seconds IMMER ausweisen (Kontrakt-Stabilitaet).
+    # Live-Erweiterung: as_of/refresh_seconds IMMER ausweisen (Kontrakt-Stabilität).
     meta["as_of"] = as_of
     meta["refresh_seconds"] = refresh_seconds
     return meta
@@ -110,8 +110,8 @@ def _live_meta(
 # Kadenz der Mobilithek-Live-Quellen (CONTEXT: live_5min, minutenfrisch).
 _LIVE_REFRESH_SECONDS = 300
 
-# Default-Abo-IDs der verifizierten Koeln-Quellen (CONTEXT 2026-06-12, HTTP 200).
-# Greifen nur, wenn die Settings-Allowlist (``*_abo_id``) keinen Wert traegt
+# Default-Abo-IDs der verifizierten Köln-Quellen (CONTEXT 2026-06-12, HTTP 200).
+# Greifen nur, wenn die Settings-Allowlist (``*_abo_id``) keinen Wert trägt
 # (Owner setzt die Werte produktiv aus dem Portal; SSRF-Allowlist bleibt gewahrt:
 # der Wert stammt NIE aus User-Input, nur aus Settings ODER diesen Konstanten).
 _KOELN_TRAFFIC_FLOW_ABO_ID = "1000923418744061952"
@@ -130,12 +130,12 @@ async def _live_mobilithek(
 ) -> dict:
     """Gemeinsame Köln-Live-Route gegen den Mobilithek-mTLS-Pull (LIVE-06/07).
 
-    Folgt 1:1 dem ``cities.py``-Handler-Skelett (Graceful Degradation), ABER fuer
+    Folgt 1:1 dem ``cities.py``-Handler-Skelett (Graceful Degradation), ABER für
     reine Live-Daten:
     - Register-Lookup zuerst (T-20-PATH): unbekannter Slug -> 404 (zentraler Handler).
     - Toggle-Check: ``enable_{source}`` False ODER ``app.state.mobilithek_http`` None
       (kein Cert) ODER ``abo_id`` fehlt -> 200 ``source_status="disabled"`` (nie 5xx).
-    - resilienter Fetch ueber die Fassade (``resilient_client.fetch``) mit
+    - resilienter Fetch über die Fassade (``resilient_client.fetch``) mit
       ``fetch_datex2`` als ``fetch_fn`` gegen den mTLS-Client.
     - toter Upstream ohne Cache (``raw is None``) -> 503 mit selbst-korrigierendem Hint.
     - leerer Feed (422/keine Daten) -> 200 ``source_status="no_data"`` OHNE Mapper.
@@ -179,7 +179,7 @@ async def _live_mobilithek(
 
     raw, status = await client.fetch(source, key, fetch_fn)
 
-    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprueft werden,
+    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprüft werden,
     # sonst 500. 503 mit selbst-korrigierendem Hint (DX-06).
     if raw is None:
         raise UpstreamError(
@@ -189,7 +189,7 @@ async def _live_mobilithek(
         )
 
     # Leerer Feed (422/keine Daten) -> ehrliches no_data (200) OHNE Mapper.
-    # Payload-Schluessel je Publication (additiv um parking erweitert).
+    # Payload-Schlüssel je Publication (additiv um parking erweitert).
     if publication == "situation":
         payload_key = "events"
     elif publication == "parking":
@@ -214,8 +214,8 @@ async def _live_mobilithek(
         wikidata_qid=entry.qid,
         **(map_kwargs or {}),
     )
-    # KEIN Archiv-Write fuer reine Live-Daten (T-20-ARCHIVE)! Nur Redis-Cache
-    # (ueber die Fassade). Das ist der bewusste Unterschied zu cities.py.
+    # KEIN Archiv-Write für reine Live-Daten (T-20-ARCHIVE)! Nur Redis-Cache
+    # (über die Fassade). Das ist der bewusste Unterschied zu cities.py.
     observed = (
         record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
     )
@@ -232,12 +232,12 @@ async def _live_mobilithek(
 
 @router.get("/{city}/traffic-flow")
 async def live_traffic_flow(city: str, request: Request) -> dict:
-    """Live-Verkehrslage je Stadt (Koeln MeasuredDataPublication, LIVE-06).
+    """Live-Verkehrslage je Stadt (Köln MeasuredDataPublication, LIVE-06).
 
     Vertikaler Live-Endpunkt der getrennten Kategorie. Köln ist die verifizierte
-    Quelle (MeasuredDataPublication, minutenfrisch); andere Staedte tragen keinen
+    Quelle (MeasuredDataPublication, minutenfrisch); andere Städte tragen keinen
     Abo-Eintrag -> ``disabled``. Graceful Degradation + Live-Envelope (``as_of`` +
-    ``refresh_seconds``) ueber den gemeinsamen ``_live_mobilithek``-Helfer. KEIN
+    ``refresh_seconds``) über den gemeinsamen ``_live_mobilithek``-Helfer. KEIN
     Archiv (reine Live-Daten, T-20-ARCHIVE).
     """
     settings = Settings()
@@ -257,8 +257,8 @@ async def live_baustellen(city: str, request: Request) -> dict:
     """Live-Baustellen je Stadt (SituationPublication, LIVE-07 / DATA-31).
 
     City-aware: Köln (verifiziertes Abo) und Bremen (VMZ Bremen, DATA-31) sind
-    verdrahtet; jede Stadt traegt ihre eigene Abo-ID + SourceId + ihren Mapper
-    (Attribution traegergenau). Eine nicht verdrahtete Stadt -> 200
+    verdrahtet; jede Stadt trägt ihre eigene Abo-ID + SourceId + ihren Mapper
+    (Attribution trägergenau). Eine nicht verdrahtete Stadt -> 200
     ``source_status="disabled"`` (kein Abo). SituationPublication ->
     RoadEventPayload. KEIN Archiv (reine Live-Daten, T-20-ARCHIVE).
     """
@@ -288,7 +288,7 @@ async def live_baustellen(city: str, request: Request) -> dict:
 
 @router.get("/{city}/ereignisse")
 async def live_ereignisse(city: str, request: Request) -> dict:
-    """Live-Verkehrsereignisse je Stadt (Koeln SituationPublication, LIVE-07).
+    """Live-Verkehrsereignisse je Stadt (Köln SituationPublication, LIVE-07).
 
     Köln Verkehrsinformationen/Ereignisse. Die Abo-ID wird vom Owner aus dem
     Portal nachgetragen (Settings-Allowlist ``koeln_ereignisse_live_abo_id``);
@@ -312,7 +312,7 @@ async def live_ereignisse(city: str, request: Request) -> dict:
 async def live_berlin_verkehrsmeldungen(request: Request) -> dict:
     """Live-Verkehrsmeldungen Berlin (SenMVKU SituationPublication, LIVE-08).
 
-    Reine V2-SituationPublication-Quelle ueber denselben Plan-04-Parser
+    Reine V2-SituationPublication-Quelle über denselben Plan-04-Parser
     (``fetch_datex2`` publication="situation") + den gemeinsamen
     ``_live_mobilithek``-Helfer; nur der Mapper (``map_berlin_traffic_messages``)
     ist Berlin-spezifisch. Stadt-Slug fix ``berlin`` (Quelle deckt nur Berlin ab).
@@ -336,7 +336,7 @@ async def live_hannover_verkehrsmeldungen(request: Request) -> dict:
 
     Reine V2-SituationPublication-Quelle (Baustellen, verkehrsrelevante
     Veranstaltungen, Verkehrsstörungen im strategischen Verkehrsnetz der Stadt
-    Hannover) ueber denselben Plan-04-Parser (``fetch_datex2`` publication=
+    Hannover) über denselben Plan-04-Parser (``fetch_datex2`` publication=
     "situation") + den gemeinsamen ``_live_mobilithek``-Helfer; nur der Mapper
     (``map_hannover_road_events``) ist Hannover-spezifisch. Stadt-Slug fix
     ``hannover`` (Quelle deckt die Region Hannover ab, BBox-gefiltert). Abo-ID aus
@@ -359,7 +359,7 @@ async def live_hannover_verkehrsmeldungen(request: Request) -> dict:
 async def live_koeln_umweltzone(request: Request) -> dict:
     """Live-LowEmissionZone Köln (MoCKiii SituationPublication, LIVE-12).
 
-    Schliesst die Köln-Quellengruppe ab. Reine V2-SituationPublication ueber den
+    Schließt die Köln-Quellengruppe ab. Reine V2-SituationPublication über den
     Plan-04-Parser + ``_live_mobilithek``; nur der Mapper (``map_koeln_lez``) ist
     LEZ-spezifisch. Stadt-Slug fix ``koeln``. Abo-ID aus der Settings-Allowlist
     (SSRF, T-20-SSRF). KEIN Archiv (reine Live-Daten, T-20-ARCHIVE).
@@ -379,20 +379,20 @@ async def live_koeln_umweltzone(request: Request) -> dict:
 async def live_dortmund_parking(request: Request, response: Response) -> dict:
     """Live-Parkbelegung Dortmund (DATA-09, Tier A, DIREKT keylos). DEPRECATED.
 
-    DEPRECATED (DATA-40, Dedup): abgeloest vom vereinheitlichten Parking-Endpunkt
-    ``GET /api/v1/cities/dortmund/parking`` (EIN Endpunkt fuer alle Park-Staedte mit
-    Quellen-Fallback). Dieser Pfad bleibt rueckwaertskompatibel (unveraenderter
-    Envelope), traegt aber ``Deprecation``-/``Link``-Header auf den Nachfolger.
+    DEPRECATED (DATA-40, Dedup): abgelöst vom vereinheitlichten Parking-Endpunkt
+    ``GET /api/v1/cities/dortmund/parking`` (EIN Endpunkt für alle Park-Städte mit
+    Quellen-Fallback). Dieser Pfad bleibt rückwärtskompatibel (unveränderter
+    Envelope), trägt aber ``Deprecation``-/``Link``-Header auf den Nachfolger.
 
-    Direkter, keyloser Zugang zum offenen Parkleitsystem der Stadt Dortmund ueber
+    Direkter, keyloser Zugang zum offenen Parkleitsystem der Stadt Dortmund über
     die Opendatasoft-Explore-API (``adapters/dortmund_parking``) statt
-    Mobilithek-mTLS: KEIN Cert, KEIN Abo noetig (Owner-Strategie 2026-06-13,
+    Mobilithek-mTLS: KEIN Cert, KEIN Abo nötig (Owner-Strategie 2026-06-13,
     direkte Anbieter-API wie HVV-Geofox). Toggle ``enable_dortmund_parking`` aus
-    -> 200 ``source_status="disabled"`` (nie 5xx). Resilienter Fetch ueber die
+    -> 200 ``source_status="disabled"`` (nie 5xx). Resilienter Fetch über die
     Fassade; leerer Feed -> ``no_data``; toter Upstream ohne Cache -> 503 mit
-    selbst-korrigierendem Hint. Lizenz DL-DE Zero 2.0 (Tier A). Schliesst die
-    DATA-09-Echtzeit-Parkbelegungsluecke. KEIN Archiv (reine Live-Daten,
-    T-20-ARCHIVE) - nur Redis-Cache ueber die Fassade.
+    selbst-korrigierendem Hint. Lizenz DL-DE Zero 2.0 (Tier A). Schließt die
+    DATA-09-Echtzeit-Parkbelegungslücke. KEIN Archiv (reine Live-Daten,
+    T-20-ARCHIVE) - nur Redis-Cache über die Fassade.
     """
     cities._mark_deprecated(response, "/api/v1/cities/dortmund/parking")
     entry = get_city("dortmund")
@@ -454,9 +454,9 @@ async def live_dortmund_parking(request: Request, response: Response) -> dict:
 
 @router.get("/kiel/zaehlstellen")
 async def live_kiel_zaehlstellen(request: Request) -> dict:
-    """Live-Zaehldaten Kiel (MIV-/Radzaehlstellen, MeasuredDataPublication, LIVE-10).
+    """Live-Zähldaten Kiel (MIV-/Radzaehlstellen, MeasuredDataPublication, LIVE-10).
 
-    Kiel Dauerzaehlstellen ueber den MeasuredData-Zweig aus Plan 04
+    Kiel Dauerzählstellen über den MeasuredData-Zweig aus Plan 04
     (``fetch_datex2`` publication="measured") + den gemeinsamen
     ``_live_mobilithek``-Helfer; der Mapper (``map_kiel_counts``) interpretiert
     die ``measurements`` als ``counts``. Stadt-Slug fix ``kiel``. Abo-ID aus der
@@ -476,15 +476,15 @@ async def live_kiel_zaehlstellen(request: Request) -> dict:
 
 @router.get("/eround/charging")
 async def live_eround_charging(request: Request) -> dict:
-    """Live-Ladesaeulen-Belegung eRound (AFIR DATEX-II V3, LIVE-11).
+    """Live-Ladesäulen-Belegung eRound (AFIR DATEX-II V3, LIVE-11).
 
     Die EINZIGE DATEX-II-V3-Quelle der Phase (EnergyInfrastructureStatus-
-    Publication, eigener Parser ``fetch_afir`` getrennt vom V2-Pfad). Schliesst
-    die zweite Haelfte der DATA-09-Belegungsluecke (Laden). REALITAET (Mobilithek-
+    Publication, eigener Parser ``fetch_afir`` getrennt vom V2-Pfad). Schließt
+    die zweite Hälfte der DATA-09-Belegungslücke (Laden). REALITÄT (Mobilithek-
     Portal 2026-06-12): Syntax JSON (nicht XML), Zugriffspunkt mit Query-URL-
     Variante (``build_pull_url`` style="query", im Adapter gesetzt). Lizenz CC0 ->
     Tier A (Owner-Verifikation, Checkpoint cc0-tier-a). Stadt-Slug fix ``koeln``
-    als Aufhaenger (eRound liefert HH-/bundesweite Standorte; der Slug dient nur
+    als Aufhänger (eRound liefert HH-/bundesweite Standorte; der Slug dient nur
     dem Register-Lookup/Geo-Kontext). Abo-ID aus der Settings-Allowlist (SSRF,
     T-20-SSRF). KEIN Archiv (reine Live-Daten, T-20-ARCHIVE), auch bei Tier A
     (RESEARCH "Live NICHT archivieren").
@@ -518,7 +518,7 @@ async def live_eround_charging(request: Request) -> dict:
 
     raw, status = await client.fetch(source, key, fetch_fn)
 
-    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprueft werden.
+    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprüft werden.
     if raw is None:
         raise UpstreamError(
             f"Live-Quelle '{source}' voruebergehend nicht erreichbar, kein "
@@ -544,7 +544,7 @@ async def live_eround_charging(request: Request) -> dict:
         ags=entry.ags,
         wikidata_qid=entry.qid,
     )
-    # KEIN Archiv-Write fuer reine Live-Daten (T-20-ARCHIVE)! Auch bei Tier A:
+    # KEIN Archiv-Write für reine Live-Daten (T-20-ARCHIVE)! Auch bei Tier A:
     # reine Live-Belegung wird nicht archiviert (RESEARCH "Live NICHT archivieren").
     observed = (
         record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
@@ -566,7 +566,7 @@ async def live_frankfurt_parking(request: Request) -> dict:
 
     Eigene Route (analog ``live_eround_charging``), weil Frankfurt DATEX-II **V3**
     als XML liefert (eigener Parser ``fetch_frankfurt_parking`` getrennt vom
-    V2-Pfad) UND zwei Abos joint: das dynamische traegt die Belegung, das
+    V2-Pfad) UND zwei Abos joint: das dynamische trägt die Belegung, das
     statische die Stammdaten (Name/Geo/Kapazitaet). Stadt-Slug fix
     ``frankfurt-am-main`` (Quelle deckt nur Frankfurt ab). Beide Abo-IDs aus der
     Settings-Allowlist (SSRF, T-20-SSRF). Container-Pull (Pull-Test 2026-06-22:
@@ -577,7 +577,7 @@ async def live_frankfurt_parking(request: Request) -> dict:
     (422/keine Belegung) -> 200 ``no_data``. Toter Upstream ohne Cache -> 503 mit
     selbst-korrigierendem Hint. Lizenz DL-DE/BY 2.0 (Tier A), Attribution "Stadt
     Frankfurt am Main". KEIN Archiv (reine Live-Daten, T-20-ARCHIVE) - nur
-    Redis-Cache ueber die Fassade.
+    Redis-Cache über die Fassade.
     """
     settings = Settings()
     city = "frankfurt-am-main"
@@ -613,7 +613,7 @@ async def live_frankfurt_parking(request: Request) -> dict:
 
     raw, status = await client.fetch(source, key, fetch_fn)
 
-    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprueft werden.
+    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprüft werden.
     if raw is None:
         raise UpstreamError(
             f"Live-Quelle '{source}' voruebergehend nicht erreichbar, kein "
@@ -639,7 +639,7 @@ async def live_frankfurt_parking(request: Request) -> dict:
         ags=entry.ags,
         wikidata_qid=entry.qid,
     )
-    # KEIN Archiv-Write fuer reine Live-Daten (T-20-ARCHIVE)! Nur Redis-Cache.
+    # KEIN Archiv-Write für reine Live-Daten (T-20-ARCHIVE)! Nur Redis-Cache.
     observed = (
         record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
     )
@@ -659,8 +659,8 @@ async def live_wuppertal_parking(request: Request) -> dict:
     """Live-Parkbelegung Wuppertal (DATEX-II V2 ParkingFacility, statisch+dynamisch).
 
     Eigene Route (analog Frankfurt), weil Wuppertal zwei Abos joint (dynamische
-    Belegung + statische Stammdaten) ueber das DATEX-II-V2-ParkingFacility-Profil
-    (eigener Parser ``fetch_wuppertal_parking``, getrennt vom Koeln-parkingStatus-
+    Belegung + statische Stammdaten) über das DATEX-II-V2-ParkingFacility-Profil
+    (eigener Parser ``fetch_wuppertal_parking``, getrennt vom Köln-parkingStatus-
     Pfad). Stadt-Slug fix ``wuppertal``. Beide Abo-IDs aus der Settings-Allowlist
     (SSRF, T-20-SSRF). Pull-Stil "path" (Pull-Test 2026-06-22).
 
@@ -782,7 +782,7 @@ async def live_hamburg_departures(
         )
 
     client = request.app.state.resilient_client
-    # Cache-Key traegt NUR den Stationsnamen (T-08-CRED): nie Credentials.
+    # Cache-Key trägt NUR den Stationsnamen (T-08-CRED): nie Credentials.
     cache_key = build_cache_key(
         "hvv_geofox", city_slug=entry.slug, params={"station": name}
     )
@@ -849,7 +849,7 @@ _TRANSIT_REFRESH_SECONDS = 45
 # stop_id/route_id-Allowlist (T-19-CACHEPOISON): DELFI-IDs haben das Muster
 # de:<AGS-Ziffern>:<rest>; der gtfs.de-Free-Feed nutzt Rein-NUMERISCHE stop_ids
 # (live verifiziert 2026-06-12: 150k+ Index-Keys wie transit_rt:idx:stop:27796).
-# Beide Formate sind zulaessig; NUR validierte Werte gelangen in Redis-Keys
+# Beide Formate sind zulässig; NUR validierte Werte gelangen in Redis-Keys
 # (kein roher User-String).
 _STOP_ID_RE = re.compile(r"^(de:\d+:[\w:.\-]+|\d+)$")
 _ID_RE = re.compile(r"^[\w:.\-]+$")
@@ -864,9 +864,42 @@ def _service_day_epoch(now_epoch: int) -> int:
     """Mitternacht (UTC) des Betriebstags von ``now_epoch`` als Unix-Epoch.
 
     Reine Arithmetik (kein Systemuhr-Aufruf): ``now_epoch`` wird vom Handler
-    injiziert. Dient als Bezug fuer GTFS-Soll-Zeiten ("HH:MM:SS", >24h moeglich).
+    injiziert. Dient als Bezug für GTFS-Soll-Zeiten ("HH:MM:SS", >24h möglich).
     """
     return now_epoch - (now_epoch % 86_400)
+
+
+def _stop_time_update_for(update: dict, stop_id: str) -> dict | None:
+    """Findet das stop_time_update eines Updates, das ``stop_id`` bedient.
+
+    Audit-Fix M-1: damit die Live-Abfahrt eine haltgenaue Abfahrtszeit und
+    Sequenz tragen kann. Kein Treffer -> ``None`` (ehrlich, kein Fehler).
+    """
+    for stu in update.get("stop_time_updates", []) or []:
+        if stu.get("stop_id") == stop_id:
+            return stu
+    return None
+
+
+def _departure_delay(stu: dict | None, update: dict) -> int | None:
+    """Liefert die Verspätung (Sekunden) einer Abfahrt, ehrlich aus den Halten.
+
+    Audit-Fix K6: bevorzugt den haltgenauen Wert aus dem stop_time_update
+    (``departure_delay``, sonst ``arrival_delay``); fehlt er, die bereits beim
+    Parsen abgeleitete effektive Fahrt-Verspätung ``delay_s``; erst zuletzt die
+    (im echten Feed praktisch nie gesetzte) Trip-Ebene ``delay``.
+    """
+    if stu is not None:
+        dep = stu.get("departure_delay")
+        if dep is not None:
+            return dep
+        arr = stu.get("arrival_delay")
+        if arr is not None:
+            return arr
+    eff = update.get("delay_s")
+    if eff is not None:
+        return eff
+    return update.get("delay")
 
 
 @router.get("/{city}/transit/departures")
@@ -906,11 +939,20 @@ async def live_transit_departures(
         update = await get_trip_update(redis, tid)
         if update is None:
             continue
+        # Audit-Fix M-1: das zu DIESEM Halt passende stop_time_update suchen, um
+        # die Abfahrt mit departure_time/stop_sequence (und dem haltgenauen Delay)
+        # auszuliefern statt nur trip_id/route_id/delay_s.
+        stu = _stop_time_update_for(update, stop_id)
         departures.append(
             {
                 "trip_id": tid,
                 "route_id": update.get("route_id"),
-                "delay_s": update.get("delay"),
+                # Audit-Fix K6: haltgenaue Verspätung aus dem stop_time_update
+                # bevorzugen (departure, sonst arrival), sonst die effektive
+                # Fahrt-Verspätung delay_s; tu.delay nur als letzter Fallback.
+                "delay_s": _departure_delay(stu, update),
+                "departure_time": stu.get("departure_time") if stu else None,
+                "stop_sequence": stu.get("stop_sequence") if stu else None,
             }
         )
 
@@ -931,7 +973,7 @@ async def live_transit_departures(
         wikidata_qid=entry.qid,
         source_attribution=attribution_for_source(await read_rt_source(redis)),
     )
-    # KEIN Archiv-Write fuer reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
+    # KEIN Archiv-Write für reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
     return {
         "data": record.model_dump(mode="json"),
         "meta": _live_meta(
@@ -947,11 +989,11 @@ async def live_transit_trip(city: str, trip_id: str, request: Request) -> dict:
     """Live-Fahrt-Detail inkl. geschätzter Position (GTFS-RT, TRANSIT-RT-04, Tier B).
 
     Liest das Update aus Redis (``get_trip_update``); fehlt es -> ``no_data``. Die
-    Statik-Aufloesung (``stops_with_geo_for_trip`` gegen ``delfi_gtfs_path``) +
+    Statik-Auflösung (``stops_with_geo_for_trip`` gegen ``delfi_gtfs_path``) +
     ``estimate_position`` liefern die geschätzte Position. now_epoch ist VERBINDLICH
     die Request-Zeit (``datetime.now(UTC).timestamp()`` im Handler ermittelt und
     injiziert, NICHT der evtl. veraltete update.timestamp). Ist die Statik nicht
-    aufloesbar -> ``unresolved=True`` (kein 500, RESEARCH Pitfall 4). KEIN Archiv.
+    auflösbar -> ``unresolved=True`` (kein 500, RESEARCH Pitfall 4). KEIN Archiv.
     """
     entry = get_city(city)
     settings = Settings()
@@ -985,9 +1027,9 @@ async def live_transit_trip(city: str, trip_id: str, request: Request) -> dict:
     now_epoch = int(datetime.now(UTC).timestamp())
     estimated_position: dict | None = None
     unresolved = True
-    # RT-Aufloesung gegen die zur PROVENANCE passende Statik (Feinschliff
+    # RT-Auflösung gegen die zur PROVENANCE passende Statik (Feinschliff
     # 2026-06-15): liefert aktuell der DELFI-Feed (mobilithek_delfi), werden die
-    # DELFI-IDs gegen den DELFI-Static (delfi_gtfs_path) aufgeloest; beim gtfs.de-
+    # DELFI-IDs gegen den DELFI-Static (delfi_gtfs_path) aufgelöst; beim gtfs.de-
     # Backup gegen die gtfs.de-Statik (gtfs_rt_static_path). So passen ID-Namensraum
     # und Statik immer zusammen (sonst ehrlich unresolved statt falscher Position).
     used_source = await read_rt_source(redis)
@@ -1007,7 +1049,14 @@ async def live_transit_trip(city: str, trip_id: str, request: Request) -> dict:
             if stops:
                 unresolved = False
                 estimated_position = estimate_position(
-                    stops, delay_s=update.get("delay") or 0, now_epoch=now_epoch
+                    stops,
+                    # Audit-Fix K6: effektive Verspätung delay_s (aus
+                    # stop_time_update) statt der praktisch nie gesetzten
+                    # Trip-Ebene tu.delay; Fallback auf 0.
+                    delay_s=update.get("delay_s")
+                    if update.get("delay_s") is not None
+                    else (update.get("delay") or 0),
+                    now_epoch=now_epoch,
                 )
         except (OSError, KeyError, ValueError):
             # Statik nicht lesbar/unvollstaendig -> ehrlich unresolved (kein 500).
@@ -1017,7 +1066,11 @@ async def live_transit_trip(city: str, trip_id: str, request: Request) -> dict:
         {
             "trip_id": trip_id,
             "route_id": update.get("route_id"),
-            "delay": update.get("delay"),
+            # Audit-Fix K6: effektive Verspätung delay_s an den Mapper geben
+            # (map_transit_trip liest "delay" -> Payload.delay_s), Fallback tu.delay.
+            "delay": update.get("delay_s")
+            if update.get("delay_s") is not None
+            else update.get("delay"),
             "timestamp": update.get("timestamp"),
             "stop_time_updates": update.get("stop_time_updates", []),
             "estimated_position": estimated_position,
@@ -1029,7 +1082,7 @@ async def live_transit_trip(city: str, trip_id: str, request: Request) -> dict:
         wikidata_qid=entry.qid,
         source_attribution=attribution_for_source(used_source),
     )
-    # KEIN Archiv-Write fuer reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
+    # KEIN Archiv-Write für reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
     return {
         "data": record.model_dump(mode="json"),
         "meta": _live_meta(
@@ -1046,7 +1099,7 @@ async def live_transit_route_status(city: str, route_id: str, request: Request) 
 
     Aggregiert die aktiven Fahrten einer Linie aus Redis (``trips_for_route`` +
     ``get_trip_update``): ``active_trips`` Anzahl, ``avg_delay_s``/``max_delay_s``
-    ueber die Verspaetungen. Leer -> ``no_data``. KEIN Request-Parse, KEIN Archiv.
+    über die Verspätungen. Leer -> ``no_data``. KEIN Request-Parse, KEIN Archiv.
     """
     entry = get_city(city)
     settings = Settings()
@@ -1072,7 +1125,12 @@ async def live_transit_route_status(city: str, route_id: str, request: Request) 
         update = await get_trip_update(redis, tid)
         if update is None:
             continue
-        delay = update.get("delay")
+        # Audit-Fix K6: effektive Verspätung delay_s (aus stop_time_update)
+        # statt der praktisch nie gesetzten Trip-Ebene tu.delay; sonst war
+        # avg/max_delay_s jeder Linie IMMER null.
+        delay = update.get("delay_s")
+        if delay is None:
+            delay = update.get("delay")
         if delay is not None:
             delays.append(delay)
         trips.append({"trip_id": tid, "delay_s": delay})
@@ -1102,7 +1160,7 @@ async def live_transit_route_status(city: str, route_id: str, request: Request) 
         wikidata_qid=entry.qid,
         source_attribution=attribution_for_source(await read_rt_source(redis)),
     )
-    # KEIN Archiv-Write fuer reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
+    # KEIN Archiv-Write für reine Live-Daten (T-19-ARCHIVE, Tier B)! Nur Redis.
     return {
         "data": record.model_dump(mode="json"),
         "meta": _live_meta(
@@ -1115,10 +1173,10 @@ async def live_transit_route_status(city: str, route_id: str, request: Request) 
 
 # --- Re-Exposition Bestand unter /live (LIVE-03, REST-Regel 6) ---------------
 #
-# DUENNE Alias-Wrapper: jeder ruft EXAKT den bestehenden cities.py-Handler auf
+# DÜNNE Alias-Wrapper: jeder ruft EXAKT den bestehenden cities.py-Handler auf
 # (eine Quelle der Wahrheit, KEIN duplizierter Body, RESEARCH Anti-Pattern). Der
 # Envelope-Kontrakt ist damit per Konstruktion identisch zum Altpfad. Die Alias-
-# Wrapper uebergeben dem cities-Handler eine WEGWERF-Response (``Response()``),
+# Wrapper übergeben dem cities-Handler eine WEGWERF-Response (``Response()``),
 # damit der vom Handler gesetzte Deprecation-Header NICHT auf der /live-Antwort
 # landet: der /live-Pfad ist der Nachfolger, nicht der deprecated Altpfad. Die
 # Alias-Routen erben Prefix /live + Tag "Live" aus dem include_router.
@@ -1126,37 +1184,37 @@ async def live_transit_route_status(city: str, route_id: str, request: Request) 
 
 @router.get("/{slug}/air")
 async def live_air(slug: str, request: Request) -> dict:
-    """Live-Alias fuer den UBA-Luft-Endpunkt (LIVE-03)."""
+    """Live-Alias für den UBA-Luft-Endpunkt (LIVE-03)."""
     return await cities.city_air(slug, request, Response())
 
 
 @router.get("/{slug}/air-uba")
 async def live_air_uba(slug: str, request: Request) -> dict:
-    """Live-Alias fuer den UBA-Luft-Endpunkt (LIVE-03)."""
+    """Live-Alias für den UBA-Luft-Endpunkt (LIVE-03)."""
     return await cities.city_air_uba(slug, request, Response())
 
 
 @router.get("/{slug}/water-level")
 async def live_water_level(slug: str, request: Request) -> dict:
-    """Live-Alias fuer den PEGELONLINE-Pegelstand-Endpunkt (LIVE-03)."""
+    """Live-Alias für den PEGELONLINE-Pegelstand-Endpunkt (LIVE-03)."""
     return await cities.city_water_level(slug, request, Response())
 
 
 @router.get("/{slug}/traffic")
 async def live_traffic(slug: str, request: Request) -> dict:
-    """Live-Alias fuer den Autobahn-Verkehrs-Endpunkt (LIVE-03)."""
+    """Live-Alias für den Autobahn-Verkehrs-Endpunkt (LIVE-03)."""
     return await cities.city_traffic(slug, request, Response())
 
 
 @router.get("/{slug}/webcams")
 async def live_webcams(slug: str, request: Request) -> dict:
-    """Live-Alias fuer den Autobahn-Webcam-Endpunkt (LIVE-03)."""
+    """Live-Alias für den Autobahn-Webcam-Endpunkt (LIVE-03)."""
     return await cities.city_webcams(slug, request, Response())
 
 
 @router.get("/{slug}/flood")
 async def live_flood(slug: str, request: Request) -> dict:
-    """Live-Alias fuer den LHP-Hochwasser-Endpunkt (LIVE-03)."""
+    """Live-Alias für den LHP-Hochwasser-Endpunkt (LIVE-03)."""
     return await cities.city_flood(slug, request, Response())
 
 
@@ -1171,12 +1229,12 @@ async def live_nuernberg_departures(request: Request, stop_id: str = "510") -> d
     Echtzeit-Abfahrtstafel inkl. Verspätung aus der offenen, keylosen VAG-Puls-API
     (CC-BY 4.0, Tier A). Stadt fix ``nuernberg`` (VGN-Raum). Der Query-Parameter
     ``stop_id`` ist die numerische VGN-Halt-ID (VGNKennung; Default 510 = Nürnberg
-    Hbf), abrufbar ueber ``/dm/api/haltestellen.json/vgn``.
+    Hbf), abrufbar über ``/dm/api/haltestellen.json/vgn``.
 
     Graceful Degradation: Toggle aus -> 200 ``source_status="disabled"`` (nie 5xx).
     Ungültige stop_id -> 400. Keine Abfahrten -> 200 ``source_status="no_data"``.
     Toter Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint. KEIN Archiv
-    (reine Live-Daten, T-20-ARCHIVE) - nur Redis-Cache ueber die Fassade.
+    (reine Live-Daten, T-20-ARCHIVE) - nur Redis-Cache über die Fassade.
     """
     entry = get_city("nuernberg")
     settings = Settings()
@@ -1251,18 +1309,18 @@ async def live_hamburg_verkehrslage(request: Request) -> dict:
     """Live-Verkehrslage Hamburg (DATA-26, Tier A, DIREKT keylos).
 
     Direkter, keyloser Zugang zur Echtzeit-Verkehrslage der Freien und Hansestadt
-    Hamburg ueber die OGC API Features (``adapters/hamburg_verkehrslage``) statt
+    Hamburg über die OGC API Features (``adapters/hamburg_verkehrslage``) statt
     Mobilithek-mTLS: KEIN Cert, KEIN Abo (Owner-Strategie, direkte Anbieter-API).
-    Die Antwort traegt eine Netz-Zusammenfassung (``summary.total`` +
-    ``by_state``-Zaehlung je Zustandsklasse) und die priorisierte, gedeckelte Liste
-    der nicht-fliessenden Strassenabschnitte (``measurements``). Stadt fix
+    Die Antwort trägt eine Netz-Zusammenfassung (``summary.total`` +
+    ``by_state``-Zählung je Zustandsklasse) und die priorisierte, gedeckelte Liste
+    der nicht-fließenden Straßenabschnitte (``measurements``). Stadt fix
     ``hamburg`` (Quelle deckt nur den Stadtraum ab).
 
     Graceful Degradation: Toggle ``enable_hamburg_verkehrslage`` aus -> 200
-    ``source_status="disabled"`` (nie 5xx). Resilienter Fetch ueber die Fassade;
+    ``source_status="disabled"`` (nie 5xx). Resilienter Fetch über die Fassade;
     leerer Feed (``summary.total`` == 0) -> ``no_data``; toter Upstream ohne Cache
     -> 503 mit selbst-korrigierendem Hint. Lizenz DL-DE/BY 2.0 (Tier A). KEIN
-    Archiv (reine Live-Daten, T-26-ARCHIVE) - nur Redis-Cache ueber die Fassade.
+    Archiv (reine Live-Daten, T-26-ARCHIVE) - nur Redis-Cache über die Fassade.
     """
     entry = get_city("hamburg")
     settings = Settings()
@@ -1290,8 +1348,8 @@ async def live_hamburg_verkehrslage(request: Request) -> dict:
             hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
         )
 
-    # Leerer Feed -> ehrliches no_data. Eine voll-fliessende Lage (segments leer,
-    # summary aber gefuellt) ist KEIN no_data, sondern ein gueltiges "ok".
+    # Leerer Feed -> ehrliches no_data. Eine voll-fließende Lage (segments leer,
+    # summary aber gefüllt) ist KEIN no_data, sondern ein gültiges "ok".
     summary = raw.get("summary") or {}
     if not summary.get("total"):
         return {

@@ -1,5 +1,5 @@
 ---
-// MCP-Server-Seite (/mcp): erklaert kurz MCP fuer Devs, zeigt die Einrichtung
+// MCP-Server-Seite (/mcp): erklärt kurz MCP für Devs, zeigt die Einrichtung
 // in Claude Code und Claude Desktop (CodeTabs) und listet die 65 Tools nach
 // Thema gruppiert. Quelle der Einrichtungs-Snippets ist docs/mcp-install.md.
 import Docs from "../layouts/Docs.astro";
@@ -7,7 +7,7 @@ import CodeTabs from "../components/CodeTabs.astro";
 import JsonLd from "../components/JsonLd.astro";
 import { mcpTopics } from "../data/mcp-topics";
 
-// Einrichtungs-Snippets. Der Server ist oeffentlich gehostet (Remote, Streamable
+// Einrichtungs-Snippets. Der Server ist öffentlich gehostet (Remote, Streamable
 // HTTP) unter https://mcp.infranode.dev/mcp. Tab 1: Claude Code (Remote, ein
 // Befehl), Tab 2: URL-Connector-Config (Claude Desktop/ChatGPT u.a.), Tab 3:
 // lokale Selfhost-Variante (stdio, braucht Repo-Zugang).
@@ -27,7 +27,7 @@ const connectorConfig = [
 
 const claudeCodeLocal = `claude mcp add infranode -- uv run --group mcp python -m infranode.mcp`;
 
-// Fallback fuer Clients, die nur lokale stdio-Server koennen (keine Remote-URL):
+// Fallback für Clients, die nur lokale stdio-Server können (keine Remote-URL):
 // die Standard-Bridge mcp-remote leitet stdio per npx an den gehosteten Endpunkt.
 const mcpRemoteConfig = [
   `{`,
@@ -152,7 +152,7 @@ const toolGroups = [
   },
 ];
 
-// FAQ fuer FAQPage-JSON-LD (GEO: direkt von KI-Antwortmaschinen + Google
+// FAQ für FAQPage-JSON-LD (GEO: direkt von KI-Antwortmaschinen + Google
 // zitierbar). Reiner Text, wird in JsonLd.astro sicher serialisiert.
 const faq = [
   {

@@ -1,6 +1,6 @@
 """Normalisierungs-Library: kanonisches Schema als einzige Quelle der Wahrheit.
 
-Re-exportiert die oeffentliche API der Library (CORE-01): den
+Re-exportiert die öffentliche API der Library (CORE-01): den
 ``CanonicalRecord``-Envelope, die Wert-Objekte, die Lizenz-/Quellen-Enums sowie
 die diskriminierte Payload-Union und ihre Mitglieder. Jede Quelle ab Phase 4
 bildet ihre Daten auf diese Modelle ab.

@@ -1,9 +1,9 @@
 """Reine Quellen-Mapper der Normalisierungs-Library (CORE-02).
 
 Jeder Mapper ist eine reine Funktion ``map_<source>(raw, *, retrieved_at)``
-ohne I/O und ohne Zeit-Seiteneffekt; sie uebersetzt heterogene Quelldaten
+ohne I/O und ohne Zeit-Seiteneffekt; sie übersetzt heterogene Quelldaten
 verlustfrei in den kanonischen ``CanonicalRecord``. Dieses Paket re-exportiert
-die oeffentlichen Mapper-Funktionen.
+die öffentlichen Mapper-Funktionen.
 """
 
 from __future__ import annotations

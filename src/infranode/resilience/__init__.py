@@ -1,7 +1,7 @@
 """Resilienz-Bausteine: gepoolter HTTP-Pool, Cache-Aside/SWR, Circuit-Breaker.
 
-Dieses Paket buendelt die Resilienz-Schicht der Phase 3. ``types.py`` liefert
-die reinen Vertraege (``SourceConfig``, ``CacheStatus``) ohne I/O, die die
+Dieses Paket bündelt die Resilienz-Schicht der Phase 3. ``types.py`` liefert
+die reinen Verträge (``SourceConfig``, ``CacheStatus``) ohne I/O, die die
 Cache- und Fassaden-Plans (03-03/03-04) konsumieren.
 """
 

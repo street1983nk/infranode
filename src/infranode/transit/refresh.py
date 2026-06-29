@@ -1,17 +1,17 @@
 """Statik-GTFS-Refresh-Batch (TRANSIT-RT-08, RESEARCH Pattern 8).
 
-Laedt das aktuelle statische DELFI/gtfs.de-GTFS herunter und ersetzt
+Lädt das aktuelle statische DELFI/gtfs.de-GTFS herunter und ersetzt
 ``data/delfi/*.zip`` idempotent (OVERWRITE wie ``ingest/delfi.py``: GTFS ist ein
 Voll-Snapshot, kein Event-Strom). Hintergrund: der gtfs.de-Basic-Statik-Feed ist
-nur 7 Tage gueltig (RESEARCH Open Question 3); ohne regelmaessigen Refresh driften
+nur 7 Tage gültig (RESEARCH Open Question 3); ohne regelmäßigen Refresh driften
 die ``trip_id`` zwischen RT-Feed und veralteter Statik auseinander
-(RESEARCH Pitfall 4) und die Aufloesung schlaegt fehl.
+(RESEARCH Pitfall 4) und die Auflösung schlägt fehl.
 
-Kadenz-Empfehlung: WOECHENTLICH (an die 7-Tage-Basic-Gueltigkeit gekoppelt), nicht
-monatlich. Der Batch laeuft ausschliesslich manuell bzw. per Timer
+Kadenz-Empfehlung: WÖCHENTLICH (an die 7-Tage-Basic-Gültigkeit gekoppelt), nicht
+monatlich. Der Batch läuft ausschließlich manuell bzw. per Timer
 (``python -m infranode.transit.refresh <ziel.zip>``), NIE im Request-Pfad oder im
 Lifespan. Die OS-Registrierung des Timers (OPS-05-Muster, systemd) erfolgt
-ausserhalb dieser Phase.
+außerhalb dieser Phase.
 
 Sicherheit:
 
@@ -20,8 +20,8 @@ Sicherheit:
   ``follow_redirects=False`` ist Pool-Default (``infra/http.py``).
 - T-19-DLZIP: der Refresh entpackt nichts, nur Download + atomarer Rename. Die ZIP
   wird erst beim Resolver gestreamt (``transit/resolver.py``, stop_times nie
-  vollstaendig im Speicher).
-- Size-Cap (Memory-DoS): ein absurd grosser Body wird abgelehnt, bevor er auf die
+  vollständig im Speicher).
+- Size-Cap (Memory-DoS): ein absurd großer Body wird abgelehnt, bevor er auf die
   Disk geschrieben wird (analog ``adapters/gtfs_rt._MAX_FEED_BYTES``).
 """
 
@@ -42,12 +42,12 @@ from infranode.infra.http import close_http_client, create_http_client
 # [OWNER-VERIFIZIEREN] Der reale gtfs.de-Statik-Download-Pfad ist im RESEARCH nicht
 # verbatim verifiziert (nur der RT-Feed realtime-free.pb). Diese URL ist der
 # bekannte gtfs.de-Statik-Bundle-Pfad und VOR dem echten Timer-Lauf gegen den
-# Owner/das gtfs.de-Downloadportal zu bestaetigen; bleibt der Pfad falsch, schlaegt
+# Owner/das gtfs.de-Downloadportal zu bestätigen; bleibt der Pfad falsch, schlägt
 # der Download (raise_for_status) hart fehl, statt still eine falsche ZIP zu setzen.
 GTFS_DE_STATIC_URL = "https://download.gtfs.de/germany/free/latest.zip"
 
-# Size-Cap (Memory-DoS): die statische Voll-ZIP ist mehrere hundert MB; 1 GiB laesst
-# Puffer fuer Wachstum, lehnt aber einen absurd grossen/manipulierten Body ab.
+# Size-Cap (Memory-DoS): die statische Voll-ZIP ist mehrere hundert MB; 1 GiB lässt
+# Puffer für Wachstum, lehnt aber einen absurd grossen/manipulierten Body ab.
 _MAX_DOWNLOAD_BYTES = 1024 * 1024 * 1024  # 1 GiB
 
 
@@ -57,7 +57,7 @@ def _write_atomic(body: bytes, dest_path: str) -> None:
     Rein synchroner Disk-I/O-Schritt (im async-Pfad via ``asyncio.to_thread``
     aufgerufen, damit der Event-Loop nicht blockiert, ruff ASYNC240). temp-Datei
     IM Zielverzeichnis, damit der Rename atomar auf demselben Dateisystem liegt
-    (cross-device-Rename waere nicht atomar). OVERWRITE: idempotent.
+    (cross-device-Rename wäre nicht atomar). OVERWRITE: idempotent.
     """
     dest = Path(dest_path).resolve()
     dest_dir = dest.parent
@@ -69,7 +69,7 @@ def _write_atomic(body: bytes, dest_path: str) -> None:
             fh.write(body)
         os.replace(tmp_path, dest)  # atomarer OVERWRITE
     except BaseException:
-        # bei jedem Fehler den temp-Rest entfernen (kein Muell im Zielverzeichnis)
+        # bei jedem Fehler den temp-Rest entfernen (kein Müll im Zielverzeichnis)
         tmp_path.unlink(missing_ok=True)
         raise
 
@@ -77,12 +77,12 @@ def _write_atomic(body: bytes, dest_path: str) -> None:
 async def refresh_static_gtfs(http, *, url: str, dest_path: str) -> None:
     """Laedt die Statik-GTFS-ZIP und ersetzt ``dest_path`` atomar (idempotent).
 
-    Schreibt zunaechst in eine temp-Datei IM Zielverzeichnis und benennt sie dann
+    Schreibt zunächst in eine temp-Datei IM Zielverzeichnis und benennt sie dann
     via ``os.replace`` atomar auf ``dest_path`` um (kein Teil-Schreib-Risiko, kein
-    Reader sieht je eine halbe ZIP). OVERWRITE: ein zweiter Lauf ueberschreibt die
+    Reader sieht je eine halbe ZIP). OVERWRITE: ein zweiter Lauf überschreibt die
     bestehende ZIP (GTFS ist ein Voll-Snapshot, idempotent wie ``ingest/delfi``).
     Der Refresh entpackt nichts (T-19-DLZIP). Die ``url`` MUSS der hartkodierte
-    ``GTFS_DE_STATIC_URL`` sein (T-19-DLSSRF); der Parameter existiert nur fuer den
+    ``GTFS_DE_STATIC_URL`` sein (T-19-DLSSRF); der Parameter existiert nur für den
     Test, der Aufrufer reicht die Modul-Konstante durch.
     """
     resp = await http.get(url)
@@ -105,9 +105,9 @@ def main(argv: list[str] | None = None) -> None:
     keiner gesetzt -> Hinweis auf stderr + ``sys.exit(2)`` (analog
     ``ingest/delfi.main``). Das DELFI-Zip (``delfi_gtfs_path``, Tier A) ist
     bewusst KEIN Fallback: dieser Refresh holt die gtfs.de-Statik (Tier B,
-    numerische Feed-IDs) und darf den Tier-A-Lizenzraum nicht ueberschreiben.
-    Sonst Download ueber einen eigenen kurzlebigen, gepoolten httpx-Client (im
-    ``finally`` geschlossen) und Erfolg auf stdout. Laeuft NIE im Request-Pfad.
+    numerische Feed-IDs) und darf den Tier-A-Lizenzraum nicht überschreiben.
+    Sonst Download über einen eigenen kurzlebigen, gepoolten httpx-Client (im
+    ``finally`` geschlossen) und Erfolg auf stdout. Läuft NIE im Request-Pfad.
     """
     import asyncio
 

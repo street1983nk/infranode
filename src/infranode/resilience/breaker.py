@@ -1,15 +1,15 @@
 """Eigenbau per-Source Circuit-Breaker (RES-04, CLOSED/OPEN/HALF_OPEN).
 
 Warum Eigenbau (Orchestrator-Entscheidung 1, RESEARCH Pattern 3 Option B):
-``pybreaker`` ist nicht asyncio-nativ und ``purgatory`` waere eine zusaetzliche
+``pybreaker`` ist nicht asyncio-nativ und ``purgatory`` wäre eine zusätzliche
 Runtime-Dependency. Die Zustandslogik eines Circuit-Breakers ist klein (~60 LOC)
-und rein synchron (Zaehl-/Zeitlogik, kein I/O), daher fuehren wir keine neue
-Abhaengigkeit ein. Der State lebt in-process pro Uvicorn-Worker (MVP: single
+und rein synchron (Zähl-/Zeitlogik, kein I/O), daher führen wir keine neue
+Abhängigkeit ein. Der State lebt in-process pro Uvicorn-Worker (MVP: single
 worker akzeptabel, T-03-13 accept; Upgrade-Pfad Redis-backed bei multi-worker).
 
-Der Breaker isoliert pro Quelle (``BreakerRegistry`` haelt je ``source_name``
+Der Breaker isoliert pro Quelle (``BreakerRegistry`` hält je ``source_name``
 einen eigenen ``CircuitBreaker``): eine tote Quelle trippt nur ihren eigenen
-Breaker und laesst andere Quellen unberuehrt (RES-04, T-03-10). Bei OPEN
+Breaker und lässt andere Quellen unberührt (RES-04, T-03-10). Bei OPEN
 liefert der Breaker fail-fast (kein Hammering auf eine kranke Quelle, T-03-11),
 bis nach ``cooldown`` ein einzelner HALF_OPEN-Probe-Call zugelassen wird:
 Erfolg -> CLOSED (failure_count 0), Fehler -> wieder OPEN.
@@ -17,7 +17,7 @@ Erfolg -> CLOSED (failure_count 0), Fehler -> wieder OPEN.
 Reine Zustandslogik, unit-testbar ohne Netz (gleiche Trennung wie
 registry/models.py). ``BreakerOpen`` ist eine leichte Signal-Exception, die in
 client.py auf ``UpstreamError`` (503) gemappt wird und selbst KEINEN HTTP-Status
-traegt.
+trägt.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ class BreakerOpen(Exception):
 
 
 class BreakerState(enum.StrEnum):
-    """Die drei Breaker-Zustaende (als String direkt log-/header-tauglich)."""
+    """Die drei Breaker-Zustände (als String direkt log-/header-tauglich)."""
 
     CLOSED = "CLOSED"
     OPEN = "OPEN"
@@ -71,7 +71,7 @@ class CircuitBreaker:
     def is_open(self) -> bool:
         """True, solange der Breaker effektiv offen ist (vor Ablauf des Cooldown).
 
-        Nach Ablauf des Cooldown ist der Breaker bereit fuer einen HALF_OPEN-Probe
+        Nach Ablauf des Cooldown ist der Breaker bereit für einen HALF_OPEN-Probe
         und gilt nicht mehr als (blockierend) offen.
         """
         if self.state is not BreakerState.OPEN:
@@ -79,7 +79,7 @@ class CircuitBreaker:
         return not self._cooldown_elapsed()
 
     def _cooldown_elapsed(self) -> bool:
-        """True, wenn seit dem Oeffnen mindestens ``cooldown`` vergangen ist."""
+        """True, wenn seit dem Öffnen mindestens ``cooldown`` vergangen ist."""
         if self.opened_at is None:
             return True
         return (self._now() - self.opened_at) >= self.cooldown
@@ -87,7 +87,7 @@ class CircuitBreaker:
     def allow_request(self) -> bool:
         """Darf ein Call durch? CLOSED ja; OPEN nur nach Cooldown (HALF_OPEN-Probe).
 
-        Bei abgelaufenem Cooldown wechselt der Breaker auf HALF_OPEN und laesst
+        Bei abgelaufenem Cooldown wechselt der Breaker auf HALF_OPEN und lässt
         GENAU diesen Probe-Call durch. Vor Ablauf bleibt OPEN -> fail-fast.
         """
         if self.state is BreakerState.CLOSED:
@@ -101,14 +101,14 @@ class CircuitBreaker:
         return False
 
     def record_success(self) -> None:
-        """Erfolgreicher Call -> Breaker schliessen, Fehlerzaehler zuruecksetzen."""
+        """Erfolgreicher Call -> Breaker schließen, Fehlerzähler zurücksetzen."""
         self.failure_count = 0
         self.state = BreakerState.CLOSED
         self.opened_at = None
 
     def record_failure(self) -> None:
-        """Fehlgeschlagener Call -> Zaehler hoch; bei Schwelle (oder HALF_OPEN) OPEN."""
-        # Ein Fehler waehrend des HALF_OPEN-Probes oeffnet sofort wieder.
+        """Fehlgeschlagener Call -> Zähler hoch; bei Schwelle (oder HALF_OPEN) OPEN."""
+        # Ein Fehler während des HALF_OPEN-Probes öffnet sofort wieder.
         if self.state is BreakerState.HALF_OPEN:
             self._open()
             return
@@ -117,7 +117,7 @@ class CircuitBreaker:
             self._open()
 
     def _open(self) -> None:
-        """Versetzt den Breaker in OPEN und merkt den Oeffnungszeitpunkt."""
+        """Versetzt den Breaker in OPEN und merkt den Öffnungszeitpunkt."""
         self.state = BreakerState.OPEN
         self.opened_at = self._now()
 
@@ -126,8 +126,8 @@ class BreakerRegistry:
     """Prozessweites Register {source_name -> CircuitBreaker} (per-Source-Isolation).
 
     Jede Quelle bekommt einen eigenen ``CircuitBreaker`` mit identischer
-    Konfiguration. Ein offener Breaker einer Quelle laesst andere Quellen
-    unberuehrt (RES-04, T-03-10). Der State lebt request-uebergreifend, solange
+    Konfiguration. Ein offener Breaker einer Quelle lässt andere Quellen
+    unberührt (RES-04, T-03-10). Der State lebt request-übergreifend, solange
     die Registry am ``app.state`` gehalten wird.
     """
 
@@ -143,10 +143,10 @@ class BreakerRegistry:
         self.cooldown = cooldown
         self._now = now
         # Per-Source-Cooldown-Override (2026-06-14): fragile/langsam erholende
-        # Quellen (z.B. zeitweise gestoerte Behoerden-APIs) bekommen einen langen
+        # Quellen (z.B. zeitweise gestörte Behörden-APIs) bekommen einen langen
         # Cooldown, damit der OPEN-Breaker den kranken Upstream selten probt (wenig
-        # Fehler-Laerm), sich aber dennoch SELBST wieder schliesst, sobald der
-        # Upstream zurueck ist. So heilen solche Quellen automatisch, ohne dass man
+        # Fehler-Lärm), sich aber dennoch SELBST wieder schließt, sobald der
+        # Upstream zurück ist. So heilen solche Quellen automatisch, ohne dass man
         # sie manuell per enable_*-Toggle abschalten muss. Fehlt ein Eintrag, gilt
         # der globale Default-Cooldown.
         self._cooldowns = cooldowns or {}
@@ -155,7 +155,7 @@ class BreakerRegistry:
     def get(self, source: str) -> CircuitBreaker:
         """Liefert den Breaker der Quelle (legt ihn beim ersten Zugriff an).
 
-        Der Cooldown ist per Quelle ueberschreibbar (``cooldowns``-Map); ohne
+        Der Cooldown ist per Quelle überschreibbar (``cooldowns``-Map); ohne
         Eintrag greift der globale Default.
         """
         breaker = self._breakers.get(source)

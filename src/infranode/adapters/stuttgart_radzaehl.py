@@ -1,12 +1,12 @@
-"""Stuttgart-Radzaehlstellen-Adapter ``fetch_stuttgart_radzaehl`` (DATA-40, Tier A).
+"""Stuttgart-Radzählstellen-Adapter ``fetch_stuttgart_radzaehl`` (DATA-40, Tier A).
 
-Liefert je Stuttgarter Radzaehlstelle den JUENGSTEN Jahres-Summenwert keylos aus
+Liefert je Stuttgarter Radzählstelle den JÜNGSTEN Jahres-Summenwert keylos aus
 der offenen CSV (CC BY 4.0, Landeshauptstadt Stuttgart, [VERIFIED 2026-06-23]):
 
   opendata.stuttgart.de/.../radfahrende_nach_zahlstelleund_jahr.csv
 
-Schwaechster bike-counts-Datensatz (nur Jahreswerte, 2 Zaehlstellen, Stand bis
-2022; Stundenwerte gibt es nur ueber Eco-Counter = ausgeschlossen). CSV ist
+Schwächster bike-counts-Datensatz (nur Jahreswerte, 2 Zählstellen, Stand bis
+2022; Stundenwerte gibt es nur über Eco-Counter = ausgeschlossen). CSV ist
 ``;``-getrennt und cp1252-kodiert; Spalten ``Jahr;Zählstelle;Anzahl Radfahrende``
 (Wert "NA" = kein Datum). KEINE Koordinaten -> ``lat``/``lon`` None.
 
@@ -37,10 +37,10 @@ async def fetch_stuttgart_radzaehl(
     lon: float,
     radius_km: float = 30.0,
 ) -> dict:
-    """Holt je Stuttgarter Zaehlstelle den juengsten Jahres-Summenwert.
+    """Holt je Stuttgarter Zählstelle den jüngsten Jahres-Summenwert.
 
-    GET der CSV (cp1252), je ``Zählstelle`` die Zeile mit dem groessten ``Jahr``
-    und gueltigem (nicht "NA") Zaehlwert. ``lat``/``lon``/``radius_km`` sind
+    GET der CSV (cp1252), je ``Zählstelle`` die Zeile mit dem größten ``Jahr``
+    und gültigem (nicht "NA") Zählwert. ``lat``/``lon``/``radius_km`` sind
     vertragskonform Teil der Signatur (ungenutzt). Rueckgabe: ``slug``,
     ``stations`` (je Station name/value/period=Jahr, Koordinaten None) und
     ``as_of`` (None: Jahreswert hat keinen Stundenzeitstempel).
@@ -50,7 +50,7 @@ async def fetch_stuttgart_radzaehl(
     reader = csv.DictReader(
         io.StringIO(resp.content.decode(_ENCODING, errors="replace")), delimiter=";"
     )
-    # Je Station die juengste Zeile mit gueltigem Wert merken: name -> (jahr, value).
+    # Je Station die jüngste Zeile mit gültigem Wert merken: name -> (jahr, value).
     latest: dict[str, tuple[int, int]] = {}
     for row in reader:
         name = (row.get("Zählstelle") or "").strip()
@@ -62,7 +62,7 @@ async def fetch_stuttgart_radzaehl(
             jahr = int(jahr_raw)
             value = int(wert_raw)
         except ValueError:
-            continue  # "NA"/leer -> ueberspringen
+            continue  # "NA"/leer -> überspringen
         if name not in latest or jahr > latest[name][0]:
             latest[name] = (jahr, value)
 

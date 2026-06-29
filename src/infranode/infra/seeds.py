@@ -1,17 +1,17 @@
-"""Gemeinsame, env-overridebare Aufloesung des Seed-Verzeichnisses (CR-01).
+"""Gemeinsame, env-overridebare Auflösung des Seed-Verzeichnisses (CR-01).
 
-Eine Quelle der Wahrheit fuer den Pfad der committeten Seeds (REST-Regel 6,
-keine Duplikate). Frueher loesten ``collector/plan.py``, ``mappers/holidays.py``,
+Eine Quelle der Wahrheit für den Pfad der committeten Seeds (REST-Regel 6,
+keine Duplikate). Früher lösten ``collector/plan.py``, ``mappers/holidays.py``,
 ``registry/cities.py`` und ``export/enrich.py`` den Pfad je einzeln per
 ``Path(__file__).resolve().parents[...] / "data" / "seeds"`` auf und ignorierten
 dabei ``INFRANODE_SEEDS_DIR`` (Live-Report 2026-06-12, M1): im Prod-Container
 verschattet das Named Volume ``infranode_data`` den Pfad ``/app/data``, weshalb
 das Dockerfile die Seeds nach ``/app/seeds`` legt und ``INFRANODE_SEEDS_DIR``
 darauf setzt. Wurde der Env-Override ignoriert, fehlten Seeds (holidays no_data,
-56 fehlende Staedte aus registry_extended.json).
+56 fehlende Städte aus registry_extended.json).
 
-KRITISCH: Lazy zur Laufzeit aufloesen (``os.environ`` bei jedem Aufruf lesen),
-NIE auf Modul-Import-Zeit in eine Konstante einfrieren. Sonst koennen Tests den
+KRITISCH: Lazy zur Laufzeit auflösen (``os.environ`` bei jedem Aufruf lesen),
+NIE auf Modul-Import-Zeit in eine Konstante einfrieren. Sonst können Tests den
 Env-Override nicht mehr setzen (Settings-Singleton-Caching).
 """
 

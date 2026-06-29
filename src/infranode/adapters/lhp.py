@@ -1,7 +1,7 @@
 """Keyloser LHP-Hochwasser-Adapter fetch_flood (DATA-12, Tier A).
 
-Laedt Hochwasser-Warnstufen vom keylosen Webservice der
-Laenderuebergreifenden Hochwasserportale (LHP, www.hochwasserzentralen.de) ueber
+Lädt Hochwasser-Warnstufen vom keylosen Webservice der
+Länderübergreifenden Hochwasserportale (LHP, www.hochwasserzentralen.de) über
 den gepoolten httpx-Client in zwei Schritten [VERIFIED 2026-06-10]:
 
 1. GET auf die Homepage: dort steht das dynamische Session-Token ``ki`` im
@@ -12,24 +12,24 @@ den gepoolten httpx-Client in zwei Schritten [VERIFIED 2026-06-10]:
    ``{"PN": "Muenchen", "GW": "Isar", "HW": "0", "HW_TXT": "Keine Meldestufe",
    "ZEIT": "Heute, 18:00 Uhr", "W": "108 cm", "Q": "38,5 m3/s", ...}``.
 
-Die 1->N-Zuordnung Stadt -> Pegel loest der Adapter ueber eine kuratierte,
+Die 1->N-Zuordnung Stadt -> Pegel löst der Adapter über eine kuratierte,
 Adapter-lokale Map (``_CITY_PEGEL``, analog ``autobahn._CITY_ROADS``). Ein
 unbekannter Slug liefert ein leeres Tuple -> leere ``warnings`` (ehrliche
 Teilabdeckung, KEIN Fehler).
 
 Sicherheit (T-07-IN, SSRF/Tampering): Die Hosts sind in ``_HOME``/``_BASE``
-hartkodiert; die ``pgnr`` stammt ausschliesslich aus der kuratierten
-``_CITY_PEGEL``-Map (nie User-Input), das ``ki`` ausschliesslich aus dem per
+hartkodiert; die ``pgnr`` stammt ausschließlich aus der kuratierten
+``_CITY_PEGEL``-Map (nie User-Input), das ``ki`` ausschließlich aus dem per
 Regex extrahierten Homepage-HTML. ``resp.raise_for_status()`` ist Pflicht, damit
-ein 5xx als ``httpx.HTTPError`` an die Fassade durchschlaegt und der
+ein 5xx als ``httpx.HTTPError`` an die Fassade durchschlägt und der
 STALE-ON-ERROR-Pfad greift.
 
-Datenfehler-Schutz (T-07-IN): Ein fehlendes ``ki``-Token (Markup-Aenderung) und
+Datenfehler-Schutz (T-07-IN): Ein fehlendes ``ki``-Token (Markup-Änderung) und
 ein leerer/nicht-JSON-Body (z.B. abgelaufenes Token) werden defensiv abgefangen
 -> leere ``warnings`` statt JSONDecodeError/500er. Felder werden per ``.get()``
 mit None-Fallback gelesen.
 
-Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
+Der Adapter ist rein gegenüber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` (das macht der Mapper in der Route) und kennt KEIN
 Cache/Breaker (das liefert die Fassade).
 """
@@ -40,7 +40,7 @@ import re
 
 import httpx
 
-# Hosts hartkodiert (T-07-IN SSRF): nur diese eine oeffentliche LHP-Instanz.
+# Hosts hartkodiert (T-07-IN SSRF): nur diese eine öffentliche LHP-Instanz.
 _HOME = "https://www.hochwasserzentralen.de/"
 _BASE = "https://www.hochwasserzentralen.de/webservices/get_infospegel.php"
 
@@ -49,27 +49,27 @@ _BASE = "https://www.hochwasserzentralen.de/webservices/get_infospegel.php"
 _KI_RE = re.compile(r"addLagePegel\((\d+)\)")
 
 # Kuratierte Stadt -> Pegel-Map (T-07-IN): Adapter-lokal, kein neues
-# Register-Feld. Nur diese foederalen Pegelkennungen gelangen in den POST-Body
+# Register-Feld. Nur diese föderalen Pegelkennungen gelangen in den POST-Body
 # (nie User-Input). Ein unbekannter Slug -> leeres Tuple -> leere warnings
 # (ehrliche Teilabdeckung). [VERIFIED 2026-06-10] via POST get_lagepegel.php
 # (1724 Pegel, Spalten PGNR/PGNAME): max 1 Pegel je Register-Stadt, konservativ
-# nur eindeutige Treffer (PGNAME traegt den Stadtnamen). Staedte ohne
-# eindeutigen Stadt-Pegel (z.B. Stuttgart, Bremen, Kiel) bleiben bewusst aussen.
+# nur eindeutige Treffer (PGNAME trägt den Stadtnamen). Städte ohne
+# eindeutigen Stadt-Pegel (z.B. Stuttgart, Bremen, Kiel) bleiben bewusst außen.
 _CITY_PEGEL: dict[str, tuple[str, ...]] = {
-    "berlin": ("BE_586290",),  # Berlin-Koepenick / Spree-Oder-Wasserstrasse
+    "berlin": ("BE_586290",),  # Berlin-Köpenick / Spree-Oder-Wasserstraße
     "hamburg": ("SH_5952050",),  # Hamburg St. Pauli / Elbe
-    "muenchen": ("BY_16005701",),  # Muenchen / Isar
-    "koeln": ("NW_2730010",),  # Koeln / Rhein
+    "muenchen": ("BY_16005701",),  # München / Isar
+    "koeln": ("NW_2730010",),  # Köln / Rhein
     "frankfurt-am-main": ("HE_24700404",),  # Frankfurt-Osthafen / Main
-    "duesseldorf": ("NW_2750010",),  # Duesseldorf / Rhein
+    "duesseldorf": ("NW_2750010",),  # Düsseldorf / Rhein
     "essen": ("NW_2769720000200",),  # Essen-Hespertal / Hesperbach
     "leipzig": ("SN_578110",),  # Leipzig-Thekla / Parthe
     "dresden": ("SN_501060",),  # Dresden / Elbe
-    "nuernberg": ("BY_24225000",),  # Nuernberg Lederersteg / Pegnitz
+    "nuernberg": ("BY_24225000",),  # Nürnberg Lederersteg / Pegnitz
     "duisburg": ("NW_2770010",),  # Duisburg-Ruhrort / Rhein
     "bonn": ("NW_2710080",),  # Bonn / Rhein
     "mainz": ("RP_25100100",),  # Mainz / Rhein
-    "erfurt": ("TH_57421.0",),  # Erfurt-Moebisburg / Gera
+    "erfurt": ("TH_57421.0",),  # Erfurt-Möbisburg / Gera
 }
 
 
@@ -81,10 +81,10 @@ async def fetch_flood(http: httpx.AsyncClient, *, slug: str) -> dict:
     aus ``_CITY_PEGEL.get(slug, ())`` ein ``POST get_infospegel.php`` mit
     ``data={"pgnr": ..., "ki": ...}``. Jede Antwort ist EIN FLACHES dict je
     Pegel: Warnstufe aus ``HW`` (Integer-String) + ``HW_TXT``, Zeitstempel aus
-    ``ZEIT``, Pegelname ``PN``, Gewaesser ``GW``. ``stand`` haelt den zuletzt
+    ``ZEIT``, Pegelname ``PN``, Gewässer ``GW``. ``stand`` hält den zuletzt
     gesehenen ``ZEIT``-Text (Attributions-Pflicht, Pitfall 6).
 
-    Rueckgabe-Keys (exakt das, was ``map_flood`` erwartet): ``slug``,
+    Rückgabe-Keys (exakt das, was ``map_flood`` erwartet): ``slug``,
     ``warnings`` (Liste der Pegel-Records) und ``stand`` (Zeitstempel-Text oder
     ``None``). Defensiv (T-07-IN): unbekannter Slug, fehlendes ki-Token oder
     ein leerer/nicht-JSON-Body liefern leere ``warnings`` ohne Crash; die Hosts
@@ -115,7 +115,7 @@ async def fetch_flood(http: httpx.AsyncClient, *, slug: str) -> dict:
             body = resp.json()
         except ValueError:
             # Leerer/nicht-JSON-Body (z.B. abgelaufenes ki-Token): Pegel
-            # ueberspringen statt JSONDecodeError -> 500er (T-07-IN).
+            # überspringen statt JSONDecodeError -> 500er (T-07-IN).
             continue
         if not isinstance(body, dict):
             continue

@@ -1,15 +1,15 @@
-"""Reiner Mapper map_public_tender (DATA-21, oeffentliche Auftragsvergabe).
+"""Reiner Mapper map_public_tender (DATA-21, öffentliche Auftragsvergabe).
 
 Bildet ein vom Adapter (``adapters.oeffentlichevergabe.parse_ocds_release``)
 geparstes OCDS-Notice-dict deterministisch auf einen ``CanonicalRecord`` mit
 ``PublicTenderPayload`` (``kind="public_tender"``) ab. Quelle ist der Datenservice
-Oeffentlicher Einkauf (oeffentlichevergabe.de, Beschaffungsamt des BMI), CC0 =
+Öffentlicher Einkauf (oeffentlichevergabe.de, Beschaffungsamt des BMI), CC0 =
 Tier A.
 
 Die Stadt-Zuordnung passiert NICHT hier, sondern in
-``infranode.tenders.matching``; der Mapper nimmt den bereits aufgeloesten
+``infranode.tenders.matching``; der Mapper nimmt den bereits aufgelösten
 ``slug`` und die ``match``-Liste (``buyer_city`` | ``place_of_performance``) als
-Argumente und schreibt sie ins Payload. ``buyer_city`` traegt den
+Argumente und schreibt sie ins Payload. ``buyer_city`` trägt den
 (slugifizierten) Stadt-Bezug, ``nuts`` den NUTS-3-Code des Auftraggebers.
 
 Rein: kein I/O, kein Logging, kein Wall-Clock. Der ``retrieved_at``-Zeitanker
@@ -48,7 +48,7 @@ def _parse_observed_at(value: str | None) -> datetime | None:
 
     Rein und ohne Wall-Clock: nur ``datetime.fromisoformat`` (das den OCDS-ISO-
     String inkl. Zeitzone versteht). Ein fehlender/ungueltiger Wert ergibt None.
-    Die kanonische UTC-Vereinheitlichung uebernimmt der ``CanonicalRecord``-
+    Die kanonische UTC-Vereinheitlichung übernimmt der ``CanonicalRecord``-
     Validator.
     """
     if not isinstance(value, str) or not value.strip():
@@ -78,10 +78,10 @@ def map_public_tender(
 ) -> CanonicalRecord:
     """Bildet ein OCDS-Notice-dict auf einen Tier-A-``CanonicalRecord`` ab.
 
-    ``slug`` ist der bereits aufgeloeste Register-Stadt-Slug (Stadt-Zuordnung in
+    ``slug`` ist der bereits aufgelöste Register-Stadt-Slug (Stadt-Zuordnung in
     ``tenders.matching``), ``match`` die Herkunfts-Liste (``buyer_city`` |
     ``place_of_performance``). Beide werden ins ``PublicTenderPayload``
-    geschrieben. ``buyer_city`` traegt den Slug-Bezug, ``nuts`` den NUTS-3-Code
+    geschrieben. ``buyer_city`` trägt den Slug-Bezug, ``nuts`` den NUTS-3-Code
     des Auftraggebers (``buyer_region`` aus dem geparsten Notice-dict).
 
     Rein: kein I/O. ``observed_at`` aus ``publication_date`` (falls parsbar);

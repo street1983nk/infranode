@@ -1,6 +1,6 @@
-"""Keyloser VGN/VAG-Nuernberg-Adapter ``fetch_vgn_departures`` (DATA-25, Tier A).
+"""Keyloser VGN/VAG-Nürnberg-Adapter ``fetch_vgn_departures`` (DATA-25, Tier A).
 
-Direkter Zugang zum VAG-Abfahrtsmonitor mit Echtzeitprognose ueber die offene,
+Direkter Zugang zum VAG-Abfahrtsmonitor mit Echtzeitprognose über die offene,
 keylose Puls-API (KEIN Key, KEINE Mobilithek; CC-BY 4.0, daher Tier A):
 
 - GET ``/dm/api/abfahrten.json/vgn/{stop_id}`` liefert je Halt
@@ -8,11 +8,12 @@ keylose Puls-API (KEIN Key, KEINE Mobilithek; CC-BY 4.0, daher Tier A):
   (je Abfahrt ``Linienname``/``Richtungstext``/``AbfahrtszeitSoll``/
   ``AbfahrtszeitIst``/``Produkt``).
 
-Rueckgabe ist das raw-dict fuer ``map_vgn_departures`` (Form identisch zum HVV-
+Rückgabe ist das raw-dict für ``map_vgn_departures`` (Form identisch zum HVV-
 Geofox-Adapter, damit derselbe ``TransitDeparturePayload`` greift): ``stop_id``,
 ``as_of`` (Metadata.Timestamp) und ``departures`` (je Abfahrt ``line``/
 ``direction``/``in_minutes``/``delay_s``/``alerts``/``product``). ``in_minutes``
-und ``delay_s`` werden aus den ISO-Zeiten berechnet; als "jetzt"-Bezug dient
+wird aus der ECHTZEIT-Abfahrt (``AbfahrtszeitIst``, Fallback ``AbfahrtszeitSoll``)
+und ``delay_s`` aus der Differenz Ist-Soll berechnet; als "jetzt"-Bezug dient
 ``Metadata.Timestamp`` (KEINE Systemuhr im Adapter). Der Adapter baut KEINEN
 ``CanonicalRecord`` und kennt KEIN Cache/Breaker (Resilienz-Fassade).
 ``resp.raise_for_status()`` ist Pflicht (5xx -> STALE-ON-ERROR).
@@ -46,9 +47,13 @@ def _departure(dep: dict, now: datetime | None) -> dict:
     """Bildet eine VAG-Abfahrt auf das schlanke departure-dict ab (rein)."""
     soll = _parse(dep.get("AbfahrtszeitSoll"))
     ist = _parse(dep.get("AbfahrtszeitIst"))
+    # Countdown aus der ECHTZEIT-Prognose (Ist) berechnen, Fallback auf Soll, wenn
+    # kein Ist vorliegt (Audit 2026-06-29, Finding 122: vorher immer Soll -> der
+    # Countdown ignorierte die Verspätung; delay_s war gesetzt, in_minutes nicht).
+    effective = ist or soll
     in_minutes = None
-    if soll is not None and now is not None:
-        in_minutes = max(0, round((soll - now).total_seconds() / 60))
+    if effective is not None and now is not None:
+        in_minutes = max(0, round((effective - now).total_seconds() / 60))
     delay_s = None
     if soll is not None and ist is not None:
         delay_s = int((ist - soll).total_seconds())
@@ -65,7 +70,7 @@ def _departure(dep: dict, now: datetime | None) -> dict:
 async def fetch_vgn_departures(http: httpx.AsyncClient, *, stop_id: str) -> dict:
     """Holt die Live-Abfahrten eines VGN-Halts und liefert das raw-dict.
 
-    Rueckgabe-Keys (wie ``map_vgn_departures`` erwartet): ``stop_id``, ``as_of``
+    Rückgabe-Keys (wie ``map_vgn_departures`` erwartet): ``stop_id``, ``as_of``
     (Metadata.Timestamp, ISO-String oder None) und ``departures`` (Liste schlanker
     dicts). ``raise_for_status`` ist Pflicht (5xx -> Fassade STALE-ON-ERROR).
     """

@@ -1,17 +1,17 @@
 ---
 // Umschaltbare Code-Tabs (curl / JS / Python). Bekommt die drei fertigen
 // Snippets als Props (aus ../lib/codegen.ts). Rendert drei Tab-Buttons plus
-// drei <pre>-Bloecke; ein kleines inline-Script schaltet sichtbar (kein
-// Framework, winzige Insel fuer gute Core Web Vitals). Code als textContent
-// im Astro-Template (kein innerHTML), HTML-Escaping uebernimmt Astro selbst.
+// drei <pre>-Blöcke; ein kleines inline-Script schaltet sichtbar (kein
+// Framework, winzige Insel für gute Core Web Vitals). Code als textContent
+// im Astro-Template (kein innerHTML), HTML-Escaping übernimmt Astro selbst.
 interface Props {
   curl: string;
   js: string;
   py: string;
   id?: string;
   // Optionale Tab-Beschriftungen (Standard curl/JavaScript/Python). Erlaubt es,
-  // CodeTabs auch fuer Nicht-Sprach-Snippets zu nutzen (z.B. Claude Code /
-  // Claude Desktop fuer die MCP-Einrichtung).
+  // CodeTabs auch für Nicht-Sprach-Snippets zu nutzen (z.B. Claude Code /
+  // Claude Desktop für die MCP-Einrichtung).
   labels?: [string, string, string];
   // Sprache der Seite (de Standard). Steuert die UI-Texte (Copy-Button, ARIA).
   lang?: "de" | "en";
@@ -69,7 +69,7 @@ const tabs = [
 
 <script>
   // Schaltet je Tab-Gruppe den sichtbaren Panel. Mehrere Gruppen pro Seite
-  // moeglich (jede ist ein eigenes [data-codetabs]).
+  // möglich (jede ist ein eigenes [data-codetabs]).
   for (const group of document.querySelectorAll<HTMLElement>("[data-codetabs]")) {
     const buttons = group.querySelectorAll<HTMLButtonElement>(".codetabs__btn");
     const panels = group.querySelectorAll<HTMLElement>(".codetabs__pre");

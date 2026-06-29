@@ -1,4 +1,4 @@
-"""Mapper: VGN/VAG-Nuernberg Live-Abfahrten -> CanonicalRecord (DATA-25, Tier A).
+"""Mapper: VGN/VAG-Nürnberg Live-Abfahrten -> CanonicalRecord (DATA-25, Tier A).
 
 Bildet das raw-dict des ``adapters.vgn.fetch_vgn_departures`` (Halt + schlanke
 Abfahrts-dicts inkl. Echtzeitprognose) auf den kanonischen Envelope ab. Wieder-

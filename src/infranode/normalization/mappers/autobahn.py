@@ -1,6 +1,6 @@
 """Reine Autobahn-Mapper: Verkehr (DATA-07/08) + Webcams (DATA-22), Tier A DL-DE/BY.
 
-Uebersetzt das rohe Adapter-dict (``slug``/``roadworks``/``warnings``)
+Übersetzt das rohe Adapter-dict (``slug``/``roadworks``/``warnings``)
 deterministisch in einen ``CanonicalRecord`` mit ``TrafficEventPayload``. Die
 Funktion ist rein: kein HTTP, kein Logging, kein ``datetime.now()``. Der
 ``retrieved_at``-Zeitstempel wird keyword-only injiziert, damit Tests
@@ -47,7 +47,7 @@ def map_autobahn_traffic(
     Zeitstempel wird injiziert (kein ``datetime.now()`` im Mapper), damit das
     Ergebnis deterministisch bleibt. Die Join-Keys ``ags``/``wikidata_qid`` werden
     aus dem Register durchgereicht (Default ``None``). Autobahn ist ein
-    Event-Strom ueber das ganze Stadtgebiet, daher bewusst KEIN ``station_id``;
+    Event-Strom über das ganze Stadtgebiet, daher bewusst KEIN ``station_id``;
     die feingranulare ``identifier`` liegt je Event in ``roadworks``/``warnings``.
     """
     return CanonicalRecord(
@@ -80,7 +80,7 @@ def map_autobahn_webcams(
 ) -> CanonicalRecord:
     """Bildet rohe Autobahn-Webcam-Daten auf einen ``CanonicalRecord`` (Tier A) ab.
 
-    Spiegelt ``map_autobahn_traffic``, traegt aber einen ``WebcamPayload``
+    Spiegelt ``map_autobahn_traffic``, trägt aber einen ``WebcamPayload``
     (``count`` = Anzahl, ``webcams`` = schlanke dicts mit imageurl/coordinate/title).
     Die Funktion ist rein: kein HTTP, kein Logging, kein ``datetime.now()``; der
     ``retrieved_at``-Zeitstempel wird keyword-only injiziert.

@@ -1,7 +1,7 @@
-"""Leipzig-Radzaehlstellen-Adapter ``fetch_leipzig_radzaehl`` (DATA-40, Tier A).
+"""Leipzig-Radzählstellen-Adapter ``fetch_leipzig_radzaehl`` (DATA-40, Tier A).
 
-Liefert die Stunden-Radzaehlwerte der Leipziger Dauerzaehlstellen (~26 Stationen)
-keylos als kanonisches Zaehlstellen-dict. Zwei OpenData-WFS-Layer der Stadt Leipzig
+Liefert die Stunden-Radzählwerte der Leipziger Dauerzählstellen (~26 Stationen)
+keylos als kanonisches Zählstellen-dict. Zwei OpenData-WFS-Layer der Stadt Leipzig
 (beide DL-DE/BY 2.0, "Stadt Leipzig", [VERIFIED 2026-06-23]) werden gejoint:
 
 1. Standorte (``OpenData:radverkehr_dauerzaehlstelle_standort_statisch``,
@@ -10,11 +10,12 @@ keylos als kanonisches Zaehlstellen-dict. Zwei OpenData-WFS-Layer der Stadt Leip
 2. Stundenwerte (``OpenData:radverkehr_dauerzaehlstelle_anzahl_stunde_zeitreihe``,
    ``outputFormat=csv``, rollierendes 31-Tage-Fenster, ~4 MB): Felder
    ``stationid``/``phenomenontime``/``count``. Je Station wird die Zeile des
-   juengsten ``phenomenontime`` (= frischster Stundenwert) genommen.
+   jüngsten ``phenomenontime`` (= frischster Stundenwert) genommen.
 
-Join ueber ``stationid``. ENCODING-GOTCHA [VERIFIED 2026-06-23]: der Server
-deklariert utf-8, sendet aber cp1252/latin-1 (sonst Mojibake bei "ß") -> beide
-Antworten werden als ``cp1252`` dekodiert.
+Join über ``stationid``. ENCODING [VERIFIED 2026-06-29]: beide Antworten sind
+echtes UTF-8 (Content-Type ``charset=utf-8``, Bytes ``c3 9f`` = "ß"); sie werden
+als ``utf-8`` dekodiert. (Frühere Annahme cp1252 war falsch und erzeugte live
+Mojibake in Stationsnamen wie "Manetstraße".)
 
 Sicherheit (T-9-02 SSRF): Host ``geodienste.leipzig.de`` hartkodiert in ``_BASE``;
 keine Upstream-gelieferte Ziel-URL. DoS-/Datenfehler-Schutz: ``raise_for_status()``
@@ -33,8 +34,8 @@ import httpx
 _BASE = "https://geodienste.leipzig.de/l3/OpenData/wfs"
 _TYPE_STANDORT = "OpenData:radverkehr_dauerzaehlstelle_standort_statisch"
 _TYPE_WERTE = "OpenData:radverkehr_dauerzaehlstelle_anzahl_stunde_zeitreihe"
-# Server deklariert utf-8, liefert aber cp1252 (Mojibake bei Umlauten/ß).
-_ENCODING = "cp1252"
+# Quelle ist echtes UTF-8 (live verifiziert 2026-06-29); cp1252 erzeugte Mojibake.
+_ENCODING = "utf-8"
 
 
 async def _fetch_standorte(http: httpx.AsyncClient) -> dict[str, dict]:
@@ -78,7 +79,7 @@ async def _fetch_standorte(http: httpx.AsyncClient) -> dict[str, dict]:
 
 
 def _latest_counts(text: str) -> dict[str, dict]:
-    """Je ``stationid`` die Zeile des juengsten ``phenomenontime`` (count/period)."""
+    """Je ``stationid`` die Zeile des jüngsten ``phenomenontime`` (count/period)."""
     reader = csv.DictReader(io.StringIO(text))
     latest: dict[str, dict] = {}
     for row in reader:
@@ -103,17 +104,17 @@ async def fetch_leipzig_radzaehl(
     lon: float,
     radius_km: float = 30.0,
 ) -> dict:
-    """Holt die Leipziger Rad-Stundenzaehlwerte (Standort-GeoJSON + Werte-CSV).
+    """Holt die Leipziger Rad-Stundenzählwerte (Standort-GeoJSON + Werte-CSV).
 
     Step 1: Standorte (stationid -> name/Koordinaten). Ohne Standorte -> leeres
     Ergebnis (kein CSV-Fetch). Step 2: Stundenwert-CSV laden (cp1252), je Station
-    den juengsten ``phenomenontime`` extrahieren. Join ueber ``stationid``.
+    den jüngsten ``phenomenontime`` extrahieren. Join über ``stationid``.
 
     ``lat``/``lon``/``radius_km`` sind vertragskonform Teil der Signatur (alle
     Stadt-Adapter teilen sie); Leipzig liefert den kompletten Stadt-Datensatz.
 
-    Rueckgabe-Keys (exakt das, was ``map_leipzig_radzaehl`` erwartet): ``slug``,
-    ``stations`` (je Station name/lat/lon/value/period) und ``as_of`` (juengster
+    Rückgabe-Keys (exakt das, was ``map_leipzig_radzaehl`` erwartet): ``slug``,
+    ``stations`` (je Station name/lat/lon/value/period) und ``as_of`` (jüngster
     ``phenomenontime`` als ISO-String oder None).
     """
     standorte = await _fetch_standorte(http)

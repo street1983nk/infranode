@@ -1,10 +1,10 @@
 """Reiner Wikidata-Stammdaten-Mapper (CORE-02).
 
-Uebersetzt rohe Wikidata-Stammdaten (ein dict) deterministisch in einen
+Übersetzt rohe Wikidata-Stammdaten (ein dict) deterministisch in einen
 ``CanonicalRecord`` mit ``CityBaseDataPayload``. Die Funktion ist rein: kein
 HTTP, kein Logging, kein ``datetime.now()``. Der ``retrieved_at``-Zeitstempel
 wird keyword-only injiziert, damit Tests deterministisch bleiben. Dieser Mapper
-ist die Vorlage fuer jeden weiteren Quellen-Mapper ab Phase 4.
+ist die Vorlage für jeden weiteren Quellen-Mapper ab Phase 4.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def map_wikidata_city(
     Mapper), damit das Ergebnis deterministisch und voll testbar bleibt. Die
     Join-Keys ``ags`` und ``wikidata_qid`` werden aus dem Register durchgereicht
     (Default ``None``, damit der Mapper rein und ohne Register testbar bleibt) und
-    fliessen so in ``record_id``/``content_hash`` ein (ARCH-02). Stammdaten haben
+    fließen so in ``record_id``/``content_hash`` ein (ARCH-02). Stammdaten haben
     keine Mess-Station, daher kein ``station_id``.
     """
     return CanonicalRecord(

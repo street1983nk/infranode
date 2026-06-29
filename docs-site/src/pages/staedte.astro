@@ -1,17 +1,17 @@
 ---
-// Staedte-Uebersicht (/staedte): vollstaendige, durchsuchbare Liste aller 84
-// abgedeckten Grossstaedte. Datenquelle: src/data/cities.json (slug, name,
+// Städte-Übersicht (/staedte): vollständige, durchsuchbare Liste aller 84
+// abgedeckten Großstädte. Datenquelle: src/data/cities.json (slug, name,
 // state, coverage, population).
 //
 // cities.json wird aus der Single Source CITY_REGISTRY exportiert. Regenerieren:
 //   uv run python scripts/export-cities.py
-// (Einzeiler-Aequivalent steht im Kopf von scripts/export-cities.py.)
+// (Einzeiler-Äquivalent steht im Kopf von scripts/export-cities.py.)
 import Docs from "../layouts/Docs.astro";
 import JsonLd from "../components/JsonLd.astro";
 import cities from "../data/cities.json";
 import { API_BASE } from "../lib/codegen";
 
-// Bundesland-Kuerzel -> ausgeschriebener Name (echte Umlaute).
+// Bundesland-Kürzel -> ausgeschriebener Name (echte Umlaute).
 const STATES: Record<string, string> = {
   BW: "Baden-Württemberg",
   BY: "Bayern",
@@ -247,7 +247,7 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
 
 <script is:inline>
   // Sofort-Suche: filtert Tabellenzeilen nach Name/Slug/Bundesland (clientseitig,
-  // keine Abhaengigkeiten). data-*-Attribute tragen die kleingeschriebenen Werte.
+  // keine Abhängigkeiten). data-*-Attribute tragen die kleingeschriebenen Werte.
   (function () {
     var input = document.getElementById("city-search");
     var table = document.getElementById("cities-table");

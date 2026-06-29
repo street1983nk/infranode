@@ -5,10 +5,10 @@ Bildet die schlanke Zulassungsbezirk-Zeile aus dem SQLite-Reader
 ``CanonicalRecord`` mit ``VehicleRegistrationPayload`` ab. Rein: kein HTTP, kein
 Logging, kein ``datetime.now()`` (``retrieved_at`` wird injiziert).
 
-Das Kraftfahrt-Bundesamt fuehrt im Datensatz nur Anteile (Prozent), keine
+Das Kraftfahrt-Bundesamt führt im Datensatz nur Anteile (Prozent), keine
 absoluten E-Auto-Zahlen; ``bev_estimated`` wird hier aus ``pkw_total`` und
 ``bev_share`` abgeleitet (klar als abgeleitet gekennzeichnet, ``modified=False``
-fuer die unveraenderten Quell-Anteile). Lizenz DL-DE/BY 2.0, Attribution
+für die unveränderten Quell-Anteile). Lizenz DL-DE/BY 2.0, Attribution
 wortgenau "Kraftfahrt-Bundesamt (KBA)" (muss verbatim in DATA-LICENSES.md +
 SOURCE_LICENSE stehen).
 """
@@ -33,8 +33,13 @@ _DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
 def _bev_estimated(pkw_total: int | None, bev_share: float | None) -> int | None:
     """Leitet die absolute BEV-Zahl aus Gesamtbestand und BEV-Anteil ab.
 
-    Beide Werte noetig; sonst ``None`` (ehrliche Degradation, keine 0). Rundet
-    kaufmaennisch auf eine ganze Zahl.
+    Hinweis (Audit 2026-06-29): Der KBA-Layer führt zwar Pkw_BEV-Absolutfelder,
+    diese sind aber durchgängig 0/gesperrt -> die Ableitung aus Gesamtbestand x
+    BEV-Anteil (bev_estimated) ist die einzige belastbare Quelle, daher bewusst
+    geschätzt statt geliefert.
+
+    Beide Werte nötig; sonst ``None`` (ehrliche Degradation, keine 0). Rundet
+    kaufmännisch auf eine ganze Zahl.
     """
     if pkw_total is None or bev_share is None:
         return None

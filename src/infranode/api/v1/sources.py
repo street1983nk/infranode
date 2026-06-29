@@ -6,9 +6,9 @@ der prozessweiten ``app.state.breakers``-Registry). So sehen Clients und Agenten
 auf einen Blick, welche Quelle aktiv ist und ob ihr Breaker getrippt hat
 (Graceful-Degradation-Transparenz).
 
-Der Breaker wird ueber die bestehende ``BreakerRegistry`` lazy angelegt; ein noch
+Der Breaker wird über die bestehende ``BreakerRegistry`` lazy angelegt; ein noch
 nie aufgerufener Breaker meldet seinen Default-State CLOSED. KEINE eigene
-HTTPException/try-except mit Detail-Leak: der zentrale Handler bleibt zustaendig.
+HTTPException/try-except mit Detail-Leak: der zentrale Handler bleibt zuständig.
 """
 
 from __future__ import annotations
@@ -23,17 +23,17 @@ from infranode.registry.source_specs import SOURCE_LICENSE
 
 router = APIRouter()
 
-# Whitelist der sortier-/filterbaren Felder fuer /sources (T-11-FILTER-INJ): nur
+# Whitelist der sortier-/filterbaren Felder für /sources (T-11-FILTER-INJ): nur
 # diese Feldnamen sind als sort erlaubt, ein unbekanntes Feld -> 400, BEVOR roher
 # User-String interpretiert wird (nie in eine Query/einen Cache-Key interpoliert).
 _SOURCES_SORT_WHITELIST = {"source", "enabled", "license"}
 
-# _KNOWN_SOURCES (Reihenfolge = oeffentliche /sources-Reihenfolge) und
+# _KNOWN_SOURCES (Reihenfolge = öffentliche /sources-Reihenfolge) und
 # SOURCE_LICENSE (Lizenz + wortgenaue Attribution, VERBATIM aus
 # DATA-LICENSES.md, fail-closed via tests/unit/test_source_license_map.py)
 # kommen jetzt aus der deklarativen Quellen-Registry (registry/source_specs.py),
 # damit eine neue Quelle nur EINEN Eintrag dort braucht statt vieler verstreuter
-# Stellen. Beide Namen sind oben importiert (Rueckwaerts-Kompatibilitaet).
+# Stellen. Beide Namen sind oben importiert (Rückwärts-Kompatibilität).
 
 
 @router.get("/sources")
@@ -48,14 +48,14 @@ async def sources(
     Rate-limitiert (API-06): @limiter.limit unter @router.get, ``request`` ist
     Pflicht-Param (Pitfall 4). ``response`` ist Pflicht, damit slowapi die
     Standard-RateLimit-Header auf die Erfolgsantwort injizieren kann; bei
-    Ueberschreitung greift der 429-Envelope-Handler.
+    Überschreitung greift der 429-Envelope-Handler.
 
-    Keylos/offen: kein API-Key noetig, das IP-Limit (ANON_LIMIT) gilt fuer alle.
+    Keylos/offen: kein API-Key nötig, das IP-Limit (ANON_LIMIT) gilt für alle.
 
     Paginiert (API-04, REST-Best-Practice #3/#8): ``Depends(page_params)`` liest
     page/limit/offset/sort/order; ``paginate`` schneidet die Seite Whitelist-
     gesichert (unbekanntes sort -> 400, T-11-FILTER-INJ) und liefert bei Offset-
-    Overflow eine leere Liste mit 200 (nie 500). ``limit > MAX_LIMIT`` wird ueber
+    Overflow eine leere Liste mit 200 (nie 500). ``limit > MAX_LIMIT`` wird über
     ``Query(le=MAX_LIMIT)`` als 422 abgewiesen.
     """
     settings = request.app.state.settings

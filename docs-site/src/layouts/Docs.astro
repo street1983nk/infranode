@@ -1,7 +1,7 @@
 ---
 // Drei-Spalten-Doku-Layout (D-01/D-02): links Nav (endpoints-Collection nach
 // tag gruppiert + Quick-Start/Start), Mitte Content-Slot (in data-pagefind-body
-// fuer Pagefind, Pitfall 4), rechts "On this page" (clientseitig aus den
+// für Pagefind, Pitfall 4), rechts "On this page" (clientseitig aus den
 // Headings des Slots). Pagefind-Suche im Topbar via Search-Komponente.
 import { getCollection } from "astro:content";
 import Search from "../components/Search.astro";
@@ -18,7 +18,7 @@ interface Props {
   // Sprache der Seite (de Standard). Steuert <html lang>, Nav-/Footer-Texte
   // und den Sprach-Switcher.
   lang?: "de" | "en";
-  // Pfad der jeweils anderen Sprachfassung (fuer Switcher + hreflang). Leer,
+  // Pfad der jeweils anderen Sprachfassung (für Switcher + hreflang). Leer,
   // wenn es kein Pendant gibt.
   altLangPath?: string;
   // An SeoHead durchgereicht: robots noindex (z.B. 404-Seite).
@@ -36,7 +36,7 @@ const {
 const isEn = lang === "en";
 
 // Nicht-Endpunkt-Seiten (Start, Quick-Start, MCP, Impressum, Datenschutz,
-// Ueber, sowie deren EN-Pendants) bekommen keine Page-Actions. Endpunkt-Seiten
+// Über, sowie deren EN-Pendants) bekommen keine Page-Actions. Endpunkt-Seiten
 // tragen die operationId als `current`.
 const NON_ENDPOINT = new Set([
   "",
@@ -68,7 +68,7 @@ const actionPrompt = isEndpointPage
     : `Hier ist die InfraNode-API-Doku für ${title} im Markdown-Format. Hilf mir, diesen Endpunkt zu nutzen. Doku-URL:`
   : "";
 
-// Nav-Eintraege aus der endpoints-Collection (Single Source openapi.yaml),
+// Nav-Einträge aus der endpoints-Collection (Single Source openapi.yaml),
 // nach tag gruppiert und je Gruppe nach id sortiert.
 const endpoints = await getCollection("endpoints");
 const groups = new Map<string, { id: string; method: string; summary: string }[]>();
@@ -417,8 +417,8 @@ const sortedTags = [...groups.keys()].sort();
         }
       }
 
-      // Mobiles Navigationsmenue: auf schmalen Viewports die Funktionsliste
-      // standardmaessig einklappen, damit der Inhalt zuerst sichtbar ist. Auf
+      // Mobiles Navigationsmenü: auf schmalen Viewports die Funktionsliste
+      // standardmäßig einklappen, damit der Inhalt zuerst sichtbar ist. Auf
       // Desktop bleibt sie offen. Ohne JS bleibt details[open] = kein Regress.
       const navDisclosure = document.querySelector<HTMLDetailsElement>(".nav__disclosure");
       if (navDisclosure) {

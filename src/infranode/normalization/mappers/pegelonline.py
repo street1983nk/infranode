@@ -1,18 +1,18 @@
 """Reiner PEGELONLINE-Pegel-Mapper map_water_level (DATA-11, GOV-01/03, Tier A).
 
-Uebersetzt das flache PEGELONLINE-raw-dict deterministisch in einen
+Übersetzt das flache PEGELONLINE-raw-dict deterministisch in einen
 ``CanonicalRecord`` mit ``WaterLevelPayload`` (kind=water_level). Die Funktion ist
 rein: kein HTTP, kein Logging, kein ``datetime.now()``. Der ``retrieved_at``-
 Zeitstempel wird keyword-only injiziert, damit Tests deterministisch bleiben.
 
 KRITISCH (Lizenz-Klassifikation GOV-02): PEGELONLINE ist Tier A (offene Lizenz),
-``license_id=DL_DE_ZERO_2_0``, ``license_tier=A``. Der Record wird ueber die Route
+``license_id=DL_DE_ZERO_2_0``, ``license_tier=A``. Der Record wird über die Route
 ``/water-level`` ausgeliefert, ABER nur wenn eine Station gefunden wurde
 (Binnenstadt liefert no_data).
 
 KRITISCH (GOV-03): Datenlizenz Deutschland Zero 2.0 verlangt KEINE
-Namensnennungspflicht; die Attribution wird dennoch gefuehrt ("PEGELONLINE / WSV")
-und traegt KEIN ``modified`` (Daten nicht aufbereitet).
+Namensnennungspflicht; die Attribution wird dennoch geführt ("PEGELONLINE / WSV")
+und trägt KEIN ``modified`` (Daten nicht aufbereitet).
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ def map_water_level(
     Mapper), damit das Ergebnis deterministisch bleibt. Die Join-Keys
     ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht (Default
     ``None``). ``geo`` bleibt ``None`` (Stadtebene, kein Stations-Geo). Die
-    Attribution traegt KEIN ``modified`` (DL-DE/Zero, GOV-03).
+    Attribution trägt KEIN ``modified`` (DL-DE/Zero, GOV-03).
 
     Diese Funktion wird NUR aufgerufen, wenn eine Station gefunden wurde; der
     no_data-Pfad (``raw["station"] is None``) wird bereits in der Route abgefangen.
@@ -62,7 +62,12 @@ def map_water_level(
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
-            text="PEGELONLINE / WSV",
+            # H15: verbatim wie source_specs + DATA-LICENSES.md (Kurzform
+            # "PEGELONLINE / WSV" war ein Attribution-Drift gegen Doku/Registry).
+            text=(
+                "PEGELONLINE, Wasserstraßen- und Schifffahrtsverwaltung "
+                "des Bundes (WSV)"
+            ),
             license_url=_DL_DE_ZERO_URL,
         ),
         payload=WaterLevelPayload(

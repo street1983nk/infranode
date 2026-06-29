@@ -1,20 +1,20 @@
 """Reiner eRound-AFIR-Mapper (LIVE-11, CC0/Tier A, Phase 20).
 
-Uebersetzt das rohe Adapter-dict aus ``adapters/mobilithek_afir.py``
+Übersetzt das rohe Adapter-dict aus ``adapters/mobilithek_afir.py``
 (``points``, eRound AFIR-Recharging, EnergyInfrastructureStatusPublication V3)
 deterministisch in einen ``CanonicalRecord`` mit ``ChargingStatusPayload`` und
-SourceId.EROUND_CHARGING (LIVE-11, schliesst die DATA-09-Belegungsluecke Laden).
+SourceId.EROUND_CHARGING (LIVE-11, schließt die DATA-09-Belegungslücke Laden).
 
 Lizenz (Owner-Verifikation 2026-06-12, Checkpoint-Entscheid ``cc0-tier-a``): das
 eRound-Angebot (mobilithek.info/offers/961629419076456448, Tab
 Nutzungsbedingungen) weist als Standard-Lizenz **Creative Commons CC Zero**
 (http://dcat-ap.de/def/licenses/cc-zero) aus -> ``license_id=CC0``,
-``license_tier=A``. CC0 verlangt keine Attribution; Projekt-Konvention fuehrt sie
+``license_tier=A``. CC0 verlangt keine Attribution; Projekt-Konvention führt sie
 dennoch konsistent ("Hamburger Energienetze GmbH / eRound").
 
 Schablone ist ``mappers/mobilithek_parken.py`` (exakt): rein (kein HTTP, kein
 Parse, keine Systemuhr), ``retrieved_at`` keyword-only injiziert
-(deterministisch). Reine Live-Daten -> ``geo=None`` (der dynamische Feed traegt
+(deterministisch). Reine Live-Daten -> ``geo=None`` (der dynamische Feed trägt
 nur Ladepunkt-IDs/Status); ``observed_at`` aus der DATEX-II ``publicationTime``
 (``as_of``) falls vorhanden, sonst ``None`` (ehrlich, keine Systemuhr).
 """
@@ -58,14 +58,14 @@ def map_eround_charging(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet die eRound-Ladesaeulen-Belegung (points) auf einen ``CanonicalRecord`` ab.
+    """Bildet die eRound-Ladesäulen-Belegung (points) auf einen ``CanonicalRecord`` ab.
 
     Die ``points`` (je Ladepunkt refill_point_id + status/observed_at, LIVE-11)
     wandern in den ``ChargingStatusPayload``. ``observed_at`` aus der DATEX-II
     ``publicationTime`` (``as_of``) falls vorhanden. ``retrieved_at`` injiziert
     (keine Systemuhr im Mapper). Tier A, CC0 (Owner-Verifikation, Checkpoint
-    cc0-tier-a), Attribution "Hamburger Energienetze GmbH / eRound". Schliesst
-    die DATA-09-Echtzeit-Ladesaeulenbelegungsluecke.
+    cc0-tier-a), Attribution "Hamburger Energienetze GmbH / eRound". Schließt
+    die DATA-09-Echtzeit-Ladesäulenbelegungslücke.
     """
     return CanonicalRecord(
         city_slug=raw["slug"],

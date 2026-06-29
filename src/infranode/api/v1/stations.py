@@ -2,7 +2,7 @@
 
 Anders als die stadtweiten ``/cities/{slug}/station-departures`` (kuratierte
 Metropolen-Hbf) liefern diese Endpunkte die Live-Tafel JEDES beliebigen DB-
-Bahnhofs ueber seine EVA-Nummer (aus dem Katalog ``/cities/{slug}/stations``),
+Bahnhofs über seine EVA-Nummer (aus dem Katalog ``/cities/{slug}/stations``),
 inklusive Nahverkehr (alle Gattungen ICE/IC/RE/RB/S) und Stoerungen/Meldungen.
 Quelle: DB Timetables (DB API Marketplace, CC BY 4.0 = Tier A), derselbe Adapter
 wie die stadtweiten Boards, nur mit genau einer EVA.
@@ -37,13 +37,13 @@ from infranode.normalization.mappers.db_timetables import (
 
 router = APIRouter()
 
-# Eine EVA-Nummer (Europaeische Vehicle-/Bahnhofs-Nummer) ist eine reine Zahl
-# (deutsche Bahnhoefe 7-stellig, defensiv 6-8). Strikte Validierung = SSRF-Schutz.
+# Eine EVA-Nummer (Europäische Vehicle-/Bahnhofs-Nummer) ist eine reine Zahl
+# (deutsche Bahnhöfe 7-stellig, defensiv 6-8). Strikte Validierung = SSRF-Schutz.
 _EVA_RE = re.compile(r"^\d{6,8}$")
 
 
 def _validate_eva(eva: str) -> str:
-    """Validiert die EVA als 6-8-stellige Zahl (SSRF, T-12); 422 bei Verstoss."""
+    """Validiert die EVA als 6-8-stellige Zahl (SSRF, T-12); 422 bei Verstoß."""
     if not _EVA_RE.match(eva):
         raise UnprocessableError(
             f"Ungueltige EVA-Nummer {eva!r}: erwartet eine 6-8-stellige Zahl.",
@@ -61,10 +61,10 @@ async def _board(
     mapper,
     empty_key: str,
 ) -> dict:
-    """Gemeinsamer Kern fuer Abfahrts-/Ankunfts-Board einer einzelnen EVA.
+    """Gemeinsamer Kern für Abfahrts-/Ankunfts-Board einer einzelnen EVA.
 
     Drei ``source_status``: ``disabled`` (Toggle aus/keine Keys), ``no_data``
-    (Bahnhof erreichbar, keine Zuege im Zeitfenster), ``ok`` (gemappter Payload).
+    (Bahnhof erreichbar, keine Züge im Zeitfenster), ``ok`` (gemappter Payload).
     """
     eva = _validate_eva(eva)
     cid = correlation_id.get()
@@ -130,8 +130,8 @@ async def _board(
 async def station_departures_by_eva(eva: str, request: Request) -> dict:
     """Live-Abfahrten eines beliebigen DB-Bahnhofs (EVA) inkl. Nahverkehr + Meldungen.
 
-    Naechste Zugabfahrten am Bahnhof mit EVA-Nummer ``eva`` (alle Gattungen
-    ICE/IC/RE/RB/S, Echtzeit-Verspaetung, Stoerungen/Meldungen). EVA aus dem Katalog
+    Nächste Zugabfahrten am Bahnhof mit EVA-Nummer ``eva`` (alle Gattungen
+    ICE/IC/RE/RB/S, Echtzeit-Verspätung, Stoerungen/Meldungen). EVA aus dem Katalog
     ``GET /api/v1/cities/{slug}/stations``. Quelle DB Timetables (CC BY 4.0).
     """
     return await _board(
@@ -146,7 +146,7 @@ async def station_departures_by_eva(eva: str, request: Request) -> dict:
 
 @router.get("/{eva}/arrivals")
 async def station_arrivals_by_eva(eva: str, request: Request) -> dict:
-    """Live-Ankuenfte eines beliebigen DB-Bahnhofs (EVA) inkl. Nahverkehr + Meldungen.
+    """Live-Ankünfte eines beliebigen DB-Bahnhofs (EVA) inkl. Nahverkehr + Meldungen.
 
     Spiegelbild zu ``station_departures_by_eva`` (``origin`` statt ``destination``).
     Quelle DB Timetables (CC BY 4.0).

@@ -1,6 +1,6 @@
-"""Reiner Muenchen-Mapper map_muenchen_road_events (DATA-15, Tier A DL-DE/BY).
+"""Reiner München-Mapper map_muenchen_road_events (DATA-15, Tier A DL-DE/BY).
 
-Uebersetzt das rohe Adapter-dict (``slug``/``events``) deterministisch in einen
+Übersetzt das rohe Adapter-dict (``slug``/``events``) deterministisch in einen
 ``CanonicalRecord`` mit ``RoadEventPayload``. Die Funktion ist rein: kein HTTP,
 keine Log-Aufrufe, keine Systemuhr. Der ``retrieved_at``-Zeitstempel wird
 keyword-only injiziert, damit Tests deterministisch bleiben.
@@ -39,9 +39,9 @@ def map_muenchen_road_events(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet rohe Muenchner Road-Events auf einen ``CanonicalRecord`` (Tier A) ab.
+    """Bildet rohe Münchner Road-Events auf einen ``CanonicalRecord`` (Tier A) ab.
 
-    Die ``events`` (Baustellen/Sperrungen, DATA-15) wandern unveraendert in den
+    Die ``events`` (Baustellen/Sperrungen, DATA-15) wandern unverändert in den
     ``RoadEventPayload`` (``city_source="muenchen_baustellen"``). Der
     ``retrieved_at``-Zeitstempel wird injiziert (keine Systemuhr im Mapper), damit
     das Ergebnis deterministisch bleibt. Die Join-Keys ``ags``/``wikidata_qid``
@@ -77,9 +77,9 @@ def map_muenchen_parking(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet den Muenchner Parkhaus-Standortkatalog auf einen ``CanonicalRecord`` ab.
+    """Bildet den Münchner Parkhaus-Standortkatalog auf einen ``CanonicalRecord`` ab.
 
-    Die ``facilities`` (Parkhaus-Standorte, DATA-40) wandern unveraendert in den
+    Die ``facilities`` (Parkhaus-Standorte, DATA-40) wandern unverändert in den
     ``ParkingPayload``. STATISCHER Standortkatalog der Landeshauptstadt München
     (CKAN-Paket ``parkhaeuser-munchen`` auf opendata.muenchen.de, [VERIFIED
     2026-06-23]), KEINE Live-Belegung. Datenlizenz Deutschland Namensnennung 2.0

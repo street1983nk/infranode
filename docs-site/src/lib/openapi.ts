@@ -1,15 +1,15 @@
 // openapi.yaml-Loader: liest docs/openapi.yaml und normalisiert jede
 // Operation zu einem flachen Endpoint-Objekt. Bewusst defensiv (Pitfall 5):
-// es werden NUR paths gelesen, $ref/oneOf werden NICHT aufgeloest, optionale
+// es werden NUR paths gelesen, $ref/oneOf werden NICHT aufgelöst, optionale
 // Felder bekommen Defaults. Nachgelagerte Slices (SEO/GEO/Try-it) filtern
-// ueber das Feld `kind`, statt erneut die Spec zu parsen.
+// über das Feld `kind`, statt erneut die Spec zu parsen.
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import { parse } from "yaml";
 
 // docs/openapi.yaml liegt relativ zu dieser Datei unter ../../../docs/.
-// Aufloesen ueber import.meta.url, damit der Pfad unabhaengig vom Cwd stimmt
+// Auflösen über import.meta.url, damit der Pfad unabhängig vom Cwd stimmt
 // (Astro-Build-Cwd ist docs-site/, aber Content-Loader laufen aus .astro/).
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SPEC_PATH = resolve(HERE, "..", "..", "..", "docs", "openapi.yaml");
@@ -72,7 +72,7 @@ export function loadEndpoints(): Endpoint[] {
       const tags = Array.isArray(op.tags) ? op.tags : [];
       const operationId = asString(op.operationId, `${method}_${opPath}`);
       // Parameter durchreichen und je Parameter eine englische Beschreibung
-      // (x-description-en) als descriptionEn ergaenzen, Fallback auf description.
+      // (x-description-en) als descriptionEn ergänzen, Fallback auf description.
       const parameters = (Array.isArray(op.parameters) ? op.parameters : []).map((p) => {
         if (p == null || typeof p !== "object") return p;
         const param = p as Record<string, unknown>;

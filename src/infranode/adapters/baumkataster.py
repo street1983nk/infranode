@@ -1,19 +1,19 @@
 """Keyloser Baumkataster-WFS-Adapter fetch_trees (DATA-OSM-Tier-2, Baumkataster).
 
-Staedtische Baumkataster sind KOMMUNALES Open Data: jede Stadt fuehrt ihr eigenes
+Städtische Baumkataster sind KOMMUNALES Open Data: jede Stadt führt ihr eigenes
 Kataster, meist als WFS. Es gibt keinen bundesweiten Endpunkt. Der Adapter ist
 daher per STADT konfiguriert: ``BAUM_WFS`` mappt einen Stadt-Slug auf eine WFS-
-Konfiguration (analog zur foederierten ``DENKMAL_WFS``, dort je Bundesland).
+Konfiguration (analog zur föderierten ``DENKMAL_WFS``, dort je Bundesland).
 
-Stand: Berlin (verifiziert, GeoJSON-WFS, DL-DE/Zero 2.0; ~900k Strassenbaeume).
-Weitere Staedte (Hamburg/Koeln/Frankfurt) folgen nach WFS-Verifikation.
+Stand: Berlin (verifiziert, GeoJSON-WFS, DL-DE/Zero 2.0; ~900k Straßenbäume).
+Weitere Städte (Hamburg/Koeln/Frankfurt) folgen nach WFS-Verifikation.
 
-Groessenschutz: Kataster sind sehr gross (Berlin > 900.000 Baeume); ``count``
+Groessenschutz: Kataster sind sehr groß (Berlin > 900.000 Bäume); ``count``
 cappt die je Anfrage geladene Feature-Zahl (Stichprobe, kein Vollabzug). Die
-Antwort liefert je Baum den Punkt + ausgewaehlte Attribute (Art, Pflanzjahr,
-Hoehe, Strasse, Bezirk).
+Antwort liefert je Baum den Punkt + ausgewählte Attribute (Art, Pflanzjahr,
+Höhe, Straße, Bezirk).
 
-Sicherheit (T-SSRF): Host + typeName stammen ausschliesslich aus der hartkodierten
+Sicherheit (T-SSRF): Host + typeName stammen ausschließlich aus der hartkodierten
 ``BAUM_WFS``-Registry (KEIN User-Input). Rein (kein Cache/Breaker, das liefert die
 Fassade); ``resp.raise_for_status()`` ist Pflicht (STALE-ON-ERROR).
 """
@@ -24,13 +24,13 @@ from typing import NamedTuple
 
 import httpx
 
-# Obergrenze der je Anfrage geladenen Baum-Features (Groessen-/DoS-Schutz). Kataster
-# sind sehr gross -> bewusste Stichprobe, in der Doku als gedeckelt gekennzeichnet.
+# Obergrenze der je Anfrage geladenen Baum-Features (Größen-/DoS-Schutz). Kataster
+# sind sehr groß -> bewusste Stichprobe, in der Doku als gedeckelt gekennzeichnet.
 _COUNT_CAP = 500
 
 
 class BaumSource(NamedTuple):
-    """WFS-Konfiguration eines staedtischen Baumkatasters."""
+    """WFS-Konfiguration eines städtischen Baumkatasters."""
 
     url: str
     typename: str
@@ -40,7 +40,7 @@ class BaumSource(NamedTuple):
     attribution: str
 
 
-# Stadt-Slug -> WFS-Konfiguration. Nur verifizierte, offen lizenzierte Staedte
+# Stadt-Slug -> WFS-Konfiguration. Nur verifizierte, offen lizenzierte Städte
 # (fail-closed). Berlin: GetCapabilities + Lizenz (DL-DE/Zero 2.0) verifiziert
 # 2026-06-26 (Fees-Feld der Capabilities).
 BAUM_WFS: dict[str, BaumSource] = {
@@ -68,11 +68,11 @@ async def fetch_trees(
     *,
     slug: str,
 ) -> dict:
-    """Holt das staedtische Baumkataster per WFS GetFeature (GeoJSON, WGS84).
+    """Holt das städtische Baumkataster per WFS GetFeature (GeoJSON, WGS84).
 
-    ``slug`` waehlt die WFS-Konfiguration; eine nicht abgedeckte Stadt loest ein
-    ``KeyError`` aus (die Route prueft jedoch vorher ``is_covered`` und liefert
-    dann ``not_covered``). Rueckgabe-Keys (das, was ``map_trees`` erwartet):
+    ``slug`` wählt die WFS-Konfiguration; eine nicht abgedeckte Stadt löst ein
+    ``KeyError`` aus (die Route prüft jedoch vorher ``is_covered`` und liefert
+    dann ``not_covered``). Rückgabe-Keys (das, was ``map_trees`` erwartet):
     ``slug``, ``fields``, ``license_id``/``license_tier``/``attribution`` und
     ``features`` (rohe GeoJSON-Features, gedeckelt auf ``_COUNT_CAP``).
     """

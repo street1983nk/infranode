@@ -1,15 +1,15 @@
 """Reiner Regionalstatistik-Mapper (DATA-37, DL-DE/BY 2.0, Tier A).
 
 Bildet die Reader-Zeilen aus ``archive.regionalstatistik_db`` deterministisch auf
-einen ``CanonicalRecord`` ab: ``map_tax_rates`` (Realsteuer-Hebesaetze, Tabelle
+einen ``CanonicalRecord`` ab: ``map_tax_rates`` (Realsteuer-Hebesätze, Tabelle
 71231) und ``map_business_registrations`` (Gewerbean-/-abmeldungen, Tabelle
 52311). Rein: kein HTTP, kein Logging, kein ``datetime.now()`` (``retrieved_at``
 wird injiziert).
 
-Quelle ist der GENESIS-Webservice der Statistischen Aemter des Bundes und der
-Laender (regionalstatistik.de). Lizenz DL-DE/BY 2.0, Attribution wortgenau
+Quelle ist der GENESIS-Webservice der Statistischen Ämter des Bundes und der
+Länder (regionalstatistik.de). Lizenz DL-DE/BY 2.0, Attribution wortgenau
 "Statistische Ämter des Bundes und der Länder" (muss verbatim in DATA-LICENSES.md
-+ SOURCE_LICENSE stehen, T-11-SRC-DRIFT). Die Werte sind unveraenderte
++ SOURCE_LICENSE stehen, T-11-SRC-DRIFT). Die Werte sind unveränderte
 Quell-Kennzahlen (``modified=False``); ``geo`` bleibt ``None`` (Gemeinde-/
 Kreisebene), ``observed_at`` bleibt ``None`` (Stichtag/Jahr steht im Payload).
 """

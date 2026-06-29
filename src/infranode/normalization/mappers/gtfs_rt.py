@@ -1,22 +1,22 @@
 """Reiner GTFS-RT-Mapper (Phase 19, Tier B / CC-BY-SA).
 
-Uebersetzt die rohen Trip-Update-/Aggregat-dicts (aus ``adapters/gtfs_rt.py`` bzw.
+Übersetzt die rohen Trip-Update-/Aggregat-dicts (aus ``adapters/gtfs_rt.py`` bzw.
 den Live-Routen) deterministisch in einen ``CanonicalRecord``:
-- ``map_transit_trip``: ein einzelnes Trip-Update inkl. geschaetzter Position
+- ``map_transit_trip``: ein einzelnes Trip-Update inkl. geschätzter Position
   -> ``TransitTripPayload`` (TRANSIT-RT-04).
 - ``map_transit_departures``: Abfahrten je Halt -> ``TransitDeparturePayload``
   (TRANSIT-RT-03).
-- ``map_transit_route_status``: aggregierte Verspaetungslage einer Linie
+- ``map_transit_route_status``: aggregierte Verspätungslage einer Linie
   -> ``TransitRouteStatusPayload`` (TRANSIT-RT-05).
 
 Schablone ist ``mappers/mobilithek_koeln.py`` (exakt: rein, kein HTTP/Parse, keine
 Systemuhr, ``retrieved_at`` keyword-only injiziert), ABER mit dem entscheidenden
 Unterschied der Lizenzklasse: gtfs.de/DELFI-Realtime steht unter CC-BY-SA 4.0 =
 ``license_tier=B`` (copyleft, getrennt vom Tier-A-Archiv halten, CONTEXT LOCKED),
-NICHT Tier A wie der Koeln-Mapper (DL-DE/Zero). Attribution "gtfs.de" (Primaerquelle)
+NICHT Tier A wie der Köln-Mapper (DL-DE/Zero). Attribution "gtfs.de" (Primärquelle)
 bzw. "DELFI e.V." (Mobilithek), Lizenz-URL CC-BY-SA.
 
-``geo=None`` (die geschaetzte Position liegt im Payload, nicht im Envelope-Geo);
+``geo=None`` (die geschätzte Position liegt im Payload, nicht im Envelope-Geo);
 ``observed_at`` aus dem RT-FeedHeader-Timestamp (``timestamp``) falls vorhanden,
 sonst ``None`` (ehrlich, keine Systemuhr). KEIN ``append_record`` (Tier B,
 T-19-ARCHIVE): reine Live-Daten werden NIE archiviert.
@@ -39,7 +39,7 @@ from infranode.normalization.payloads import (
     TransitTripPayload,
 )
 
-# Attribution-Texte je Quelle (CONTEXT LOCKED): gtfs.de = Primaerquelle,
+# Attribution-Texte je Quelle (CONTEXT LOCKED): gtfs.de = Primärquelle,
 # DELFI e.V. = Mobilithek-Realtime. Beide CC-BY-SA 4.0 (Tier B copyleft).
 _GTFS_DE_ATTRIBUTION = "gtfs.de"
 _DELFI_ATTRIBUTION = "DELFI e.V."
@@ -51,7 +51,7 @@ def attribution_for_source(used_source: str | None) -> str:
 
     ``"mobilithek_delfi"`` -> "DELFI e.V.", sonst (gtfs.de-Backup/Default) "gtfs.de".
     Beide bleiben CC-BY-SA 4.0 Tier B (CONTEXT LOCKED); nur die Namensnennung
-    folgt der tatsaechlich liefernden Quelle.
+    folgt der tatsächlich liefernden Quelle.
     """
     if used_source == "mobilithek_delfi":
         return _DELFI_ATTRIBUTION
@@ -89,9 +89,9 @@ def map_transit_trip(
 ) -> CanonicalRecord:
     """Bildet ein einzelnes Trip-Update auf einen ``CanonicalRecord`` ab (Tier B).
 
-    Reicht ``trip_id``/``route_id``/``delay_s`` durch und uebernimmt die bereits
-    interpolierte ``estimated_position`` unveraendert in den Payload. ``unresolved``
-    True heisst: die ``trip_id`` war nicht gegen das statische GTFS aufloesbar
+    Reicht ``trip_id``/``route_id``/``delay_s`` durch und übernimmt die bereits
+    interpolierte ``estimated_position`` unverändert in den Payload. ``unresolved``
+    True heisst: die ``trip_id`` war nicht gegen das statische GTFS auflösbar
     (ehrlich statt 500, RESEARCH Pitfall 4). ``retrieved_at`` injiziert (keine
     Systemuhr im Mapper).
     """
@@ -158,7 +158,7 @@ def map_transit_route_status(
     wikidata_qid: str | None = None,
     source_attribution: str = _GTFS_DE_ATTRIBUTION,
 ) -> CanonicalRecord:
-    """Bildet die aggregierte Verspaetungslage einer Linie ab (Tier B).
+    """Bildet die aggregierte Verspätungslage einer Linie ab (Tier B).
 
     ``active_trips``/``avg_delay_s``/``max_delay_s``/``trips`` werden vom Aufrufer
     (Live-Route) aggregiert und hier in den ``TransitRouteStatusPayload``

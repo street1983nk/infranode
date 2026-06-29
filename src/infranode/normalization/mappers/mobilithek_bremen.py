@@ -1,6 +1,6 @@
 """Reiner Bremen-Mobilithek-Mapper (DATA-31, Tier A DL-DE/BY, Live).
 
-Uebersetzt das rohe Adapter-dict aus ``adapters/mobilithek_datex2.py``
+Übersetzt das rohe Adapter-dict aus ``adapters/mobilithek_datex2.py``
 (``parse_datex2_situations`` -> ``{"slug","events","as_of"}``) deterministisch in
 einen ``CanonicalRecord`` mit ``RoadEventPayload`` (Bremen Baustellen/
 Arbeitsstellen, SituationPublication). Schablone ist ``mappers/mobilithek_koeln``:

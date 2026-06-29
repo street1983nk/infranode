@@ -1,6 +1,6 @@
 """Reine Stadt-Mobilithek-Mapper (LIVE-08/12, Tier A DL-DE/BY, Phase 20).
 
-Uebersetzt die rohen Adapter-dicts aus ``adapters/mobilithek_datex2.py``
+Übersetzt die rohen Adapter-dicts aus ``adapters/mobilithek_datex2.py``
 (SituationPublication, ``events``) deterministisch in einen ``CanonicalRecord``:
 - ``map_berlin_traffic_messages``: Berlin Verkehrsmeldungen (SenMVKU,
   SituationPublication) -> ``RoadEventPayload`` (``city_source="berlin_senmvku"``),
@@ -15,8 +15,8 @@ Schablone ist ``mappers/mobilithek_koeln.py`` (exakt, Plan 04): rein (kein HTTP,
 kein XML-Parse, keine Systemuhr), ``retrieved_at`` keyword-only injiziert
 (deterministisch). Beide Quellen stehen unter der Datenlizenz Deutschland
 Namensnennung 2.0: ``license_id=DL_DE_BY_2_0``, ``license_tier=A`` (verifiziert,
-T-20-TIER: KEIN pauschales Tier-A ueber alle Quellen, nur diese DL-DE/BY-Feeds).
-Wortgenaue Attribution gemaess DATA-LICENSES.md (Berlin = SenMVKU, Köln = Stadt
+T-20-TIER: KEIN pauschales Tier-A über alle Quellen, nur diese DL-DE/BY-Feeds).
+Wortgenaue Attribution gemäß DATA-LICENSES.md (Berlin = SenMVKU, Köln = Stadt
 Köln).
 
 Reine Live-Daten -> ``geo=None`` (Geo je Event im Payload); ``observed_at`` aus

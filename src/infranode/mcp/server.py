@@ -2,18 +2,18 @@
 
 Der Server registriert je Stadtdaten-Ressource ein Tool. Die eigentliche
 Tool-Logik liegt als freistehende async-Funktion in ``infranode.mcp.tools``
-(Blocker-4-Aufrufvertrag): ``@mcp.tool()`` wird hier nur duenn ueber diese
+(Blocker-4-Aufrufvertrag): ``@mcp.tool()`` wird hier nur dünn über diese
 Funktionen gelegt, sodass sie direkt als Coroutine testbar bleiben und der
-Decorator dennoch das FunctionTool fuer die FastMCP-API registriert.
+Decorator dennoch das FunctionTool für die FastMCP-API registriert.
 
-Es gibt KEINE Mapping-/Lizenz-Logik im Server: jedes Tool ruft ueber
+Es gibt KEINE Mapping-/Lizenz-Logik im Server: jedes Tool ruft über
 ``infranode.mcp.client.get_resource`` die Live-FastAPI und gibt deren
-normalisiertes JSON 1:1 zurueck (D-07/D-08). Zwei Transporte:
-- stdio (Default): lokaler Subprozess fuer Claude Desktop/Code.
-- streamable-http: oeffentlicher Remote-Endpunkt (z.B. mcp.infranode.dev),
+normalisiertes JSON 1:1 zurück (D-07/D-08). Zwei Transporte:
+- stdio (Default): lokaler Subprozess für Claude Desktop/Code.
+- streamable-http: öffentlicher Remote-Endpunkt (z.B. mcp.infranode.dev),
   hinter Caddy/Cloudflare, keylos wie die API. Per INFRANODE_MCP_TRANSPORT
   =streamable-http aktiviert; INFRANODE_MCP_API_BASE zeigt dann auf die
-  oeffentliche API (https://infranode.dev/api/v1).
+  öffentliche API (https://infranode.dev/api/v1).
 """
 
 from __future__ import annotations
@@ -27,8 +27,8 @@ from infranode.mcp import tools
 from infranode.registry.catalog import CITY_DATA_CATALOG
 
 # Server-Instructions: werden beim initialize an den Client/Agenten ausgeliefert und
-# sind der groesste Discovery-Hebel. Sie sagen dem Agenten, WO er anfangen soll
-# (get_city_overview) und wie alles zusammenhaengt, damit er schnell und ohne Raten
+# sind der größte Discovery-Hebel. Sie sagen dem Agenten, WO er anfangen soll
+# (get_city_overview) und wie alles zusammenhängt, damit er schnell und ohne Raten
 # an alle Daten kommt (Owner-Wunsch 2026-06-24).
 _INSTRUCTIONS = (
     "InfraNode is a keyless, read-only open-data API for 84 German cities, exposed "
@@ -50,12 +50,12 @@ mcp = FastMCP("infranode", instructions=_INSTRUCTIONS)
 
 # Verhaltens-Hinweise (MCP Tool Annotations): Jedes InfraNode-Tool ist ein
 # read-only GET-Wrapper auf die Live-API: es schreibt keinen State, ist gefahrlos
-# wiederholbar (idempotent) und nicht destruktiv. Clients koennen Aufrufe so ohne
-# Rueckfrage zulassen; Verzeichnis-Scanner (Glama/Smithery) bewerten die
+# wiederholbar (idempotent) und nicht destruktiv. Clients können Aufrufe so ohne
+# Rückfrage zulassen; Verzeichnis-Scanner (Glama/Smithery) bewerten die
 # Transparenz positiv. ``open_world`` unterscheidet ehrlich: Datentools ziehen
-# Live-Daten von externen Behoerden-APIs (offene, veraenderliche Domaene = True),
+# Live-Daten von externen Behörden-APIs (offene, veränderliche Domäne = True),
 # die Meta-Tools list_cities/sources liefern dagegen InfraNodes eigene,
-# abgeschlossene Abdeckungsliste (geschlossene Domaene = False).
+# abgeschlossene Abdeckungsliste (geschlossene Domäne = False).
 def _annotations(*, open_world: bool) -> ToolAnnotations:
     return ToolAnnotations(
         readOnlyHint=True,
@@ -65,9 +65,9 @@ def _annotations(*, open_world: bool) -> ToolAnnotations:
     )
 
 
-# Duenne Registrierung der freistehenden Tool-Funktionen (Blocker 4): der
-# Decorator wird programmatisch ueber jede Funktion gelegt. Die Funktion selbst
-# bleibt in infranode.mcp.tools unveraendert als Coroutine aufrufbar; FastMCP
+# Dünne Registrierung der freistehenden Tool-Funktionen (Blocker 4): der
+# Decorator wird programmatisch über jede Funktion gelegt. Die Funktion selbst
+# bleibt in infranode.mcp.tools unverändert als Coroutine aufrufbar; FastMCP
 # generiert das Schema aus den Typannotationen und Docstrings.
 def _register(fn, *, open_world: bool = True) -> None:
     """Registriert ein Tool mit den read-only Annotations (siehe oben)."""
@@ -75,7 +75,7 @@ def _register(fn, *, open_world: bool = True) -> None:
 
 
 _register(tools.get_city)
-# Owner 2026-06-24: Ein-Aufruf-Ueberblick (Basis + Katalog aller Datenarten +
+# Owner 2026-06-24: Ein-Aufruf-Überblick (Basis + Katalog aller Datenarten +
 # Live-Highlights). Discovery-Einstieg, damit Agenten die ganze Breite je Stadt
 # sehen (nicht nur Wetter). Zieht Live-Highlights -> open_world=True.
 _register(tools.get_city_overview)
@@ -99,7 +99,7 @@ _register(tools.icu_live)
 _register(tools.road_events)
 _register(tools.events)
 _register(tools.webcams)
-# SMARD/DWD (frueher ergaenzte Endpunkte, jetzt als MCP-Tools nachgezogen).
+# SMARD/DWD (früher ergänzte Endpunkte, jetzt als MCP-Tools nachgezogen).
 _register(tools.power_load)
 _register(tools.power_price)
 _register(tools.weather_warnings)
@@ -111,7 +111,7 @@ _register(tools.construction)
 _register(tools.accidents)
 # PKS-01: BKA Polizeiliche Kriminalstatistik (Tier A, Kreis-Jahreswerte).
 _register(tools.crime_stats)
-# DATA-30: Tankerkoenig Spritpreise (Tier A, aggregiert je Stadt).
+# DATA-30: Tankerkönig Spritpreise (Tier A, aggregiert je Stadt).
 _register(tools.fuel_prices)
 # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
 _register(tools.sharing)
@@ -119,18 +119,18 @@ _register(tools.sharing)
 _register(tools.solar)
 # DATA-39: Dach-Solarkataster je Stadt (NRW-Pilot, Tier A, Teilabdeckung).
 _register(tools.solar_roofs)
-# DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
+# DATA-32: INKAR/BBSR sozialökonomische Indikatoren je Kreis (Tier A).
 _register(tools.indicators)
 # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Tier A, aggregiert, Bauland).
 _register(tools.land_values)
-# DATA-37: Regionalstatistik.de Realsteuer-Hebesaetze (Gemeinde) + Gewerbean-/
+# DATA-37: Regionalstatistik.de Realsteuer-Hebesätze (Gemeinde) + Gewerbean-/
 # -abmeldungen (Kreis), Tier A.
 _register(tools.tax_rates)
 _register(tools.business_registrations)
 # DATA-37: Regionalstatistik.de beantragte Insolvenzen je Kreis (52411-02
-# Unternehmen + 52411-03 uebrige Schuldner), Tier A.
+# Unternehmen + 52411-03 übrige Schuldner), Tier A.
 _register(tools.insolvencies)
-# DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
+# DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankünfte Metropolen-Hbf (Tier A).
 _register(tools.station_departures)
 _register(tools.station_arrivals)
 # DATA-36: StaDa Bahnhofs-Katalog je Stadt + Per-Bahnhof-Live-Boards (jede EVA,
@@ -138,12 +138,12 @@ _register(tools.station_arrivals)
 _register(tools.stations)
 _register(tools.station_board_departures)
 _register(tools.station_board_arrivals)
-# DATA-26: Live-/Meta-Tools (echte neue Faehigkeiten, nicht slug-redundant):
-# Echtzeit-Abfahrten, Staedte-Liste, Quellen-Uebersicht. list_cities/sources
-# beschreiben die eigene Abdeckung -> geschlossene Domaene (open_world=False).
+# DATA-26: Live-/Meta-Tools (echte neue Fähigkeiten, nicht slug-redundant):
+# Echtzeit-Abfahrten, Städte-Liste, Quellen-Übersicht. list_cities/sources
+# beschreiben die eigene Abdeckung -> geschlossene Domäne (open_world=False).
 _register(tools.transit_departures)
 # Frankfurt am Main Live-Parkbelegung (Mobilithek DATEX II V3, stadt-fix; weitere
-# Park-Staedte folgen ueber dieselbe parking-Route -> Tool laeuft automatisch mit).
+# Park-Städte folgen über dieselbe parking-Route -> Tool läuft automatisch mit).
 _register(tools.parking)
 _register(tools.list_cities, open_world=False)
 _register(tools.sources, open_world=False)
@@ -164,13 +164,13 @@ _register(tools.education)
 _register(tools.heritage)
 # DATA-OSM-Tier-2: Baumkataster je Stadt (kommunaler WFS, coverage-gated).
 _register(tools.tree_cadastre)
-# DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Staedte).
+# DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Städte).
 _register(tools.population_density)
-# TENDER-05/06: Oeffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
+# TENDER-05/06: Öffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
 # OCDS, CC0/Tier A). Zieht Live-/Store-Daten von der API -> open_world=True.
 _register(tools.public_tenders)
-# DATA-40: Kommunale Radzaehlstellen je Stadt (Dauerzaehlstellen, Tier A,
-# Teilabdeckung). Zieht Zaehldaten von externen kommunalen Quellen -> open_world=True.
+# DATA-40: Kommunale Radzählstellen je Stadt (Dauerzählstellen, Tier A,
+# Teilabdeckung). Zieht Zähldaten von externen kommunalen Quellen -> open_world=True.
 # NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
 _register(tools.bike_counts)
 
@@ -259,12 +259,12 @@ def commute_check(slug: str) -> str:
 
 
 def run() -> None:
-    """Startet den Server im per Env gewaehlten Transport.
+    """Startet den Server im per Env gewählten Transport.
 
     stdio (Default): kein offener Port, lokaler Subprozess. streamable-http:
-    bindet einen HTTP-Port (INFRANODE_MCP_HOST/-PORT) fuer den oeffentlichen
+    bindet einen HTTP-Port (INFRANODE_MCP_HOST/-PORT) für den öffentlichen
     Remote-Endpunkt. Host-Default 127.0.0.1; der Container-Service setzt
-    INFRANODE_MCP_HOST=0.0.0.0, damit Caddy ihn ueber das Compose-Netz erreicht.
+    INFRANODE_MCP_HOST=0.0.0.0, damit Caddy ihn über das Compose-Netz erreicht.
     """
     transport = os.environ.get("INFRANODE_MCP_TRANSPORT", "stdio")
     if transport == "streamable-http":
@@ -273,9 +273,9 @@ def run() -> None:
         mcp.settings.host = os.environ.get("INFRANODE_MCP_HOST", "127.0.0.1")
         mcp.settings.port = int(os.environ.get("INFRANODE_MCP_PORT", "8081"))
         # Der MCP-Transport hat einen DNS-Rebinding-Schutz, der per Default nur
-        # localhost-Hosts/-Origins erlaubt (gedacht fuer lokal gebundene Server).
-        # Hinter Caddy/Cloudflare variieren Host/Origin; fuer eine oeffentliche,
-        # keylose read-only API ist der Schutz nicht noetig und blockt sonst alle
+        # localhost-Hosts/-Origins erlaubt (gedacht für lokal gebundene Server).
+        # Hinter Caddy/Cloudflare variieren Host/Origin; für eine öffentliche,
+        # keylose read-only API ist der Schutz nicht nötig und blockt sonst alle
         # Calls (HTTP 421). Default daher aus; per
         # INFRANODE_MCP_DNS_REBINDING_PROTECTION=1 mit expliziten Allowlists
         # (INFRANODE_MCP_ALLOWED_HOSTS/-ORIGINS, kommagetrennt) wieder scharf.
@@ -300,12 +300,12 @@ def run() -> None:
                 enable_dns_rebinding_protection=False,
             )
         # Eigener uvicorn-Start statt mcp.run(transport=...), damit wir die
-        # Streamable-HTTP-App mit der IP-Rate-Limit-Middleware umhuellen koennen
-        # (Security-Haertung 2026-06-21): der oeffentliche MCP-Endpunkt hatte
-        # sonst KEINE Drosselung. mcp.run() wuerde intern denselben
+        # Streamable-HTTP-App mit der IP-Rate-Limit-Middleware umhüllen können
+        # (Security-Härtung 2026-06-21): der öffentliche MCP-Endpunkt hatte
+        # sonst KEINE Drosselung. mcp.run() würde intern denselben
         # streamable_http_app() bauen und per uvicorn starten; wir reichen nur die
         # Middleware dazwischen. Die App-eigene Lifespan (Session-Manager) bleibt
-        # erhalten, da uvicorn sie aus der ASGI-App ausfuehrt.
+        # erhalten, da uvicorn sie aus der ASGI-App ausführt.
         import uvicorn
 
         from infranode.mcp.ratelimit import MCPRateLimitMiddleware

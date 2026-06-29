@@ -5,17 +5,18 @@ Bildet die Indikator-Zeilen aus dem SQLite-Reader
 ``CanonicalRecord`` mit ``IndicatorsPayload`` ab. Rein: kein HTTP, kein Logging,
 kein ``datetime.now()`` (``retrieved_at`` wird injiziert).
 
-Quelle ist das Bundesinstitut fuer Bau-, Stadt- und Raumforschung (BBSR) /
+Quelle ist das Bundesinstitut für Bau-, Stadt- und Raumforschung (BBSR) /
 INKAR (Indikatoren und Karten zur Raum- und Stadtentwicklung). Lizenz DL-DE/BY
 2.0, Attribution wortgenau "Bundesinstitut für Bau-, Stadt- und Raumforschung
 (BBSR), INKAR" (muss verbatim in DATA-LICENSES.md + SOURCE_LICENSE stehen). Die
-Werte sind unveraenderte Quell-Kennzahlen (``modified=False``); ``geo`` bleibt
+Werte sind unveränderte Quell-Kennzahlen (``modified=False``); ``geo`` bleibt
 ``None`` (Kreis-/Stadtebene), ``observed_at`` bleibt ``None`` (das Jahr steht je
 Indikator im Payload).
 """
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 from infranode.normalization import (
@@ -28,6 +29,18 @@ from infranode.normalization import (
 )
 
 _DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
+
+# INKAR führt die Einheit nur im name-String als Klammerzusatz "(in %)" / "(in EUR)"
+# (Audit 2026-06-29). Wir extrahieren sie zusätzlich in ein strukturiertes unit-Feld.
+_UNIT_RE = re.compile(r"\(in\s+([^)]+)\)", re.IGNORECASE)
+
+
+def _extract_unit(name: object) -> str | None:
+    """Liest die Einheit aus dem INKAR-Indikatornamen ("(in %)" -> "%"); sonst None."""
+    if not isinstance(name, str):
+        return None
+    match = _UNIT_RE.search(name)
+    return match.group(1).strip() if match else None
 
 
 def map_indicators(
@@ -63,6 +76,9 @@ def map_indicators(
         ),
         payload=IndicatorsPayload(
             indicator_count=len(rows),
-            indicators=rows,
+            # Einheit zusätzlich strukturiert je Indikator (aus dem name-String).
+            indicators=[
+                {**row, "unit": _extract_unit(row.get("name"))} for row in rows
+            ],
         ),
     )

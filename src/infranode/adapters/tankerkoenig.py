@@ -1,7 +1,7 @@
 """Tankerkoenig-Adapter ``fetch_fuel_prices`` (DATA-30, Live, Tier A).
 
-Aktuelle Spritpreise je Stadt aus der offenen Tankerkoenig-API (MTS-K-Daten der
-Markttransparenzstelle fuer Kraftstoffe), aggregiert von einzelnen Tankstellen
+Aktuelle Spritpreise je Stadt aus der offenen Tankerkönig-API (MTS-K-Daten der
+Markttransparenzstelle für Kraftstoffe), aggregiert von einzelnen Tankstellen
 auf eine Stadt-Kennzahl (Durchschnitts- und Minimal-Preis je Sorte im Umkreis):
 
 - GET ``/json/list.php?lat&lng&rad&sort=dist&type=all&apikey=<key>`` liefert je
@@ -10,11 +10,11 @@ auf eine Stadt-Kennzahl (Durchschnitts- und Minimal-Preis je Sorte im Umkreis):
   Stadtkoordinate stammt aus dem Register (lat/lng), der Key kommt als Parameter
   (NIE in Cache-Key/Response/Log).
 
-Rueckgabe ist das raw-dict, das ``map_fuel_prices`` erwartet: ``slug``,
+Rückgabe ist das raw-dict, das ``map_fuel_prices`` erwartet: ``slug``,
 ``radius_km``, ``station_count`` (alle Tankstellen im Radius), ``open_count``
-(davon geoeffnet), die Aggregate ``avg_e5``/``avg_e10``/``avg_diesel`` und
-``min_e5``/``min_e10``/``min_diesel`` (nur ueber geoeffnete Tankstellen mit
-gueltigem Preis) sowie ``stations`` (je Tankstelle ein schlankes dict). Der
+(davon geöffnet), die Aggregate ``avg_e5``/``avg_e10``/``avg_diesel`` und
+``min_e5``/``min_e10``/``min_diesel`` (nur über geöffnete Tankstellen mit
+gültigem Preis) sowie ``stations`` (je Tankstelle ein schlankes dict). Der
 Adapter baut KEINEN ``CanonicalRecord`` und kennt KEIN Cache/Breaker (das liefert
 die Resilienz-Fassade). ``resp.raise_for_status()`` ist Pflicht (5xx -> Fassade
 STALE-ON-ERROR).
@@ -22,10 +22,10 @@ STALE-ON-ERROR).
 Lizenz: CC BY 4.0 (creativecommons.tankerkoenig.de) = Tier A.
 
 Sicherheit:
-- T-05-08 (SSRF): Der Host ist in ``_BASE`` hartkodiert; es fliessen nur die
+- T-05-08 (SSRF): Der Host ist in ``_BASE`` hartkodiert; es fließen nur die
   validierten Register-Koordinaten + der feste Radius in die Query.
 - T-08-CRED: Der Key geht NUR in den Query-Parameter ``apikey``, nie in
-  Rueckgabe/Log; der Cache-Key (Route) traegt ihn nicht.
+  Rueckgabe/Log; der Cache-Key (Route) trägt ihn nicht.
 """
 
 from __future__ import annotations
@@ -34,16 +34,16 @@ import httpx
 
 # Host hartkodiert (SSRF-Schutz, T-05-08).
 _BASE = "https://creativecommons.tankerkoenig.de/json"
-# Umkreis um die Stadtkoordinate (km). Tankerkoenig erlaubt max. 25; 5 km deckt
-# das Stadtgebiet der grossen Staedte mit ausreichend Tankstellen ab.
+# Umkreis um die Stadtkoordinate (km). Tankerkönig erlaubt max. 25; 5 km deckt
+# das Stadtgebiet der großen Städte mit ausreichend Tankstellen ab.
 _RADIUS_KM = 5.0
 _FUELS = ("e5", "e10", "diesel")
 
 
 def _price(value: object) -> float | None:
-    """Gibt einen positiven Preis als float zurueck, sonst None (rein).
+    """Gibt einen positiven Preis als float zurück, sonst None (rein).
 
-    Tankerkoenig liefert fehlende Preise als ``false`` oder ``0`` -> None.
+    Tankerkönig liefert fehlende Preise als ``false`` oder ``0`` -> None.
     """
     if isinstance(value, bool):  # ``True``/``False`` ist kein Preis (bool < int!).
         return None
@@ -53,7 +53,7 @@ def _price(value: object) -> float | None:
 
 
 def _station(rec: dict) -> dict:
-    """Bildet ein Tankerkoenig-Record auf ein schlankes station-dict ab (rein)."""
+    """Bildet ein Tankerkönig-Record auf ein schlankes station-dict ab (rein)."""
     return {
         "station_id": rec.get("id"),
         "name": rec.get("name"),
@@ -67,10 +67,10 @@ def _station(rec: dict) -> dict:
 
 
 def _aggregate(stations: list[dict], fuel: str) -> tuple[float | None, float | None]:
-    """Durchschnitt und Minimum eines Kraftstoffpreises ueber offene Stationen (rein).
+    """Durchschnitt und Minimum eines Kraftstoffpreises über offene Stationen (rein).
 
-    Beruecksichtigt nur geoeffnete Tankstellen mit gueltigem Preis (geschlossene
-    fuehren oft veraltete/leere Preise). Keine gueltigen Preise -> (None, None).
+    Berücksichtigt nur geöffnete Tankstellen mit gültigem Preis (geschlossene
+    führen oft veraltete/leere Preise). Keine gültigen Preise -> (None, None).
     """
     prices = [s[fuel] for s in stations if s["is_open"] and s[fuel] is not None]
     if not prices:
@@ -83,7 +83,7 @@ async def fetch_fuel_prices(
 ) -> dict:
     """Holt die Live-Spritpreise im Umkreis der Stadt und aggregiert sie.
 
-    Rueckgabe-Keys (exakt das, was ``map_fuel_prices`` erwartet): ``slug``,
+    Rückgabe-Keys (exakt das, was ``map_fuel_prices`` erwartet): ``slug``,
     ``radius_km``, ``station_count``, ``open_count``, ``avg_e5``/``avg_e10``/
     ``avg_diesel``, ``min_e5``/``min_e10``/``min_diesel`` und ``stations`` (Liste
     schlanker dicts). Keine Tankstelle im Radius -> alle Aggregate None,

@@ -8,13 +8,13 @@ from . import cities, compare, dcat, health, live, openapi, sources, stations, t
 
 api_v1 = APIRouter(prefix="/api/v1")
 api_v1.include_router(health.router, tags=["meta"])
-# Cache-freier Erstkontakt-Beacon (/api/v1/track): loest note_first_seen aus, auch
+# Cache-freier Erstkontakt-Beacon (/api/v1/track): löst note_first_seen aus, auch
 # wenn die Daten-Endpunkte edge-gecacht sind (HIT erreicht das Origin nicht).
 api_v1.include_router(track.router, tags=["meta"])
 api_v1.include_router(cities.router, tags=["cities"])
 api_v1.include_router(sources.router, tags=["meta"])
 api_v1.include_router(openapi.router, tags=["meta"])
-# EU-Hebel: DCAT-AP-Katalog (JSON-LD) fuer data.europa.eu/GovData-Harvesting.
+# EU-Hebel: DCAT-AP-Katalog (JSON-LD) für data.europa.eu/GovData-Harvesting.
 api_v1.include_router(dcat.router, tags=["meta"])
 api_v1.include_router(compare.router, tags=["compare"])
 # Phase 20: getrennte Live-Kategorie (LIVE-01/02/03). Eigener Namespace /live +

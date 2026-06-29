@@ -1,12 +1,12 @@
-"""Reiner BNetzA-Ladesaeulen-Mapper map_charging (DATA-09, GOV-01/03, Tier A).
+"""Reiner BNetzA-Ladesäulen-Mapper map_charging (DATA-09, GOV-01/03, Tier A).
 
-Uebersetzt das flache Adapter-dict (``slug``/``count``/``stations``)
+Übersetzt das flache Adapter-dict (``slug``/``count``/``stations``)
 deterministisch in einen ``CanonicalRecord`` mit ``ChargingStationPayload``. Die
 Funktion ist rein: kein HTTP, kein Logging, kein ``datetime.now()``. Der
 ``retrieved_at``-Zeitstempel wird keyword-only injiziert, damit Tests
 deterministisch bleiben.
 
-Das BNetzA-Ladesaeulenregister ist unter CC-BY 4.0 verfuegbar:
+Das BNetzA-Ladesäulenregister ist unter CC-BY 4.0 verfuegbar:
 ``license_id=CC_BY_4_0``, ``license_tier=A`` (kennzeichnet die permissive Lizenz
 zur korrekten Attribution und Weiternutzung) und die wortgenaue Attribution
 "Bundesnetzagentur.de" (Mapper-Test asserted sie, T-07-LIC). Die Einzel-Stationen
@@ -37,7 +37,7 @@ def map_charging(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet rohe BNetzA-Ladesaeulen-Daten auf einen ``CanonicalRecord`` (Tier A) ab.
+    """Bildet rohe BNetzA-Ladesäulen-Daten auf einen ``CanonicalRecord`` (Tier A) ab.
 
     ``count`` und ``stations`` landen im ``ChargingStationPayload``; die
     Einzel-Stationen tragen ihre Koordinaten selbst, daher ``geo=None``. Der

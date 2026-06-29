@@ -1,11 +1,11 @@
 """Reiner DWD/Bright-Sky-Wetter-Mapper map_weather (DATA-03, GOV-03).
 
-Uebersetzt das flache Bright-Sky-raw-dict deterministisch in einen
+Übersetzt das flache Bright-Sky-raw-dict deterministisch in einen
 ``CanonicalRecord`` mit ``WeatherPayload``. Die Funktion ist rein: kein HTTP,
 kein Logging, kein ``datetime.now()``. Der ``retrieved_at``-Zeitstempel wird
 keyword-only injiziert, damit Tests deterministisch bleiben.
 
-KRITISCH (GOV-03, Pitfall 3): DWD-Daten sind aufbereitet, daher traegt die
+KRITISCH (GOV-03, Pitfall 3): DWD-Daten sind aufbereitet, daher trägt die
 Attribution ``modified=True`` und den wortgenauen GeoNutzV-Hinweis
 "Datenbasis: Deutscher Wetterdienst, eigene Elemente ergänzt". Lizenz und Tier
 sind hartkodiert (GeoNutzV, Tier A: permissiv lizenziert).
@@ -45,7 +45,7 @@ def map_weather(
     Join-Keys ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht
     (Default ``None``); ``WeatherPayload.station_id`` wird aus
     ``raw["dwd_station_id"]`` (echte DWD-Mess-Stations-ID) gesetzt und dient als
-    fachlicher Schluessel fuer ``record_id`` (ARCH-02).
+    fachlicher Schlüssel für ``record_id`` (ARCH-02).
     """
     return CanonicalRecord(
         city_slug=raw["slug"],

@@ -59,5 +59,6 @@ def map_dwd_warnings(
             count=raw.get("count", 0),
             max_level=raw.get("max_level"),
             warnings=raw.get("warnings") or [],
+            special_warnings=raw.get("special_warnings") or [],
         ),
     )

@@ -1,15 +1,15 @@
 """Keyloser Mobilithek-DATEX-II-V3-Parking-Adapter (Frankfurt am Main).
 
 Frankfurt liefert seine Parkdaten als DATEX-II **V3** im **XML**-Profil
-(Namespace ``http://datex2.eu/schema/3/parking``) ueber den Mobilithek-mTLS-Pull
+(Namespace ``http://datex2.eu/schema/3/parking``) über den Mobilithek-mTLS-Pull
 (``infra/mobilithek.py``). Das ist die einzige DATEX-II-V3-**XML**-Quelle:
 ``adapters/mobilithek_afir`` ist V3 als JSON, ``adapters/mobilithek_datex2`` ist
 V2 als XML. Der V2-Parser greift bei einem V3-Body NICHT (anderes Status-Element
 ``parkingRecordStatus`` statt ``parkingStatus``, verschachteltes
-``parkingOccupancy``), daher ein eigener V3-Parser. Die DoS/XXE-Haertung
+``parkingOccupancy``), daher ein eigener V3-Parser. Die DoS/XXE-Härtung
 (``_guard``: Pre-Parse-Guard + Size-Cap) wird aus dem V2-Adapter wiederverwendet.
 
-Zwei Abos, im Adapter gejoint (ein nuetzlicher Datensatz):
+Zwei Abos, im Adapter gejoint (ein nützlicher Datensatz):
 - **dynamisch** (``ParkingSiteStatus``): je ``parkingRecordStatus`` die
   Belegung -- ``free`` (parkingNumberOfVacantSpaces), ``occupancy`` (Prozent),
   ``occupancy_graded``, ``observed_at`` (parkingStatusOriginTime) + die
@@ -18,17 +18,17 @@ Zwei Abos, im Adapter gejoint (ein nuetzlicher Datensatz):
   ``name`` (parkingName), ``capacity`` (parkingNumberOfSpaces),
   ``lat``/``lon`` (parkingLocation/pointCoordinates).
 
-Der Join ueber die ``parkingRecord``-ID reichert die dynamische Belegung um
+Der Join über die ``parkingRecord``-ID reichert die dynamische Belegung um
 Name/Geo/Kapazitaet an; der dynamische Feed ist der Treiber (liefert die
 Belegung), das statische Pendant nur Anreicherung.
 
-REALITAET (Pull-Test 2026-06-22, Box): der vom Portal angezeigte
+REALITÄT (Pull-Test 2026-06-22, Box): der vom Portal angezeigte
 ``soap/datexv3``-Endpoint gibt bei GET HTTP 405 (SOAP braucht POST); der
 ``container``-Zugriffspunkt (``build_pull_url(..., style="container")``) liefert
 das reine DATEX-II-V3-XML mit HTTP 200. ``Accept-Encoding: gzip`` ist PFLICHT
 (im mTLS-Client gesetzt).
 
-Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
+Der Adapter ist rein gegenüber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` (das macht der Mapper), kennt KEIN Cache/Breaker (das liefert
 die Fassade) und schreibt KEIN Archiv.
 """
@@ -47,14 +47,14 @@ _NS_V3_PARKING = "{http://datex2.eu/schema/3/parking}"
 
 # Dynamisch: Belegungs-Status je Parkplatz (verifiziert 2026-06-22).
 _STATUS_TAG = "parkingRecordStatus"
-_STATUS_REF_TAG = "parkingRecordReference"  # traegt das id-Attribut (Join-Key)
+_STATUS_REF_TAG = "parkingRecordReference"  # trägt das id-Attribut (Join-Key)
 _STATUS_ORIGIN_TAG = "parkingStatusOriginTime"
 _STATUS_VACANT_TAG = "parkingNumberOfVacantSpaces"
 _STATUS_OCCUPANCY_TAG = "parkingOccupancy"  # ACHTUNG: Container UND Prozentwert
 _STATUS_GRADED_TAG = "parkingOccupancyGraded"
 
 # Statisch: Stammdaten je Parkplatz (verifiziert 2026-06-22).
-_RECORD_TAG = "parkingRecord"  # traegt das id-Attribut (Join-Key)
+_RECORD_TAG = "parkingRecord"  # trägt das id-Attribut (Join-Key)
 _RECORD_NAME_TAG = "parkingName"
 _RECORD_CAPACITY_TAG = "parkingNumberOfSpaces"
 _RECORD_LOCATION_TAG = "parkingLocation"
@@ -87,10 +87,10 @@ def _extract_parking_status(status) -> dict | None:
     ``facility_id`` aus dem ``id``-Attribut der ``parkingRecordReference``.
     Belegung NS-robust: ``free`` (``parkingNumberOfVacantSpaces``, int),
     ``occupancy`` (Prozent, float -- der ``parkingOccupancy`` MIT Textwert; das
-    gleichnamige Container-Element traegt keinen direkten Text und wird daher
-    uebersprungen), ``occupancy_graded`` (str), ``observed_at``
+    gleichnamige Container-Element trägt keinen direkten Text und wird daher
+    übersprungen), ``occupancy_graded`` (str), ``observed_at``
     (``parkingStatusOriginTime``). Felder optional; ein komplett leeres Element
-    -> ``None`` (Datenfehler faellt aus, statt 500). Ein einzelner unparsebarer
+    -> ``None`` (Datenfehler fällt aus, statt 500). Ein einzelner unparsebarer
     Wert verwirft nur diesen Wert.
     """
     facility_id: str | None = None
@@ -107,7 +107,7 @@ def _extract_parking_status(status) -> dict | None:
         text = (node.text or "").strip()
         if not text:
             # Das Container-``parkingOccupancy`` hat keinen direkten Text -> hier
-            # uebersprungen; nur der innere Prozentwert traegt Text.
+            # übersprungen; nur der innere Prozentwert trägt Text.
             continue
         try:
             if local == _STATUS_VACANT_TAG:
@@ -143,7 +143,7 @@ def _extract_parking_site(record) -> dict | None:
     ``facility_id`` aus dem ``id``-Attribut. ``name`` aus dem ersten ``value``
     unter ``parkingName`` (gezielt, NICHT der erste ``value`` im ganzen Record --
     parkingAlias/parkingDescription tragen ebenfalls ``value``). ``capacity`` aus
-    dem ersten ``parkingNumberOfSpaces`` (Gesamtkapazitaet auf Record-Ebene).
+    dem ersten ``parkingNumberOfSpaces`` (Gesamtkapazität auf Record-Ebene).
     ``lat``/``lon`` gezielt aus ``parkingLocation`` (NICHT aus parkingAccess-
     Zufahrten, die eigene Koordinaten tragen). Felder optional; ein Record ohne
     jede verwertbare Angabe -> ``None``.
@@ -195,8 +195,8 @@ def parse_parking_status_v3(xml_bytes: bytes, *, slug: str) -> dict:
 
     Sucht je ``parkingRecordStatus`` die Belegung (siehe
     ``_extract_parking_status``). Reiner, synchroner Parse (testbar ohne Netz).
-    Haertung: ``_guard`` (Pre-Parse-Guard + Size-Cap, T-20-XXE) laeuft VOR
-    ``iterparse``; ``elem.clear()`` haelt den Speicher konstant.
+    Haertung: ``_guard`` (Pre-Parse-Guard + Size-Cap, T-20-XXE) läuft VOR
+    ``iterparse``; ``elem.clear()`` hält den Speicher konstant.
 
     Rueckgabe: ``{"slug": slug, "facilities": [...], "as_of": <publicationTime>}``.
     """
@@ -225,8 +225,8 @@ def parse_parking_static_v3(xml_bytes: bytes, *, slug: str) -> dict:
     """Parst eine DATEX-II-V3-Parking-Stammdaten-Publication (statisch).
 
     Sucht je ``parkingRecord`` die Stammdaten (siehe ``_extract_parking_site``)
-    und gibt sie als dict ``{facility_id: site}`` fuer den Join zurueck. Reiner,
-    synchroner Parse. Haertung identisch (``_guard`` vor ``iterparse``,
+    und gibt sie als dict ``{facility_id: site}`` für den Join zurück. Reiner,
+    synchroner Parse. Härtung identisch (``_guard`` vor ``iterparse``,
     ``elem.clear()``).
 
     Rueckgabe: ``{"slug": slug, "sites": {facility_id: {...}}}``.
@@ -262,12 +262,12 @@ def _publication_time(xml_bytes: bytes) -> str | None:
 
 
 def _join(status: dict, static: dict) -> list[dict]:
-    """Joint dynamische Belegung mit statischen Stammdaten ueber die facility_id.
+    """Joint dynamische Belegung mit statischen Stammdaten über die facility_id.
 
     Der dynamische Feed ist der Treiber (liefert die Belegung); jedes facility
     wird um ``name``/``lat``/``lon``/``capacity`` aus dem statischen Pendant
     angereichert (falls vorhanden). Dynamische Werte haben Vorrang bei
-    Schluessel-Kollision (es gibt keine).
+    Schlüssel-Kollision (es gibt keine).
     """
     sites: dict = static.get("sites", {})
     merged: list[dict] = []
@@ -290,18 +290,18 @@ async def fetch_frankfurt_parking(
 
     Live-Pfad (untrusted): baut die Pull-URLs aus den Allowlist-Abo-IDs mit der
     ``container``-Variante (``build_pull_url(..., style="container")``; Host
-    hartkodiert -> SSRF-Invariante), pullt ueber den mTLS-Client
+    hartkodiert -> SSRF-Invariante), pullt über den mTLS-Client
     (``pull_subscription``) und parst beide V3-XML-Antworten. Das statische Abo
     ist optional: fehlt es (oder liefert es nichts), wird die dynamische Belegung
-    ohne Stammdaten zurueckgegeben (ehrliche Degradation, kein Fehler).
+    ohne Stammdaten zurückgegeben (ehrliche Degradation, kein Fehler).
 
     HTTP 422 (Abo aktiv, kein Datenpaket) und ein vom Guard/Size-Cap abgelehnter
     Body (``ValueError``) liefern ein ehrliches leeres Ergebnis (no_data, kein
     ``raise``). 5xx/Netzfehler des dynamischen Pulls schlagen via
     ``pull_subscription`` durch an die resiliente Fassade (STALE-ON-ERROR).
 
-    Rueckgabe (exakt was der Mapper erwartet): ``{"slug", "facilities": [...],
-    "as_of"}``; jedes facility traegt facility_id + free/occupancy/
+    Rückgabe (exakt was der Mapper erwartet): ``{"slug", "facilities": [...],
+    "as_of"}``; jedes facility trägt facility_id + free/occupancy/
     occupancy_graded/observed_at (dynamisch) + name/lat/lon/capacity (statisch).
     """
     dyn_url = build_pull_url(abo_id, style="container")

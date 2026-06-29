@@ -7,24 +7,24 @@ Zwei Bausteine je Bahnhof (EVA-Nummer), gemerged:
 - ``/plan/{evaNo}/{YYMMDD}/{HH}``: der Sollfahrplan EINER Stunde (LOKALE Zeit
   Europe/Berlin!) als XML ``<timetable><s id><tl c n f/><dp pt pp ppth l fb/></s>``.
 - ``/fchg/{evaNo}``: die aktuellen Abweichungen (Echtzeit) als XML, je ``<s id>``
-  ein geaendertes ``<dp ct cp cs/>`` (ct=geaenderte Zeit, cp=geaendertes Gleis,
-  cs="c"=Ausfall). Gematcht wird ueber die Stop-``id``.
+  ein geändertes ``<dp ct cp cs/>`` (ct=geaenderte Zeit, cp=geaendertes Gleis,
+  cs="c"=Ausfall). Gematcht wird über die Stop-``id``.
 
-Aggregiert ueber die aufgeloesten EVAs einer Stadt (kuratierte Override-Liste
+Aggregiert über die aufgelösten EVAs einer Stadt (kuratierte Override-Liste
 oder aus dem StaDa-Katalog abgeleitet; Berlin Hbf hat z.B. zwei Ebenen mit eigenen
-EVAs), dedupliziert je Stop-``id``, berechnet die Verspaetung und liefert die
-naechsten Abfahrten zeitsortiert.
+EVAs), dedupliziert je Stop-``id``, berechnet die Verspätung und liefert die
+nächsten Abfahrten zeitsortiert.
 
 Sicherheit:
 - T-05-08 (SSRF): Host hartkodiert; nur kuratierte ODER aus dem StaDa-Katalog
   abgeleitete EVAs (cities._resolve_city_station_evas, NIE roher User-Input)
-  fliessen in die URL.
+  fließen in die URL.
 - T-08-CRED: Client-Id/Api-Key gehen NUR in die Request-Header, nie in
   Cache-Key/Response/Log.
 - T-9-01 (untrusted Live-XML): Pre-Parse-Guard gegen DOCTYPE/ENTITY + Size-Cap VOR
   dem stdlib-Parse (kein XXE/Billion-Laughs). KEINE neue XML-Dependency.
 
-Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
+Der Adapter ist rein gegenüber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` und kennt KEIN Cache/Breaker (Resilienz-Fassade).
 ``raise_for_status`` ist Pflicht (5xx -> STALE-ON-ERROR).
 """
@@ -41,7 +41,7 @@ import httpx
 _BASE = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1"
 # DB-Timetables /plan ist nach LOKALER Stunde indiziert (Bahnhofszeit).
 _TZ = ZoneInfo("Europe/Berlin")
-# Size-Cap (T-9-01): ein Stundenfahrplan ist klein; alles ueber dem Cap wird nicht
+# Size-Cap (T-9-01): ein Stundenfahrplan ist klein; alles über dem Cap wird nicht
 # geparst (DoS-Schutz beim untrusted Live-XML).
 _MAX_BYTES = 8 * 1024 * 1024
 
@@ -73,9 +73,9 @@ def _parse_dt(value: str | None) -> datetime | None:
 
 
 def _parse_messages(elem) -> list[dict]:
-    """Liest die ``<m>``-Stoerungs-/Hinweismeldungen unter ``elem`` (rein).
+    """Liest die ``<m>``-Störungs-/Hinweismeldungen unter ``elem`` (rein).
 
-    DB-Timetables traegt Stoerungen, Verspaetungsgruende und Hinweise als ``<m>``-
+    DB-Timetables trägt Störungen, Verspätungsgründe und Hinweise als ``<m>``-
     Elemente (Attribute: ``t`` Typ [h=HIM/Stoerung, q=Qualitaet/Grund], ``c`` Code,
     ``cat`` Kategorietext, ``ts`` Zeitstempel ``YYMMDDHHmm``). Je Meldung ein
     schlankes dict; leere Liste, wenn keine vorhanden. ``elem`` kann ``None`` sein.
@@ -114,16 +114,16 @@ def _parse_board(
     path_index: int,
     station: str | None = None,
 ) -> list[dict]:
-    """Liest ``<s>``-Stops eines /plan-Baums fuer Abfahrt (``dp``)/Ankunft (``ar``).
+    """Liest ``<s>``-Stops eines /plan-Baums für Abfahrt (``dp``)/Ankunft (``ar``).
 
-    ``tag`` waehlt das Ereignis (``dp``/``ar``); ``place_key`` ist der Ortsname im
+    ``tag`` wählt das Ereignis (``dp``/``ar``); ``place_key`` ist der Ortsname im
     Ergebnis (``destination`` bei Abfahrt, ``origin`` bei Ankunft); ``path_index``
-    waehlt das Glied im ``ppth`` (-1 = Ziel/letztes Glied, 0 = Ursprung/erstes).
+    wählt das Glied im ``ppth`` (-1 = Ziel/letztes Glied, 0 = Ursprung/erstes).
     ``station`` ist der Bahnhofsname (aus dem ``<timetable station=...>``-Wurzel-
-    attribut), der je Eintrag mitgefuehrt wird - so unterscheidet eine Metropolen-
-    Tafel die mehreren Grossbahnhoefe (z.B. Hamburg Hbf/Dammtor/Harburg/Altona).
-    Wendet die /fchg-Aenderungen (ct/cp/cs) je Stop-``id`` an. Stops ohne das
-    gewaehlte Ereignis (z.B. Endbahnhof ohne Abfahrt) werden uebersprungen.
+    attribut), der je Eintrag mitgeführt wird - so unterscheidet eine Metropolen-
+    Tafel die mehreren Großbahnhöfe (z.B. Hamburg Hbf/Dammtor/Harburg/Altona).
+    Wendet die /fchg-Änderungen (ct/cp/cs) je Stop-``id`` an. Stops ohne das
+    gewählte Ereignis (z.B. Endbahnhof ohne Abfahrt) werden übersprungen.
     """
     out: list[dict] = []
     for s in root.findall("s"):
@@ -143,7 +143,7 @@ def _parse_board(
         delay_minutes: int | None = None
         cancelled = False
         # Stoerungen/Meldungen aus Soll (Stop + Ereignis) lesen; Echtzeit-
-        # Meldungen aus /fchg kommen unten ueber den change-Eintrag dazu.
+        # Meldungen aus /fchg kommen unten über den change-Eintrag dazu.
         messages = _parse_messages(s) + _parse_messages(ev)
         change = changes.get(sid) if sid else None
         if change is not None:
@@ -176,11 +176,11 @@ def _parse_board(
 
 
 def _parse_changes(root, *, tag: str) -> dict[str, dict]:
-    """Baut aus /fchg die Stop-``id`` -> Aenderung-Map fuer ``tag`` (rein).
+    """Baut aus /fchg die Stop-``id`` -> Änderung-Map für ``tag`` (rein).
 
-    Enthaelt neben Zeit/Gleis/Ausfall (ct/cp/cs) auch die Echtzeit-Stoerungs-/
+    Enthält neben Zeit/Gleis/Ausfall (ct/cp/cs) auch die Echtzeit-Störungs-/
     Hinweismeldungen (``<m>`` unter Stop und Ereignis), die im Board je Eintrag
-    mit den Soll-Meldungen zusammengefuehrt werden.
+    mit den Soll-Meldungen zusammengeführt werden.
     """
     changes: dict[str, dict] = {}
     for s in root.findall("s"):
@@ -223,9 +223,9 @@ async def _fetch_board(
     """Holt + merged eine Live-Tafel (Abfahrt ``dp`` oder Ankunft ``ar``) der EVAs.
 
     Je EVA werden ``horizon_hours`` Sollfahrplan-Stunden (ab der aktuellen LOKALEN
-    Stunde Europe/Berlin) plus die aktuellen Aenderungen (/fchg) geholt + gemerged,
-    dedupliziert ueber die Stop-``id``, nach (geplanter) Zeit sortiert, auf
-    ``limit`` gekuerzt. Rueckgabe: ``{"slug": slug, result_key: [...]}``. Leere Tafel
+    Stunde Europe/Berlin) plus die aktuellen Änderungen (/fchg) geholt + gemerged,
+    dedupliziert über die Stop-``id``, nach (geplanter) Zeit sortiert, auf
+    ``limit`` gekürzt. Rueckgabe: ``{"slug": slug, result_key: [...]}``. Leere Tafel
     -> leere Liste (-> Route mappt no_data). ``raise_for_status`` Pflicht (Fassade).
     """
     headers = {
@@ -280,7 +280,7 @@ async def fetch_station_departures(
 ) -> dict:
     """Live-Abfahrtstafel (``<dp>``, ``destination`` = letztes ppth-Glied).
 
-    Rueckgabe-Keys (exakt was ``map_station_departures`` erwartet): ``slug``,
+    Rückgabe-Keys (exakt was ``map_station_departures`` erwartet): ``slug``,
     ``departures``.
     """
     return await _fetch_board(
@@ -312,7 +312,7 @@ async def fetch_station_arrivals(
 ) -> dict:
     """Live-Ankunftstafel (``<ar>``, ``origin`` = erstes ppth-Glied).
 
-    Rueckgabe-Keys (exakt was ``map_station_arrivals`` erwartet): ``slug``,
+    Rückgabe-Keys (exakt was ``map_station_arrivals`` erwartet): ``slug``,
     ``arrivals``.
     """
     return await _fetch_board(

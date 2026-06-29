@@ -1,23 +1,23 @@
-"""Reine Koeln-Mobilithek-Mapper (LIVE-06/07, Tier A DL-DE/Zero, Phase 20).
+"""Reine Köln-Mobilithek-Mapper (LIVE-06/07, Tier A DL-DE/Zero, Phase 20).
 
-Uebersetzt die rohen Adapter-dicts aus ``adapters/mobilithek_datex2.py``
+Übersetzt die rohen Adapter-dicts aus ``adapters/mobilithek_datex2.py``
 deterministisch in einen ``CanonicalRecord``:
-- ``map_koeln_traffic_flow``: ``measurements`` (Koeln Verkehrslage dynamisch,
+- ``map_koeln_traffic_flow``: ``measurements`` (Köln Verkehrslage dynamisch,
   MeasuredDataPublication) -> ``TrafficFlowPayload`` (LIVE-06).
-- ``map_koeln_road_events``: ``events`` (Koeln Baustellen/Ereignisse,
+- ``map_koeln_road_events``: ``events`` (Köln Baustellen/Ereignisse,
   SituationPublication) -> ``RoadEventPayload`` (LIVE-07).
 
 Schablone ist ``mappers/mobidata_bw.py`` (exakt): rein (kein HTTP, kein XML-Parse,
 keine Systemuhr), ``retrieved_at`` keyword-only injiziert (deterministisch). Die
-Koeln-Feeds stehen unter der Datenlizenz Deutschland Zero 2.0 (verifiziert
-2026-06-26: Koeln stellt seine Verkehrs-/Umweltzonen-Daten auf
-offenedaten-koeln.de durchgaengig unter DL-DE/Zero bereit, z.B.
+Köln-Feeds stehen unter der Datenlizenz Deutschland Zero 2.0 (verifiziert
+2026-06-26: Köln stellt seine Verkehrs-/Umweltzonen-Daten auf
+offenedaten-koeln.de durchgängig unter DL-DE/Zero bereit, z.B.
 "Verkehrsbeeintraechtigungen Stadt Koeln" und "Umweltzone Koeln"):
 ``license_id=DL_DE_ZERO_2_0``, ``license_tier=A`` (permissiv, KEINE
 Namensnennungspflicht). Attribution "Stadt Köln" bleibt informativ erhalten
 (wortgenau wie SOURCE_LICENSE / DATA-LICENSES.md).
 
-Reine Live-Daten -> ``geo=None`` (der dynamische Feed traegt nur ID-Referenzen
+Reine Live-Daten -> ``geo=None`` (der dynamische Feed trägt nur ID-Referenzen
 bzw. Geo je Event); ``observed_at`` aus der DATEX-II ``publicationTime`` (``as_of``)
 falls vorhanden, sonst ``None`` (ehrlich, keine Systemuhr).
 """
@@ -62,10 +62,10 @@ def map_koeln_traffic_flow(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet die Koeln-Verkehrslage (measured) auf einen ``CanonicalRecord`` ab.
+    """Bildet die Köln-Verkehrslage (measured) auf einen ``CanonicalRecord`` ab.
 
     Die ``measurements`` (je Messpunkt station_id + speed/flow, LIVE-06) wandern
-    in den ``TrafficFlowPayload``. ``station_id`` traegt die erste Messpunkt-ID
+    in den ``TrafficFlowPayload``. ``station_id`` trägt die erste Messpunkt-ID
     (oder None). ``observed_at`` aus der DATEX-II ``publicationTime`` (``as_of``)
     falls vorhanden. ``retrieved_at`` injiziert (keine Systemuhr im Mapper).
     """
@@ -100,10 +100,10 @@ def map_koeln_road_events(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet Koeln-Baustellen/Ereignisse (situation) auf einen ``CanonicalRecord`` ab.
+    """Bildet Köln-Baustellen/Ereignisse (situation) auf einen ``CanonicalRecord`` ab.
 
     Die ``events`` (Baustellen/Ereignisse, LIVE-07) wandern in den
-    ``RoadEventPayload`` (``city_source="koeln"``). ``source`` waehlt die
+    ``RoadEventPayload`` (``city_source="koeln"``). ``source`` wählt die
     SourceId je Route (Baustellen vs. Ereignisse, Default
     ``KOELN_BAUSTELLEN_LIVE``). ``observed_at`` aus der DATEX-II
     ``publicationTime`` (``as_of``) falls vorhanden. ``retrieved_at`` injiziert

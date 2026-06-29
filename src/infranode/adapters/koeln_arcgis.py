@@ -1,6 +1,6 @@
-"""Keyloser Koeln-Verkehrs-Adapter fetch_koeln_road_events (DATA-15, Tier A).
+"""Keyloser Köln-Verkehrs-Adapter fetch_koeln_road_events (DATA-15, Tier A).
 
-Die Stadt Koeln stellt Baustellen/Verkehrsbeeintraechtigungen ueber einen
+Die Stadt Köln stellt Baustellen/Verkehrsbeeintraechtigungen über einen
 ArcGIS-REST-Endpunkt (Verkehrskalender, MapServer) bereit. Der alte CKAN-Pfad
 ist seit der Drupal-10-Migration tot (404); deshalb wird hier 1:1 die in Phase 7
 erprobte BNetzA-ArcGIS-Blaupause gespiegelt (Plan 09-02, Decision 2). Der Adapter
@@ -8,13 +8,13 @@ fragt eine Envelope-Geometry (Bounding-Box) um den Register-Geo (``lat``/``lon``
 der Stadt ab und reduziert die ``features`` auf eine schlanke Event-Liste.
 
 Layer [VERIFIED 2026-06-10] per Live-Probe gegen den MapServer:
-Layer 0 "Standort" (Punkt) und Layer 2 "Bereich" (Flaeche) tragen das
+Layer 0 "Standort" (Punkt) und Layer 2 "Bereich" (Fläche) tragen das
 Baustellen-Schema (``name``/``typ``/``datum_von``/``datum_bis``/``beschreibung``)
-und werden beide abgefragt (additiv zusammengefuehrt). Layer 1 "Strecke" ist
+und werden beide abgefragt (additiv zusammengeführt). Layer 1 "Strecke" ist
 live verifiziert KEIN Baustellen-Layer (Schema ``identifier``/``auslastung``/
 ``tendenz`` = Verkehrslage-Strecken ohne Datumsfelder) und wird bewusst NICHT
-abgefragt. TODO: erneut pruefen, falls die Stadt Koeln einen echten
-Linien-Baustellen-Layer ergaenzt.
+abgefragt. TODO: erneut prüfen, falls die Stadt Köln einen echten
+Linien-Baustellen-Layer ergänzt.
 
 Felder [VERIFIED 2026-06-10] per Live-Probe: ``objectid``, ``name``,
 ``datum_von``, ``datum_bis``, ``link``, ``typ``, ``anzeige``, ``beschreibung``.
@@ -24,7 +24,7 @@ werden defensiv nach ISO-8601 (UTC) konvertiert. Das Service-CRS ist UTM, daher
 wird ``outSR=4326`` mitgesendet; dann ist ``geometry.x``=lon, ``geometry.y``=lat.
 
 Sicherheit (T-9-02 SSRF): Der Host ist in ``_BASE`` hartkodiert; die Geometry
-wird ausschliesslich aus (``lat``/``lon``) gebaut, nie aus einem User-Host. Der
+wird ausschließlich aus (``lat``/``lon``) gebaut, nie aus einem User-Host. Der
 Slug stammt aus dem Register-Allowlist (Route), nie roher User-Input.
 
 DoS-Schutz (T-9-DOS): enge Bounding-Box (``delta=0.15``) plus
@@ -33,13 +33,13 @@ Breaker liefert die Resilienz-Fassade.
 
 Datenfehler-Schutz (T-9-02 / Phase-7/8-Konvention): Der Adapter liest jedes Feld
 defensiv per ``.get(...)`` mit None-Fallback, daher kein ``KeyError`` bei einem
-fehlenden oder anders benannten Feld; die Epoch-ms-Konvertierung faengt
+fehlenden oder anders benannten Feld; die Epoch-ms-Konvertierung fängt
 None/0/Unsinn ab.
 
-Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
+Der Adapter ist rein gegenüber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` (das macht der Mapper in der Route) und kennt KEIN
 Cache/Breaker (das liefert die Fassade). ``resp.raise_for_status()`` ist Pflicht,
-damit ein 5xx als ``httpx.HTTPError`` an die Fassade durchschlaegt und der
+damit ein 5xx als ``httpx.HTTPError`` an die Fassade durchschlägt und der
 STALE-ON-ERROR-Pfad greift.
 """
 
@@ -50,13 +50,13 @@ from datetime import UTC, datetime
 
 import httpx
 
-# [VERIFIED 2026-06-10] Layer 0 "Standort" (Punkt) + Layer 2 "Bereich" (Flaeche)
+# [VERIFIED 2026-06-10] Layer 0 "Standort" (Punkt) + Layer 2 "Bereich" (Fläche)
 # tragen das Baustellen-Schema; Layer 1 "Strecke" ist ein Verkehrslage-Layer
-# (auslastung/tendenz, keine Datumsfelder) und bleibt bewusst aussen vor.
+# (auslastung/tendenz, keine Datumsfelder) und bleibt bewusst außen vor.
 _LAYERS: tuple[int, ...] = (0, 2)
 
 # Host hartkodiert (T-9-02 SSRF): nur dieser eine ArcGIS-REST-Endpunkt der Stadt
-# Koeln. Der Layer-Index wird je Abfrage an _BASE angehaengt (nur aus _LAYERS).
+# Köln. Der Layer-Index wird je Abfrage an _BASE angehängt (nur aus _LAYERS).
 _BASE = (
     "https://geoportal.stadt-koeln.de/arcgis/rest/services/"
     "verkehr/verkehrskalender/MapServer"
@@ -64,7 +64,7 @@ _BASE = (
 
 # [VERIFIED 2026-06-10] Feldnamen per Live-Probe gegen Layer 0/2. Defensiv per
 # .get() gelesen -> None-Fallback statt KeyError (T-9-02, Phase-7/8-Konvention).
-_FIELD_BEZEICHNUNG = "name"  # [VERIFIED 2026-06-10] Titel/Strasse der Massnahme
+_FIELD_BEZEICHNUNG = "name"  # [VERIFIED 2026-06-10] Titel/Strasse der Maßnahme
 _FIELD_ART = "typ"  # [VERIFIED 2026-06-10] Integer-Code, als String durchgereicht
 _FIELD_BEGINN = "datum_von"  # [VERIFIED 2026-06-10] Epoch-ms -> ISO-8601
 _FIELD_ENDE = "datum_bis"  # [VERIFIED 2026-06-10] Epoch-ms -> ISO-8601
@@ -86,10 +86,10 @@ def _epoch_ms_to_iso(value: object) -> str | None:
 
 
 def _extract_point(geom: dict) -> tuple[float | None, float | None]:
-    """Liefert (lon, lat) als repraesentativen Punkt einer ArcGIS-Geometrie.
+    """Liefert (lon, lat) als repräsentativen Punkt einer ArcGIS-Geometrie.
 
-    Punkt-Layer (0): ``x``/``y`` direkt. Flaechen-Layer (2): erste Koordinate des
-    ersten Rings (``rings``); analog ``paths`` fuer etwaige Linien. Mit
+    Punkt-Layer (0): ``x``/``y`` direkt. Flächen-Layer (2): erste Koordinate des
+    ersten Rings (``rings``); analog ``paths`` für etwaige Linien. Mit
     ``outSR=4326`` gilt x=lon, y=lat ([VERIFIED 2026-06-10]). Defensiv: jede
     abweichende Struktur -> (None, None) statt Crash (T-9-02).
     """
@@ -122,19 +122,19 @@ async def fetch_koeln_road_events(
     lon: float,
     delta: float = 0.15,
 ) -> dict:
-    """Holt Koeln-Baustellen/Sperrungen in einer Bounding-Box um (``lat``, ``lon``).
+    """Holt Köln-Baustellen/Sperrungen in einer Bounding-Box um (``lat``, ``lon``).
 
     Baut eine ArcGIS-Envelope-Geometry (``xmin``/``ymin``/``xmax``/``ymax`` aus
     ``lat``/``lon`` +/- ``delta``, ``wkid=4326``) und fragt die Baustellen-Layer
     ``_LAYERS`` (0 "Standort" + 2 "Bereich", [VERIFIED 2026-06-10]) des MapServers
     mit ``f=json``, ``returnGeometry=true``, ``outSR=4326`` (Service-CRS ist UTM)
     und ``resultRecordCount=1000`` (DoS-Cap je Layer) ab; die Ergebnisse werden
-    additiv zusammengefuehrt. Aus ``features`` wird je Event
+    additiv zusammengeführt. Aus ``features`` wird je Event
     ``bezeichnung``/``art``/``beginn``/``ende`` (aus ``attributes`` per ``.get()``
     mit None-Fallback, T-9-02; ``typ`` als String, Epoch-ms -> ISO-8601) und
-    ``lat``/``lon`` (repraesentativer Punkt) extrahiert.
+    ``lat``/``lon`` (repräsentativer Punkt) extrahiert.
 
-    Rueckgabe-Keys (exakt das, was ``map_koeln_road_events`` erwartet): ``slug``
+    Rückgabe-Keys (exakt das, was ``map_koeln_road_events`` erwartet): ``slug``
     und ``events``.
     """
     geometry = {

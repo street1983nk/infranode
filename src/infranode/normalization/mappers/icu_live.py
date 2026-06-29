@@ -1,6 +1,6 @@
 """Reiner DIVI-Live-ICU-Mapper map_icu_live (DATA-25b, T-08-DBR, Pitfall 4).
 
-Uebersetzt das flache DIVI-Live-raw-dict (klinikscharfe Intensivregister-Live-API)
+Übersetzt das flache DIVI-Live-raw-dict (klinikscharfe Intensivregister-Live-API)
 deterministisch in einen ``CanonicalRecord`` mit ``IcuCapacityPayload``
 (kind=icu_capacity). Die Funktion ist rein: kein HTTP, kein Logging, kein
 ``datetime.now()``. Der ``retrieved_at``-Zeitstempel wird keyword-only injiziert,
@@ -10,8 +10,8 @@ KRITISCH (DB-Schutzrecht, RESEARCH Pitfall 4, T-08-DBR): Die klinikscharfe
 DIVI-Live-Lage ist KEINE offene Lizenz (Datenbank-Schutzrecht). Daher
 ``license_tier=LicenseTier.C`` (live-only) und
 ``license_id=LicenseId.UNKNOWN`` (ehrlicher Tag statt eines falschen pauschalen
-CC-BY/DL-DE). Die Route ``/icu-live`` leitet diese Records ausschliesslich live
-durch. Die Kreis-Aggregat-CSV (CC-BY 4.0, Tier A) laeuft getrennt ueber
+CC-BY/DL-DE). Die Route ``/icu-live`` leitet diese Records ausschließlich live
+durch. Die Kreis-Aggregat-CSV (CC-BY 4.0, Tier A) läuft getrennt über
 ``map_icu`` (mappers/divi.py).
 """
 
@@ -46,13 +46,13 @@ def map_icu_live(
 
     [VERIFIED 2026-06-10] Die Live-API liefert keine numerische Belegung mehr;
     ``beds_free``/``beds_occupied`` bleiben ``None`` und die klinikscharfen
-    Status-Einschaetzungen laufen in ``hospitals`` (bezeichnung, ort,
+    Status-Einschätzungen laufen in ``hospitals`` (bezeichnung, ort,
     letzte_meldung, status_high_care, status_ecmo).
 
     KRITISCH (T-08-DBR, Pitfall 4): ``source=DIVI``,
     ``license_id=LicenseId.UNKNOWN`` (keine offene Lizenz, klinikscharfes
     DB-Schutzrecht), ``license_tier=LicenseTier.C`` (live-only). Die Attribution
-    traegt einen Disclaimer, dass die Daten nur live durchgeleitet werden
+    trägt einen Disclaimer, dass die Daten nur live durchgeleitet werden
     (Tier C, keine dauerhafte Speicherung).
     """
     datum = raw.get("datum")

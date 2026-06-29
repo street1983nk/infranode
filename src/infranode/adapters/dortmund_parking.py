@@ -1,6 +1,6 @@
 """Keyloser Dortmund-Parken-Adapter ``fetch_dortmund_parking`` (DATA-09, Tier A).
 
-Direkter Zugang zum offenen Parkleitsystem der Stadt Dortmund ueber die
+Direkter Zugang zum offenen Parkleitsystem der Stadt Dortmund über die
 Opendatasoft-Explore-API (KEIN Mobilithek-mTLS, KEIN Key, live verifiziert
 2026-06-13: Feld ``zeitstempel_status`` "Daten 2 Minuten alt"):
 
@@ -8,20 +8,20 @@ Opendatasoft-Explore-API (KEIN Mobilithek-mTLS, KEIN Key, live verifiziert
   Einrichtung (Parkhaus + Park&Ride) ein flaches Record mit ``id``/``name``/
   ``type``/``frei``/``capacity``/``parkeinrichtung``/``zeitstempel``.
 
-Rueckgabe ist das raw-dict, das ``map_dortmund_parking`` erwartet: ``slug`` =
-"dortmund", ``as_of`` (juengster ``zeitstempel`` aller Records) und ``facilities``
+Rückgabe ist das raw-dict, das ``map_dortmund_parking`` erwartet: ``slug`` =
+"dortmund", ``as_of`` (jüngster ``zeitstempel`` aller Records) und ``facilities``
 (je Einrichtung ein schlankes dict mit facility_id/name/type/free/capacity/
 occupancy/status/observed_at). Der Adapter baut KEINEN ``CanonicalRecord`` und
 kennt KEIN Cache/Breaker (das liefert die Resilienz-Fassade).
 ``resp.raise_for_status()`` ist Pflicht, damit ein 5xx als ``httpx.HTTPError``
-durchschlaegt und der STALE-ON-ERROR-Pfad greift.
+durchschlägt und der STALE-ON-ERROR-Pfad greift.
 
 Lizenz: Datenlizenz Deutschland Zero 2.0 (govdata.de/dl-de/zero-2-0) = Tier A
 (permissiv lizenziert, keine Attributionspflicht; Projektkonvention nennt die
 Quelle dennoch). Siehe ``mappers/mobilithek_parken.map_dortmund_parking``.
 
 Sicherheit:
-- T-05-08 (SSRF): Der Host ist in ``_BASE`` hartkodiert; es fliesst kein
+- T-05-08 (SSRF): Der Host ist in ``_BASE`` hartkodiert; es fließt kein
   User-Input in die URL (fixer Datensatz-Pfad, fixe Query).
 """
 
@@ -63,10 +63,10 @@ def _facility(rec: dict) -> dict:
 
 
 async def fetch_dortmund_parking(http: httpx.AsyncClient) -> dict:
-    """Holt die Live-Parkbelegung Dortmund und liefert das raw-dict fuer den Mapper.
+    """Holt die Live-Parkbelegung Dortmund und liefert das raw-dict für den Mapper.
 
-    Rueckgabe-Keys (exakt das, was ``map_dortmund_parking`` erwartet): ``slug``
-    ("dortmund"), ``as_of`` (juengster ``zeitstempel``, ISO-String, oder None) und
+    Rückgabe-Keys (exakt das, was ``map_dortmund_parking`` erwartet): ``slug``
+    ("dortmund"), ``as_of`` (jüngster ``zeitstempel``, ISO-String, oder None) und
     ``facilities`` (Liste schlanker dicts). ``raise_for_status`` ist Pflicht
     (5xx -> Fassade STALE-ON-ERROR).
     """

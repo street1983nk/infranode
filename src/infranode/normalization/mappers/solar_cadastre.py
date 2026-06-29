@@ -7,7 +7,7 @@ Solarkataster NRW / MaStR / LANUK / Geobasis NRW, DL-DE/Zero 2.0) via stdlib
 ``CanonicalRecord`` mit ``SolarRoofsPayload`` (kind="solar_roofs") ab.
 
 KRITISCH (T-08-DEP): KEINE Laufzeit-Fremd-API, KEINE openpyxl-Runtime-Dep. Der
-Reader nutzt ausschliesslich stdlib ``json`` und ist tolerant (fehlende Datei /
+Reader nutzt ausschließlich stdlib ``json`` und ist tolerant (fehlende Datei /
 fehlender AGS -> ``None`` -> no_data-Pfad, kein Crash, kein 5xx). Analog
 Feiertage-Seed.
 
@@ -33,7 +33,7 @@ from infranode.normalization import (
 )
 
 _SEED_FILE = "solar_cadastre_nrw.json"
-# Fallback (NRW), falls ein Seed-Eintrag ausnahmsweise kein states-Meta traegt.
+# Fallback (NRW), falls ein Seed-Eintrag ausnahmsweise kein states-Meta trägt.
 _FALLBACK_LICENSE_ID = "dl_de_zero_2_0"
 _FALLBACK_LICENSE_URL = "https://www.govdata.de/dl-de/zero-2-0"
 _FALLBACK_ATTRIBUTION = "Land NRW / GeoBasis NRW / LANUK (MaStR), Solarkataster NRW"
@@ -44,8 +44,8 @@ def load_solar_roofs(ags: str | None) -> dict | None:
 
     Tolerant by design (T-08-DEP, no_data-Pfad): fehlende Seed-Datei, fehlender
     ``ags`` oder unbekannte Gemeinde -> ``None`` (kein Crash, KEIN Fremd-API).
-    Der Bezugszeitraum (``reference_date`` aus ``_meta``) wird in das zurueck-
-    gegebene dict gehoben. Der Seed-Pfad wird lazy via ``seeds_dir()`` aufgeloest
+    Der Bezugszeitraum (``reference_date`` aus ``_meta``) wird in das zurück-
+    gegebene dict gehoben. Der Seed-Pfad wird lazy via ``seeds_dir()`` aufgelöst
     (respektiert ``INFRANODE_SEEDS_DIR``, Prod-Volume-Override).
     """
     if not ags:
@@ -57,7 +57,7 @@ def load_solar_roofs(ags: str | None) -> dict | None:
     entry = (data.get("cities") or {}).get(ags)
     if not isinstance(entry, dict):
         return None
-    # Lizenz/Attribution/Stichtag stehen je Bundesland im states-Block (foederiert,
+    # Lizenz/Attribution/Stichtag stehen je Bundesland im states-Block (föderiert,
     # GOV-04): NRW = DL-DE/Zero 2.0, Bayern = CC BY 4.0. Ins Entry-dict heben, damit
     # der reine Mapper die Pro-Record-Lizenz daraus ableitet.
     state_meta = (data.get("states") or {}).get(entry.get("state")) or {}
@@ -76,12 +76,12 @@ def map_solar_roofs(
 
     ``retrieved_at`` wird injiziert (kein ``datetime.now()`` im Mapper). ``geo``
     bleibt ``None`` (Stadtebene), ``observed_at`` bleibt ``None`` (Stichtags-/
-    Stammdaten, kein Mess-Zeitstempel; ``reference_date`` traegt den Stand im
+    Stammdaten, kein Mess-Zeitstempel; ``reference_date`` trägt den Stand im
     Payload). ``exploitation_pct`` = installed_kwp/potential_kwp*100 wird hier
-    deterministisch abgeleitet (Ausschoepfungsgrad). Lizenz je Bundesland aus dem
+    deterministisch abgeleitet (Ausschöpfungsgrad). Lizenz je Bundesland aus dem
     states-Block (NRW/Berlin DL-DE/Zero 2.0, Bayern CC BY 4.0, Hamburg DL-DE/BY 2.0),
     alle Tier A; Attribution ``modified=True`` (Aggregation + Einheiten-Umrechnung
-    kWh->MWh + abgeleiteter Ausschoepfungsgrad).
+    kWh->MWh + abgeleiteter Ausschöpfungsgrad).
     """
     potential_kwp = raw.get("potential_kwp")
     installed_kwp = raw.get("installed_kwp")

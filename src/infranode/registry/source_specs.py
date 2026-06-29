@@ -1,18 +1,18 @@
 """Deklarative Quellen-Registry: EINE Stelle pro Upstream-Quelle.
 
-Single source of truth fuer die rein-datenhaften Quellen-Attribute, die
-frueher auf vier Strukturen verteilt waren:
+Single source of truth für die rein-datenhaften Quellen-Attribute, die
+früher auf vier Strukturen verteilt waren:
   * KNOWN_SOURCES        (vorher api/v1/sources.py:_KNOWN_SOURCES)
   * SOURCE_LICENSE       (vorher api/v1/sources.py:SOURCE_LICENSE)
   * SOURCE_TTL           (vorher resilience/client.py:_SOURCE_TTL)
   * FRAGILE_SOURCE_COOLDOWN (vorher resilience/breaker_redis.py)
 
-Eine neue Quelle hinzufuegen = EIN SourceSpec-Eintrag hier (plus weiterhin:
+Eine neue Quelle hinzufügen = EIN SourceSpec-Eintrag hier (plus weiterhin:
 der enable_<name>-Toggle in config.py, der SourceId-Wert in enums.py, der
 Adapter/Mapper-Code und die wortgenaue Zeile in DATA-LICENSES.md). Die
-Lizenz-Wortlaute bleiben fail-closed gegen DATA-LICENSES.md geprueft
+Lizenz-Wortlaute bleiben fail-closed gegen DATA-LICENSES.md geprüft
 (tests/unit/test_source_license_map.py); die Reihenfolge hier IST die
-oeffentliche Reihenfolge der /sources-Route.
+öffentliche Reihenfolge der /sources-Route.
 """
 
 from __future__ import annotations
@@ -25,12 +25,12 @@ class SourceSpec:
     """Eine Upstream-Quelle, deklarativ.
 
     Args:
-        name: Quellen-Schluessel; MUSS exakt zum enable_<name>-Toggle
+        name: Quellen-Schlüssel; MUSS exakt zum enable_<name>-Toggle
             (config.py) und zum SourceId-Wert (enums.py) passen.
-        license_id: Lizenz-Kuerzel (siehe LicenseId/DATA-LICENSES.md).
+        license_id: Lizenz-Kürzel (siehe LicenseId/DATA-LICENSES.md).
         attribution: wortgenaue Attribution VERBATIM aus DATA-LICENSES.md.
         ttl: (fresh_s, stale_s) Cache-Fenster; None = Default (60s/120s).
-        cooldown: HALF_OPEN-Probe-Intervall (s) fuer fragile Upstreams;
+        cooldown: HALF_OPEN-Probe-Intervall (s) für fragile Upstreams;
             None = 30s-Default des Breakers.
     """
 
@@ -101,7 +101,10 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
     SourceSpec(
         name="genesis",
         license_id="dl_de_by_2_0",
-        attribution="Statistisches Bundesamt (Destatis) / Regionalstatistik",
+        # H15 (Owner 2026-06-29): vereinheitlicht mit der regionalstatistik-Quelle
+        # (gleicher Host www.regionalstatistik.de -> "Statistische Ämter des
+        # Bundes und der Länder"). zensus bleibt separat (eigene ZENSUS-Quelle).
+        attribution="Statistische Ämter des Bundes und der Länder",
         ttl=(86400.0, 2592000.0),
     ),
     SourceSpec(
@@ -381,7 +384,7 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
     ),
 )
 
-# --- Abgeleitete Sichten (Rueckwaerts-kompatibel zu den alten Strukturen) ---
+# --- Abgeleitete Sichten (Rückwärts-kompatibel zu den alten Strukturen) ---
 KNOWN_SOURCES: tuple[str, ...] = tuple(s.name for s in SOURCE_SPECS)
 
 SOURCE_LICENSE: dict[str, dict[str, str]] = {

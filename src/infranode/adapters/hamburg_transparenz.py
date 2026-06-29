@@ -3,11 +3,11 @@
 Korrektur [VERIFIED 2026-06-10]: der alte CKAN-2-Step-Pfad (package_show auf
 ``suche.transparenz.hamburg.de`` -> GeoJSON-Ressource) hat dauerhaft leere
 ``events`` geliefert. Das Paket ``baustellen-hamburg`` existiert zwar (Paket-ID
-und ``license_id=dl-de-by-2.0`` live bestaetigt), seine Ressourcen sind aber
-ausschliesslich XML/GML/HTML-Archivlinks auf ``archiv.transparenz.hamburg.de``;
+und ``license_id=dl-de-by-2.0`` live bestätigt), seine Ressourcen sind aber
+ausschließlich XML/GML/HTML-Archivlinks auf ``archiv.transparenz.hamburg.de``;
 der GeoJSON-Format-Match konnte also nie greifen. Die im Paket verlinkten
 WFS-Dienste auf ``geodienste.hamburg.de`` (z. B. ``HH_WFS_Baustellen``) sind
-ebenfalls tot (404, live geprueft).
+ebenfalls tot (404, live geprüft).
 
 Echte GeoJSON-Quelle [VERIFIED 2026-06-10]: die Hamburger Urban Data Platform
 liefert denselben Datensatz ("Baustellen Hamburg", Bauweiser-Steckbriefe) als
@@ -20,17 +20,17 @@ z. B. "01.04.2020"), ``internetlink`` u. a.
 
 Sicherheit (T-9-02 SSRF): Die komplette Items-URL ist in ``_BASE`` hartkodiert;
 es wird KEINE Upstream-gelieferte URL gefolgt (kein Discovery-Step mehr, daher
-entfaellt die Allowlist-Pruefung einer entdeckten URL).
+entfällt die Allowlist-Prüfung einer entdeckten URL).
 
 DoS-Schutz (T-9-DOS): ``limit=1000`` als harter Cap (live 125 Features);
 ``resp.raise_for_status()`` ist Pflicht, damit ein 5xx als ``httpx.HTTPError``
-an die Fassade durchschlaegt und der STALE-ON-ERROR-Pfad greift.
+an die Fassade durchschlägt und der STALE-ON-ERROR-Pfad greift.
 
 Datenfehler-Schutz (T-9-02): Jeder Zugriff ist ``.get()``/``[]``-defensiv mit
 None-Fallback, daher kein ``KeyError`` bei fehlenden oder anders benannten
 Feldern.
 
-Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
+Der Adapter ist rein gegenüber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` (das macht der Mapper in der Route) und kennt KEIN
 Cache/Breaker (das liefert die Fassade).
 """
@@ -48,8 +48,8 @@ _LIMIT = 1000
 
 # [VERIFIED 2026-06-10]-properties-Feldnamen per Live-Probe gegen die OGC API.
 # Defensiv per .get() gelesen -> None-Fallback statt KeyError (T-9-02).
-_FIELD_TITEL = "titel"  # [VERIFIED 2026-06-10] Titel der Massnahme
-_FIELD_ORGANISATION = "organisation"  # [VERIFIED 2026-06-10] Realisierungstraeger
+_FIELD_TITEL = "titel"  # [VERIFIED 2026-06-10] Titel der Maßnahme
+_FIELD_ORGANISATION = "organisation"  # [VERIFIED 2026-06-10] Realisierungsträger
 _FIELD_ANLASS = "anlass"  # [VERIFIED 2026-06-10] Anlass/Beschreibung
 _FIELD_BEGINN = "baubeginn"  # [VERIFIED 2026-06-10] z. B. "01.04.2020"
 _FIELD_ENDE = "bauende"  # [VERIFIED 2026-06-10] z. B. "31.12.2026"
@@ -63,7 +63,7 @@ async def fetch_hamburg_road_events(
     lon: float,
     radius_km: float = 30.0,
 ) -> dict:
-    """Holt Hamburg-Baustellen ueber die OGC API Features (GeoJSON).
+    """Holt Hamburg-Baustellen über die OGC API Features (GeoJSON).
 
     GET ``{_BASE}?f=json&limit={_LIMIT}`` ([VERIFIED 2026-06-10], Host
     hartkodiert, T-9-02) und aus ``features`` je ``properties`` ein schlankes
@@ -75,7 +75,7 @@ async def fetch_hamburg_road_events(
     Stadt-Adapter teilen sie); Hamburg liefert den kompletten Stadt-Datensatz,
     daher werden sie hier nicht zur serverseitigen Filterung benutzt.
 
-    Rueckgabe-Keys (exakt das, was ``map_hamburg_road_events`` erwartet):
+    Rückgabe-Keys (exakt das, was ``map_hamburg_road_events`` erwartet):
     ``slug`` und ``events``.
     """
     resp = await http.get(_BASE, params={"f": "json", "limit": _LIMIT})

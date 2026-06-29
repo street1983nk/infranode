@@ -1,15 +1,15 @@
-"""Graceful Redis-Metrik-Helper fuer das Admin-Dashboard (OPS-02).
+"""Graceful Redis-Metrik-Helper für das Admin-Dashboard (OPS-02).
 
-Reine Redis-Helper ohne Routen-/Middleware-Abhaengigkeit: Counter fuer Cache-
-Status (HIT/MISS/STALE/STALE-ON-ERROR), Request-Zaehler (gesamt + je Status-Code
+Reine Redis-Helper ohne Routen-/Middleware-Abhaengigkeit: Counter für Cache-
+Status (HIT/MISS/STALE/STALE-ON-ERROR), Request-Zähler (gesamt + je Status-Code
 + je Endpunkt) und ein gekappter Ringpuffer der letzten Request-Logs. Die
 Anzeige-Schicht (Plan 13-03) liest diese Werte aus und berechnet die Hit-Rate.
 
 Graceful Degradation (Muster aus cache.py, Pitfall 2): JEDER Redis-Zugriff ist in
-try/except gekapselt. Faellt Redis aus, geht eine Metrik verloren, der Request-Pfad
+try/except gekapselt. Fällt Redis aus, geht eine Metrik verloren, der Request-Pfad
 crasht aber nie (incr/push degradieren still, read_* liefern leere/Null-Defaults).
 
-decode_responses-agnostisch: Leseergebnisse werden vor ``orjson.loads`` ueber den
+decode_responses-agnostisch: Leseergebnisse werden vor ``orjson.loads`` über den
 lokalen ``_to_bytes``-Helper (identisch zu cache.py) auf bytes normalisiert, sodass
 die Helper sowohl mit dem Prod-Pool (decode_responses=True) als auch mit dem
 fake_redis-Test-Client (decode_responses=False) funktionieren.
@@ -26,8 +26,8 @@ log = structlog.get_logger()
 
 # Redis-Key-Konstanten (zentral, damit Lese- und Schreibseite denselben Namen
 # nutzen). _LOG_KEY ist die Liste des Request-Log-Ringpuffers; der Cache-Counter-
-# Praefix wird mit dem normalisierten Status-Bucket zusammengesetzt; die Request-
-# Keys sind ein Zaehler (count) plus zwei Hashes (status-Code/Endpunkt).
+# Präfix wird mit dem normalisierten Status-Bucket zusammengesetzt; die Request-
+# Keys sind ein Zähler (count) plus zwei Hashes (status-Code/Endpunkt).
 _LOG_KEY = "metrics:logs"
 _CACHE_PREFIX = "metrics:cache:"
 _REQ_COUNT_KEY = "metrics:req:count"
@@ -36,14 +36,14 @@ _REQ_ENDPOINT_KEY = "metrics:req:endpoint"
 
 # Aktive-Consumer-Tracking (OPS): je UTC-Stunde ein Hash ident->Request-Anzahl
 # plus ein Meta-Hash ident->"user-agent\tletzter-Pfad". ident = echte Client-IP
-# (oder "mcp" fuer interne MCP-Server-Aufrufe). Selbst-ablaufend (TTL), damit kein
+# (oder "mcp" für interne MCP-Server-Aufrufe). Selbst-ablaufend (TTL), damit kein
 # unbegrenztes Wachstum. Das Filtern interner Monitoring-IPs macht die Auswerte-
-# Schicht (der Box-Digest kennt die eigene IP), nicht der heisse Request-Pfad.
+# Schicht (der Box-Digest kennt die eigene IP), nicht der heiße Request-Pfad.
 _CONSUMER_PREFIX = "metrics:consumers:"
-_CONSUMER_TTL = 10800  # 3 h: deckt die stuendliche Auswertung + Verzug sicher ab.
+_CONSUMER_TTL = 10800  # 3 h: deckt die stündliche Auswertung + Verzug sicher ab.
 
-# Tages-Request-Zaehler je Kanal (api|mcp): ein einzelner Counter-Key pro UTC-Tag
-# (metrics:daily:<channel>:<YYYY-MM-DD>) fuer den taeglichen 00:05-Digest. Bewusst
+# Tages-Request-Zähler je Kanal (api|mcp): ein einzelner Counter-Key pro UTC-Tag
+# (metrics:daily:<channel>:<YYYY-MM-DD>) für den täglichen 00:05-Digest. Bewusst
 # NICHT per-IP wie die Consumer-Buckets: genau 2 Keys/Tag, daher kein Redis-OOM
 # bei einer IP-Flut. Selbst-ablaufend (TTL deckt Vortag + Verzug bis zum Digest).
 _DAILY_PREFIX = "metrics:daily:"
@@ -94,10 +94,10 @@ async def push_log(redis, entry: dict, max: int | None = None) -> None:
     """Schiebt einen Log-Eintrag in den gekappten Ringpuffer (neuester zuerst).
 
     ``max`` ist absichtlich ein None-Sentinel und wird NICHT als Default direkt
-    aus ``get_settings()`` gebunden: sonst wuerde der Settings-Wert zur Import-Zeit
+    aus ``get_settings()`` gebunden: sonst würde der Settings-Wert zur Import-Zeit
     eingefroren und der Test-Determinismus (monkeypatched admin_log_max) bricht.
-    Erst innerhalb der Funktion auf den Settings-Wert zurueckgreifen. LPUSH legt
-    den neuesten Eintrag an den Kopf, LTRIM kappt auf die letzten ``max`` Eintraege.
+    Erst innerhalb der Funktion auf den Settings-Wert zurückgreifen. LPUSH legt
+    den neuesten Eintrag an den Kopf, LTRIM kappt auf die letzten ``max`` Einträge.
     Graceful: ein Redis-Fehler verliert den Log-Eintrag, crasht aber nie.
     """
     if max is None:
@@ -112,7 +112,7 @@ async def push_log(redis, entry: dict, max: int | None = None) -> None:
 
 
 async def read_logs(redis, n: int) -> list[dict]:
-    """Liest die letzten ``n`` Log-Eintraege (neuester zuerst).
+    """Liest die letzten ``n`` Log-Einträge (neuester zuerst).
 
     Graceful: bei einem Redis-Fehler -> leere Liste statt Crash.
     """
@@ -139,7 +139,7 @@ async def read_cache_counts(redis) -> dict[str, int]:
 
 
 def consumer_hour(now) -> str:
-    """UTC-Stunden-Bucket-Schluessel (z.B. ``2026-06-14T17``)."""
+    """UTC-Stunden-Bucket-Schlüssel (z.B. ``2026-06-14T17``)."""
     return now.strftime("%Y-%m-%dT%H")
 
 
@@ -149,9 +149,9 @@ async def record_consumer(
     """Zaehlt einen aktiven Consumer in den Stunden-Bucket (Anzahl + letzte Meta).
 
     ``ident`` = echte Client-IP oder ``"mcp"`` (interner MCP-Server-Aufruf). Der
-    Meta-Hash haelt User-Agent + letzten Pfad + letzten HTTP-Status (last-write-
+    Meta-Hash hält User-Agent + letzten Pfad + letzten HTTP-Status (last-write-
     wins, tab-getrennt) zur App-Erkennung und damit im Digest sichtbar ist, ob ein
-    (Scanner-)Pfad 200 oder 404 zurueckgab. Beide Keys laufen nach ``_CONSUMER_TTL``
+    (Scanner-)Pfad 200 oder 404 zurückgab. Beide Keys laufen nach ``_CONSUMER_TTL``
     selbst ab. Graceful: jeder Redis-Fehler degradiert still und crasht NIE den
     Request.
     """
@@ -173,9 +173,9 @@ async def record_consumer(
 async def read_consumers(redis, hour: str) -> list[dict]:
     """Liest die aktiven Consumer eines Stunden-Buckets (Anzahl + UA + Pfad + Status).
 
-    Rueckgabe je Eintrag: ``{ident, count, user_agent, last_path, last_status}``,
+    Rückgabe je Eintrag: ``{ident, count, user_agent, last_path, last_status}``,
     nach Anzahl absteigend. ``last_status`` ist der HTTP-Status des letzten Requests
-    als String (``""`` fuer Alt-Eintraege ohne Status-Feld). Graceful: bei einem
+    als String (``""`` für Alt-Einträge ohne Status-Feld). Graceful: bei einem
     Redis-Fehler -> leere Liste.
     """
     try:
@@ -189,7 +189,7 @@ async def read_consumers(redis, hour: str) -> list[dict]:
     out = []
     for ident_raw, count_raw in (counts or {}).items():
         ident = _to_bytes(ident_raw).decode()
-        # Tab-getrennt: UA \t Pfad \t Status. Alt-Eintraege (ohne Status) -> "".
+        # Tab-getrennt: UA \t Pfad \t Status. Alt-Einträge (ohne Status) -> "".
         parts = meta.get(ident, "").split("\t")
         ua = parts[0] if parts else ""
         last_path = parts[1] if len(parts) > 1 else ""
@@ -212,9 +212,9 @@ async def incr_daily(redis, *, channel: str, now) -> None:
 
     Ein einzelner Counter-Key je Kanal und UTC-Tag
     (``metrics:daily:<channel>:<YYYY-MM-DD>``) mit Selbst-Ablauf (``_DAILY_TTL``).
-    Anders als die per-IP-Consumer-Buckets waechst das NICHT mit der Zahl der
+    Anders als die per-IP-Consumer-Buckets wächst das NICHT mit der Zahl der
     Clients (genau zwei Keys pro Tag), daher kein OOM-Risiko bei einer IP-Flut.
-    Speist den taeglichen 00:05-ntfy-Digest. Graceful: jeder Redis-Fehler
+    Speist den täglichen 00:05-ntfy-Digest. Graceful: jeder Redis-Fehler
     degradiert still (Metrik-Verlust), crasht aber NIE den Request-Pfad.
     """
     try:
@@ -228,7 +228,7 @@ async def incr_daily(redis, *, channel: str, now) -> None:
 
 
 async def read_daily(redis, *, day: str) -> dict[str, int]:
-    """Liest die Tages-Counter beider Kanaele (``api``|``mcp``) fuer ``day``.
+    """Liest die Tages-Counter beider Kanäle (``api``|``mcp``) für ``day``.
 
     ``day`` ist ein UTC-Datum ``YYYY-MM-DD``. Fehlende Keys -> 0. Graceful: bei
     einem Redis-Fehler -> beide 0 (nie ein Crash im Digest).
@@ -247,7 +247,7 @@ async def read_daily(redis, *, day: str) -> dict[str, int]:
 def compute_hit_rate(counts: dict[str, int]) -> float:
     """Berechnet die Cache-Hit-Rate: hit / (hit + miss + stale + stale_on_error).
 
-    STALE fliesst in den Nenner mit ein (der Cache lieferte, der Refresh lief im
+    STALE fließt in den Nenner mit ein (der Cache lieferte, der Refresh lief im
     Hintergrund), wird im Dashboard aber separat ausgewiesen. Division durch 0
     (noch keine Requests) -> 0.0, niemals ein ZeroDivisionError.
     """

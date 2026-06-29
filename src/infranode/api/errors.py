@@ -1,6 +1,6 @@
 """Zentrales Fehler-Mapping mit einheitlicher Envelope (FND-04, REST-Regel 7).
 
-Eine ``AppError``-Hierarchie traegt status_code + maschinenlesbaren code. Ein
+Eine ``AppError``-Hierarchie trägt status_code + maschinenlesbaren code. Ein
 einziges ``register_exception_handlers(app)`` mappt AppError,
 RequestValidationError und die Catch-All-Exception auf eine ``ErrorEnvelope``.
 Der Catch-All leakt NIE Stacktrace/Secrets an den Client (Pitfall 2 / T-01-01).
@@ -75,9 +75,9 @@ class ValidationFailedError(AppError):
 
 
 class UnprocessableError(AppError):
-    """Syntaktisch gueltige, aber semantisch unzulaessige Eingabe (HTTP 422).
+    """Syntaktisch gültige, aber semantisch unzulässige Eingabe (HTTP 422).
 
-    Genutzt fuer den ``?type=``-Whitelist-Verstoss der POI-Route: ein
+    Genutzt für den ``?type=``-Whitelist-Verstoß der POI-Route: ein
     unbekannter POI-Typ wird abgewiesen, BEVOR roher User-Input in die
     Overpass-QL gelangt (T-05-09 Injection-Schutz).
     """
@@ -111,7 +111,7 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RateLimitExceeded)
     async def _rate_limited(request: Request, exc: RateLimitExceeded) -> OrjsonResponse:
-        # 429 ueber den zentralen Envelope (kein slowapi-Default-JSON, kein
+        # 429 über den zentralen Envelope (kein slowapi-Default-JSON, kein
         # Stacktrace/Detail-Leak, T-11-RL-LEAK). Code "rate_limited" == RateLimitError.
         response = _envelope(
             429,
@@ -123,7 +123,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             ),
         )
         # Standard-RateLimit-Header (D-02) auf die 429-Antwort setzen. slowapi
-        # injiziert sie ueber das normalisierte _header_mapping des Limiters
+        # injiziert sie über das normalisierte _header_mapping des Limiters
         # (RateLimit-Limit/Remaining/Reset + Retry-After).
         limiter = getattr(request.app.state, "limiter", None)
         view_limit = getattr(request.state, "view_rate_limit", None)
@@ -136,7 +136,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: RequestValidationError
     ) -> OrjsonResponse:
         # Nur Feldpfad + Fehlertyp an den Client (Audit MEDIUM-2, 2026-06-10):
-        # str(exc.errors()) wuerde Pydantic-Interna UND den Roh-Input (input=...)
+        # str(exc.errors()) würde Pydantic-Interna UND den Roh-Input (input=...)
         # reflektieren (Information Disclosure). Volle Details nur serverseitig.
         log.info("request_validation_failed", errors=exc.errors()[:5])
         fields = "; ".join(
@@ -154,8 +154,8 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def _http_exception(
         request: Request, exc: StarletteHTTPException
     ) -> OrjsonResponse:
-        # FastAPI/Starlette wirft StarletteHTTPException fuer Routing-Faelle, die
-        # NICHT ueber unsere AppError-Hierarchie laufen: unbekannter Pfad (404) und
+        # FastAPI/Starlette wirft StarletteHTTPException für Routing-Fälle, die
+        # NICHT über unsere AppError-Hierarchie laufen: unbekannter Pfad (404) und
         # falsche Methode (405). Ohne diesen Handler liefert Starlette dort den
         # Default ``{"detail": "..."}`` statt des projektweiten Error-Envelopes
         # (Live-Report M4). Fachliche Fehler (unbekannte Stadt, POI-Typ, Validierung,

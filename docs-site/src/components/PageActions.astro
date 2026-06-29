@@ -2,7 +2,7 @@
 // Page-Actions je Endpunkt-Seite (DX-04, GEO). Bietet (1) "Copy page as
 // Markdown": ein inline-Script holt die .md-Variante der Seite per fetch und
 // schreibt sie in navigator.clipboard, mit Link-Fallback auf die .md-URL;
-// (2) "In Claude oeffnen" und (3) "In ChatGPT oeffnen" als Deep-Links mit
+// (2) "In Claude öffnen" und (3) "In ChatGPT öffnen" als Deep-Links mit
 // urlencodetem Prompt. Der Prompt verweist auf die .md-URL.
 // Sicherheit (T-12-GEO-INJECT): Prompt + URL strikt via encodeURIComponent in
 // die href, kein roher String. Icons als inline-SVG, keine Emojis. ASCII in
@@ -10,7 +10,7 @@
 interface Props {
   // Relative .md-URL der aktuellen Seite, z.B. "/api/getCityCharging.md".
   mdUrl: string;
-  // Vorbereiteter Prompt-Text fuer die LLM-Deep-Links.
+  // Vorbereiteter Prompt-Text für die LLM-Deep-Links.
   prompt: string;
   // Sprache der Seite (de Standard). Steuert die sichtbaren Button-Texte.
   lang?: "de" | "en";
@@ -27,11 +27,11 @@ const t = {
   openMd: isEn ? "Open Markdown version" : "Markdown-Variante öffnen",
 };
 
-// Absolute .md-URL fuer Prompt + Deep-Links (LLM braucht eine abrufbare URL).
+// Absolute .md-URL für Prompt + Deep-Links (LLM braucht eine abrufbare URL).
 const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
 const absoluteMdUrl = `${site}${mdUrl}`;
 
-// Deep-Link-Prompt: erwaehnt die abrufbare .md-URL. encodeURIComponent kapselt
+// Deep-Link-Prompt: erwähnt die abrufbare .md-URL. encodeURIComponent kapselt
 // jeden Sonderzeichen-Inhalt; die Basis-Hosts sind statisch.
 const fullPrompt = `${prompt} ${absoluteMdUrl}`;
 const claudeUrl = `https://claude.ai/new?q=${encodeURIComponent(fullPrompt)}`;
@@ -109,8 +109,8 @@ const chatgptUrl = `https://chatgpt.com/?q=${encodeURIComponent(fullPrompt)}`;
 
 <script>
   // Copy-as-Markdown: holt die .md-Variante per fetch und legt sie in die
-  // Zwischenablage. Faellt bei Fehler/fehlender Clipboard-API auf das Oeffnen
-  // der .md-URL zurueck. Kein innerHTML, nur textContent/Attribute.
+  // Zwischenablage. Fällt bei Fehler/fehlender Clipboard-API auf das Öffnen
+  // der .md-URL zurück. Kein innerHTML, nur textContent/Attribute.
   const btn = document.querySelector<HTMLButtonElement>("[data-copy-md]");
   const label = document.querySelector<HTMLElement>("[data-copy-label]");
   if (btn) {
@@ -132,7 +132,7 @@ const chatgptUrl = `https://chatgpt.com/?q=${encodeURIComponent(fullPrompt)}`;
           }, 2000);
         }
       } catch {
-        // Fallback: .md-URL in neuem Tab oeffnen, damit der Nutzer sie manuell
+        // Fallback: .md-URL in neuem Tab öffnen, damit der Nutzer sie manuell
         // kopieren kann.
         window.open(url, "_blank", "noopener");
       }

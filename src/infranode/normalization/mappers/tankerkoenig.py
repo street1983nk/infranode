@@ -1,6 +1,6 @@
-"""Reiner Tankerkoenig-Mapper ``map_fuel_prices`` (Spritpreise, CC BY 4.0, Tier A).
+"""Reiner Tankerkönig-Mapper ``map_fuel_prices`` (Spritpreise, CC BY 4.0, Tier A).
 
-Uebersetzt das aggregierte Tankerkoenig-raw-dict (aus
+Übersetzt das aggregierte Tankerkönig-raw-dict (aus
 ``adapters.tankerkoenig.fetch_fuel_prices``) deterministisch in einen
 ``CanonicalRecord`` mit ``FuelPricePayload``. Rein: kein HTTP, kein Logging, kein
 ``datetime.now()`` (``retrieved_at`` wird injiziert).

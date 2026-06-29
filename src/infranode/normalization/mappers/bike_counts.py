@@ -1,13 +1,13 @@
 """bike-counts-Mapper je Stadt + gemeinsamer Record-Helper (DATA-40, Tier A).
 
-Alle bike-counts-Quellen muenden in die kanonische ``CountStationPayload``-Huelle
+Alle bike-counts-Quellen münden in die kanonische ``CountStationPayload``-Hülle
 (``kind="count_station"``, ``counts`` je Station). ``build_bike_count_record``
 baut den ``CanonicalRecord``-Envelope (Lizenz/Attribution/observed_at) einheitlich;
 die per-Stadt-Mapper liefern nur die ``counts``-Liste + Lizenz-Parameter. Rein:
 kein HTTP, keine Systemuhr (``retrieved_at`` keyword-only injiziert).
 
 Lizenz JE URSPRUNG verifiziert (GOV-01). Eco-Counter/Eco-Visio ist ausgeschlossen
-(Owner-Entscheidung 2026-06-23: Lizenz ungeklaert).
+(Owner-Entscheidung 2026-06-23: Lizenz ungeklärt).
 """
 
 from __future__ import annotations
@@ -98,10 +98,10 @@ def map_leipzig_radzaehl(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet rohe Leipziger Rad-Stundenzaehlwerte auf einen ``CanonicalRecord`` ab.
+    """Bildet rohe Leipziger Rad-Stundenzählwerte auf einen ``CanonicalRecord`` ab.
 
-    Je Station ein Zaehl-dict (``value`` = juengster Stundenwert, ``granularity``
-    "hour", ``period`` = ISO-Stundenzeitstempel). ``observed_at`` = juengster
+    Je Station ein Zähl-dict (``value`` = jüngster Stundenwert, ``granularity``
+    "hour", ``period`` = ISO-Stundenzeitstempel). ``observed_at`` = jüngster
     ``phenomenontime`` (``as_of``). Lizenz DL-DE/BY 2.0, Tier A, "Stadt Leipzig".
     """
     return build_bike_count_record(
@@ -126,9 +126,9 @@ def map_hamburg_radzaehl(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet den Hamburger Rad-Stundenwert (Dauerzaehlstelle Gurlittinsel) ab.
+    """Bildet den Hamburger Rad-Stundenwert (Dauerzählstelle Gurlittinsel) ab.
 
-    Eine Station, ``value`` = juengster Stundenwert, ``granularity`` "hour",
+    Eine Station, ``value`` = jüngster Stundenwert, ``granularity`` "hour",
     ``period`` = ISO-Stundenzeitstempel. Lizenz DL-DE/BY 2.0, Tier A,
     "Freie und Hansestadt Hamburg, Behörde für Verkehr und Mobilitätswende".
     """
@@ -156,9 +156,9 @@ def map_berlin_radzaehl(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet die juengsten Berliner Rad-Stundenwerte ab (DL-DE/Zero 2.0, Tier A).
+    """Bildet die jüngsten Berliner Rad-Stundenwerte ab (DL-DE/Zero 2.0, Tier A).
 
-    Je Station ``value`` = juengster Stundenwert, ``granularity`` "hour". Lizenz
+    Je Station ``value`` = jüngster Stundenwert, ``granularity`` "hour". Lizenz
     Datenlizenz Deutschland Zero 2.0 (keine Namensnennungspflicht), Tier A,
     Attribution "Senatsverwaltung für Mobilität, Verkehr, Klimaschutz und Umwelt
     Berlin".
@@ -189,7 +189,7 @@ def map_stuttgart_radzaehl(
 ) -> CanonicalRecord:
     """Bildet die Stuttgarter Rad-Jahreswerte ab (CC BY 4.0, Tier A).
 
-    Je Station ``value`` = juengster Jahres-Summenwert, ``granularity`` "year",
+    Je Station ``value`` = jüngster Jahres-Summenwert, ``granularity`` "year",
     ``period`` = Jahr; KEINE Koordinaten (Quelle liefert keine). ``observed_at``
     None (Jahreswert ohne Stundenzeitstempel). Attribution "Landeshauptstadt
     Stuttgart" (CC BY verlangt Namensnennung).

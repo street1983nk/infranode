@@ -1,5 +1,5 @@
 ---
-// Eigene Such-UI (D-01, kein vorgefertigtes Pagefind-Default-UI). Laedt zur
+// Eigene Such-UI (D-01, kein vorgefertigtes Pagefind-Default-UI). Lädt zur
 // Laufzeit /pagefind/pagefind.js dynamisch (existiert erst nach postbuild),
 // ruft pagefind.search(query) und rendert Treffer in eigenem Markup. Das
 // Sucheingabe-Icon ist inline-SVG (CLAUDE.md: Icons als SVG, keine Emojis).
@@ -14,7 +14,7 @@ const { lang = "de" } = Astro.props;
 const isEn = lang === "en";
 const searchLabel = isEn ? "Search docs" : "Doku durchsuchen";
 // Lokalisierte Leerzustands-Texte (D-09): werden zur Laufzeit aus Daten-
-// Attributen gelesen, damit das Skript sprachunabhaengig bleibt.
+// Attributen gelesen, damit das Skript sprachunabhängig bleibt.
 const msgEmpty = isEn ? "No results for" : "Keine Treffer für";
 const msgLoading = isEn ? "Search is still loading…" : "Suche lädt noch …";
 ---
@@ -73,7 +73,7 @@ const msgLoading = isEn ? "Search is still loading…" : "Suche lädt noch …";
       loading = true;
       try {
         // /pagefind/pagefind.js existiert erst nach dem postbuild im dist und
-        // ist zur Build-Zeit nicht aufloesbar. Der Pfad wird zur Laufzeit
+        // ist zur Build-Zeit nicht auflösbar. Der Pfad wird zur Laufzeit
         // zusammengesetzt, damit Rollup ihn nicht statisch zu resolven
         // versucht (sonst bricht der Build mit "failed to resolve import").
         const path = ["", "pagefind", "pagefind.js"].join("/");
@@ -147,9 +147,9 @@ const msgLoading = isEn ? "Search is still loading…" : "Suche lädt noch …";
       }, 150);
     });
 
-    // Tastatur-Shortcut (Flexibilitaet fuer Power-User): "/" oder Cmd/Strg+K
-    // fokussiert die Suche, greift nicht waehrend man in einem Feld tippt.
-    // Escape leert die Suche und verlaesst das Feld.
+    // Tastatur-Shortcut (Flexibilität für Power-User): "/" oder Cmd/Strg+K
+    // fokussiert die Suche, greift nicht während man in einem Feld tippt.
+    // Escape leert die Suche und verlässt das Feld.
     document.addEventListener("keydown", (e) => {
       const el = document.activeElement;
       const typing =

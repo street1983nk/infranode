@@ -1,8 +1,8 @@
 """DCAT-AP-Katalog-Endpunkt ``/api/v1/catalog.jsonld`` (EU-Harvesting).
 
 Liefert einen maschinenlesbaren DCAT-AP-Katalog (JSON-LD) der von InfraNode
-bereitgestellten Datensaetze. Ziel: von ``data.europa.eu`` / GovData / sonstigen
-CKAN-Harvestern indexierbar machen, ohne dass InfraNode selbst eine oeffentliche
+bereitgestellten Datensätze. Ziel: von ``data.europa.eu`` / GovData / sonstigen
+CKAN-Harvestern indexierbar machen, ohne dass InfraNode selbst eine öffentliche
 Stelle sein muss (der Katalog beschreibt die *Distributionen* = API-Endpunkte +
 die offen lizenzierten Bulk-Snapshots auf Zenodo/Hugging Face).
 
@@ -39,15 +39,15 @@ _THEME = "http://publications.europa.eu/resource/authority/data-theme/{}"
 GERMANY = "http://publications.europa.eu/resource/authority/country/DEU"
 _FILE_TYPE = "http://publications.europa.eu/resource/authority/file-type/{}"
 
-# Kuratierte Datensatz-Definitionen (Topic-Granularitaet) ausgelagert, damit die
-# langen mehrsprachigen Texte nicht der Python-Zeilenlaenge unterliegen.
+# Kuratierte Datensatz-Definitionen (Topic-Granularität) ausgelagert, damit die
+# langen mehrsprachigen Texte nicht der Python-Zeilenlänge unterliegen.
 _DATA_PATH = Path(__file__).parent / "dcat_datasets.json"
 _DATA = json.loads(_DATA_PATH.read_text(encoding="utf-8"))
 _DATASETS: list[dict] = _DATA["datasets"]
 _SNAPSHOT_DISTRIBUTIONS: list[dict] = _DATA["snapshot_distributions"]
 
 # license_id (String wie in SOURCE_LICENSE) -> (Label, URI). Spiegelt
-# manifest._SPDX_MAP + ergaenzt die Nicht-Tier-A-Faelle (odbl/gemeinfrei), die im
+# manifest._SPDX_MAP + ergänzt die Nicht-Tier-A-Fälle (odbl/gemeinfrei), die im
 # Katalog ehrlich ausgewiesen werden. unknown/mixed -> keine Lizenz-URI.
 _LICENSE_URI: dict[str, tuple[str, str]] = {
     "cc0": ("CC0-1.0", "https://creativecommons.org/publicdomain/zero/1.0/"),

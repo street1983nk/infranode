@@ -46,13 +46,13 @@ log = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Oeffnet Redis-Pool + gepoolten HTTP-Client beim Start, schliesst beim Stop."""
+    """Oeffnet Redis-Pool + gepoolten HTTP-Client beim Start, schließt beim Stop."""
     settings = get_settings()
     app.state.settings = settings
     app.state.redis = create_redis_pool(settings.redis_url)
-    # Ein prozessweiter, gepoolter httpx-AsyncClient fuer alle Upstreams (RES-01/05).
+    # Ein prozessweiter, gepoolter httpx-AsyncClient für alle Upstreams (RES-01/05).
     app.state.http = create_http_client(settings)
-    # Dedizierter mTLS-Client NUR fuer Mobilithek (LIVE-04, T-20-MTLS): das
+    # Dedizierter mTLS-Client NUR für Mobilithek (LIVE-04, T-20-MTLS): das
     # Client-Cert darf nie an fremde Hosts gehen, daher ein SEPARATER Client,
     # NICHT app.state.http. Graceful Degradation: ohne Cert + Passwort kein Pull
     # (None), die Live-Routen liefern dann source_status="disabled".
@@ -71,27 +71,27 @@ async def lifespan(app: FastAPI):
             app.state.mobilithek_http = None
     else:
         app.state.mobilithek_http = None
-    # Prozessweites Task-Set fuer SWR-Background-Refresh (Pitfall 3, Plan 03/04).
+    # Prozessweites Task-Set für SWR-Background-Refresh (Pitfall 3, Plan 03/04).
     app.state.bg_tasks = set()
     # Prozessweite, Redis-persistente Breaker-Registry: Breaker-State MUSS
-    # request-uebergreifend leben (eine in Request A getrippte Quelle bleibt fuer
-    # Request B offen, RES-04) UND Deploys/Worker-Grenzen ueberleben (C-2026). Die
+    # request-übergreifend leben (eine in Request A getrippte Quelle bleibt für
+    # Request B offen, RES-04) UND Deploys/Worker-Grenzen überleben (C-2026). Die
     # RedisBreakerRegistry spiegelt den State write-through nach Redis und nutzt
-    # Wall-Clock-Zeit (prozessuebergreifend gueltiger opened_at). Faellt Redis aus,
+    # Wall-Clock-Zeit (prozessübergreifend gültiger opened_at). Fällt Redis aus,
     # degradiert sie still zum reinen in-memory-Verhalten (BreakerRegistry-Basis).
     app.state.breakers = RedisBreakerRegistry(redis=app.state.redis)
 
     def _schedule(coro):
         """Plant eine SWR-Refresh-Coroutine als langlebigen Task (Pitfall 3).
 
-        Haelt eine Referenz in ``app.state.bg_tasks`` gegen vorzeitige
+        Hält eine Referenz in ``app.state.bg_tasks`` gegen vorzeitige
         Garbage-Collection und entfernt sie nach Abschluss wieder.
         """
         task = asyncio.ensure_future(coro)
         app.state.bg_tasks.add(task)
         task.add_done_callback(app.state.bg_tasks.discard)
 
-    # EINE Fassade fuer alle Quellen-Adapter ab Phase 4 (Integration RES-01..05).
+    # EINE Fassade für alle Quellen-Adapter ab Phase 4 (Integration RES-01..05).
     app.state.resilient_client = ResilientSourceClient(
         http=app.state.http,
         redis=app.state.redis,
@@ -100,7 +100,7 @@ async def lifespan(app: FastAPI):
     )
     # GTFS-RT-Hintergrund-Poller (Phase 19): parst den Feed EINMAL je Kadenz nach
     # Redis (NIE im Request-Pfad, T-19-REQPARSE). Wird nur bei enable_gtfs_rt True
-    # + aufloesbarer Quelle gestartet (gtfs_de immer; mobilithek_delfi nur mit Cert
+    # + auflösbarer Quelle gestartet (gtfs_de immer; mobilithek_delfi nur mit Cert
     # + Abo-ID); nutzt das bestehende _schedule/bg_tasks-Muster (GC-Schutz). Bei
     # Default (enable_gtfs_rt False) entsteht KEIN Task (kein Verhaltensbruch).
     maybe_start_gtfs_rt_poller(app, settings, _schedule)
@@ -109,10 +109,10 @@ async def lifespan(app: FastAPI):
     finally:
         # Langlebige Hintergrund-Tasks (GTFS-RT-Poller, SWR-Refresh) zuerst canceln,
         # damit kein Task nach dem Pool-Close noch auf http/redis zugreift. Der
-        # Poller faengt CancelledError ab und beendet sich sauber (Phase 19).
+        # Poller fängt CancelledError ab und beendet sich sauber (Phase 19).
         for task in list(app.state.bg_tasks):
             task.cancel()
-        # Reihenfolge: erst HTTP-Pools schliessen, dann Redis.
+        # Reihenfolge: erst HTTP-Pools schließen, dann Redis.
         await close_http_client(app.state.http)
         if app.state.mobilithek_http is not None:
             await close_mobilithek_client(app.state.mobilithek_http)
@@ -120,13 +120,13 @@ async def lifespan(app: FastAPI):
 
 
 def _etag_payload(body: bytes, request_id: str | None) -> bytes:
-    """Neutralisiert die per-Request correlation_id fuer die ETag-Berechnung.
+    """Neutralisiert die per-Request correlation_id für die ETag-Berechnung.
 
-    Der ETag soll den stabilen Ressourcen-Inhalt repraesentieren, nicht die je
+    Der ETag soll den stabilen Ressourcen-Inhalt repräsentieren, nicht die je
     Request frisch erzeugte correlation_id. Ist die aktuelle ID im Body
     enthalten, wird genau ihr Vorkommen durch einen festen Platzhalter ersetzt
-    (nur fuer das Hashing); der ausgelieferte Body bleibt unveraendert. Ohne
-    bekannte ID (kein Treffer) wird der Body unveraendert gehasht.
+    (nur für das Hashing); der ausgelieferte Body bleibt unverändert. Ohne
+    bekannte ID (kein Treffer) wird der Body unverändert gehasht.
     """
     if not request_id:
         return body
@@ -142,15 +142,15 @@ class ETagMiddleware(BaseHTTPMiddleware):
     Greift NUR auf erfolgreiche GET-Reads (Status 200): liest den finalen
     Response-Body (OrjsonResponse liefert bytes), berechnet daraus einen
     stabilen ETag und setzt Cache-Control je Ressource. Stimmt der
-    ``If-None-Match``-Request-Header mit dem berechneten ETag ueberein, wird ein
-    304 ohne Body zurueckgegeben (ETag + Cache-Control bleiben erhalten). Fehler-
+    ``If-None-Match``-Request-Header mit dem berechneten ETag überein, wird ein
+    304 ohne Body zurückgegeben (ETag + Cache-Control bleiben erhalten). Fehler-
     Envelopes/503/non-GET/Streaming werden NIE angefasst (Anti-Pattern,
     T-11-ETAG-LEAK). ``If-None-Match`` wird nur verglichen, nie als Cache-
-    Schluessel verwendet (T-11-ETAG-POISON).
+    Schlüssel verwendet (T-11-ETAG-POISON).
 
     Reihenfolge (Pitfall 5): diese Middleware muss den finalen Body sehen, also
-    nahe am Response liegen (zuerst hinzugefuegt = zuletzt ausgefuehrt), CORS
-    bleibt aussen.
+    nahe am Response liegen (zuerst hinzugefügt = zuletzt ausgeführt), CORS
+    bleibt außen.
     """
 
     async def dispatch(
@@ -158,23 +158,23 @@ class ETagMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         response = await call_next(request)
 
-        # Nur erfolgreiche GET-Reads cachen; alles andere unberuehrt lassen.
+        # Nur erfolgreiche GET-Reads cachen; alles andere unberührt lassen.
         if request.method != "GET" or response.status_code != 200:
             return response
 
-        # Finalen Body aus dem Streaming-Iterator zusammenfuehren (BaseHTTPMiddleware
-        # liefert eine StreamingResponse), ohne ihn fuer den Client zu verlieren.
+        # Finalen Body aus dem Streaming-Iterator zusammenführen (BaseHTTPMiddleware
+        # liefert eine StreamingResponse), ohne ihn für den Client zu verlieren.
         body = b"".join([chunk async for chunk in response.body_iterator])
 
-        # ETag ueber den STABILEN Ressourcen-Inhalt: die per-Request neu erzeugte
+        # ETag über den STABILEN Ressourcen-Inhalt: die per-Request neu erzeugte
         # correlation_id (meta.correlation_id) ist Request-Rauschen und darf den
         # ETag nicht variieren lassen, sonst matcht If-None-Match nie -> kein 304.
         # Wir hashen daher eine Variante mit neutralisierter correlation_id; der
-        # AUSGELIEFERTE Body behaelt die echte ID unveraendert.
+        # AUSGELIEFERTE Body behält die echte ID unverändert.
         etag = compute_etag(_etag_payload(body, correlation_id.get()))
         response.headers["ETag"] = etag
-        # Ressource aus dem Pfadsegment nach /api/v1/<resource> ableiten; faellt
-        # in cache_control_for auf default zurueck, wenn unbekannt.
+        # Ressource aus dem Pfadsegment nach /api/v1/<resource> ableiten; fällt
+        # in cache_control_for auf default zurück, wenn unbekannt.
         parts = [p for p in request.url.path.split("/") if p]
         resource = parts[2] if len(parts) > 2 else None
         response.headers["Cache-Control"] = cache_control_for(resource)
@@ -195,17 +195,17 @@ class ETagMiddleware(BaseHTTPMiddleware):
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
-    """Log-Capture fuer das Admin-Dashboard (OPS-01/OPS-02).
+    """Log-Capture für das Admin-Dashboard (OPS-01/OPS-02).
 
     Misst je Request die Bearbeitungsdauer (``time.perf_counter`` VOR/NACH
     ``call_next``) und schreibt nach Abschluss einen KOMPAKTEN Log-Eintrag (Zeit,
     Methode, Pfad, Status, Dauer, request_id) in den gekappten Redis-Ringpuffer
-    plus einen Request-Zaehler (gesamt + Status + Endpunkt). Es landen NUR
+    plus einen Request-Zähler (gesamt + Status + Endpunkt). Es landen NUR
     Request-Metadaten im Buffer, NIE Header/Body/Cookies (T-13-02-06).
 
     Reihenfolge (Pitfall 1/5): MetricsMiddleware braucht den finalen Status UND die
     correlation_id. ``CorrelationIdMiddleware`` muss daher VOR der MetricsMiddleware
-    laufen (= spaeter added, da Starlette zuletzt-added-zuerst-ausfuehrt), damit
+    laufen (= später added, da Starlette zuletzt-added-zuerst-ausführt), damit
     ``correlation_id.get()`` im dispatch bereits gesetzt ist.
 
     Jeder Redis-Zugriff ist try/except-gekapselt: ein Metrik-Verlust crasht NIE den
@@ -219,8 +219,8 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         dauer_ms = round((time.perf_counter() - start) * 1000, 1)
 
-        # Endpunkt-Pfad fuer den Counter-Hash auf das Route-Template normalisieren
-        # (keine unbeschraenkte Kardinalitaet durch slugs): bevorzugt das gematchte
+        # Endpunkt-Pfad für den Counter-Hash auf das Route-Template normalisieren
+        # (keine unbeschränkte Kardinalität durch slugs): bevorzugt das gematchte
         # Route-Template (scope["route"].path), sonst der rohe URL-Pfad.
         route = request.scope.get("route")
         endpoint = getattr(route, "path", None) or request.url.path
@@ -252,7 +252,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             )
             # Aktive-Consumer-Tracking (nur echte Datenabrufe unter /api/v1/, ohne
             # Health/OpenAPI): je Stunde Anzahl + letzte Meta je Client-IP bzw.
-            # "mcp" fuer interne MCP-Aufrufe. Speist den stuendlichen ntfy-Digest.
+            # "mcp" für interne MCP-Aufrufe. Speist den stündlichen ntfy-Digest.
             p = request.url.path
             if p.startswith("/api/v1/") and not p.startswith(
                 ("/api/v1/health", "/api/v1/openapi")
@@ -267,7 +267,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                     status_code=response.status_code,
                     now=now,
                 )
-                # Tages-Counter je Kanal (api|mcp) fuer den taeglichen 00:05-Digest.
+                # Tages-Counter je Kanal (api|mcp) für den täglichen 00:05-Digest.
                 # Gleiche Abgrenzung wie das Consumer-Tracking (nur echte Datenabrufe
                 # unter /api/v1/, ohne Health/OpenAPI); MCP getrennt via Header.
                 await incr_daily(
@@ -280,7 +280,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
         # Erstkontakt-Benachrichtigung: meldet per ntfy, wenn ein neuer Dev (per
         # Client-IP) zum ersten Mal die API nutzt. Selbst gekapselt und best-effort,
-        # crasht den Request nie. Nach call_next eingehaengt (Pfad dann bekannt).
+        # crasht den Request nie. Nach call_next eingehängt (Pfad dann bekannt).
         try:
             pass  # Erstkontakt-Telemetrie ist privat (entfernt im Public-Build)
         except Exception as exc:  # noqa: BLE001 - Erstkontakt-Push crasht nie den Request
@@ -300,19 +300,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     """Wendet die Limiter-default_limits auf JEDE Route an (Live-Report M2).
 
     Hintergrund: slowapi-``@limiter.limit``-Decorator stehen nur auf wenigen Routen
-    (/sources, /compare, /admin/login). Die uebrigen City-/Meta-GETs trugen KEINEN
+    (/sources, /compare, /admin/login). Die übrigen City-/Meta-GETs trugen KEINEN
     Decorator, also griff dort weder das IP-Limit (60/min) noch wurden RateLimit-
     Header gesetzt. Diese Middleware ruft den Limiter mit ``in_middleware=True``
-    auf: slowapi zieht dann die ``default_limits`` (ANON_LIMIT) fuer alle NICHT per
-    Decorator markierten Routen und ueberspringt die bereits dekorierten (kein
-    Doppelzaehlen).
+    auf: slowapi zieht dann die ``default_limits`` (ANON_LIMIT) für alle NICHT per
+    Decorator markierten Routen und überspringt die bereits dekorierten (kein
+    Doppelzählen).
 
     Warum NICHT die mitgelieferte ``SlowAPIMiddleware``: deren synchroner
-    429-Pfad faellt auf slowapis eigenen Default-Handler zurueck, sobald der
+    429-Pfad fällt auf slowapis eigenen Default-Handler zurück, sobald der
     registrierte ``RateLimitExceeded``-Handler async ist (unser Envelope-Handler
     ist async) und crasht dort (``exc.detail``). Diese Middleware gibt den 429
-    stattdessen direkt ueber den zentralen ErrorEnvelope zurueck (gleiche Form wie
-    der async-Handler) und injiziert in beiden Faellen die RateLimit-Header.
+    stattdessen direkt über den zentralen ErrorEnvelope zurück (gleiche Form wie
+    der async-Handler) und injiziert in beiden Fällen die RateLimit-Header.
     """
 
     async def dispatch(
@@ -325,18 +325,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         handler = _find_route_handler(request.app.routes, request.scope)
 
         # Routen MIT eigenem @limiter.limit-Decorator NICHT hier pruefen: ihr
-        # auto_check-Decorator prueft selbst (sources/compare mit ANON_LIMIT,
-        # admin/login mit ADMIN_LOGIN_LIMIT). Sonst zoege slowapi-0.1.9 im
-        # Middleware-Pfad das Default ZUSAETZLICH (leere route_limits ->
-        # combined_defaults=True), was die Limits verfaelschen wuerde (Doppelzaehlung).
+        # auto_check-Decorator prüft selbst (sources/compare mit ANON_LIMIT,
+        # admin/login mit ADMIN_LOGIN_LIMIT). Sonst zöge slowapi-0.1.9 im
+        # Middleware-Pfad das Default ZUSÄTZLICH (leere route_limits ->
+        # combined_defaults=True), was die Limits verfälschen würde (Doppelzählung).
         marked = getattr(limiter_obj, "_Limiter__marked_for_limiting", {})
         if handler is not None:
             handler_name = f"{handler.__module__}.{handler.__name__}"
             if handler_name in marked:
                 return await call_next(request)
         try:
-            # in_middleware=True: zieht default_limits fuer un-dekorierte Routen,
-            # ueberspringt @limiter.limit-markierte (deren Decorator prueft selbst).
+            # in_middleware=True: zieht default_limits für un-dekorierte Routen,
+            # überspringt @limiter.limit-markierte (deren Decorator prüft selbst).
             limiter_obj._check_request_limit(request, handler, in_middleware=True)
         except RateLimitExceeded:
             # Zentraler 429-Envelope (identisch zum async-Handler in errors.py),
@@ -371,7 +371,7 @@ def create_app() -> FastAPI:
     configure_logging(settings.log_level)
 
     # Fail-fast bei Admin-Teilkonfiguration (Audit LOW-3, 2026-06-10): ist NUR
-    # das Passwort gesetzt (ohne Session-Secret), wuerde ein erfolgreicher Login
+    # das Passwort gesetzt (ohne Session-Secret), würde ein erfolgreicher Login
     # beim Schreiben in request.session mit einem 500er crashen (Session-
     # Middleware nicht montiert). Kein Bypass, aber ein verdeckter Defekt; daher
     # hart beim Start abbrechen statt erst beim ersten Login.
@@ -389,20 +389,20 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Reihenfolge (Pitfall 1/5): zuletzt hinzugefuegt = beim Request ZUERST
-    # ausgefuehrt. Ausfuehrungsreihenfolge eines Requests (aussen -> innen):
+    # Reihenfolge (Pitfall 1/5): zuletzt hinzugefügt = beim Request ZUERST
+    # ausgeführt. Ausführungsreihenfolge eines Requests (außen -> innen):
     #   CORS -> Session -> CorrelationId -> Metrics -> ETag -> RateLimit -> Route.
-    # Begruendung der relativen Ordnung Metrics/CorrelationId/ETag/RateLimit:
+    # Begründung der relativen Ordnung Metrics/CorrelationId/ETag/RateLimit:
     #   - RateLimit ganz innen (zuletzt added): es matcht den finalen Route-Handler
-    #     zuverlaessig und injiziert die RateLimit-Header auf die Route-Response;
-    #     ETag (weiter aussen) kopiert sie via dict(response.headers) durch (auch auf
-    #     die 304-Antwort), CORS bleibt aussen.
+    #     zuverlässig und injiziert die RateLimit-Header auf die Route-Response;
+    #     ETag (weiter außen) kopiert sie via dict(response.headers) durch (auch auf
+    #     die 304-Antwort), CORS bleibt außen.
     #   - ETag muss den FINALEN Body sehen -> nah an der Route.
     #   - Metrics braucht den finalen Status UND die correlation_id; CorrelationId
-    #     muss daher VOR Metrics laufen (= CorrelationId spaeter added als Metrics).
-    #   - SessionMiddleware weit aussen (frueh ausgefuehrt), damit request.session
+    #     muss daher VOR Metrics laufen (= CorrelationId später added als Metrics).
+    #   - SessionMiddleware weit außen (früh ausgeführt), damit request.session
     #     vor dem Inline-Auth-Guard der /admin-Routen bereitsteht.
-    #   - CORS bleibt ganz aussen (zuletzt added).
+    #   - CORS bleibt ganz außen (zuletzt added).
     #
     # RateLimitMiddleware (Live-Report M2): wendet die Limiter-default_limits
     # (ANON_LIMIT, default 60/min pro IP) auf JEDE Route an, auch auf die
@@ -410,17 +410,17 @@ def create_app() -> FastAPI:
     # griff nur das per-Route-Decorator-Limit (admin-login), die GET-Reads blieben
     # ungedrosselt und ohne RateLimit-Header.
     app.add_middleware(RateLimitMiddleware)
-    # AbuseGuard NACH RateLimitMiddleware added -> laeuft knapp DAVOR (Starlette:
-    # zuletzt added = aeusserste Schicht = zuerst ausgefuehrt). Grobe, billige
+    # AbuseGuard NACH RateLimitMiddleware added -> läuft knapp DAVOR (Starlette:
+    # zuletzt added = äußerste Schicht = zuerst ausgeführt). Grobe, billige
     # Vor-Filter gegen verteilte Bots (Subnetz-Limit + optionaler CF-Bot-Score-Block)
-    # vor dem feineren per-IP-Limit. Scraping-Haertung; Details: abuse_guard.py.
+    # vor dem feineren per-IP-Limit. Scraping-Härtung; Details: abuse_guard.py.
     app.add_middleware(AbuseGuardMiddleware)
     app.add_middleware(ETagMiddleware)
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
     # SessionMiddleware nur, wenn ein Session-Secret konfiguriert ist (fail-closed,
     # T-13-02-02): ohne Secret gibt es kein Admin-Login. HttpOnly ist Starlette-
-    # Default; SameSite=Strict + Secure(Prod) + max_age 8h schuetzen das Cookie.
+    # Default; SameSite=Strict + Secure(Prod) + max_age 8h schützen das Cookie.
     if settings.admin_session_secret:
         app.add_middleware(
             SessionMiddleware,
@@ -430,8 +430,8 @@ def create_app() -> FastAPI:
             https_only=settings.admin_cookie_https_only,
             max_age=60 * 60 * 8,
         )
-    # Keylose, oeffentliche Read-API: "*" ist der Default (siehe config.py). "*"
-    # und allow_credentials=True schliessen sich per CORS-Spec aus -> Credentials
+    # Keylose, öffentliche Read-API: "*" ist der Default (siehe config.py). "*"
+    # und allow_credentials=True schließen sich per CORS-Spec aus -> Credentials
     # nur bei expliziter Whitelist. Admin ist same-origin und damit CORS-neutral.
     cors_wildcard = "*" in settings.cors_origins
     app.add_middleware(
@@ -442,7 +442,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # StaticFiles-Mount fuer admin.css (B1): check_dir=False verhindert einen
+    # StaticFiles-Mount für admin.css (B1): check_dir=False verhindert einen
     # RuntimeError, falls das Verzeichnis beim App-Start noch leer/abwesend ist.
     # Pfad paket-relativ absolut via Path(__file__).parent.
     app.mount(

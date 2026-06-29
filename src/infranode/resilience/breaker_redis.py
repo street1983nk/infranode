@@ -5,14 +5,14 @@ Neustart und teilt ihn nicht zwischen mehreren Uvicorn-Workern: ein in Worker A
 oder vor einem Deploy getrippter Breaker startet danach wieder CLOSED und
 hammert die kranke Quelle erneut, bis er erneut 5x failt. Diese Unterklasse
 spiegelt den Breaker-State je Quelle write-through nach Redis und hydriert ihn
-vor jedem Zugriff zurueck, sodass OPEN/HALF_OPEN Deploys und Worker-Grenzen
-ueberlebt (der im Code vorgesehene Upgrade-Pfad, breaker.py-Docstring T-03-13).
+vor jedem Zugriff zurück, sodass OPEN/HALF_OPEN Deploys und Worker-Grenzen
+überlebt (der im Code vorgesehene Upgrade-Pfad, breaker.py-Docstring T-03-13).
 
-Wichtig (Uhr): der persistierte ``opened_at`` ist nur prozessuebergreifend
+Wichtig (Uhr): der persistierte ``opened_at`` ist nur prozessübergreifend
 sinnvoll, wenn er eine WALL-CLOCK-Zeit ist. Daher injiziert diese Registry
 ``time.time`` (statt des ``time.monotonic``-Defaults der Basisklasse) in jeden
 erzeugten ``CircuitBreaker``; der Cooldown-Vergleich (now - opened_at >= cooldown)
-bleibt damit ueber Prozesse hinweg korrekt.
+bleibt damit über Prozesse hinweg korrekt.
 
 Graceful Degradation (RES-Kernprinzip): jeder Redis-Fehler in hydrate/persist
 degradiert still zum reinen in-memory-Verhalten (nur ``type(exc).__name__``
@@ -36,16 +36,16 @@ from .breaker import BreakerRegistry, BreakerState, CircuitBreaker
 
 log = structlog.get_logger()
 
-# State-Schluessel je Quelle. Eigener Namespace, getrennt von den Cache-Keys
+# State-Schlüssel je Quelle. Eigener Namespace, getrennt von den Cache-Keys
 # (source:{name}:v1:...), damit ein Breaker-State nie mit Nutzdaten kollidiert.
 _KEY_PREFIX = "breaker:state:"
 
-# TTL des persistierten States: nach einem Tag ohne jeden Zugriff verfaellt der
-# Eintrag (eine seit 24h unberuehrte Quelle startet sauber CLOSED). Ein aktiver
-# OPEN-Breaker wird bei jedem record_* neu geschrieben und verlaengert die TTL.
+# TTL des persistierten States: nach einem Tag ohne jeden Zugriff verfällt der
+# Eintrag (eine seit 24h unberührte Quelle startet sauber CLOSED). Ein aktiver
+# OPEN-Breaker wird bei jedem record_* neu geschrieben und verlängert die TTL.
 _STATE_TTL = 86400
 
-# Per-Source-Cooldown (s) fuer fragile Upstreams aus der deklarativen Quellen-
+# Per-Source-Cooldown (s) für fragile Upstreams aus der deklarativen Quellen-
 # Registry (registry/source_specs.py). Quellen ohne Eintrag behalten 30s.
 _FRAGILE_SOURCE_COOLDOWN: dict[str, float] = dict(_REGISTRY_COOLDOWN)
 
@@ -57,7 +57,7 @@ class RedisBreakerRegistry(BreakerRegistry):
         redis: redis.asyncio-kompatibler Client (app.state.redis).
         failure_threshold/cooldown: wie Basisklasse.
         now: injizierbare Uhr; Default ``time.time`` (WALL-CLOCK, prozess-
-            uebergreifend gueltig), NICHT der monotonic-Default der Basisklasse.
+            übergreifend gültig), NICHT der monotonic-Default der Basisklasse.
     """
 
     def __init__(
@@ -85,7 +85,7 @@ class RedisBreakerRegistry(BreakerRegistry):
         """Laedt den persistierten State aus Redis in den in-memory Breaker.
 
         Redis ist die Quelle der Wahrheit (Multi-Worker-Konvergenz). Fehlt der
-        Eintrag oder ist er unlesbar, bleibt der in-memory Breaker unveraendert
+        Eintrag oder ist er unlesbar, bleibt der in-memory Breaker unverändert
         (frischer Worker -> CLOSED). Still degradierend bei jedem Redis-Fehler.
         """
         try:
@@ -103,7 +103,7 @@ class RedisBreakerRegistry(BreakerRegistry):
             breaker.opened_at = data["opened_at"]
             breaker.failure_count = int(data["failure_count"])
         except (ValueError, KeyError, TypeError) as exc:
-            # Defekter Eintrag: ignorieren statt crashen (in-memory bleibt gueltig).
+            # Defekter Eintrag: ignorieren statt crashen (in-memory bleibt gültig).
             log.debug(
                 "breaker_hydrate_parse_failed",
                 source=source,
@@ -113,8 +113,8 @@ class RedisBreakerRegistry(BreakerRegistry):
     async def persist(self, source: str, breaker: CircuitBreaker) -> None:
         """Schreibt den aktuellen Breaker-State write-through nach Redis (best-effort).
 
-        Wird nach jedem record_success/record_failure aufgerufen, damit der naechste
-        Worker/der naechste Request den State sieht. Still degradierend.
+        Wird nach jedem record_success/record_failure aufgerufen, damit der nächste
+        Worker/der nächste Request den State sieht. Still degradierend.
         """
         payload = orjson.dumps(
             {

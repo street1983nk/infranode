@@ -51,14 +51,29 @@ def map_mastr_assets(
     Default ``None``). ``geo`` bleibt ``None`` (Stadtebene); ``observed_at``
     bleibt ``None``.
 
-    ``by_type`` zaehlt die Anlagen je Typ (pv/wind/speicher/biogas). Leere
+    ``by_type`` zählt die Anlagen je Typ (pv/wind/speicher/biogas). Leere
     ``rows`` sind KEIN Fehler (Batch ohne Treffer -> count 0).
     """
     by_type: dict[str, int] = {}
+    # H7: leistung_kw je Anlage zur Stadt-Gesamtleistung (+ je Typ) aggregieren -
+    # die wichtigste MaStR-Kennzahl. Nur echte Zahlen zählen; trägt keine Anlage
+    # eine Leistung, bleibt total_power_kw None (ehrliche Null statt 0.0).
+    power_by_type: dict[str, float] = {}
+    total_power_kw = 0.0
+    has_power = False
     for row in rows:
         typ = row.get("einheit_typ")
         if typ:
             by_type[typ] = by_type.get(typ, 0) + 1
+        leistung = row.get("leistung_kw")
+        if isinstance(leistung, (int, float)) and not isinstance(leistung, bool):
+            has_power = True
+            total_power_kw += leistung
+            if typ:
+                power_by_type[typ] = power_by_type.get(typ, 0.0) + leistung
+
+    total_power = round(total_power_kw, 1) if has_power else None
+    power_by_type = {t: round(p, 1) for t, p in power_by_type.items()}
 
     return CanonicalRecord(
         city_slug=slug,
@@ -77,6 +92,8 @@ def map_mastr_assets(
         payload=EnergyAssetPayload(
             count=len(rows),
             by_type=by_type,
+            total_power_kw=total_power,
+            power_by_type=power_by_type,
             assets=list(rows),
         ),
     )

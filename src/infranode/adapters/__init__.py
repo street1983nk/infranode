@@ -1,10 +1,10 @@
 """Quellen-Adapter: keylose/leichte Upstream-Fetcher (DATA-01).
 
-Re-exportiert die oeffentliche Adapter-API. Jeder Adapter laedt eine Upstream-
-Quelle und liefert ein flaches raw-dict, das der zugehoerige reine Mapper aus
+Re-exportiert die öffentliche Adapter-API. Jeder Adapter lädt eine Upstream-
+Quelle und liefert ein flaches raw-dict, das der zugehörige reine Mapper aus
 der Normalisierungs-Library erwartet. Der Adapter koppelt NICHT an Pydantic und
 kennt KEIN Cache/Breaker (das liefert die Resilienz-Fassade). Muster analog
-``infranode.normalization`` (Paket-__init__ re-exportiert die oeffentliche API).
+``infranode.normalization`` (Paket-__init__ re-exportiert die öffentliche API).
 """
 
 from __future__ import annotations

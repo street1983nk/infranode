@@ -1,17 +1,17 @@
 """Reiner MobiData-BW-Road-Event-Mapper (DATA-15, Tier A DL-DE/BY).
 
-Uebersetzt das rohe Adapter-dict (``slug``/``events`` aus
+Übersetzt das rohe Adapter-dict (``slug``/``events`` aus
 ``adapters/mobidata_bw.py``) deterministisch in einen ``CanonicalRecord`` mit
 ``RoadEventPayload`` (``city_source="mobidata_bw"``). Die Funktion ist rein: kein
 HTTP, kein XML-Parse, keine Systemuhr. Der ``retrieved_at``-Zeitstempel wird
 keyword-only injiziert, damit Tests deterministisch bleiben.
 
 Der landesweite BW-DATEX-II-Feed (MobiData BW, Verkehrsministerium Baden-
-Wuerttemberg) steht unter der Datenlizenz Deutschland Namensnennung 2.0:
+Württemberg) steht unter der Datenlizenz Deutschland Namensnennung 2.0:
 ``license_id=DL_DE_BY_2_0``, ``license_tier=A`` (kennzeichnet die permissive
 Lizenz zur korrekten Attribution und Weiternutzung, T-9-03 / Verifikation 09-06)
 und die wortgenaue Attribution
-"Verkehrsministerium Baden-Wuerttemberg / MobiData BW". Verkehrs-
+"Verkehrsministerium Baden-Württemberg / MobiData BW". Verkehrs-
 ereignisse tragen ihre Zeit/Geometrie je Event, daher ``observed_at=None`` und
 ``geo=None`` (keine strikte Geometry-Validierung, RESEARCH Pitfall 6).
 """
@@ -41,7 +41,7 @@ def map_mobidata_road_events(
 ) -> CanonicalRecord:
     """Bildet rohe MobiData-Road-Events auf einen ``CanonicalRecord`` (Tier A) ab.
 
-    Die ``events`` (Baustellen/Sperrungen, DATA-15) wandern unveraendert in den
+    Die ``events`` (Baustellen/Sperrungen, DATA-15) wandern unverändert in den
     ``RoadEventPayload`` (``city_source="mobidata_bw"``). Der ``retrieved_at``-
     Zeitstempel wird injiziert (keine Systemuhr im Mapper), damit das Ergebnis
     deterministisch bleibt. Die Join-Keys ``ags``/``wikidata_qid`` werden aus dem

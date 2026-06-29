@@ -1,5 +1,5 @@
 // llms-full.txt an der Build-Wurzel (DX-04, GEO). Volltext aller Endpunkte als
-// zusammengefuegtes Markdown, sodass ein LLM ohne Folgeklicks alles im Kontext
+// zusammengefügtes Markdown, sodass ein LLM ohne Folgeklicks alles im Kontext
 // hat: je Endpunkt Titel (METHOD path), summary/description, Parameter-Liste
 // und ein Beispiel-curl. Single Source ist loadEndpoints() (openapi.yaml).
 // Defensiv gegen fehlende Felder (Pitfall 5). ASCII in Code/URLs, Umlaute nur in
@@ -10,7 +10,7 @@ import type { Endpoint } from "../lib/openapi";
 import { curlFor } from "../lib/codegen";
 
 // Datenquelle ist die endpoints-Collection (gespeist aus loadEndpoints() in
-// content.config.ts). Collection-Load laeuft im Astro-Build-Kontext und ist
+// content.config.ts). Collection-Load läuft im Astro-Build-Kontext und ist
 // robust gegen das Pfadproblem eines direkten loadEndpoints()-Aufrufs hier.
 
 interface OpenApiParameter {
@@ -26,7 +26,7 @@ function asParam(value: unknown): OpenApiParameter {
 }
 
 // Rendert einen Endpunkt als Markdown-Block (ohne fenced code via Backtick-Var,
-// damit die Quelldatei keine literalen Code-Fences enthaelt).
+// damit die Quelldatei keine literalen Code-Fences enthält).
 function renderEndpoint(endpoint: Endpoint): string {
   const fence = "```";
   const out: string[] = [];

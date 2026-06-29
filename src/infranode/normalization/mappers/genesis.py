@@ -1,6 +1,6 @@
 """Reiner GENESIS-Demografie-Mapper map_demographics (DATA-17, GOV-02/03).
 
-Uebersetzt das flache GENESIS-raw-dict deterministisch in einen
+Übersetzt das flache GENESIS-raw-dict deterministisch in einen
 ``CanonicalRecord`` mit ``DemographicsPayload`` (kind=demographics). Die Funktion
 ist rein: kein HTTP, kein Logging, kein ``datetime.now()``. Der
 ``retrieved_at``-Zeitstempel wird keyword-only injiziert, damit Tests
@@ -8,8 +8,9 @@ deterministisch bleiben.
 
 KRITISCH (Lizenz-Klassifikation GOV-02): GENESIS-Demografie ist Tier A (offene Lizenz),
 ``source=SourceId.GENESIS``, ``license_id=DL_DE_BY_2_0``, ``license_tier=A``.
-Die Attribution traegt PFLICHT die Destatis-/Regionalstatistik-Quelle samt der
-DL-DE/BY-2.0-Lizenz-URL (GOV-03).
+Die Attribution trägt PFLICHT die "Statistischen Ämter des Bundes und der Länder"
+(H15: vereinheitlicht mit der regionalstatistik-Quelle, gleicher Host
+www.regionalstatistik.de) samt der DL-DE/BY-2.0-Lizenz-URL (GOV-03).
 
 ``observed_at`` bleibt ``None`` (das Stichjahr steht im Payload,
 ``reference_year``); ``geo`` bleibt ``None`` (Stadtebene, kein Punkt-Geo).
@@ -52,8 +53,8 @@ def map_demographics(
     bleibt ``None`` (Stichjahr im Payload ``reference_year``).
 
     KRITISCH (GOV-02/03): ``source=GENESIS``, ``license_id=DL_DE_BY_2_0``,
-    ``license_tier=A``; die Attribution nennt PFLICHT die Destatis-/
-    Regionalstatistik-Quelle samt DL-DE/BY-2.0-Lizenz-URL.
+    ``license_tier=A``; die Attribution nennt PFLICHT die "Statistischen Ämter des
+    Bundes und der Länder" (H15-vereinheitlicht) samt DL-DE/BY-2.0-Lizenz-URL.
     """
     return CanonicalRecord(
         city_slug=raw["slug"],
@@ -66,7 +67,11 @@ def map_demographics(
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
-            text="Statistisches Bundesamt (Destatis) / Regionalstatistik",
+            # H15 (Owner 2026-06-29): vereinheitlicht mit der regionalstatistik-
+            # Quelle - beide ziehen vom selben Host www.regionalstatistik.de
+            # (Regionaldatenbank Deutschland), dessen Pflicht-Nennung die
+            # "Statistischen Ämter des Bundes und der Länder" sind.
+            text="Statistische Ämter des Bundes und der Länder",
             license_url=_DL_DE_BY_URL,
         ),
         payload=DemographicsPayload(
@@ -95,7 +100,8 @@ def map_regional_stat(
     (``reference_year``/``region_name``/``values``). ``dataset`` benennt den
     Datensatz (unemployment/tourism/construction). Rein: kein HTTP, kein
     ``datetime.now()`` (injiziert). GOV-02/03: ``source=GENESIS``,
-    ``license_id=DL_DE_BY_2_0``, Tier A, Destatis-/Regionalstatistik-Attribution.
+    ``license_id=DL_DE_BY_2_0``, Tier A, "Statistische Ämter des Bundes und der
+    Länder"-Attribution (H15-vereinheitlicht).
     ``observed_at``/``geo`` bleiben ``None`` (Jahreswert je Kreis, kein Punkt-Geo).
     """
     return CanonicalRecord(
@@ -109,7 +115,11 @@ def map_regional_stat(
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
-            text="Statistisches Bundesamt (Destatis) / Regionalstatistik",
+            # H15 (Owner 2026-06-29): vereinheitlicht mit der regionalstatistik-
+            # Quelle - beide ziehen vom selben Host www.regionalstatistik.de
+            # (Regionaldatenbank Deutschland), dessen Pflicht-Nennung die
+            # "Statistischen Ämter des Bundes und der Länder" sind.
+            text="Statistische Ämter des Bundes und der Länder",
             license_url=_DL_DE_BY_URL,
         ),
         payload=RegionalStatPayload(
@@ -135,7 +145,7 @@ def map_population_demographics(
     aus dem Register (Herkunft Wikidata, CC0). Sortenrein Tier A mit eigener
     Wikidata-Attribution - KEINE Vermischung mit GENESIS (das einen vollen
     DemographicsPayload liefert). reference_year bleibt None (Wikidata-Stand
-    ist nicht jahresscharf gefuehrt).
+    ist nicht jahresscharf geführt).
     """
     return CanonicalRecord(
         city_slug=slug,

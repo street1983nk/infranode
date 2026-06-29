@@ -1,18 +1,18 @@
-"""Rate-Limiting fuer den oeffentlichen MCP-Endpunkt (Security-Haertung 2026-06-21).
+"""Rate-Limiting für den öffentlichen MCP-Endpunkt (Security-Härtung 2026-06-21).
 
 Der Remote-MCP-Server (``mcp.infranode.dev/mcp``, streamable-http) lief bis hier
 OHNE eigene Drosselung: Caddy reicht 1:1 durch und die slowapi-Limiter der
 FastAPI-App greifen nur auf dem API-Pfad, nicht auf dem MCP-Service. Ein Client
-konnte den MCP-Endpunkt also ungebremst haemmern (jeder Tool-Call loest zudem
+konnte den MCP-Endpunkt also ungebremst hämmern (jeder Tool-Call löst zudem
 einen API-Aufruf aus, der die Upstream-Last vervielfacht).
 
 Diese Middleware drosselt pro echter Client-IP mit einem Moving-Window
 (``limits``-Library, bereits via slowapi vorhanden). Der Storage liegt in REDIS
-(``INFRANODE_REDIS_URL``), damit das Budget ueber mehrere MCP-Replicas GETEILT
+(``INFRANODE_REDIS_URL``), damit das Budget über mehrere MCP-Replicas GETEILT
 ist (horizontale Skalierung): liefen N Replicas mit je eigenem In-Memory-Fenster,
 ver-N-fachte sich das effektive Limit. Ist Redis nicht erreichbar (z.B. lokaler
-stdio-Betrieb ohne Redis), faellt die Middleware auf einen prozesslokalen
-In-Memory-Speicher zurueck, damit der Server trotzdem startet (Schutzlimit, kein
+stdio-Betrieb ohne Redis), fällt die Middleware auf einen prozesslokalen
+In-Memory-Speicher zurück, damit der Server trotzdem startet (Schutzlimit, kein
 harter State). Die echte Client-IP kommt wie in der API zuerst aus
 ``CF-Connecting-IP`` (von Cloudflare verbindlich gesetzt), dann aus
 ``X-Forwarded-For[0]``, sonst dem Peer.
@@ -32,22 +32,22 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 logger = logging.getLogger(__name__)
 
-# Default-Budget pro IP fuer den MCP-Endpunkt. Per INFRANODE_MCP_RATE_LIMIT
-# (limits-Format "<zahl>/<einheit>") ueberschreibbar. Historie Owner 2026-06-24:
+# Default-Budget pro IP für den MCP-Endpunkt. Per INFRANODE_MCP_RATE_LIMIT
+# (limits-Format "<zahl>/<einheit>") überschreibbar. Historie Owner 2026-06-24:
 # zuerst 60 -> 240/min (Discovery-Flows get_city_overview -> mehrere gezielte
-# Tool-Calls), dann 240 -> 480/min (mehr Luft fuer KI-Agenten-Sitzungen). Zielgroesse
-# bis Jahresende klar < 1000 Nutzer, Box mit grosser Reserve -> unkritisch. Der
-# Overview-Snapshot buendelt seine Highlights serverseitig in EINEN API-Aufruf (kein
+# Tool-Calls), dann 240 -> 480/min (mehr Luft für KI-Agenten-Sitzungen). Zielgröße
+# bis Jahresende klar < 1000 Nutzer, Box mit großer Reserve -> unkritisch. Der
+# Overview-Snapshot bündelt seine Highlights serverseitig in EINEN API-Aufruf (kein
 # Vervielfachen der Upstream-Last) und ist parallel + zeitgedeckelt. Bleibt bewusst
 # ein Schutz-Limit gegen Hammering.
 _DEFAULT_LIMIT = "480/minute"
 
 
 def _make_storage():
-    """Redis-Storage fuer geteilte Budgets ueber Replicas; Fallback In-Memory.
+    """Redis-Storage für geteilte Budgets über Replicas; Fallback In-Memory.
 
     storage_from_string verbindet lazy; ``check()`` pingt Redis und gibt bei
-    nicht erreichbarem Server False zurueck (wirft nicht). Nur dann der
+    nicht erreichbarem Server False zurück (wirft nicht). Nur dann der
     prozesslokale Fallback, damit ein versehentlich fehlendes Redis den
     lokalen/stdio-MCP-Server nicht am Start hindert.
     """
@@ -56,9 +56,9 @@ def _make_storage():
         # Kurze Connect-/Read-Timeouts: ohne sie kann check() bei nicht
         # aufloesbarem/erreichbarem Host (lokaler stdio-Betrieb ohne Redis, oder
         # ISP-DNS-Hijack des Compose-Servicenamens "redis") bis zum OS-Default
-        # blockieren -> der MCP-Server-Start haengt. So faellt check() schnell auf
+        # blockieren -> der MCP-Server-Start hängt. So fällt check() schnell auf
         # False und wir nehmen den In-Memory-Fallback. memory:// ignoriert die
-        # kwargs (kein Netz), daher unschaedlich.
+        # kwargs (kein Netz), daher unschädlich.
         storage = storage_from_string(
             url, socket_connect_timeout=0.5, socket_timeout=0.5
         )
@@ -83,9 +83,9 @@ def client_ip(request: Request) -> str:
     """Echte Client-IP: CF-Connecting-IP -> X-Forwarded-For[0] -> Peer.
 
     Identische Quelle wie ``infranode.api.v1.ratelimit.real_client_ip``; hier
-    eigenstaendig gehalten, damit der MCP-Server nicht den FastAPI-/slowapi-Pfad
-    importieren muss. Vertrauenswuerdig nur unter der CF-only-Firewall (sonst
-    koennte ein Angreifer CF-Connecting-IP faelschen, s. DEPLOYMENT.md Abschnitt 2).
+    eigenständig gehalten, damit der MCP-Server nicht den FastAPI-/slowapi-Pfad
+    importieren muss. Vertrauenswürdig nur unter der CF-only-Firewall (sonst
+    könnte ein Angreifer CF-Connecting-IP fälschen, s. DEPLOYMENT.md Abschnitt 2).
     """
     cf = request.headers.get("cf-connecting-ip")
     if cf:
@@ -111,19 +111,19 @@ class MCPRateLimitMiddleware:
         self._item = parse(
             limit or os.environ.get("INFRANODE_MCP_RATE_LIMIT", _DEFAULT_LIMIT)
         )
-        # Fenster in Sekunden fuer den Retry-After-Header.
+        # Fenster in Sekunden für den Retry-After-Header.
         self._retry_after = str(self._item.get_expiry())
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
-            # Lifespan/WebSocket unberuehrt durchreichen.
+            # Lifespan/WebSocket unberührt durchreichen.
             await self.app(scope, receive, send)
             return
 
         request = Request(scope, receive=receive)
         ip = client_ip(request)
-        # hit() zaehlt den Request und gibt False zurueck, sobald das Budget
-        # erschoepft ist. Namespace "mcp" trennt die Buckets sauber.
+        # hit() zählt den Request und gibt False zurück, sobald das Budget
+        # erschöpft ist. Namespace "mcp" trennt die Buckets sauber.
         if not self._limiter.hit(self._item, "mcp", ip):
             response = JSONResponse(
                 {

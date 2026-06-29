@@ -4,12 +4,12 @@ Bahnhofs-Stammdaten der Deutschen Bahn aus der offenen StaDa-API (DB API
 Marketplace, Produkt "StaDa - Station Data", CC BY 4.0 = Tier A). Holt die
 KOMPLETTE bundesweite Bahnhofsliste in einem Abruf und normalisiert sie zu
 schlanken dicts. Die Zuordnung Bahnhof -> Stadt erfolgt NICHT hier, sondern in
-der Route ueber den amtlichen Gemeindeschluessel (StaDa ``municipalityCode`` ==
+der Route über den amtlichen Gemeindeschlüssel (StaDa ``municipalityCode`` ==
 Stadt-``ags``); deshalb wird die Liste EINMAL geholt + via Resilienz-Fassade lange
-gecacht und je Stadt gefiltert (ein Abruf bedient alle 84 Staedte).
+gecacht und je Stadt gefiltert (ein Abruf bedient alle 84 Städte).
 
 Je Bahnhof wird die Haupt-EVA (``isMain``, sonst die erste) samt Geokoordinate
-extrahiert; Bahnhoefe ohne EVA werden uebersprungen (ohne EVA kein Board).
+extrahiert; Bahnhöfe ohne EVA werden übersprungen (ohne EVA kein Board).
 
 Sicherheit:
 - T-05-08 (SSRF): Host hartkodiert (DB-API-Marketplace-Gateway); kein User-Input
@@ -17,7 +17,7 @@ Sicherheit:
 - T-08-CRED: Client-Id/Api-Key gehen NUR in die Request-Header, nie in
   Cache-Key/Response/Log.
 
-Der Adapter ist rein gegenueber Pydantic/Resilienz: er baut KEINEN
+Der Adapter ist rein gegenüber Pydantic/Resilienz: er baut KEINEN
 ``CanonicalRecord`` und kennt KEIN Cache/Breaker (Resilienz-Fassade in der Route).
 ``raise_for_status`` ist Pflicht (5xx -> STALE-ON-ERROR).
 """
@@ -28,7 +28,7 @@ import httpx
 
 # Host hartkodiert (SSRF, T-05-08): der DB-API-Marketplace-Gateway, Produkt StaDa.
 _BASE = "https://apis.deutschebahn.com/db-api-marketplace/apis/station-data/v2/stations"
-# StaDa liefert bundesweit ~5400 Bahnhoefe; ein grosszuegiges Limit holt alle in
+# StaDa liefert bundesweit ~5400 Bahnhöfe; ein großzügiges Limit holt alle in
 # einem Abruf (die API deckelt selbst bei 10000).
 _LIMIT = 10000
 
@@ -53,10 +53,10 @@ def _normalize(station: dict) -> dict | None:
     lat = coords[1] if len(coords) == 2 else None
     lon = coords[0] if len(coords) == 2 else None
     addr = station.get("mailingAddress") or {}
-    # Alle EVA-Nummern: Grossbahnhoefe haben mehrere Ebenen mit eigener EVA, und
-    # die Abfahrtstafel (/plan) haengt teils an einer Ebenen-EVA, nicht an der
+    # Alle EVA-Nummern: Großbahnhöfe haben mehrere Ebenen mit eigener EVA, und
+    # die Abfahrtstafel (/plan) hängt teils an einer Ebenen-EVA, nicht an der
     # Haupt-EVA. ``eva`` = Haupt-EVA (Bequemlichkeit), ``evas`` = alle (Fallback
-    # fuer Split-Bahnhoefe, damit jeder Bahnhof per Board nutzbar ist).
+    # für Split-Bahnhöfe, damit jeder Bahnhof per Board nutzbar ist).
     all_evas = [
         str(e["number"])
         for e in (station.get("evaNumbers") or [])
@@ -70,7 +70,7 @@ def _normalize(station: dict) -> dict | None:
         "lat": lat,
         "lon": lon,
         "zip": addr.get("zipcode"),
-        # Amtlicher Gemeindeschluessel = Zuordnungsschluessel zur Stadt (== ags).
+        # Amtlicher Gemeindeschlüssel = Zuordnungsschlüssel zur Stadt (== ags).
         "ags": station.get("municipalityCode"),
     }
 
@@ -92,7 +92,7 @@ async def fetch_all_stations(
         "DB-Api-Key": api_key,
         "Accept": "application/json",
     }
-    # Die bundesweite Liste ist gross (~8 MB / ~13 s); eigener grosszuegiger
+    # Die bundesweite Liste ist groß (~8 MB / ~13 s); eigener großzügiger
     # Timeout statt des knappen globalen http-Defaults. Ergebnis wird lange
     # gecacht (24h/30d) + SWR-warmgehalten, der Abruf passiert also selten.
     resp = await http.get(

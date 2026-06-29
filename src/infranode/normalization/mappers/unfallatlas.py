@@ -1,11 +1,11 @@
-"""Reiner Unfallatlas-Mapper map_accidents (Verkehrsunfaelle, DL-DE/BY 2.0, Tier A).
+"""Reiner Unfallatlas-Mapper map_accidents (Verkehrsunfälle, DL-DE/BY 2.0, Tier A).
 
 Bildet das Jahres-Aggregat aus dem SQLite-Reader (``archive.unfallatlas_db.
 read_accidents``) deterministisch auf einen ``CanonicalRecord`` mit
 ``AccidentPayload`` ab. Rein: kein HTTP, kein ``datetime.now()`` (injiziert).
 
-Lizenz DL-DE/BY 2.0, Attribution wortgenau "Statistische Aemter des Bundes und
-der Laender, Unfallatlas" (muss verbatim in DATA-LICENSES.md + SOURCE_LICENSE
+Lizenz DL-DE/BY 2.0, Attribution wortgenau "Statistische Ämter des Bundes und
+der Länder, Unfallatlas" (muss verbatim in DATA-LICENSES.md + SOURCE_LICENSE
 stehen). ``observed_at``/``geo`` bleiben ``None`` (Jahres-Aggregat je Kreis).
 """
 

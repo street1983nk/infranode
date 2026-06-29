@@ -1,12 +1,12 @@
 """Reiner DB-Timetables-Mapper ``map_station_departures`` (DATA-34, CC BY 4.0, Tier A).
 
-Uebersetzt das aggregierte DB-Timetables-raw-dict (aus
+Übersetzt das aggregierte DB-Timetables-raw-dict (aus
 ``adapters.db_timetables.fetch_station_departures``) deterministisch in einen
 ``CanonicalRecord`` mit ``StationDeparturesPayload``. Rein: kein HTTP, kein
 Logging, kein ``datetime.now()`` (``retrieved_at`` wird injiziert).
 
-Die Abfahrtstafel ist aus Sollfahrplan + Echtzeit-Aenderungen ZUSAMMENGEFUEHRT
-(Merge, Verspaetungsberechnung), daher ``modified=True``. Lizenz CC BY 4.0,
+Die Abfahrtstafel ist aus Sollfahrplan + Echtzeit-Änderungen ZUSAMMENGEFÜHRT
+(Merge, Verspätungsberechnung), daher ``modified=True``. Lizenz CC BY 4.0,
 Attribution wortgenau "Deutsche Bahn AG" (muss verbatim in DATA-LICENSES.md +
 SOURCE_LICENSE stehen).
 """
@@ -47,7 +47,7 @@ def map_station_departures(
 ) -> CanonicalRecord:
     """Bildet die aggregierte Live-Abfahrtstafel auf einen ``CanonicalRecord`` ab.
 
-    ``modified=True`` (Soll + Echtzeit zusammengefuehrt). ``observed_at=None`` (die
+    ``modified=True`` (Soll + Echtzeit zusammengeführt). ``observed_at=None`` (die
     Abfahrtszeit steht je Eintrag im Payload). ``lat``/``lon`` (Stadtkoordinate aus
     dem Register) werden, falls vorhanden, als ``geo`` gesetzt.
     """

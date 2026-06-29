@@ -1,4 +1,4 @@
-"""Entrypoint fuer ``python -m infranode`` (lokaler uvicorn-Start)."""
+"""Entrypoint für ``python -m infranode`` (lokaler uvicorn-Start)."""
 
 from __future__ import annotations
 

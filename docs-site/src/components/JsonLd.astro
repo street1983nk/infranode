@@ -1,11 +1,11 @@
 ---
 // JSON-LD strukturierte Daten (DX-03, schema.org). type="WebAPI" auf der
-// Startseite, type="APIReference" je Endpunkt-Seite, type="FAQPage" fuer Q&A-
-// Bloecke (GEO: KI-Antwortmaschinen + Google-Rich-Results) und
-// type="SoftwareApplication" fuer den MCP-Server. Das schema.org-Objekt wird mit
-// JSON.stringify serialisiert (gueltiges, escaptes JSON; kein manuelles
+// Startseite, type="APIReference" je Endpunkt-Seite, type="FAQPage" für Q&A-
+// Blöcke (GEO: KI-Antwortmaschinen + Google-Rich-Results) und
+// type="SoftwareApplication" für den MCP-Server. Das schema.org-Objekt wird mit
+// JSON.stringify serialisiert (gültiges, escaptes JSON; kein manuelles
 // String-Bauen, T-12-SEO-INJECT). Felder konservativ nach schema.org gehalten
-// (T-12-SEO-INVALID: invalid schema waere schlechter als keins, daher nur
+// (T-12-SEO-INVALID: invalid schema wäre schlechter als keins, daher nur
 // Kernfelder).
 interface Props {
   type:
@@ -131,7 +131,7 @@ if (type === "WebAPI") {
     // Doku/Snapshot wird mit jedem Deploy neu erzeugt. Gibt Google Dataset
     // Search ein Frische-Signal.
     dateModified: new Date().toISOString().slice(0, 10),
-    // Verweis auf den DCAT-AP-Katalog (EU-harvestbar), staerkt die Einordnung
+    // Verweis auf den DCAT-AP-Katalog (EU-harvestbar), stärkt die Einordnung
     // als Datensatz.
     includedInDataCatalog: {
       "@type": "DataCatalog",

@@ -1,17 +1,17 @@
 """Reiner UBA-Luft-Mapper map_air_uba (DATA-10, GOV-01/03, Tier A).
 
-Uebersetzt das flache UBA-raw-dict deterministisch in einen ``CanonicalRecord``
+Übersetzt das flache UBA-raw-dict deterministisch in einen ``CanonicalRecord``
 mit dem WIEDERVERWENDETEN ``AirQualityPayload`` (kind=air_quality, kein neues
 Air-Payload). Die Funktion ist rein: kein HTTP, kein Logging, kein
 ``datetime.now()``. Der ``retrieved_at``-Zeitstempel wird keyword-only injiziert,
 damit Tests deterministisch bleiben.
 
 KRITISCH (Lizenz-Klassifikation GOV-02): UBA ist Tier A (offene Lizenz),
-``license_id=DL_DE_BY_2_0``, ``license_tier=A``. Der UBA-Record wird ueber die
+``license_id=DL_DE_BY_2_0``, ``license_tier=A``. Der UBA-Record wird über die
 Route ``/air-uba`` (Tier-A-Bestand) ausgeliefert.
 
 KRITISCH (GOV-03): UBA-Daten unter Datenlizenz Deutschland Namensnennung 2.0 sind
-NICHT aufbereitet (anders als DWD-Wetter), daher traegt die Attribution KEIN
+NICHT aufbereitet (anders als DWD-Wetter), daher trägt die Attribution KEIN
 ``modified`` (Default ``False``) und die wortgenaue Namensnennung
 "Umweltbundesamt".
 """
@@ -47,8 +47,8 @@ def map_air_uba(
     Mapper), damit das Ergebnis deterministisch bleibt. Die Join-Keys
     ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht (Default
     ``None``). Der Payload nutzt das bestehende ``AirQualityPayload``; die
-    UBA-Station-ID dient als fachlicher Schluessel fuer die ``record_id``
-    (ARCH-02). Die Attribution traegt KEIN ``modified`` (DL-DE/BY, GOV-03).
+    UBA-Station-ID dient als fachlicher Schlüssel für die ``record_id``
+    (ARCH-02). Die Attribution trägt KEIN ``modified`` (DL-DE/BY, GOV-03).
     """
     return CanonicalRecord(
         city_slug=raw["slug"],
@@ -61,7 +61,9 @@ def map_air_uba(
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
-            text="Umweltbundesamt",
+            # H15: verbatim wie source_specs + DATA-LICENSES.md ("(UBA)" war im
+            # Mapper abgeschnitten -> Attribution-Drift gegen Doku/Registry).
+            text="Umweltbundesamt (UBA)",
             license_url=_DL_DE_BY_URL,
         ),
         payload=AirQualityPayload(

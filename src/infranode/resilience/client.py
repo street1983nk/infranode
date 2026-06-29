@@ -4,18 +4,18 @@ Diese Klasse verschmilzt die einzelnen Resilienz-Schichten zu EINER Funktion,
 die Phase 4+ pro Quellen-Adapter trivial konsumiert:
 
 - RES-01/05 (Pool + User-Agent): der gepoolte ``httpx.AsyncClient`` aus
-  ``app.state.http`` wird durchgereicht; der Quellen-Adapter erhaelt ihn als
+  ``app.state.http`` wird durchgereicht; der Quellen-Adapter erhält ihn als
   einzigen I/O-Kanal.
-- RES-02/03 (Cache-Aside + SWR + Single-Flight): jeder Read laeuft durch
+- RES-02/03 (Cache-Aside + SWR + Single-Flight): jeder Read läuft durch
   ``cache_get_or_set`` (genau ein Upstream-Call bei HIT/Single-Flight).
 - RES-04 (per-Source-Breaker): die Upstream-Coroutine wird pro Quelle durch den
-  ``CircuitBreaker`` der ``BreakerRegistry`` geschuetzt. Eine tote Quelle trippt
+  ``CircuitBreaker`` der ``BreakerRegistry`` geschützt. Eine tote Quelle trippt
   nur ihren eigenen Breaker und blockiert weder andere Quellen noch die
   Gesamt-Response (T-03-10).
 
-Fallback-Politik (T-03-10/12): faellt der Upstream aus (Breaker OPEN ODER
+Fallback-Politik (T-03-10/12): fällt der Upstream aus (Breaker OPEN ODER
 ``httpx.HTTPError``), liefert die Fassade einen vorhandenen (auch abgelaufenen)
-Cache-Eintrag als ``STALE-ON-ERROR`` zurueck. Existiert kein Cache, liefert sie
+Cache-Eintrag als ``STALE-ON-ERROR`` zurück. Existiert kein Cache, liefert sie
 ``(None, STALE-ON-ERROR)`` statt zu blockieren oder einen Stacktrace zu leaken;
 der aufrufende API-Layer (Phase 4) entscheidet, ob daraus ein ``UpstreamError``
 (503) wird. ``fetch`` blockiert nie und wirft keinen ungemappten Upstream-Fehler.
@@ -50,7 +50,7 @@ async def _last_cache(redis, key: str):
 
     Graceful Degradation (T-03-09): jeder Redis-Fehler -> None statt Raise. Der
     Value-Container ist derselbe wie in ``infra/cache._store`` (payload +
-    fresh_until/stale_until); base64-gewrappte bytes werden zurueck dekodiert.
+    fresh_until/stale_until); base64-gewrappte bytes werden zurück dekodiert.
     """
     try:
         raw = await redis.get(key)
@@ -72,7 +72,7 @@ async def _last_cache(redis, key: str):
     return payload
 
 
-# Default-Cache-Fenster (fresh_s, stale_s) fuer Quellen ohne expliziten Registry-
+# Default-Cache-Fenster (fresh_s, stale_s) für Quellen ohne expliziten Registry-
 # Eintrag: bisheriges Verhalten (60s fresh, ~120s stale via Pad).
 _DEFAULT_TTL: tuple[float, float] = (60.0, 120.0)
 # Per-Source-Cache-TTL (fresh_s, stale_s) aus der deklarativen Quellen-Registry
@@ -82,7 +82,7 @@ _SOURCE_TTL: dict[str, tuple[float, float]] = dict(_REGISTRY_TTL)
 # --- Outbound-Limits je Upstream (ToS-Compliance) -----------------------------
 # Obergrenze gleichzeitiger Upstream-Calls je Quelle. Geteilte VM-IP -> der
 # Wikidata-WDQS-Endpoint erlaubt nur ~5 parallele Queries/IP. Quellen ohne
-# Eintrag: unbegrenzt (Verhalten unveraendert).
+# Eintrag: unbegrenzt (Verhalten unverändert).
 _SOURCE_MAX_CONCURRENCY: dict[str, int] = {"wikidata": 5}
 # Mindestabstand (Sekunden) zwischen Upstream-Calls je Quelle (Aggregat-Rate).
 # DB-Timetables-ToS: <=60 Aufrufe/Minute -> >=1.0s. Quellen ohne Eintrag: kein
@@ -140,9 +140,9 @@ class ResilientSourceClient:
         http: prozessweiter, gepoolter ``httpx.AsyncClient`` (app.state.http).
         redis: redis.asyncio-kompatibler Client (app.state.redis).
         breakers: prozessweite ``BreakerRegistry`` (app.state.breakers). Default:
-            eine frische Registry (Breaker-State lebt dann nur fuer diese
+            eine frische Registry (Breaker-State lebt dann nur für diese
             Instanz; in der App wird eine geteilte Registry injiziert, damit der
-            Breaker-State request-uebergreifend lebt).
+            Breaker-State request-übergreifend lebt).
         schedule: plant die SWR-Background-Refresh-Coroutine (Default: der
             asyncio-Task-Halter aus ``cache_get_or_set``).
     """
@@ -169,14 +169,14 @@ class ResilientSourceClient:
     ):
         """Hole Daten der Quelle ``source`` unter ``key`` (resilient, nie blockierend).
 
-        Reihenfolge: Cache (HIT/STALE/MISS) um eine Breaker-geschuetzte
+        Reihenfolge: Cache (HIT/STALE/MISS) um eine Breaker-geschützte
         Upstream-Coroutine. Bei OPEN-Breaker oder Upstream-Fehler -> last-cache-
         Fallback (STALE-ON-ERROR) bzw. ``(None, STALE-ON-ERROR)``.
 
         Args:
-            store: Wenn ``False``, laeuft der Call ON-DEMAND: KEIN Redis-Read/Write,
+            store: Wenn ``False``, läuft der Call ON-DEMAND: KEIN Redis-Read/Write,
                 kein Stale-Fallback, kein SWR-Background-Refresh; nur der
-                Breaker-Schutz um den Live-Call bleibt. Fuer Quellen, deren ToS
+                Breaker-Schutz um den Live-Call bleibt. Für Quellen, deren ToS
                 das Spiegeln/Vorhalten verbieten (Tankerkoenig/MTS-K): Daten nur
                 live bei Useraktion, nie zwischengespeichert (T-08-CRED-Folge).
 
@@ -186,9 +186,9 @@ class ResilientSourceClient:
         """
         breaker = self._breakers.get(source)
         # Optionale Redis-Persistenz des Breaker-States (RedisBreakerRegistry, C-2026):
-        # hydrate ZIEHT den prozessuebergreifenden State vor der Entscheidung, persist
+        # hydrate ZIEHT den prozessübergreifenden State vor der Entscheidung, persist
         # SCHREIBT ihn nach jedem record_*. Duck-Typing -> die schlanke in-memory
-        # BreakerRegistry (Tests/Fallback) bleibt voellig unveraendert (keine Methoden).
+        # BreakerRegistry (Tests/Fallback) bleibt völlig unverändert (keine Methoden).
         hydrate = getattr(self._breakers, "hydrate", None)
         persist = getattr(self._breakers, "persist", None)
         if hydrate is not None:
@@ -242,7 +242,7 @@ class ResilientSourceClient:
             # Cache-Status-Counter am EINZIGEN Chokepoint (OPS-02). result[1] ist
             # der rohe Status-str (HIT/MISS/STALE); incr_cache_status ist intern
             # try/except-gekapselt (13-01) und kann den fetch-Pfad nie blockieren.
-            # NOCH IM try-Block, damit das except-Verhalten unten unveraendert bleibt.
+            # NOCH IM try-Block, damit das except-Verhalten unten unverändert bleibt.
             await incr_cache_status(self._redis, result[1])
             return result
         except (BreakerOpen, httpx.HTTPError) as exc:
@@ -255,6 +255,6 @@ class ResilientSourceClient:
                 has_stale=stale is not None,
                 error=type(exc).__name__,
             )
-            # Auch der Fallback-Pfad zaehlt am Chokepoint (STALE-ON-ERROR-Bucket).
+            # Auch der Fallback-Pfad zählt am Chokepoint (STALE-ON-ERROR-Bucket).
             await incr_cache_status(self._redis, CacheStatus.STALE_ON_ERROR)
             return stale, CacheStatus.STALE_ON_ERROR

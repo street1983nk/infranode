@@ -1,18 +1,18 @@
 """Reiner DWD-Pollen/UV-Mapper map_pollen_uv (DATA-14, GOV-03).
 
-Uebersetzt das flache DWD-raw-dict aus ``fetch_pollen_uv`` deterministisch in
+Übersetzt das flache DWD-raw-dict aus ``fetch_pollen_uv`` deterministisch in
 einen ``CanonicalRecord`` mit ``PollenUvPayload``. Die Funktion ist rein: kein
 HTTP, kein Logging, kein ``datetime.now()``. Der ``retrieved_at``-Zeitstempel
 wird keyword-only injiziert, damit Tests deterministisch bleiben.
 
-KRITISCH (GOV-03, Pitfall 5): DWD-Daten sind aufbereitet, daher traegt die
+KRITISCH (GOV-03, Pitfall 5): DWD-Daten sind aufbereitet, daher trägt die
 Attribution ``modified=True`` und den wortgenauen GeoNutzV-Hinweis
 "Datenbasis: Deutscher Wetterdienst, eigene Elemente ergänzt" (identisch zu
 ``map_weather``). Lizenz und Tier sind hartkodiert (GeoNutzV, Tier A).
 
 KRITISCH (Pitfall 4, Ehrlichkeit): Die Daten sind GROSSREGION-genau, NICHT
-stadtgenau. ``region_id``/``region_name`` weisen die Grossregion ehrlich im
-Payload aus; ``geo`` bleibt ``None`` (keine vorgetaeuschte Stadt-Koordinate).
+stadtgenau. ``region_id``/``region_name`` weisen die Großregion ehrlich im
+Payload aus; ``geo`` bleibt ``None`` (keine vorgetäuschte Stadt-Koordinate).
 """
 
 from __future__ import annotations
@@ -42,11 +42,11 @@ def map_pollen_uv(
 ) -> CanonicalRecord:
     """Bildet rohe DWD-Pollen/UV-Daten auf einen ``CanonicalRecord`` ab.
 
-    ``observed_at`` bleibt ``None`` (DWD liefert Tagesindex je Grossregion, keinen
+    ``observed_at`` bleibt ``None`` (DWD liefert Tagesindex je Großregion, keinen
     Messzeitpunkt). Der ``retrieved_at``-Zeitstempel wird injiziert (kein
     ``datetime.now()`` im Mapper), damit das Ergebnis deterministisch ist. Die
     Join-Keys ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht
-    (Default ``None``). ``geo=None`` (Pitfall 4: Grossregion, nicht stadtgenau).
+    (Default ``None``). ``geo=None`` (Pitfall 4: Großregion, nicht stadtgenau).
     """
     return CanonicalRecord(
         city_slug=raw["slug"],

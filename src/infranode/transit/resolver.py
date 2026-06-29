@@ -71,9 +71,9 @@ def stop_times_for_trip(zip_path: str | Path, trip_id: str) -> list[dict]:
 def _stops_geo_index(zip_path: str | Path) -> dict[str, dict[str, float]]:
     """Baut aus ``stops.txt`` eine ``{stop_id: {lat, lon}}``-Map.
 
-    ``stops.txt`` ist klein genug fuer eine vollstaendige In-Memory-Map (anders als
+    ``stops.txt`` ist klein genug für eine vollständige In-Memory-Map (anders als
     ``stop_times.txt``). Streamt zeilenweise (kein Voll-Lesen). Zeilen ohne
-    parsebare Koordinaten werden uebersprungen (ehrlich, kein Fehler).
+    parsebare Koordinaten werden übersprungen (ehrlich, kein Fehler).
     """
     out: dict[str, dict[str, float]] = {}
     for row in stream_entry(zip_path, "stops.txt"):
@@ -94,11 +94,11 @@ def stops_with_geo_for_trip(
 
     Verbindet :func:`stop_times_for_trip` (sortierte Halte mit Soll-Zeiten) mit der
     ``stops.txt``-Geo-Map und rechnet die GTFS-Soll-Zeit (``arrival_time``, sonst
-    ``departure_time``, "HH:MM:SS", >24h moeglich) gegen den injizierten
+    ``departure_time``, "HH:MM:SS", >24h möglich) gegen den injizierten
     ``service_day_epoch`` in einen ``scheduled_epoch`` um (reine Funktion, keine
-    Systemuhr). Halte ohne Geo ODER ohne parsebare Soll-Zeit werden uebersprungen,
+    Systemuhr). Halte ohne Geo ODER ohne parsebare Soll-Zeit werden übersprungen,
     damit :func:`infranode.transit.interpolation.estimate_position` nur
-    vollstaendige Halte sieht. Unbekannte ``trip_id`` -> leere Liste.
+    vollständige Halte sieht. Unbekannte ``trip_id`` -> leere Liste.
     """
     stops = stop_times_for_trip(zip_path, trip_id)
     if not stops:

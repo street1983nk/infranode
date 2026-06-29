@@ -1,11 +1,11 @@
-// Single Source fuer die per-Datentyp-Landingpages (SEO-Massnahme 1).
-// Jede Datenachse (Wetter, Luftqualitaet, Strompreis, Bodenrichtwerte,
-// OePNV-Echtzeit) bekommt eine keyword-optimierte Seite in DE und EN, gespeist
+// Single Source für die per-Datentyp-Landingpages (SEO-Maßnahme 1).
+// Jede Datenachse (Wetter, Luftqualität, Strompreis, Bodenrichtwerte,
+// ÖPNV-Echtzeit) bekommt eine keyword-optimierte Seite in DE und EN, gespeist
 // aus diesem Array. Die dynamischen Routen src/pages/daten/[topic].astro und
 // src/pages/en/data/[topic].astro generieren daraus die Seiten.
 //
-// coverageKey: Schluessel in src/data/coverage.json#partial fuer die Stadt-Zahl.
-// "all" = alle Staedte (nationale/flaechendeckende Quelle). endpointId verlinkt
+// coverageKey: Schlüssel in src/data/coverage.json#partial für die Stadt-Zahl.
+// "all" = alle Städte (nationale/flächendeckende Quelle). endpointId verlinkt
 // in die API-Referenz (/api/{endpointId}/ bzw. /en/api/{endpointId}/).
 
 export interface TopicFaq {
@@ -346,7 +346,7 @@ export const topics: Topic[] = [
     endpointId: "getCityStationDepartures",
     examplePath: "/api/v1/cities/berlin/station-departures",
     // ÖPNV-Echtzeit gibt es für alle Städte (DELFI/HVV GTFS), daher "all".
-    // Vorher faelschlich "station-departures" (kein Key in coverage.json) ->
+    // Vorher fälschlich "station-departures" (kein Key in coverage.json) ->
     // Topic erschien auf KEINER Stadt-Landingpage. Fix 2026-06-23.
     coverageKey: "all",
     de: {
@@ -398,29 +398,29 @@ export const topics: Topic[] = [
     id: "public-tenders",
     endpointId: "getCityPublicTenders",
     examplePath: "/api/v1/cities/koeln/public-tenders",
-    // Bundesweite OCDS-Quelle (Datenservice Oeffentlicher Einkauf), daher "all".
+    // Bundesweite OCDS-Quelle (Datenservice Öffentlicher Einkauf), daher "all".
     coverageKey: "all",
     de: {
       slug: "vergabe-api",
-      metaTitle: "Vergabe-API Deutschland: oeffentliche Auftraege je Stadt, keylos",
-      h1: "API fuer oeffentliche Auftragsvergabe deutscher Staedte",
-      lead: "Laufende Ausschreibungen und vergebene Auftraege deutscher Staedte ueber eine kostenlose, keylose REST-API. Quelle ist der Datenservice Oeffentlicher Einkauf (oeffentlichevergabe.de) im OCDS-Standard, einheitlich als JSON mit Quelle, Lizenz und Zeitstempel je Antwort.",
+      metaTitle: "Vergabe-API Deutschland: öffentliche Aufträge je Stadt, keylos",
+      h1: "API für öffentliche Auftragsvergabe deutscher Städte",
+      lead: "Laufende Ausschreibungen und vergebene Aufträge deutscher Städte über eine kostenlose, keylose REST-API. Quelle ist der Datenservice Öffentlicher Einkauf (oeffentlichevergabe.de) im OCDS-Standard, einheitlich als JSON mit Quelle, Lizenz und Zeitstempel je Antwort.",
       dataDesc:
-        "Pro Stadt liefert der Endpunkt die oeffentlichen Vergabebekanntmachungen: Bekanntmachungstyp (Ausschreibung oder Zuschlag), Status, Auftraggeber-Ort, Region (NUTS), Leistungsgegenstand (CPV) und, soweit veroeffentlicht, der Auftragswert. Filtern laesst sich nach Status (active fuer laufende, complete fuer vergebene Auftraege).",
-      sourceName: "Datenservice Oeffentlicher Einkauf",
+        "Pro Stadt liefert der Endpunkt die öffentlichen Vergabebekanntmachungen: Bekanntmachungstyp (Ausschreibung oder Zuschlag), Status, Auftraggeber-Ort, Region (NUTS), Leistungsgegenstand (CPV) und, soweit veröffentlicht, der Auftragswert. Filtern lässt sich nach Status (active für laufende, complete für vergebene Aufträge).",
+      sourceName: "Datenservice Öffentlicher Einkauf",
       sourceUrl: "https://www.oeffentlichevergabe.de/",
       license: "CC0",
       licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
       vars: ["Bekanntmachungstyp (Ausschreibung/Zuschlag)", "Status", "Auftraggeber-Ort", "Region (NUTS)", "Leistungsgegenstand (CPV)", "Auftragswert"],
-      keywords: ["Vergabe API Deutschland", "oeffentliche Auftraege API", "Ausschreibungen API", "OCDS API Deutschland", "Auftragsvergabe Daten API", "public procurement API Germany"],
-      coverageNote: "Die Abdeckung waechst: Oberschwellige Bekanntmachungen sind vollstaendig, unterschwellige werden ab 2024 schrittweise ergaenzt.",
+      keywords: ["Vergabe API Deutschland", "öffentliche Aufträge API", "Ausschreibungen API", "OCDS API Deutschland", "Auftragsvergabe Daten API", "public procurement API Germany"],
+      coverageNote: "Die Abdeckung wächst: Oberschwellige Bekanntmachungen sind vollständig, unterschwellige werden ab 2024 schrittweise ergänzt.",
       faq: [
-        { q: "Ist die Vergabe-API kostenlos und ohne Schluessel nutzbar?", a: "Ja. Die API ist keylos und kostenlos, ein GET-Request ohne Anmeldung genuegt. Das Rate-Limit betraegt 300 Anfragen pro Minute und IP." },
-        { q: "Welche Vergabedaten sind enthalten?", a: "Laufende Ausschreibungen und bereits vergebene Auftraege je Stadt mit Bekanntmachungstyp, Status, Auftraggeber-Ort, Region (NUTS), Leistungsgegenstand (CPV) und, soweit veroeffentlicht, dem Auftragswert." },
-        { q: "Welche Lizenz gilt fuer die Vergabedaten?", a: "Die Daten stammen aus dem Datenservice Oeffentlicher Einkauf und werden unter CC0 durchgereicht. Lizenz-URL und Attribution stehen in jeder API-Antwort im attribution-Block." },
+        { q: "Ist die Vergabe-API kostenlos und ohne Schlüssel nutzbar?", a: "Ja. Die API ist keylos und kostenlos, ein GET-Request ohne Anmeldung genügt. Das Rate-Limit beträgt 300 Anfragen pro Minute und IP." },
+        { q: "Welche Vergabedaten sind enthalten?", a: "Laufende Ausschreibungen und bereits vergebene Aufträge je Stadt mit Bekanntmachungstyp, Status, Auftraggeber-Ort, Region (NUTS), Leistungsgegenstand (CPV) und, soweit veröffentlicht, dem Auftragswert." },
+        { q: "Welche Lizenz gilt für die Vergabedaten?", a: "Die Daten stammen aus dem Datenservice Öffentlicher Einkauf und werden unter CC0 durchgereicht. Lizenz-URL und Attribution stehen in jeder API-Antwort im attribution-Block." },
       ],
-      datasetName: "InfraNode Vergabedaten deutscher Staedte (Datenservice Oeffentlicher Einkauf)",
-      datasetDesc: "Laufende Ausschreibungen und vergebene Auftraege deutscher Staedte aus dem Datenservice Oeffentlicher Einkauf (OCDS, CC0), kostenlos und keylos ueber eine REST-API als JSON.",
+      datasetName: "InfraNode Vergabedaten deutscher Städte (Datenservice Öffentlicher Einkauf)",
+      datasetDesc: "Laufende Ausschreibungen und vergebene Aufträge deutscher Städte aus dem Datenservice Öffentlicher Einkauf (OCDS, CC0), kostenlos und keylos über eine REST-API als JSON.",
     },
     en: {
       slug: "public-procurement-api",

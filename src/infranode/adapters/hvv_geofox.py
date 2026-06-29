@@ -3,7 +3,7 @@
 Echtzeit-Abfahrten je Halt aus der HVV-Geofox-GTI-API (Geofox Thin Interface).
 Im Unterschied zur statischen ``/cities/{slug}/transit`` (DELFI/HVV-GTFS-Stops,
 Batch) ist dies ein LIVE-Request-Pfad: minutenfrische Abfahrten inkl. Verspätung
-und Linien-Störungshinweisen, nur für Hamburg (Geofox deckt ausschliesslich den
+und Linien-Störungshinweisen, nur für Hamburg (Geofox deckt ausschließlich den
 HVV-Raum ab).
 
 Auth (verifiziert gegen die bestehende Geofox-Integration, school-kiosk):

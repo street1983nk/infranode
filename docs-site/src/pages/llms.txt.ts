@@ -16,7 +16,7 @@ import { mcpTopics } from "../data/mcp-topics";
 // eines direkten loadEndpoints()-Aufrufs in der prerenderten Route.
 
 // Absolute Doku-Domain. Astro.site stammt aus astro.config.mjs (Env
-// INFRANODE_DOCS_SITE), Fallback ist die oeffentliche Domain infranode.dev.
+// INFRANODE_DOCS_SITE), Fallback ist die öffentliche Domain infranode.dev.
 function siteBase(site: URL | undefined): string {
   return (site?.toString() ?? "https://infranode.dev").replace(/\/$/, "");
 }
@@ -63,7 +63,7 @@ export const GET: APIRoute = async ({ site }) => {
   );
   lines.push("");
 
-  // Kern-Seiten (Doku, MCP, Ueber) zuerst, damit Agenten Einstieg und Kontext
+  // Kern-Seiten (Doku, MCP, Über) zuerst, damit Agenten Einstieg und Kontext
   // finden, gefolgt von der englischen Fassung der Kernseiten.
   lines.push("## Seiten");
   lines.push("");

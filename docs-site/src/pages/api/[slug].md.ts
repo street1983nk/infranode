@@ -1,8 +1,8 @@
 // Statische .md-Variante je Endpunkt (DX-04, "Copy page as Markdown"-Quelle).
 // getStaticPaths baut je OpenAPI-Operation eine Route (params.slug =
-// operationId), die GET-Funktion gibt eine reine Markdown-Repraesentation
+// operationId), die GET-Funktion gibt eine reine Markdown-Repräsentation
 // (Titel, summary/description, Parameter-Liste, Beispiel-curl) als
-// text/markdown zurueck. Single Source ist loadEndpoints() (openapi.yaml).
+// text/markdown zurück. Single Source ist loadEndpoints() (openapi.yaml).
 // Defensiv gegen fehlende Felder (Pitfall 5). ASCII in Code/URLs, Umlaute nur in
 // Prosa, keine Em-Dashes, keine Emojis.
 import type { APIRoute, GetStaticPaths } from "astro";
@@ -11,7 +11,7 @@ import type { Endpoint } from "../../lib/openapi";
 import { curlFor } from "../../lib/codegen";
 
 // Datenquelle ist die endpoints-Collection (gespeist aus loadEndpoints() in
-// content.config.ts). getCollection laeuft im Astro-Build-Kontext und vermeidet
+// content.config.ts). getCollection läuft im Astro-Build-Kontext und vermeidet
 // das Pfadproblem eines direkten loadEndpoints()-Aufrufs im prerenderten Chunk.
 
 interface OpenApiParameter {

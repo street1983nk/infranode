@@ -1,11 +1,11 @@
-"""Paginierungs-Vertraege (API-04): PageParams + page_params + paginate.
+"""Paginierungs-Verträge (API-04): PageParams + page_params + paginate.
 
-Opt-in Listen-Paginierung (D-07): page/limit/offset + Whitelist fuer sort/order.
+Opt-in Listen-Paginierung (D-07): page/limit/offset + Whitelist für sort/order.
 ``limit`` wird auf ``MAX_LIMIT`` gedeckelt (200 mit gedeckelter Seite statt 5xx,
 Best-Practice #8): der zentrale RequestValidationError-Handler mappt auf 400, ein
-ueberhoehtes limit soll aber NICHT als invalid_request gelten, daher wird in
-``page_params`` ueber ``min(limit, MAX_LIMIT)`` gedeckelt statt ueber ``le=``
-abgewiesen. Whitelist-Verstoss bei sort/order -> ``ValidationFailedError`` (400),
+überhöhtes limit soll aber NICHT als invalid_request gelten, daher wird in
+``page_params`` über ``min(limit, MAX_LIMIT)`` gedeckelt statt über ``le=``
+abgewiesen. Whitelist-Verstoß bei sort/order -> ``ValidationFailedError`` (400),
 BEVOR roher User-String interpretiert wird (T-11-FILTER-INJ). Offset-Overflow ->
 Python-Slice ergibt ``[]`` (200, nie 500, Best-Practice #8).
 """
@@ -18,7 +18,7 @@ from fastapi import Query
 
 from infranode.api.errors import ValidationFailedError
 
-# Defaults + harte Obergrenze fuer das Seiten-Limit (Cap via Query(le=MAX_LIMIT)).
+# Defaults + harte Obergrenze für das Seiten-Limit (Cap via Query(le=MAX_LIMIT)).
 DEFAULT_LIMIT = 50
 MAX_LIMIT = 200
 
@@ -43,8 +43,8 @@ def page_params(
 ) -> PageParams:
     """FastAPI-Dependency: parst + validiert page/limit/offset/sort/order.
 
-    ``limit`` wird ueber ``min(limit, MAX_LIMIT)`` gedeckelt (gedeckelte 200-Seite
-    statt 5xx/4xx, Best-Practice #8), nicht ueber ``le=`` hart abgewiesen.
+    ``limit`` wird über ``min(limit, MAX_LIMIT)`` gedeckelt (gedeckelte 200-Seite
+    statt 5xx/4xx, Best-Practice #8), nicht über ``le=`` hart abgewiesen.
     """
     if order not in ("asc", "desc"):
         raise ValidationFailedError(

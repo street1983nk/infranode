@@ -1,9 +1,9 @@
 """Reiner Baumkataster-Mapper map_trees (DATA-OSM-Tier-2, Baumkataster).
 
-Uebersetzt rohe Baum-WFS-Features (GeoJSON-Punkte) deterministisch in einen
+Übersetzt rohe Baum-WFS-Features (GeoJSON-Punkte) deterministisch in einen
 ``CanonicalRecord`` mit ``PoiPayload`` (``poi_type="trees"``). Je Baum der Punkt
-(lat/lon) plus die je Stadt konfigurierten Attribute (Art, Pflanzjahr, Hoehe,
-Strasse, Bezirk). Lizenz/Attribution kommen pro Stadt aus dem raw-dict (Berlin:
+(lat/lon) plus die je Stadt konfigurierten Attribute (Art, Pflanzjahr, Höhe,
+Straße, Bezirk). Lizenz/Attribution kommen pro Stadt aus dem raw-dict (Berlin:
 DL-DE/Zero 2.0, Tier A). Rein: kein HTTP/Logging/now().
 """
 
@@ -34,9 +34,9 @@ def map_trees(
     """Bildet rohe Baumkataster-WFS-Features auf einen ``CanonicalRecord`` ab.
 
     Jedes Feature (Punkt) wird auf ein schlankes dict (lat/lon + konfigurierte
-    Felder) reduziert; ein Feld wird nur gesetzt, wenn der Baum es traegt (kein
+    Felder) reduziert; ein Feld wird nur gesetzt, wenn der Baum es trägt (kein
     null-Rauschen). ``count`` ist immer ``len(items)`` (gedeckelte Stichprobe,
-    siehe Adapter). Baeume sind statisch, daher ``observed_at=None``; der
+    siehe Adapter). Bäume sind statisch, daher ``observed_at=None``; der
     ``retrieved_at``-Zeitstempel wird injiziert.
     """
     fields = raw.get("fields", [])

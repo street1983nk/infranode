@@ -1,11 +1,11 @@
 """Reiner StaDa-Mapper ``map_station_catalog`` (DATA-36, CC BY 4.0, Tier A).
 
-Uebersetzt das je Stadt gefilterte StaDa-raw-dict (``{slug, stations}``, gebaut
+Übersetzt das je Stadt gefilterte StaDa-raw-dict (``{slug, stations}``, gebaut
 in der Route aus ``adapters.stada.fetch_all_stations`` + ags-Filter)
 deterministisch in einen ``CanonicalRecord`` mit ``StationCatalogPayload``. Rein:
 kein HTTP, kein Logging, kein ``datetime.now()`` (``retrieved_at`` injiziert).
 
-Der Katalog wird unveraendert durchgereicht (kein Merge), daher ``modified=False``.
+Der Katalog wird unverändert durchgereicht (kein Merge), daher ``modified=False``.
 Lizenz CC BY 4.0, Attribution wortgenau "Deutsche Bahn AG" (muss verbatim in
 DATA-LICENSES.md + SOURCE_LICENSE stehen, T-11-SRC-DRIFT).
 """
@@ -38,7 +38,7 @@ def map_station_catalog(
 ) -> CanonicalRecord:
     """Bildet den Bahnhofs-Katalog einer Stadt auf einen ``CanonicalRecord`` ab.
 
-    ``modified=False`` (Stammdaten unveraendert). ``observed_at=None`` (kein
+    ``modified=False`` (Stammdaten unverändert). ``observed_at=None`` (kein
     Messzeitpunkt). ``lat``/``lon`` (Stadtkoordinate aus dem Register) werden,
     falls vorhanden, als ``geo`` gesetzt.
     """

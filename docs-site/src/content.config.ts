@@ -1,7 +1,7 @@
 // Astro Content Collection "endpoints": speist sich aus dem openapi.yaml-Loader
 // (eine Quelle der Wahrheit, Design-First). Jeder Eintrag ist eine OpenAPI-
-// Operation, normalisiert auf method (UPPERCASE) + kind (city|meta). Spaetere
-// Slices generieren per-Endpoint-Seiten und filtern ueber kind.
+// Operation, normalisiert auf method (UPPERCASE) + kind (city|meta). Spätere
+// Slices generieren per-Endpoint-Seiten und filtern über kind.
 import { defineCollection, z } from "astro:content";
 import { loadEndpoints } from "./lib/openapi";
 

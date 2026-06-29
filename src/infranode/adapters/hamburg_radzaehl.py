@@ -1,12 +1,13 @@
-"""Hamburg-Radzaehlstelle-Adapter ``fetch_hamburg_radzaehl`` (DATA-40, Tier A).
+"""Hamburg-Radzählstelle-Adapter ``fetch_hamburg_radzaehl`` (DATA-40, Tier A).
 
-Liefert den juengsten Stundenwert der Hamburger Rad-Dauerzaehlstelle "Gurlittinsel"
-(die FHH betreibt aktuell genau diese eine offene Dauerzaehlstelle) keylos aus dem
+Liefert den jüngsten Stundenwert der Hamburger Rad-Dauerzählstelle "Gurlittinsel"
+(die FHH betreibt aktuell genau diese eine offene Dauerzählstelle) keylos aus dem
 Open-Data-CSV-Export (DL-DE/BY 2.0, [VERIFIED 2026-06-23]):
 
   https://daten-hamburg.de/transport_verkehr/dauerzaehlstellen_rad/export_radverkehr.csv
 
-CSV-Aufbau (cp1252! Server liefert latin-1): Zeile 1 = Stationsname ("Gurlittinsel;;"),
+CSV-Aufbau (UTF-8, [VERIFIED 2026-06-29]: Bytes ``c3 a4`` = "ä"): Zeile 1 =
+Stationsname ("Gurlittinsel;;"),
 Zeile 2 = Spaltenkopf ``Datum;Zeitraum (von);Anzahl Fahrräder``, danach je Stunde
 eine Zeile ``TT.MM.JJJJ;HH:MM Uhr;Anzahl`` (Historie seit 2014). Die LETZTE
 Datenzeile ist der frischeste Stundenwert.
@@ -14,8 +15,8 @@ Datenzeile ist der frischeste Stundenwert.
 Die Koordinate der Station ist statisch eingebettet ([VERIFIED 2026-06-23 via
 WFS HH_WFS_Dauerzaehlstellen_Rad, gml:pos 53.559240 10.008480]); der WFS liefert
 nur GML (kein JSON) und liegt auf einem Hamburg-Host, der die Produktions-Box-IP
-teils blockt -> die statische Koordinate haelt den Adapter auf EINEN Host
-(daten-hamburg.de) und unabhaengig vom GML-Parsing.
+teils blockt -> die statische Koordinate hält den Adapter auf EINEN Host
+(daten-hamburg.de) und unabhängig vom GML-Parsing.
 
 Sicherheit (T-9-02 SSRF): Host hartkodiert. DoS-/Datenfehler-Schutz:
 ``raise_for_status()`` (5xx -> STALE-ON-ERROR der Fassade); Felder defensiv.
@@ -32,8 +33,9 @@ _CSV_URL = (
     "https://daten-hamburg.de/transport_verkehr/dauerzaehlstellen_rad/"
     "export_radverkehr.csv"
 )
-_ENCODING = "cp1252"
-# [VERIFIED 2026-06-23 via WFS gml:pos] Dauerzaehlstelle "An der Gurlittinsel".
+# Quelle ist echtes UTF-8 (live verifiziert 2026-06-29); cp1252 war falsch.
+_ENCODING = "utf-8"
+# [VERIFIED 2026-06-23 via WFS gml:pos] Dauerzählstelle "An der Gurlittinsel".
 _STATION_LAT = 53.559240
 _STATION_LON = 10.008480
 
@@ -66,10 +68,10 @@ async def fetch_hamburg_radzaehl(
     lon: float,
     radius_km: float = 30.0,
 ) -> dict:
-    """Holt den juengsten Stundenwert der Hamburger Rad-Dauerzaehlstelle.
+    """Holt den jüngsten Stundenwert der Hamburger Rad-Dauerzählstelle.
 
     GET des CSV-Exports (cp1252), Stationsname aus Zeile 1, dann die LETZTE
-    Datenzeile mit gueltiger Anzahl als frischster Stundenwert. ``lat``/``lon``/
+    Datenzeile mit gültiger Anzahl als frischster Stundenwert. ``lat``/``lon``/
     ``radius_km`` sind vertragskonform Teil der Signatur (ungenutzt; eine feste
     Station). Rueckgabe: ``slug``, ``stations`` (0 oder 1) und ``as_of``.
     """
@@ -81,7 +83,7 @@ async def fetch_hamburg_radzaehl(
 
     station_name = lines[0].split(";", 1)[0].strip() or "Gurlittinsel"
     reader = csv.reader(io.StringIO("\n".join(lines[1:])), delimiter=";")
-    next(reader, None)  # Spaltenkopf ueberspringen
+    next(reader, None)  # Spaltenkopf überspringen
     last: tuple[str, int] | None = None  # (iso_period, value)
     for row in reader:
         if len(row) < 3:

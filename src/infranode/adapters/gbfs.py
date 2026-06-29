@@ -1,13 +1,13 @@
 """GBFS-Sharing-Adapter ``fetch_sharing`` (DATA-33, Live, Tier A).
 
 Aggregiert Bike-/Scooter-Sharing je Stadt aus offenen GBFS-Feeds (General
-Bikeshare Feed Specification). Primaerquelle Nextbike (CC0, Tier A): je Stadt ein
+Bikeshare Feed Specification). Primärquelle Nextbike (CC0, Tier A): je Stadt ein
 oder mehrere GBFS-Systeme (kuratierte Allowlist ``GBFS_SYSTEMS`` in cities.py,
 NIE User-Input -> kein SSRF).
 
 Fail-closed Tier-A (GOV-02/04): die Lizenz wird PRO System aus dem GBFS-eigenen
 ``system_information.license_id`` gelesen und gegen die Tier-A-Allowlist
-``_TIER_A_LICENSES`` geprueft. Ein System ohne anerkannte permissive Lizenz wird
+``_TIER_A_LICENSES`` geprüft. Ein System ohne anerkannte permissive Lizenz wird
 VERWORFEN (nicht aggregiert), damit kein Datensatz mit unklarer/kommerzieller
 Lizenz ins System gelangt.
 
@@ -19,7 +19,7 @@ zu Stadt-Kennzahlen verdichtet.
 
 Sicherheit:
 - T-05-08 (SSRF): Der Host ist in ``_BASE`` hartkodiert; nur die kuratierten
-  ``system_id`` aus der Allowlist fliessen in die URL.
+  ``system_id`` aus der Allowlist fließen in die URL.
 - Resilienz: Der Adapter baut KEINEN ``CanonicalRecord`` und kennt KEIN
   Cache/Breaker (das liefert die Resilienz-Fassade). ``raise_for_status`` ist
   Pflicht (5xx -> STALE-ON-ERROR).
@@ -27,9 +27,34 @@ Sicherheit:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import httpx
 
 from infranode.adapters.autobahn import _within_bbox
+
+
+def _parse_gbfs_ts(value: object) -> str | None:
+    """GBFS-``last_updated`` -> UTC-ISO-String (rein, kein ``datetime.now()``).
+
+    GBFS v2 liefert einen POSIX-Sekunden-Integer, v3 einen RFC3339-String.
+    Unbrauchbare Werte -> ``None``. UTC-normalisiert, damit ein lexikografisches
+    ``max()`` dem chronologisch jüngsten Stand entspricht.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return datetime.fromtimestamp(value, tz=UTC).isoformat()
+    if isinstance(value, str) and value.strip():
+        try:
+            dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        return dt.astimezone(UTC).isoformat()
+    return None
+
 
 # Host hartkodiert (SSRF, T-05-08): die Nextbike-GBFS-Auslieferung.
 _BASE = "https://gbfs.nextbike.net"
@@ -38,15 +63,15 @@ _BASE = "https://gbfs.nextbike.net"
 _DISCOVERY = "/maps/gbfs/v2/{system_id}/gbfs.json"
 
 # Obergrenze der je Anbieter ausgelieferten Stationsliste (Payload-/Archiv-Groesse:
-# Grossstadt-Systeme wie nextbike Berlin haben >1000 Stationen). ``station_count``
-# bleibt der WAHRE Gesamtwert; ``stations`` traegt die nach Verfuegbarkeit
+# Großstadt-Systeme wie nextbike Berlin haben >1000 Stationen). ``station_count``
+# bleibt der WAHRE Gesamtwert; ``stations`` trägt die nach Verfügbarkeit
 # sortierten Top-Stationen (kein stiller Verlust der Kennzahl, nur der Detailliste).
 _MAX_STATIONS = 200
 
 # Fail-closed Tier-A-Allowlist (GOV-02/04): GBFS-``license_id`` (SPDX-/Freitext) ->
 # unser kanonischer Lizenz-Tag. Ein System mit hier UNBEKANNTER license_id (oder
 # ganz ohne) wird verworfen, statt mit unklarer Lizenz aggregiert zu werden. Nur
-# permissive Tier-A-Lizenzen. Schluessel case-insensitiv normalisiert (.upper()).
+# permissive Tier-A-Lizenzen. Schlüssel case-insensitiv normalisiert (.upper()).
 _TIER_A_LICENSES: dict[str, str] = {
     "CC0-1.0": "cc0",
     "CC0": "cc0",
@@ -70,7 +95,7 @@ def _tier_a_license(license_id: object) -> str | None:
 def _feeds(discovery: dict) -> dict[str, str]:
     """Liest aus einem GBFS-``gbfs.json`` die ``{feed_name: url}``-Abbildung (rein).
 
-    Die ``data``-Ebene traegt entweder Sprach-Schluessel (``{"de": {"feeds": []}}``,
+    Die ``data``-Ebene trägt entweder Sprach-Schlüssel (``{"de": {"feeds": []}}``,
     GBFS v2) oder direkt ``{"feeds": []}`` (GBFS v3). ``de`` wird bevorzugt, sonst
     die erste vorhandene Sprache.
     """
@@ -93,17 +118,22 @@ async def _get_json(http: httpx.AsyncClient, url: str) -> dict:
 def _count_free_floating(
     payload: dict, *, lat: float, lon: float, radius: float
 ) -> int:
-    """Zaehlt verfuegbare free-floating-Fahrzeuge in der BBox (rein).
+    """Zaehlt verfügbare free-floating-Fahrzeuge in der BBox (rein).
 
     GBFS v2 liefert ``data.bikes``, v3 ``data.vehicles``. Nur Fahrzeuge mit
-    gueltigen Koordinaten in der BBox, die weder ``is_disabled`` noch
-    ``is_reserved`` sind, zaehlen als verfuegbar.
+    gültigen Koordinaten in der BBox, die weder ``is_disabled`` noch
+    ``is_reserved`` sind, zählen als verfügbar. Fahrzeuge mit ``station_id``
+    sind stationsgebunden (H9: Nextbike führt sie auch im free_bike_status) und
+    werden hier NICHT gezählt - sie zählen über ``station_status`` (sonst
+    Doppelzählung -> free_floating zu hoch).
     """
     data = payload.get("data") or {}
     vehicles = data.get("bikes") or data.get("vehicles") or []
     count = 0
     for v in vehicles:
         if not isinstance(v, dict):
+            continue
+        if v.get("station_id"):  # H9: stationsgebunden, nicht free-floating.
             continue
         vlat, vlon = v.get("lat"), v.get("lon")
         if not isinstance(vlat, int | float) or not isinstance(vlon, int | float):
@@ -120,9 +150,16 @@ def _stations(
 ) -> list[dict]:
     """Joint station_information + station_status, BBox-gefiltert (rein).
 
-    Liefert je Station in der BBox ein schlankes dict
-    (``station_id``/``name``/``lat``/``lon``/``bikes_available``/``docks_available``).
-    Stationen ohne gueltige Koordinaten oder ausserhalb der BBox fallen heraus.
+    Liefert je Station in der BBox ein schlankes dict (``station_id``/``name``/
+    ``lat``/``lon``/``capacity``/``bikes_available``/``docks_available``/
+    ``is_renting``). Stationen ohne gültige Koordinaten oder außerhalb der BBox
+    fallen heraus.
+
+    H9: ``capacity`` (Stellplatzzahl je Station, aus ``station_information``) wird
+    übernommen statt verworfen. Nicht mietbare Bestände zählen NICHT als
+    verfuegbar: ist eine Station explizit ``is_installed=false``/
+    ``is_renting=false``/``is_disabled=true`` (GBFS-Flags, fehlend = aktiv), wird
+    ``bikes_available`` auf 0 gesetzt (sonst werden gesperrte Räder gemeldet).
     """
     status_by_id = {
         s.get("station_id"): s
@@ -139,14 +176,24 @@ def _stations(
         if not _within_bbox(float(slat), float(slon), lat, lon, radius):
             continue
         live = status_by_id.get(st.get("station_id"), {})
+        # H9: GBFS-Flags prüfen (nur ein EXPLIZITES false/true sperrt; fehlend
+        # = aktiv). Gesperrte Station -> keine verfügbaren Räder.
+        rentable = (
+            live.get("is_installed", True) is not False
+            and live.get("is_renting", True) is not False
+            and live.get("is_disabled", False) is not True
+        )
+        bikes_available = live.get("num_bikes_available") if rentable else 0
         out.append(
             {
                 "station_id": st.get("station_id"),
                 "name": st.get("name"),
                 "lat": float(slat),
                 "lon": float(slon),
-                "bikes_available": live.get("num_bikes_available"),
+                "capacity": st.get("capacity"),
+                "bikes_available": bikes_available,
                 "docks_available": live.get("num_docks_available"),
+                "is_renting": bool(rentable),
             }
         )
     return out
@@ -157,7 +204,7 @@ async def _fetch_system(
 ) -> dict | None:
     """Holt EIN GBFS-System und aggregiert es (fail-closed Tier-A, rein gegen Schema).
 
-    Rueckgabe ist ein provider-dict oder ``None``, wenn die Lizenz nicht Tier-A ist
+    Rückgabe ist ein provider-dict oder ``None``, wenn die Lizenz nicht Tier-A ist
     (fail-closed verworfen). Aggregiert free-floating- + stationsgebundene
     Fahrzeuge in der Stadt-BBox.
     """
@@ -174,25 +221,28 @@ async def _fetch_system(
 
     sysdata = info.get("data") or {}
     free_floating = 0
+    # H9: jüngster Feed-Stand (last_updated) je System für observed_at ermitteln.
+    observed_candidates: list[str] = []
     ff_feed = feeds.get("free_bike_status") or feeds.get("vehicle_status")
     if ff_feed:
-        free_floating = _count_free_floating(
-            await _get_json(http, ff_feed), lat=lat, lon=lon, radius=radius
-        )
+        ff_json = await _get_json(http, ff_feed)
+        free_floating = _count_free_floating(ff_json, lat=lat, lon=lon, radius=radius)
+        ts = _parse_gbfs_ts(ff_json.get("last_updated"))
+        if ts:
+            observed_candidates.append(ts)
 
     stations: list[dict] = []
     if "station_information" in feeds and "station_status" in feeds:
-        stations = _stations(
-            await _get_json(http, feeds["station_information"]),
-            await _get_json(http, feeds["station_status"]),
-            lat=lat,
-            lon=lon,
-            radius=radius,
-        )
+        status_json = await _get_json(http, feeds["station_status"])
+        info_json = await _get_json(http, feeds["station_information"])
+        stations = _stations(info_json, status_json, lat=lat, lon=lon, radius=radius)
+        ts = _parse_gbfs_ts(status_json.get("last_updated"))
+        if ts:
+            observed_candidates.append(ts)
     docked = sum(s["bikes_available"] for s in stations if s["bikes_available"])
 
     # station_count bleibt der wahre Gesamtwert; die ausgelieferte stations-Liste
-    # wird nach verfuegbaren Fahrzeugen sortiert und auf _MAX_STATIONS gedeckelt.
+    # wird nach verfügbaren Fahrzeugen sortiert und auf _MAX_STATIONS gedeckelt.
     top_stations = sorted(
         stations, key=lambda s: s["bikes_available"] or 0, reverse=True
     )[:_MAX_STATIONS]
@@ -204,6 +254,7 @@ async def _fetch_system(
         "free_floating_available": free_floating,
         "docked_available": docked,
         "station_count": len(stations),
+        "observed_at": max(observed_candidates) if observed_candidates else None,
         "stations": top_stations,
     }
 
@@ -219,9 +270,9 @@ async def fetch_sharing(
 ) -> dict:
     """Holt + aggregiert die GBFS-Sharing-Daten der kuratierten Systeme einer Stadt.
 
-    Iteriert ueber die kuratierten ``systems`` (NIE User-Input), filtert jedes per
+    Iteriert über die kuratierten ``systems`` (NIE User-Input), filtert jedes per
     BBox um (``lat``, ``lon``) und verwirft Systeme ohne Tier-A-Lizenz fail-closed.
-    Rueckgabe-Keys (exakt was ``map_sharing`` erwartet): ``slug``, ``radius_km``,
+    Rückgabe-Keys (exakt was ``map_sharing`` erwartet): ``slug``, ``radius_km``,
     ``providers`` (Liste der akzeptierten Tier-A-Systeme), sowie die Stadt-Aggregate
     ``vehicles_available``/``free_floating_available``/``docked_available``/
     ``station_count``. Keine akzeptierten Daten -> ``providers == []`` (die Route
@@ -237,6 +288,9 @@ async def fetch_sharing(
 
     free_floating = sum(p["free_floating_available"] for p in providers)
     docked = sum(p["docked_available"] for p in providers)
+    # H9: jüngster Stand über alle Systeme (UTC-ISO -> lexikografisches max =
+    # chronologisches max). None, wenn kein Feed einen last_updated trug.
+    observed = [p["observed_at"] for p in providers if p.get("observed_at")]
     return {
         "slug": slug,
         "radius_km": radius_km,
@@ -245,4 +299,5 @@ async def fetch_sharing(
         "docked_available": docked,
         "vehicles_available": free_floating + docked,
         "station_count": sum(p["station_count"] for p in providers),
+        "observed_at": max(observed) if observed else None,
     }

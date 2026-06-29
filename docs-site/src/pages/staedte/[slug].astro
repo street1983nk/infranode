@@ -1,6 +1,6 @@
 ---
-// Per-City-Landingpage DE (SEO-Massnahme 2). Eine Seite je abgedeckter Stadt
-// aus src/data/cities.json, mit den konkret fuer diese Stadt verfuegbaren
+// Per-City-Landingpage DE (SEO-Maßnahme 2). Eine Seite je abgedeckter Stadt
+// aus src/data/cities.json, mit den konkret für diese Stadt verfügbaren
 // Datenarten, stadt-spezifischen curl-Beispielen und stadtbezogenem
 // Dataset-JSON-LD. Pendant: src/pages/en/cities/[slug].astro.
 import { getCollection } from "astro:content";
@@ -24,11 +24,11 @@ const fmt = new Intl.NumberFormat("de-DE");
 const available = topicsForCity(city.slug, coverage);
 const isCore = city.coverage === "full";
 
-// Vollstaendige Liste ALLER datentragenden Stadt-Endpunkte (Single Source
+// Vollständige Liste ALLER datentragenden Stadt-Endpunkte (Single Source
 // openapi.yaml via endpoints-Collection): nur pro-Slug-Pfade
 // /cities/{slug}/... (ohne Listen-/Vergleichs-Operationen wie getCities).
-// Jede Datenart ist fuer jede Stadt ueber den Slug abrufbar; wo eine Quelle
-// fuer die Stadt nichts hat, antwortet die API ehrlich mit no_data.
+// Jede Datenart ist für jede Stadt über den Slug abrufbar; wo eine Quelle
+// für die Stadt nichts hat, antwortet die API ehrlich mit no_data.
 const cityEndpoints = (await getCollection("endpoints"))
   .filter((e) => e.data.kind === "city" && /\/cities\/\{[^}]+\}\//.test(e.data.path))
   .map((e) => ({

@@ -1,21 +1,21 @@
 """httpx-Wrapper um die lokale InfraNode-Live-FastAPI (DX-05).
 
-Die MCP-Tools rufen ihre Daten ueber diesen Wrapper, nie direkt bei Upstreams.
-Die Funktion ``get_resource`` baut die URL ausschliesslich aus der konfigurierten
+Die MCP-Tools rufen ihre Daten über diesen Wrapper, nie direkt bei Upstreams.
+Die Funktion ``get_resource`` baut die URL ausschließlich aus der konfigurierten
 Base-URL plus einem festen ``/cities/{slug}/{resource}``-Schema und gibt das
-geparste JSON unveraendert zurueck (keine Mapping-/Lizenz-Logik, D-07/D-08).
+geparste JSON unverändert zurück (keine Mapping-/Lizenz-Logik, D-07/D-08).
 
 Sicherheit:
 
-- T-12-MCP-SSRF: Die Base-URL stammt ausschliesslich aus der Env
+- T-12-MCP-SSRF: Die Base-URL stammt ausschließlich aus der Env
   ``INFRANODE_MCP_API_BASE`` (Default ``http://localhost:8000/api/v1``). Ihr Host
-  wird gegen eine Allowlist geprueft; ein nicht-allowlisteter Host wird mit
+  wird gegen eine Allowlist geprüft; ein nicht-allowlisteter Host wird mit
   ``ValueError`` abgelehnt, bevor ein Request rausgeht. Eine arbitrary URL aus
-  Tool-Argumenten ist nicht moeglich.
+  Tool-Argumenten ist nicht möglich.
 - T-12-MCP-INJECT: ``resource`` wird gegen die Konstante ``ALLOWED_RESOURCES``
   validiert und ``slug`` als reiner Pfadbestandteil url-gequotet, bevor die URL
   gebaut wird. Ein unbekannter ``resource`` oder ein Slug mit Pfad-/Host-Anteilen
-  loest einen ``ValueError`` aus, bevor ein Request rausgeht.
+  löst einen ``ValueError`` aus, bevor ein Request rausgeht.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from urllib.parse import quote, urlsplit
 
 import httpx
 
-# Default-Base-URL der lokalen Live-API (Loopback). Aus der Env ueberschreibbar,
+# Default-Base-URL der lokalen Live-API (Loopback). Aus der Env überschreibbar,
 # aber nur auf einen allowlisteten Host (siehe ALLOWED_HOSTS).
 _DEFAULT_BASE_URL = "http://localhost:8000/api/v1"
 
@@ -34,8 +34,8 @@ _DEFAULT_BASE_URL = "http://localhost:8000/api/v1"
 # nicht-allowlisteter Host wird abgelehnt, bevor ein Request rausgeht.
 # - localhost/127.0.0.1/::1: lokaler Subprozess (stdio) gegen eine lokale API.
 # - api: der interne Compose-Service-Name. Im Remote-Betrieb (Phase 2) ruft der
-#   MCP-Container die API ueber das Compose-Netz (http://api:8000/api/v1), NICHT
-#   die oeffentliche URL (sonst teilen sich alle Nutzer eine IP -> Rate-Limit).
+#   MCP-Container die API über das Compose-Netz (http://api:8000/api/v1), NICHT
+#   die öffentliche URL (sonst teilen sich alle Nutzer eine IP -> Rate-Limit).
 ALLOWED_HOSTS: frozenset[str] = frozenset(
     {
         "localhost",
@@ -47,13 +47,13 @@ ALLOWED_HOSTS: frozenset[str] = frozenset(
 
 # Header, mit dem der MCP-Server seine internen API-Aufrufe markiert. Die API-
 # MetricsMiddleware erkennt ihn und macht MCP-Aktionen im Dashboard sichtbar +
-# loest einen ntfy-Push aus (Owner-Wunsch: MCP-Aktionen verfolgen). Best-effort-
+# löst einen ntfy-Push aus (Owner-Wunsch: MCP-Aktionen verfolgen). Best-effort-
 # Kennung, kein Auth-Mechanismus.
 _MCP_SOURCE_HEADER = "X-Infranode-Mcp"
 
 # T-12-MCP-INJECT: erlaubte Ressourcen-Namen, exakt die City-Sub-Ressourcen aus
 # docs/openapi.yaml (GET /api/v1/cities/{slug}/<resource>). Roher Tool-Input wird
-# gegen diese Konstante geprueft, bevor er in die URL gelangt.
+# gegen diese Konstante geprüft, bevor er in die URL gelangt.
 ALLOWED_RESOURCES: frozenset[str] = frozenset(
     {
         "base",
@@ -79,7 +79,7 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "road-events",
         "events",
         "webcams",
-        # SMARD/DWD (frueher ergaenzt, in der MCP-Allowlist nachgezogen).
+        # SMARD/DWD (früher ergänzt, in der MCP-Allowlist nachgezogen).
         "power-load",
         "power-price",
         "weather-warnings",
@@ -91,7 +91,7 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "accidents",
         # PKS-01: BKA Polizeiliche Kriminalstatistik (Tier A, Kreis-Jahreswerte).
         "crime-stats",
-        # DATA-30: Tankerkoenig Spritpreise (Tier A, aggregiert je Stadt).
+        # DATA-30: Tankerkönig Spritpreise (Tier A, aggregiert je Stadt).
         "fuel-prices",
         # DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
         "sharing",
@@ -99,21 +99,21 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "solar",
         # DATA-39: Dach-Solarkataster je Stadt (NRW-Pilot, Tier A, Teilabdeckung).
         "solar-roofs",
-        # DATA-32: INKAR/BBSR sozialoekonomische Indikatoren je Kreis (Tier A).
+        # DATA-32: INKAR/BBSR sozialökonomische Indikatoren je Kreis (Tier A).
         "indicators",
         # DATA-35: BORIS amtliche Bodenrichtwerte je Stadt, aggregiert (Tier A).
         "land-values",
-        # DATA-37: Regionalstatistik.de Realsteuer-Hebesaetze (Gemeinde) +
+        # DATA-37: Regionalstatistik.de Realsteuer-Hebesätze (Gemeinde) +
         # Gewerbean-/-abmeldungen (Kreis), Tier A.
         "tax-rates",
         "business-registrations",
         # DATA-37: Regionalstatistik.de beantragte Insolvenzen je Kreis (52411-02
-        # Unternehmen + 52411-03 uebrige Schuldner), Tier A.
+        # Unternehmen + 52411-03 übrige Schuldner), Tier A.
         "insolvencies",
-        # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankuenfte Metropolen-Hbf (Tier A).
+        # DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankünfte Metropolen-Hbf (Tier A).
         "station-departures",
         "station-arrivals",
-        # DATA-36: StaDa Bahnhofs-Katalog je Stadt (alle Bahnhoefe mit EVA, Tier A).
+        # DATA-36: StaDa Bahnhofs-Katalog je Stadt (alle Bahnhöfe mit EVA, Tier A).
         "stations",
         # DATA-OSM (Tier 1): 10 dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
         "playgrounds",
@@ -132,23 +132,23 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "tree-cadastre",
         # DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Städte).
         "population-density",
-        # TENDER-05/06: Oeffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
+        # TENDER-05/06: Öffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
         # OCDS, CC0/Tier A). Read-only aus dem deduplizierten Store (Plan 21-04/05).
         "public-tenders",
-        # DATA-40: Kommunale Radzaehlstellen je Stadt (Dauerzaehlstellen, Tier A,
+        # DATA-40: Kommunale Radzählstellen je Stadt (Dauerzählstellen, Tier A,
         # Teilabdeckung). NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
         "bike-counts",
     }
 )
 
 # T-12-MCP-INJECT: erlaubte Per-Bahnhof-Board-Pfade unter GET /api/v1/stations/{eva}/...
-# Die EVA wird zusaetzlich als reine Zahl validiert (_validate_eva), bevor sie in
-# die URL gelangt; nur diese Board-Namen sind als zweites Segment zulaessig.
+# Die EVA wird zusätzlich als reine Zahl validiert (_validate_eva), bevor sie in
+# die URL gelangt; nur diese Board-Namen sind als zweites Segment zulässig.
 ALLOWED_STATION_BOARDS: frozenset[str] = frozenset({"departures", "arrivals"})
 
 # T-12-MCP-INJECT: erlaubte Live-Ressourcen-Pfade unter GET /api/v1/live/{slug}/...
-# Mehrsegmentige Pfade sind hier zulaessig, weil sie gegen DIESE Allowlist
-# geprueft werden (kein roher Tool-Input im Pfad ausser dem gequoteten slug).
+# Mehrsegmentige Pfade sind hier zulässig, weil sie gegen DIESE Allowlist
+# geprüft werden (kein roher Tool-Input im Pfad außer dem gequoteten slug).
 ALLOWED_LIVE_RESOURCES: frozenset[str] = frozenset(
     {
         "transit/departures",
@@ -159,8 +159,8 @@ ALLOWED_LIVE_RESOURCES: frozenset[str] = frozenset(
 )
 
 # T-12-MCP-INJECT: erlaubte slug-lose Top-Level-Endpunkte (GET /api/v1/<name>),
-# optional mit Query-Parametern. "compare" faechert eine Ressource ueber mehrere
-# Staedte (cities/resource als Query, kein roher Input im Pfad).
+# optional mit Query-Parametern. "compare" fächert eine Ressource über mehrere
+# Städte (cities/resource als Query, kein roher Input im Pfad).
 ALLOWED_COLLECTIONS: frozenset[str] = frozenset(
     {
         "cities",
@@ -169,8 +169,8 @@ ALLOWED_COLLECTIONS: frozenset[str] = frozenset(
     }
 )
 
-# Timeout fuer den loopback-Call. Grosszuegig, da einige Upstreams hinter der
-# Live-API langsam sein koennen, aber endlich (kein haengender Agent).
+# Timeout für den loopback-Call. Großzügig, da einige Upstreams hinter der
+# Live-API langsam sein können, aber endlich (kein hängender Agent).
 _TIMEOUT_SECONDS = 30.0
 
 
@@ -180,7 +180,7 @@ class UpstreamError(RuntimeError):
     Wird bei einem 4xx/5xx-Status geworfen, statt einen rohen
     ``httpx.HTTPStatusError``-Traceback an den Agenten zu geben. FastMCP wandelt
     eine geworfene Exception in einen Tool-Fehler um, dessen Text das Modell
-    sieht; mit dieser Klasse traegt der Text die strukturierte API-Meldung inkl.
+    sieht; mit dieser Klasse trägt der Text die strukturierte API-Meldung inkl.
     ``hint``, sodass sich das Modell selbst korrigieren kann (z.B. ``list_cities``
     bei unbekanntem Slug aufrufen).
     """
@@ -190,8 +190,8 @@ def _build_upstream_error(response: httpx.Response) -> UpstreamError:
     """Formt aus einer Fehler-Response eine lesbare ``UpstreamError``.
 
     Bevorzugt den kanonischen API-Fehler-Envelope ``{"error": {"message",
-    "hint", "code"}}``; faellt auf den (gekuerzten) Rohtext bzw. den HTTP-Grund
-    zurueck, falls die Antwort kein erwartetes JSON ist.
+    "hint", "code"}}``; fällt auf den (gekürzten) Rohtext bzw. den HTTP-Grund
+    zurück, falls die Antwort kein erwartetes JSON ist.
     """
     detail = ""
     try:
@@ -209,14 +209,14 @@ def _build_upstream_error(response: httpx.Response) -> UpstreamError:
 
 
 def _base_url() -> str:
-    """Liest die Base-URL aus der Env und prueft den Host gegen die Allowlist.
+    """Liest die Base-URL aus der Env und prüft den Host gegen die Allowlist.
 
-    Gibt die validierte Base-URL ohne abschliessenden Schraegstrich zurueck.
-    Loest ``ValueError`` aus, wenn das Schema nicht http/https ist oder der Host
+    Gibt die validierte Base-URL ohne abschließenden Schrägstrich zurück.
+    Löst ``ValueError`` aus, wenn das Schema nicht http/https ist oder der Host
     nicht in ``ALLOWED_HOSTS`` liegt (T-12-MCP-SSRF).
     """
     # Basis-URL aus INFRANODE_MCP_API_BASE, sonst Default. So
-    # funktioniert die nach aussen dokumentierte Variable, ohne den bestehenden
+    # funktioniert die nach außen dokumentierte Variable, ohne den bestehenden
     # Env-Vertrag zu brechen.
     raw = os.environ.get("INFRANODE_MCP_API_BASE", _DEFAULT_BASE_URL)
     parts = urlsplit(raw)
@@ -237,13 +237,13 @@ def _validate_slug(slug: str) -> str:
     """Validiert und quotet den Slug als reinen Pfadbestandteil (T-12-MCP-INJECT).
 
     Ein Slug darf keine Pfad-Trenner oder Host-Anteile (``/``, ``@``, ``:``,
-    Whitespace) enthalten; solche Eingaben koennten die URL umlenken. Gibt den
-    url-gequoteten Slug zurueck oder loest ``ValueError`` aus.
+    Whitespace) enthalten; solche Eingaben könnten die URL umlenken. Gibt den
+    url-gequoteten Slug zurück oder löst ``ValueError`` aus.
     """
     if not slug or not isinstance(slug, str):
         raise ValueError("Slug muss ein nicht-leerer String sein.")
     # Reiner Pfadbestandteil: kein Slash/At/Doppelpunkt/Whitespace. Diese Zeichen
-    # koennten Host/Userinfo/Pfad umlenken (z.B. "hamburg@evil.example/internal").
+    # könnten Host/Userinfo/Pfad umlenken (z.B. "hamburg@evil.example/internal").
     forbidden = set("/@:\\ \t\n\r?#")
     if any(ch in forbidden for ch in slug):
         raise ValueError(
@@ -258,14 +258,14 @@ async def get_resource(
     resource: str,
     params: dict[str, str] | None = None,
 ) -> dict:
-    """Ruft eine Stadt-Ressource der lokalen Live-API und gibt das JSON zurueck.
+    """Ruft eine Stadt-Ressource der lokalen Live-API und gibt das JSON zurück.
 
-    Baut die URL ausschliesslich aus der allowlisteten Base-URL plus dem festen
+    Baut die URL ausschließlich aus der allowlisteten Base-URL plus dem festen
     ``/cities/{slug}/{resource}``-Schema. ``resource`` wird gegen
-    ``ALLOWED_RESOURCES`` geprueft, ``slug`` als reiner Pfadbestandteil gequotet
+    ``ALLOWED_RESOURCES`` geprüft, ``slug`` als reiner Pfadbestandteil gequotet
     und der Host der Base-URL gegen ``ALLOWED_HOSTS`` validiert, bevor ein Request
     rausgeht. Das Ergebnis (kanonischer ``{data, meta}``-Envelope der API) wird
-    unveraendert zurueckgegeben, ohne jede Mapping-/Lizenz-Logik.
+    unverändert zurückgegeben, ohne jede Mapping-/Lizenz-Logik.
 
     Args:
         slug: Stadt-Slug (reiner Pfadbestandteil, z.B. ``"hamburg"``).
@@ -292,9 +292,9 @@ async def get_live(
     live_resource: str,
     params: dict[str, str] | None = None,
 ) -> dict:
-    """Ruft eine Live-Ressource ``/live/{slug}/{live_resource}``; gibt JSON zurueck.
+    """Ruft eine Live-Ressource ``/live/{slug}/{live_resource}``; gibt JSON zurück.
 
-    ``live_resource`` wird gegen ``ALLOWED_LIVE_RESOURCES`` geprueft, ``slug`` als
+    ``live_resource`` wird gegen ``ALLOWED_LIVE_RESOURCES`` geprüft, ``slug`` als
     reiner Pfadbestandteil gequotet und der Base-Host gegen ``ALLOWED_HOSTS``
     validiert, BEVOR ein Request rausgeht (T-12-MCP-SSRF/-INJECT). Envelope 1:1.
 
@@ -319,9 +319,9 @@ async def get_collection(
     name: str,
     params: dict[str, str] | None = None,
 ) -> dict:
-    """Ruft einen slug-losen Collection-Endpunkt ``/{name}`` und gibt das JSON zurueck.
+    """Ruft einen slug-losen Collection-Endpunkt ``/{name}`` und gibt das JSON zurück.
 
-    ``name`` wird gegen ``ALLOWED_COLLECTIONS`` geprueft und der Base-Host gegen
+    ``name`` wird gegen ``ALLOWED_COLLECTIONS`` geprüft und der Base-Host gegen
     ``ALLOWED_HOSTS`` validiert, BEVOR ein Request rausgeht (T-12-MCP-SSRF/-INJECT).
 
     Args:
@@ -341,10 +341,10 @@ _EVA_RE = re.compile(r"^\d{6,8}$")
 
 
 async def get_station_board(eva: str, board: str) -> dict:
-    """Ruft ein Per-Bahnhof-Board ``/stations/{eva}/{board}`` und gibt das JSON zurueck.
+    """Ruft ein Per-Bahnhof-Board ``/stations/{eva}/{board}`` und gibt das JSON zurück.
 
     ``eva`` wird strikt als 6-8-stellige Zahl validiert (T-12-MCP-SSRF/-INJECT),
-    ``board`` gegen ``ALLOWED_STATION_BOARDS`` geprueft, der Base-Host gegen
+    ``board`` gegen ``ALLOWED_STATION_BOARDS`` geprüft, der Base-Host gegen
     ``ALLOWED_HOSTS``, BEVOR ein Request rausgeht. Envelope 1:1.
 
     Args:
@@ -373,10 +373,10 @@ async def _request(
 ) -> dict:
     """Fuehrt den Loopback-GET gegen die allowlistete Base-URL aus (gemeinsamer Kern).
 
-    ``path`` wird ausschliesslich aus bereits validierten Bestandteilen gebaut
+    ``path`` wird ausschließlich aus bereits validierten Bestandteilen gebaut
     (gequoteter slug + allowlistete resource/collection); roher Tool-Input gelangt
-    nie ungeprueft hierher. Der Base-Host wird in ``_base_url`` gegen die Allowlist
-    geprueft. Die MCP-Kennung ``tag`` faehrt als Header mit (Dashboard/ntfy).
+    nie ungeprüft hierher. Der Base-Host wird in ``_base_url`` gegen die Allowlist
+    geprüft. Die MCP-Kennung ``tag`` fährt als Header mit (Dashboard/ntfy).
     """
     base = _base_url()
     url = f"{base}{path}"

@@ -3,8 +3,8 @@
 Definiert ``CityRegistryEntry`` als gefrorenes Wert-Objekt (Pitfall 2:
 ``frozen=True`` gegen Manipulation, T-02-06). Pflicht-Cross-Walk-IDs sind die
 Wikidata-QID und die OSM-Relation; DWD-Station und GTFS-Stop sind optionale
-Felder (Slots vorhanden, leer/None), die erst Phase 5/6 befuellt. ``slug`` ist
-ASCII (muenchen), ``name_de`` traegt korrekte Umlaute (München).
+Felder (Slots vorhanden, leer/None), die erst Phase 5/6 befüllt. ``slug`` ist
+ASCII (muenchen), ``name_de`` trägt korrekte Umlaute (München).
 """
 
 from __future__ import annotations
@@ -21,10 +21,10 @@ class CityRegistryEntry(BaseModel):
     DWD-/GTFS-Felder existieren als Slots (CORE-03 verlangt die Spalten),
     bleiben in Phase 2 aber leer/None.
 
-    ``ags`` ist der amtliche 8-stellige Gemeindeschluessel und dient als
+    ``ags`` ist der amtliche 8-stellige Gemeindeschlüssel und dient als
     dim_city-Join-Anker gegen Zensus/Wahlen/MaStR (ARCH-02). ``state`` ist das
-    bereits vorhandene Bundesland-Kuerzel und dient ebenfalls als Join-Anker
-    (kein neues Feld noetig).
+    bereits vorhandene Bundesland-Kürzel und dient ebenfalls als Join-Anker
+    (kein neues Feld nötig).
     """
 
     model_config = ConfigDict(frozen=True)
@@ -42,7 +42,7 @@ class CityRegistryEntry(BaseModel):
     gtfs_stop_ref: str | None = None
     # Abdeckungsgrad (Expansion 2026-06): "full" = handverifizierte Kern-Stadt mit
     # allen Quellen inkl. hand-kuratierter Maps (LHP-Pegel, DWD-Pollen-Region,
-    # DIVI-Kreis, Stadt-Baustellen-Connector); "auto" = ueber 100k-EW-Stadt, die
+    # DIVI-Kreis, Stadt-Baustellen-Connector); "auto" = über 100k-EW-Stadt, die
     # NUR von den AGS-/geo-automatischen Tier-A-Quellen bedient wird, hand-
     # kuratierte Quellen liefern ehrliches no_data. Default "full" (Kern-Register).
     coverage: str = Field(default="full", pattern=r"^(full|auto)$")

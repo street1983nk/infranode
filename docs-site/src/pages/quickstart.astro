@@ -1,12 +1,12 @@
 ---
 // Quick-Start (D-02): in drei Schritten zum ersten Call. Basis-URL, ein
-// Beispiel-Aufruf mit Envelope-Erklaerung (Feld-Tabelle), naechste Schritte.
+// Beispiel-Aufruf mit Envelope-Erklärung (Feld-Tabelle), nächste Schritte.
 // Statisch, keine Build-Time-Calls der Live-API.
 import Docs from "../layouts/Docs.astro";
 import CodeTabs from "../components/CodeTabs.astro";
 import { API_BASE } from "../lib/codegen";
 
-// Ein konkreter Beispiel-Call (Wetter fuer Hamburg) als Einstieg.
+// Ein konkreter Beispiel-Call (Wetter für Hamburg) als Einstieg.
 const exampleUrl = `${API_BASE}/api/v1/cities/hamburg/weather`;
 const curl = `curl "${exampleUrl}"`;
 const js = [

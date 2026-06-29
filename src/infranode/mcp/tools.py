@@ -155,7 +155,7 @@ async def water_level(slug: _Slug) -> ToolEnvelope:
 async def flood(slug: _Slug) -> ToolEnvelope:
     """Get flood warning levels for a German city.
 
-    Sourced from the Laenderhochwasserportal. Read-only. Coverage is partial.
+    Sourced from the Länderhochwasserportal. Read-only. Coverage is partial.
     """
     return await client.get_resource(slug, "flood")
 
@@ -320,7 +320,7 @@ async def crime_stats(slug: _Slug) -> ToolEnvelope:
 async def fuel_prices(slug: _Slug) -> ToolEnvelope:
     """Get current fuel prices for a German city, aggregated per fuel type.
 
-    Sourced from Tankerkoenig. Returns average and minimum per fuel type
+    Sourced from Tankerkönig. Returns average and minimum per fuel type
     (E5/E10/diesel). Read-only, near-real-time.
     """
     return await client.get_resource(slug, "fuel-prices")
@@ -572,7 +572,7 @@ async def compare(
 
 
 # DATA-OSM (Tier 1): dedizierte OSM-Overpass-Datenarten (ODbL, Tier B copyleft).
-# Duenne Wrapper wie oben; Tag-Whitelist + Overpass-QL liegen in der Live-API.
+# Dünne Wrapper wie oben; Tag-Whitelist + Overpass-QL liegen in der Live-API.
 async def playgrounds(slug: _Slug) -> ToolEnvelope:
     """List public playgrounds in a city (OpenStreetMap). Read-only."""
     return await client.get_resource(slug, "playgrounds")
@@ -621,7 +621,7 @@ async def public_wifi(slug: _Slug) -> ToolEnvelope:
 
 
 async def recycling_centres(slug: _Slug) -> ToolEnvelope:
-    """List recycling centres (Wertstoffhoefe) in a city (OpenStreetMap). Read-only."""
+    """List recycling centres (Wertstoffhöfe) in a city (OpenStreetMap). Read-only."""
     return await client.get_resource(slug, "recycling-centres")
 
 

@@ -1,6 +1,6 @@
 """Reiner LHP-Hochwasser-Mapper map_flood (DATA-12, GOV-01/03, Pitfall 6).
 
-Uebersetzt das flache LHP-raw-dict deterministisch in einen ``CanonicalRecord``
+Übersetzt das flache LHP-raw-dict deterministisch in einen ``CanonicalRecord``
 mit ``FloodWarningPayload`` (kind=flood_warning). Die Funktion ist rein: kein
 HTTP, kein Logging, kein ``datetime.now()``. Der ``retrieved_at``-Zeitstempel
 wird keyword-only injiziert, damit Tests deterministisch bleiben.
@@ -10,7 +10,7 @@ KRITISCH (Tier-Trennung GOV-02): LHP ist Tier A,
 HOCHWASSER), ``license_id=CC_BY_4_0``, ``license_tier=A``.
 
 KRITISCH (GOV-03, Pitfall 6): Die CC-BY-4.0-Lizenz der Landeshochwasserportale
-verlangt die Quelle UND einen Stand-Zeitstempel. Die Attribution traegt daher
+verlangt die Quelle UND einen Stand-Zeitstempel. Die Attribution trägt daher
 PFLICHT den Wortlaut ``"Datenquelle: www.hochwasserzentralen.de, Stand: <stand>"``;
 der Mapper-/Routen-Test asserted den ``"Stand:"``-String.
 """
@@ -48,7 +48,7 @@ def map_flood(
     ``observed_at`` bleibt ``None`` (Event-Layer ohne Mess-Zeitstempel, der Stand
     steht im Payload/in der Attribution).
 
-    KRITISCH (Pitfall 6, GOV-03): Die Attribution traegt PFLICHT den Wortlaut
+    KRITISCH (Pitfall 6, GOV-03): Die Attribution trägt PFLICHT den Wortlaut
     ``"Datenquelle: www.hochwasserzentralen.de, Stand: {stand}"`` (CC-BY 4.0); der
     ``"Stand:"``-Teil wird vom Mapper- und Routen-Test asserted.
 

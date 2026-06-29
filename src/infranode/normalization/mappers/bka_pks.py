@@ -8,9 +8,9 @@ kein ``datetime.now()`` (``retrieved_at`` wird injiziert).
 Quelle ist die Polizeiliche Kriminalstatistik (PKS) des Bundeskriminalamts.
 Lizenz DL-DE/BY 2.0 (Tier A), Attribution wortgenau "Polizeiliche
 Kriminalstatistik (PKS) - Bundeskriminalamt" (muss verbatim in source_specs +
-DATA-LICENSES.md stehen, T-11-SRC-DRIFT). Das BKA verlangt zusaetzlich die Angabe
+DATA-LICENSES.md stehen, T-11-SRC-DRIFT). Das BKA verlangt zusätzlich die Angabe
 von Berichtsjahr und Version: beide werden im Payload (``reference_year`` +
-``version``) gefuehrt. ``geo`` bleibt ``None`` (Kreis-/Stadtebene),
+``version``) geführt. ``geo`` bleibt ``None`` (Kreis-/Stadtebene),
 ``observed_at`` bleibt ``None`` (das Berichtsjahr steht im Payload).
 """
 

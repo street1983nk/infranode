@@ -2,15 +2,15 @@
 
 Das einzige genuin neue Infra-Modul der Phase: ein dedizierter
 ``httpx.AsyncClient``, der ein Client-Zertifikat NUR an ``mobilithek.info``
-traegt (T-20-MTLS). httpx/ssl koennen ``.p12`` nicht direkt lesen, daher
+trägt (T-20-MTLS). httpx/ssl können ``.p12`` nicht direkt lesen, daher
 konvertiert ``cryptography`` (pyca) das p12 beim Start zu PEM und baut daraus
 einen ``ssl.SSLContext``.
 
 Sicherheits-Invarianten:
-- **PEM nie dauerhaft auf Disk** (T-20-PEM, Security V12): das entschluesselte
-  Schluesselmaterial wird in eine kurzlebige tmpfs-Datei (``/dev/shm`` falls
+- **PEM nie dauerhaft auf Disk** (T-20-PEM, Security V12): das entschlüsselte
+  Schlüsselmaterial wird in eine kurzlebige tmpfs-Datei (``/dev/shm`` falls
   vorhanden) mit Modus 0600 geschrieben, von ``ssl.load_cert_chain`` gelesen und
-  im ``finally`` SOFORT via ``os.unlink`` geloescht.
+  im ``finally`` SOFORT via ``os.unlink`` gelöscht.
 - **gzip PFLICHT** (Pitfall 1): der Broker antwortet ohne
   ``Accept-Encoding: gzip`` mit leerem HTTP 400 (verifiziert 2026-06-12).
 - **SSRF-Invariante** (T-20-SSRF): Host hartkodiert ``mobilithek.info:8443``,
@@ -41,18 +41,18 @@ GZIP_HEADER = "gzip"
 #: Mobilithek-Broker-Host HARTKODIERT (T-20-SSRF): nie aus Config/User-Input.
 _MOBILITHEK_BASE = "https://mobilithek.info:8443/mobilithek/api/v1.0"
 
-#: tmpfs-Verzeichnis fuer das kurzlebige PEM (T-20-PEM): ``/dev/shm`` haelt das
-#: entschluesselte Schluesselmaterial im RAM, nie auf der persistenten Disk.
+#: tmpfs-Verzeichnis für das kurzlebige PEM (T-20-PEM): ``/dev/shm`` hält das
+#: entschlüsselte Schlüsselmaterial im RAM, nie auf der persistenten Disk.
 _TMPFS_DIR = "/dev/shm" if os.path.isdir("/dev/shm") else None  # noqa: S108
 
 
 def build_pull_url(abo_id: str, *, style: str = "path") -> str:
-    """Baut die Mobilithek-Pull-URL fuer ein Abo (Host hartkodiert, SSRF).
+    """Baut die Mobilithek-Pull-URL für ein Abo (Host hartkodiert, SSRF).
 
     ``abo_id`` MUSS aus der Settings-Allowlist (``*_abo_id``) stammen, NIE aus
     User-Input (T-20-SSRF). Das Cert-Passwort taucht NIE in der URL auf
     (T-20-SECLOG). Der Host bleibt in JEDER Variante hartkodiert
-    (``_MOBILITHEK_BASE``), die SSRF-Invariante gilt unveraendert.
+    (``_MOBILITHEK_BASE``), die SSRF-Invariante gilt unverändert.
 
     Drei verifizierte Zugriffspunkt-Muster (Mobilithek-Portal/Service Desk):
     - ``style="path"`` (Default, die V2-Stadt-Abos): mit
@@ -61,9 +61,9 @@ def build_pull_url(abo_id: str, *, style: str = "path") -> str:
       ``/{aboId}/clientPullService``-Pfadsegment, nur
       ``/subscription?subscriptionID={aboId}``.
     - ``style="container"`` (Legacy-Datenmodell, Techn. SST-Beschreibung
-      Kap. 7.3.2.2.1; vom Mobilithek-Service-Desk 2026-06-15 fuer das
-      DELFI-GTFS-RT-Abo bestaetigt): ``/container/subscription?subscriptionID=
-      {aboId}``. Der modernere ``path``-Zugriff (Kap. 6.2.1) gibt fuer dieses
+      Kap. 7.3.2.2.1; vom Mobilithek-Service-Desk 2026-06-15 für das
+      DELFI-GTFS-RT-Abo bestätigt): ``/container/subscription?subscriptionID=
+      {aboId}``. Der modernere ``path``-Zugriff (Kap. 6.2.1) gibt für dieses
       Legacy-Abo einen 4xx-Fehler.
     """
     if style == "container":
@@ -79,11 +79,11 @@ def build_pull_url(abo_id: str, *, style: str = "path") -> str:
 def build_mtls_context(p12_path: str, password: str) -> ssl.SSLContext:
     """Baut einen ``ssl.SSLContext`` aus einer ``.p12``-Datei (mTLS, T-20-PEM).
 
-    Liest die p12-Bytes, entschluesselt Key + Cert (+ Chain) via
+    Liest die p12-Bytes, entschlüsselt Key + Cert (+ Chain) via
     ``cryptography`` (pyca), serialisiert sie als PEM in eine kurzlebige
-    tmpfs-Datei (Modus 0600), laedt diese in den Context und LOESCHT sie sofort
-    im ``finally`` (entschluesseltes Schluesselmaterial nie dauerhaft auf Disk,
-    Security V12 / Pitfall 2). ``password`` ist der entschluesselte SecretStr-
+    tmpfs-Datei (Modus 0600), lädt diese in den Context und LÖSCHT sie sofort
+    im ``finally`` (entschlüsseltes Schlüsselmaterial nie dauerhaft auf Disk,
+    Security V12 / Pitfall 2). ``password`` ist der entschlüsselte SecretStr-
     Wert; er wird nie geloggt.
     """
     with open(p12_path, "rb") as fh:
@@ -104,7 +104,7 @@ def build_mtls_context(p12_path: str, password: str) -> ssl.SSLContext:
 
     ctx = ssl.create_default_context()
     # Datei mit restriktivem Modus (0600) auf tmpfs (RAM) erzeugen; delete=False,
-    # damit wir Pfad an load_cert_chain geben koennen, dann im finally unlink.
+    # damit wir Pfad an load_cert_chain geben können, dann im finally unlink.
     tmp = tempfile.NamedTemporaryFile(  # noqa: SIM115
         mode="wb", delete=False, dir=_TMPFS_DIR, suffix=".pem"
     )
@@ -115,18 +115,18 @@ def build_mtls_context(p12_path: str, password: str) -> ssl.SSLContext:
         tmp.close()
         ctx.load_cert_chain(certfile=tmp.name)
     finally:
-        # Entschluesseltes PEM SOFORT loeschen (T-20-PEM / Security V12).
+        # Entschlüsseltes PEM SOFORT löschen (T-20-PEM / Security V12).
         os.unlink(tmp.name)
     return ctx
 
 
 def create_mobilithek_client(settings) -> httpx.AsyncClient:
-    """Baut den dedizierten mTLS-Client NUR fuer Mobilithek (T-20-MTLS).
+    """Baut den dedizierten mTLS-Client NUR für Mobilithek (T-20-MTLS).
 
     Analog ``infra/http.create_http_client``, ABER mit ``verify=SSLContext``
     (Client-Cert) und PFLICHT-Header ``Accept-Encoding: gzip``. Ein EIGENER
     Client, NICHT der geteilte ``app.state.http`` (das Cert darf nie an fremde
-    Hosts gehen). ``follow_redirects=False`` haelt die SSRF-Invariante.
+    Hosts gehen). ``follow_redirects=False`` hält die SSRF-Invariante.
     """
     ctx = build_mtls_context(
         settings.mobilithek_cert_path,
@@ -139,7 +139,7 @@ def create_mobilithek_client(settings) -> httpx.AsyncClient:
             "Accept-Encoding": GZIP_HEADER,  # PFLICHT (Pitfall 1)
         },
         # Konservativer Default; Mobilithek kann minutenfrisch sein, aber nicht
-        # ewig haengen duerfen.
+        # ewig hängen dürfen.
         timeout=httpx.Timeout(connect=2.0, read=10.0, write=5.0, pool=1.0),
         follow_redirects=False,  # SSRF-Invariante (T-20-SSRF)
     )

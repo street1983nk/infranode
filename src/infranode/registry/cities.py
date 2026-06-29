@@ -1,25 +1,25 @@
-"""Statisches Grossstadt-Register als import-zeit-validierte Konstante (CORE-03).
+"""Statisches Großstadt-Register als import-zeit-validierte Konstante (CORE-03).
 
-EXPANSION 2026-06: 28 handverifizierte Kern-Staedte (``_CORE_REGISTRY``,
-``coverage="full"``, unten als Literale) + alle weiteren deutschen Grossstaedte
-ueber 100.000 EW (``coverage="auto"``, maschinengeneriert aus Wikidata via
+EXPANSION 2026-06: 28 handverifizierte Kern-Städte (``_CORE_REGISTRY``,
+``coverage="full"``, unten als Literale) + alle weiteren deutschen Großstädte
+über 100.000 EW (``coverage="auto"``, maschinengeneriert aus Wikidata via
 scripts/generate_registry.py, geladen aus data/seeds/registry_extended.json).
-Die ``auto``-Staedte werden NUR von den AGS-/geo-automatischen Tier-A-Quellen
-bedient; hand-kuratierte Quellen liefern fuer sie ehrliches no_data.
+Die ``auto``-Städte werden NUR von den AGS-/geo-automatischen Tier-A-Quellen
+bedient; hand-kuratierte Quellen liefern für sie ehrliches no_data.
 
 
 Werte (slug/name_de/state/is_state_capital/qid/osm_relation) stammen direkt aus
 der SPARQL-verifizierten Tabelle in 02-RESEARCH.md (Wikidata P402/P1082, Stand
-2026-06-08). Verletzt ein Eintrag das Schema, schlaegt bereits der Import (und
-damit jeder Test) fehl. Die 16 Landeshauptstaedte tragen
+2026-06-08). Verletzt ein Eintrag das Schema, schlägt bereits der Import (und
+damit jeder Test) fehl. Die 16 Landeshauptstädte tragen
 ``is_state_capital=True``. Koordinaten sind plausible Stadtzentren.
 
-``ags`` ist der amtliche 8-stellige Gemeindeschluessel (ARCH-02,
-dim_city-Join-Anker). Fuer kreisfreie Staedte gilt: 8-stelliger AGS =
-5-stelliger Stadt-Praefix (aus ingest/delfi.py AGS_TO_SLUG) + "000". Alle 28 ags
+``ags`` ist der amtliche 8-stellige Gemeindeschlüssel (ARCH-02,
+dim_city-Join-Anker). Für kreisfreie Städte gilt: 8-stelliger AGS =
+5-stelliger Stadt-Präfix (aus ingest/delfi.py AGS_TO_SLUG) + "000". Alle 28 ags
 sind gegen die amtliche GENESIS-Quelle (regionalstatistik.de, Tabelle
 12411-01-01-4, Stand 2022) verifiziert; Berlin/Hamburg als Stadtstaaten auf
-Laender-Ebene (AGS 11000000/02000000), die uebrigen als kreisfreie Staedte.
+Länder-Ebene (AGS 11000000/02000000), die übrigen als kreisfreie Städte.
 """
 
 from __future__ import annotations
@@ -168,8 +168,8 @@ _CORE_REGISTRY: tuple[CityRegistryEntry, ...] = (
         name_de="Hannover",
         state="NI",
         # [VERIFIED Wikidata P439, 2026-06-10] Stadt Hannover = 03241001; der
-        # fruehere Wert 03241000 war Region-Hannover-Kreis + "000" (existiert
-        # nicht als Gemeinde) -> /energy und GENESIS liefen fuer Hannover leer.
+        # frühere Wert 03241000 war Region-Hannover-Kreis + "000" (existiert
+        # nicht als Gemeinde) -> /energy und GENESIS liefen für Hannover leer.
         ags="03241001",
         is_state_capital=True,
         qid="Q1715",
@@ -324,8 +324,8 @@ _CORE_REGISTRY: tuple[CityRegistryEntry, ...] = (
         slug="saarbruecken",
         name_de="Saarbrücken",
         state="SL",
-        # [VERIFIED Wikidata P439, 2026-06-10] Landeshauptstadt Saarbruecken =
-        # 10041100; der fruehere Wert 10041000 war Regionalverband-Kreis + "000".
+        # [VERIFIED Wikidata P439, 2026-06-10] Landeshauptstadt Saarbrücken =
+        # 10041100; der frühere Wert 10041000 war Regionalverband-Kreis + "000".
         ags="10041100",
         is_state_capital=True,
         qid="Q1724",
@@ -348,18 +348,18 @@ _CORE_REGISTRY: tuple[CityRegistryEntry, ...] = (
 
 
 def _load_extended() -> tuple[CityRegistryEntry, ...]:
-    """Laedt die maschinengenerierten >100k-EW-Staedte (coverage="auto").
+    """Laedt die maschinengenerierten >100k-EW-Städte (coverage="auto").
 
     Quelle: data/seeds/registry_extended.json (committet, aus Wikidata via
     scripts/generate_registry.py). Beim Import gegen ``CityRegistryEntry``
-    validiert (Import schlaegt fehl, wenn das JSON das Schema verletzt). QIDs der
-    Kern-Staedte werden defensiv ausgefiltert (Kern hat Vorrang, keine Dubletten).
+    validiert (Import schlägt fehl, wenn das JSON das Schema verletzt). QIDs der
+    Kern-Städte werden defensiv ausgefiltert (Kern hat Vorrang, keine Dubletten).
     Fehlt die Datei, bleibt es beim Kern-Register (Graceful Degradation).
 
-    Der Seed-Pfad wird ueber ``seeds_dir()`` aufgeloest (respektiert
+    Der Seed-Pfad wird über ``seeds_dir()`` aufgelöst (respektiert
     ``INFRANODE_SEEDS_DIR``, Live-Report M1): im Prod-Container liegen die Seeds
     unter ``/app/seeds`` (Named-Volume-Schatten auf ``/app/data``), sonst fehlten
-    56 der 84 ``auto``-Staedte aus registry_extended.json.
+    56 der 84 ``auto``-Städte aus registry_extended.json.
     """
     path = seeds_dir() / "registry_extended.json"
     if not path.exists():
@@ -371,10 +371,10 @@ def _load_extended() -> tuple[CityRegistryEntry, ...]:
     )
 
 
-# Vollregister: 28 handverifizierte Kern-Staedte (coverage="full") + alle weiteren
-# Grossstaedte >100k EW (coverage="auto", maschinengeneriert). Reihenfolge:
+# Vollregister: 28 handverifizierte Kern-Städte (coverage="full") + alle weiteren
+# Großstädte >100k EW (coverage="auto", maschinengeneriert). Reihenfolge:
 # Kern zuerst (stabil), dann die erweiterten alphabetisch.
 CITY_REGISTRY: tuple[CityRegistryEntry, ...] = _CORE_REGISTRY + _load_extended()
 
-# Modul-Index fuer O(1)-Lookup (statisch, keine Laufzeit-Quelle).
+# Modul-Index für O(1)-Lookup (statisch, keine Laufzeit-Quelle).
 _BY_SLUG: dict[str, CityRegistryEntry] = {c.slug: c for c in CITY_REGISTRY}

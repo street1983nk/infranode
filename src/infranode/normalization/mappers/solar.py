@@ -1,17 +1,17 @@
 """Reiner PVGIS-Solar-Mapper map_solar (DATA-38, GOV-03).
 
-Uebersetzt das flache PVGIS-raw-dict deterministisch in einen ``CanonicalRecord``
+Übersetzt das flache PVGIS-raw-dict deterministisch in einen ``CanonicalRecord``
 mit ``SolarPayload``. Die Funktion ist rein: kein HTTP, kein Logging, kein
 ``datetime.now()`` (der ``retrieved_at``-Zeitstempel wird keyword-only injiziert,
 damit Tests deterministisch bleiben).
 
 ``observed_at`` bleibt bewusst ``None``: PVGIS liefert ein klimatologisches
 Mehrjahresmittel, keinen Messzeitpunkt; der Bezugszeitraum steht als
-``period_start``/``period_end`` im Payload (record_id faellt damit auf
-``retrieved_at`` zurueck, ARCH-02).
+``period_start``/``period_end`` im Payload (record_id fällt damit auf
+``retrieved_at`` zurück, ARCH-02).
 
 KRITISCH (GOV-03): PVGIS-Daten sind aufbereitet (InfraNode normiert auf 1 kWp bei
-optimalem Winkel und formt das Schema um), daher traegt die Attribution
+optimalem Winkel und formt das Schema um), daher trägt die Attribution
 ``modified=True`` und den wortgenauen PVGIS-Hinweis. Lizenz und Tier sind
 hartkodiert: EU-Reuse-Policy (EC_REUSE, faktisch CC BY 4.0, frei nutzbar mit
 Quellenangabe) = Tier A.
@@ -72,6 +72,7 @@ def map_solar(
             optimal_azimuth_deg=raw.get("optimal_azimuth_deg"),
             peakpower_kwp=raw.get("peakpower_kwp"),
             system_loss_pct=raw.get("system_loss_pct"),
+            total_performance_delta_pct=raw.get("total_performance_delta_pct"),
             radiation_db=raw.get("radiation_db"),
             period_start=raw.get("period_start"),
             period_end=raw.get("period_end"),

@@ -2,7 +2,7 @@
 
 Liest die eingebetteten, committeten Seeds (``data/seeds/feiertage_<year>.json``
 und ``data/seeds/schulferien_<year>.json``) via stdlib ``json`` je Bundesland
-(``entry.state``-Kuerzel) und bildet sie deterministisch auf einen
+(``entry.state``-Kürzel) und bildet sie deterministisch auf einen
 ``CanonicalRecord`` mit ``HolidayPayload`` (kind="holiday") ab.
 
 KRITISCH (Gray-Area-Entscheidung, GOV-02/03): Feiertage/Schulferien sind
@@ -11,7 +11,7 @@ gemeinfreie Herkunft (KMK-validiert) aus. Die Seeds sind statisch im Repo
 (kein DB-Schutzrecht).
 
 KRITISCH (T-08-DEP/T-08-SC): KEINE Laufzeit-Fremd-API, KEINE neue Dependency.
-Der Reader nutzt ausschliesslich stdlib ``json``; ``load_holidays`` ist tolerant
+Der Reader nutzt ausschließlich stdlib ``json``; ``load_holidays`` ist tolerant
 (fehlende Datei/fehlendes Bundesland -> leere Listen, kein Crash, kein 5xx).
 
 Der Mapper ist rein: kein HTTP, kein Logging, kein ``datetime.now()``. Der
@@ -35,7 +35,7 @@ from infranode.normalization import (
 )
 
 # CC0 / gemeinfreie Fakten. Die Lizenz-URL dient nur der Attribution; die Daten
-# sind ausdruecklich NICHT permissiv lizenziert (siehe Modul-Docstring).
+# sind ausdrücklich NICHT permissiv lizenziert (siehe Modul-Docstring).
 _CC0_URL = "https://creativecommons.org/publicdomain/zero/1.0/"
 
 # Wortgenaue Attribution: gemeinfreie, KMK-validierte Fakten (CC0).
@@ -43,13 +43,13 @@ _ATTRIBUTION_TEXT = "Feiertage/Schulferien (gemeinfreie Fakten, gegen KMK validi
 
 
 def _read_seed(filename: str, state: str) -> list[dict]:
-    """Liest eine Seed-Datei via stdlib json und gibt die Eintraege fuer ``state``.
+    """Liest eine Seed-Datei via stdlib json und gibt die Einträge für ``state``.
 
     Tolerant by design (T-08-DEP, no_data-Pfad): fehlende Datei oder fehlendes
     Bundesland -> leere Liste (kein Crash, KEIN Fremd-API-Call). ``_meta``-Keys
     werden nie als Bundesland interpretiert (der Lookup ist exakt ``state``).
 
-    Der Seed-Pfad wird lazy via ``seeds_dir()`` aufgeloest (respektiert
+    Der Seed-Pfad wird lazy via ``seeds_dir()`` aufgelöst (respektiert
     ``INFRANODE_SEEDS_DIR``, Live-Report M1): nie auf Import-Zeit einfrieren,
     sonst greift im Prod-Container der Volume-Override nicht.
     """
@@ -66,7 +66,7 @@ def load_holidays(state: str, year: int) -> dict:
 
     Liest ``data/seeds/feiertage_<year>.json`` und
     ``data/seeds/schulferien_<year>.json`` via stdlib ``json`` und extrahiert die
-    Eintraege fuer das Bundesland-Kuerzel ``state`` (z. B. "BY"). Unbekanntes
+    Einträge für das Bundesland-Kürzel ``state`` (z. B. "BY"). Unbekanntes
     Bundesland oder fehlendes Jahr -> leere Listen (kein Crash, KEIN Fremd-API).
 
     Returns:

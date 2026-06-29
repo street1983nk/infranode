@@ -1,6 +1,6 @@
 """Reiner DIVI-RKI-ICU-Mapper map_icu (DATA-25b, GOV-02/03, Pitfall 5/6).
 
-Uebersetzt das flache RKI-DIVI-raw-dict (Kreisebene, aus der RKI-GitHub-CSV)
+Übersetzt das flache RKI-DIVI-raw-dict (Kreisebene, aus der RKI-GitHub-CSV)
 deterministisch in einen ``CanonicalRecord`` mit ``IcuCapacityPayload``
 (kind=icu_capacity). Die Funktion ist rein: kein HTTP, kein Logging, kein
 ``datetime.now()``. Der ``retrieved_at``-Zeitstempel wird keyword-only injiziert,
@@ -9,10 +9,10 @@ damit Tests deterministisch bleiben.
 KRITISCH (Tier-Trennung GOV-02): Die RKI-GitHub-DIVI-CSV ist Kreisebene unter
 CC-BY 4.0 (RKI, DIVI-Intensivregister) und damit permissiv lizenziert (Tier A). NICHT zu
 verwechseln mit der klinikscharfen DIVI-Live-API (Tier C, DB-Schutzrecht): die
-laeuft ueber ``map_icu_live`` und wird ausschliesslich live durchgeleitet.
+läuft über ``map_icu_live`` und wird ausschließlich live durchgeleitet.
 
 KRITISCH (GOV-03, Pitfall 6): CC-BY 4.0 verlangt die Quelle UND einen Stand. Die
-Attribution traegt daher PFLICHT den Wortlaut mit "Robert Koch-Institut (RKI)"
+Attribution trägt daher PFLICHT den Wortlaut mit "Robert Koch-Institut (RKI)"
 und dem ``datum`` als Stand. ``observed_at`` bleibt ``None`` (das Stand-Datum
 steht im Payload ``datum``), ``geo`` bleibt ``None`` (Kreisebene, kein Punkt-Geo).
 """

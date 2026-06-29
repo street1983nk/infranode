@@ -3,7 +3,7 @@
 Beweist jeden Cross-Cutting-Concern end-to-end:
 - /health  -> Redis-Ping + Status (FND-05)
 - /ping    -> Correlation-ID in meta + JSON-Log mit request_id (FND-03/05)
-- /echo    -> typvalidierter Query (loest 400-Envelope bei Fehler aus, FND-04)
+- /echo    -> typvalidierter Query (löst 400-Envelope bei Fehler aus, FND-04)
 - /_boom   -> erzwungener UpstreamError (beweist 503-Envelope, FND-04)
 """
 
@@ -35,14 +35,14 @@ async def health(request: Request) -> dict:
 
 @router.get("/ping")
 async def ping() -> dict:
-    """Erzeugt eine JSON-Log-Zeile mit request_id und gibt die ID im meta zurueck."""
+    """Erzeugt eine JSON-Log-Zeile mit request_id und gibt die ID im meta zurück."""
     log.info("ping_received")
     return {"data": {"pong": True}, "meta": {"correlation_id": correlation_id.get()}}
 
 
 @router.get("/echo")
 async def echo(n: int) -> dict:
-    """Echo eines int-Query; nicht-int loest RequestValidationError -> 400 aus."""
+    """Echo eines int-Query; nicht-int löst RequestValidationError -> 400 aus."""
     return {"data": {"n": n}, "meta": {"correlation_id": correlation_id.get()}}
 
 

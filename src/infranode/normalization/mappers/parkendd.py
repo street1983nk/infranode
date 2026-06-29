@@ -1,15 +1,15 @@
 """Reiner ParkenDD-Mapper map_parkendd (DATA-40, Live-Parken, Tier A je Stadt).
 
-Uebersetzt das rohe Adapter-dict (``slug``/``facilities``/``as_of``) deterministisch
+Übersetzt das rohe Adapter-dict (``slug``/``facilities``/``as_of``) deterministisch
 in einen ``CanonicalRecord`` mit ``ParkingPayload``. Rein: kein HTTP, keine
 Systemuhr (``retrieved_at`` keyword-only injiziert).
 
 LIZENZ (B-1, GOV-01): ParkenDD aggregiert heterogen lizenzierte Stadt-Quellen ohne
 einheitliche Lizenz. Die Lizenz wird daher PRO STADT am echten Ursprung verifiziert
 (``_PARKENDD_LICENSE``) und mit korrektem Tier getragen (CC0/DL-DE-Zero/DL-DE-BY/
-CC-BY, je Stadt; alle Tier A). Es werden NUR Staedte mit offener Standardlizenz
+CC-BY, je Stadt; alle Tier A). Es werden NUR Städte mit offener Standardlizenz
 ausgeliefert (Owner-Entscheidung 2026-06-23: keine Tier-B/C-/NC-Auslieferung); die
-uebrigen sind aus ``PARKENDD_CITIES`` entfernt (not_covered). Reine Live-Daten.
+übrigen sind aus ``PARKENDD_CITIES`` entfernt (not_covered). Reine Live-Daten.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ from infranode.normalization import (
 
 _PARKENDD_URL = "https://github.com/ParkenDD"
 
-# Kanonische Lizenz-Deed-URL je LicenseId (Attribution.license_url). Fuer nicht
+# Kanonische Lizenz-Deed-URL je LicenseId (Attribution.license_url). Für nicht
 # gelistete (UNKNOWN) Lizenzen bleibt die ParkenDD-Projektseite die Quellangabe.
 _LICENSE_DEED: dict[LicenseId, str] = {
     LicenseId.DL_DE_BY_2_0: "https://www.govdata.de/dl-de/by-2-0",
@@ -41,12 +41,12 @@ _LICENSE_DEED: dict[LicenseId, str] = {
 # der echten Quelle verifiziert und hier getragen (Owner-Entscheidung 2026-06-23:
 # "Ursprung je Stadt verifizieren"). Eintrag: slug -> (LicenseId, LicenseTier,
 # attribution_text). Lizenz-Recherche je Ursprung 2026-06-23: genau diese 13
-# ParkenDD-Staedte fuehren am Ursprung eine OFFENE Standardlizenz und werden
+# ParkenDD-Städte führen am Ursprung eine OFFENE Standardlizenz und werden
 # ausgeliefert (deckungsgleich mit ``adapters.parkendd.PARKENDD_CITIES``); die
-# uebrigen 9 wurden entfernt (bonn CC BY-NC, hanau/ingolstadt/nuernberg proprietaer,
+# übrigen 9 wurden entfernt (bonn CC BY-NC, hanau/ingolstadt/nuernberg proprietär,
 # luebeck/magdeburg/mannheim/regensburg/wiesbaden ohne auffindbare Lizenz). Der
 # ``_DEFAULT_LICENSE`` (UNKNOWN/C) ist nur noch ein Fail-safe (keine ausgelieferte
-# Stadt faellt darauf).
+# Stadt fällt darauf).
 _PARKENDD_LICENSE: dict[str, tuple[LicenseId, LicenseTier, str]] = {
     "aachen": (LicenseId.CC0, LicenseTier.A, "APAG - Aachener Parkhaus GmbH"),
     "dortmund": (LicenseId.DL_DE_ZERO_2_0, LicenseTier.A, "Stadt Dortmund"),
@@ -72,8 +72,8 @@ _PARKENDD_LICENSE: dict[str, tuple[LicenseId, LicenseTier, str]] = {
     "ulm": (LicenseId.CC0, LicenseTier.A, "Stadt Ulm"),
 }
 
-# Fail-safe fuer einen nicht gelisteten Slug (sollte nie ausgeliefert werden, da
-# PARKENDD_CITIES == Schluessel dieser Map): ehrlich UNKNOWN/Tier C.
+# Fail-safe für einen nicht gelisteten Slug (sollte nie ausgeliefert werden, da
+# PARKENDD_CITIES == Schlüssel dieser Map): ehrlich UNKNOWN/Tier C.
 _DEFAULT_LICENSE: tuple[LicenseId, LicenseTier, str] = (
     LicenseId.UNKNOWN,
     LicenseTier.C,
@@ -100,11 +100,11 @@ def map_parkendd(
 ) -> CanonicalRecord:
     """Bildet rohe ParkenDD-Parkdaten auf einen ``CanonicalRecord`` (Tier C) ab.
 
-    Die ``facilities`` (Parkhaeuser mit frei/gesamt/Zustand) wandern unveraendert
+    Die ``facilities`` (Parkhäuser mit frei/gesamt/Zustand) wandern unverändert
     in den ``ParkingPayload``. ``observed_at`` kommt aus dem ParkenDD-Datenstand
     (``as_of``), ``geo=None`` (Koordinaten je Facility im Payload). ``license_id``/
     ``license_tier``/Attribution kommen PRO STADT aus ``_PARKENDD_LICENSE`` (am
-    Ursprung verifiziert); nicht gelistete Staedte fallen ehrlich auf UNKNOWN/Tier C.
+    Ursprung verifiziert); nicht gelistete Städte fallen ehrlich auf UNKNOWN/Tier C.
     """
     slug = raw["slug"]
     license_id, license_tier, attribution_text = _PARKENDD_LICENSE.get(

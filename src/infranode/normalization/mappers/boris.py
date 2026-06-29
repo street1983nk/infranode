@@ -5,12 +5,12 @@ Bildet die aggregierte Bodenrichtwert-Zeile aus dem SQLite-Reader
 ``CanonicalRecord`` mit ``LandValuesPayload`` ab. Rein: kein HTTP, kein Logging,
 kein ``datetime.now()`` (``retrieved_at`` wird injiziert).
 
-Quelle ist BORIS (Bodenrichtwert-Informationssystem der Gutachterausschuesse),
-foederiert je Bundesland. Lizenz + wortgenaue Attribution werden je Land getragen
-(die Zeile aus dem Store fuehrt ``license_id``/``attribution``/``license_url``
+Quelle ist BORIS (Bodenrichtwert-Informationssystem der Gutachterausschüsse),
+föderiert je Bundesland. Lizenz + wortgenaue Attribution werden je Land getragen
+(die Zeile aus dem Store führt ``license_id``/``attribution``/``license_url``
 mit, da die Lizenzen je Land variieren; Berlin = DL-DE/Zero 2.0). Die Werte sind
-unveraenderte Quell-Kennzahlen (``modified=False``); ``geo`` bleibt ``None``
-(aggregiert ueber das Stadtgebiet), ``observed_at`` bleibt ``None`` (der
+unveränderte Quell-Kennzahlen (``modified=False``); ``geo`` bleibt ``None``
+(aggregiert über das Stadtgebiet), ``observed_at`` bleibt ``None`` (der
 Bewertungsstichtag steht im Payload).
 """
 
@@ -43,7 +43,7 @@ def map_land_values(
     ``bbox_radius_deg`` + ``license_id``/``attribution``/``license_url``). Der
     ``retrieved_at``-Zeitstempel wird injiziert (kein ``datetime.now()`` im
     Mapper), damit das Ergebnis deterministisch bleibt. Die Lizenz wird aus der
-    Zeile uebernommen (je Land verschieden); der Tier ist fuer alle offenen
+    Zeile übernommen (je Land verschieden); der Tier ist für alle offenen
     Lizenzen A.
     """
     return CanonicalRecord(
@@ -68,5 +68,10 @@ def map_land_values(
             zone_count=row["zone_count"],
             stichtag=row["stichtag"],
             bbox_radius_deg=row["bbox_radius_deg"],
+            # .get(): ältere Archiv-/Ingest-Zeilen ohne das Feld -> False.
+            normalized=row.get("normalized", False),
+            # truncated stammt nur aus dem Live-Pfad (Seiten-Cap erreicht); der
+            # SQLite-Reader führt es nicht -> .get()-Default False.
+            truncated=row.get("truncated", False),
         ),
     )

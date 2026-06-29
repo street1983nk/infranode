@@ -1,16 +1,16 @@
 """Keyloser Denkmal-WFS-Adapter fetch_heritage (DATA-OSM-Tier-2, Denkmallisten).
 
-Denkmalschutz ist in Deutschland LANDESsache: jedes Bundesland fuehrt eine eigene
+Denkmalschutz ist in Deutschland LANDESsache: jedes Bundesland führt eine eigene
 Denkmalliste, oft als WFS. Es gibt KEINEN bundesweiten Endpunkt. Daher ist der
-Adapter foederiert: ``DENKMAL_WFS`` mappt das Bundesland-Kuerzel
+Adapter foederiert: ``DENKMAL_WFS`` mappt das Bundesland-Kürzel
 (``CityRegistryEntry.state``) auf eine WFS-Konfiguration. Ein neues Land erweitert
-die Abdeckung automatisch (``registry.coverage`` leitet die Staedte daraus ab).
+die Abdeckung automatisch (``registry.coverage`` leitet die Städte daraus ab).
 
-Stand: Berlin (verifiziert, GeoJSON-WFS, DL-DE/Zero 2.0). Weitere Laender folgen,
+Stand: Berlin (verifiziert, GeoJSON-WFS, DL-DE/Zero 2.0). Weitere Länder folgen,
 sobald ihr WFS verifiziert ist (Hamburg liefert nur GML, NRW eigenes Schema ->
-eigene Parser-Logik noetig; Bayern CC-BY-ND = NICHT nutzbar, fail-closed).
+eigene Parser-Logik nötig; Bayern CC-BY-ND = NICHT nutzbar, fail-closed).
 
-Sicherheit (T-SSRF): Host + typeName stammen ausschliesslich aus der hartkodierten
+Sicherheit (T-SSRF): Host + typeName stammen ausschließlich aus der hartkodierten
 ``DENKMAL_WFS``-Registry (KEIN User-Input; ``state`` kommt aus dem validierten
 Register). DoS-Schutz: ``count`` cappt die Feature-Zahl (analog Overpass
 ``out center``). Der Adapter ist rein (kein Cache/Breaker; das liefert die
@@ -24,14 +24,14 @@ from typing import NamedTuple
 import httpx
 
 # Obergrenze der je Anfrage geladenen Denkmal-Features (DoS-/Groessenschutz). Die
-# Antwort liefert Repraesentativpunkte, nicht die rohen (grossen) Polygone.
+# Antwort liefert Repräsentativpunkte, nicht die rohen (großen) Polygone.
 _COUNT_CAP = 500
 
 
 class DenkmalSource(NamedTuple):
     """WFS-Konfiguration eines Bundeslandes (Denkmalliste).
 
-    ``fields`` nennt die Property-Schluessel, die je Objekt ueber lat/lon hinaus
+    ``fields`` nennt die Property-Schlüssel, die je Objekt über lat/lon hinaus
     ausgeliefert werden. ``license_id``/``license_tier``/``attribution`` sind je
     Land verschieden (Berlin DL-DE/Zero) und wandern in den CanonicalRecord.
     """
@@ -44,8 +44,8 @@ class DenkmalSource(NamedTuple):
     attribution: str
 
 
-# Bundesland-Kuerzel -> WFS-Konfiguration. Nur verifizierte, offen lizenzierte
-# Laender (fail-closed). Berlin: GetCapabilities-verifiziert 2026-06-26.
+# Bundesland-Kürzel -> WFS-Konfiguration. Nur verifizierte, offen lizenzierte
+# Länder (fail-closed). Berlin: GetCapabilities-verifiziert 2026-06-26.
 DENKMAL_WFS: dict[str, DenkmalSource] = {
     "BE": DenkmalSource(
         url="https://gdi.berlin.de/services/wfs/denkmale",
@@ -61,9 +61,9 @@ DENKMAL_WFS: dict[str, DenkmalSource] = {
 def _representative_point(geometry: dict | None) -> tuple[float | None, float | None]:
     """Mittelt alle Koordinaten einer GeoJSON-Geometrie zu einem Punkt (lat, lon).
 
-    Denkmale sind oft (Multi-)Polygone; statt der grossen Polygonringe liefern wir
-    einen Repraesentativpunkt (Schwerpunkt der Stuetzpunkte). GeoJSON-Koordinaten
-    sind ``[lon, lat]``. Robuste, defensive Rekursion ueber verschachtelte Listen.
+    Denkmale sind oft (Multi-)Polygone; statt der großen Polygonringe liefern wir
+    einen Repräsentativpunkt (Schwerpunkt der Stützpunkte). GeoJSON-Koordinaten
+    sind ``[lon, lat]``. Robuste, defensive Rekursion über verschachtelte Listen.
     """
     if not isinstance(geometry, dict):
         return (None, None)
@@ -98,14 +98,14 @@ async def fetch_heritage(
 ) -> dict:
     """Holt Denkmale eines Bundeslandes per WFS GetFeature (GeoJSON, WGS84).
 
-    ``state`` (Bundesland-Kuerzel aus dem Register) waehlt die WFS-Konfiguration;
-    ein nicht abgedecktes Land loest ein ``KeyError`` aus (die Route prueft jedoch
+    ``state`` (Bundesland-Kürzel aus dem Register) wählt die WFS-Konfiguration;
+    ein nicht abgedecktes Land löst ein ``KeyError`` aus (die Route prüft jedoch
     vorher ``is_covered`` und liefert dann ``not_covered``, sodass dieser Pfad nur
-    fuer abgedeckte Laender erreicht wird).
+    für abgedeckte Länder erreicht wird).
 
-    Rueckgabe-Keys (das, was ``map_heritage`` erwartet): ``slug``, ``state``,
+    Rückgabe-Keys (das, was ``map_heritage`` erwartet): ``slug``, ``state``,
     ``fields``, ``license_id``/``license_tier``/``attribution`` und ``features``
-    (rohe GeoJSON-FeatureCollection-Eintraege).
+    (rohe GeoJSON-FeatureCollection-Einträge).
     """
     src = DENKMAL_WFS[state]
     params = {

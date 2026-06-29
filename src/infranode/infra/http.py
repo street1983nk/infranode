@@ -3,9 +3,9 @@
 Analog zum ``infra/redis.py``-create/close-Paar: genau EIN ``httpx.AsyncClient``
 bedient alle Upstreams. Der Client wird im Lifespan-Startup erzeugt
 (``create_http_client``) und im Shutdown via ``close_http_client`` geschlossen.
-Pool-Limits und ein konservativer Default-Timeout schuetzen vor haengenden
-Upstreams; per-Source-Timeout ist je Request ueberschreibbar
-(``per_source_timeout``), ohne den Pool zu vervielfachen. Der User-Agent traegt
+Pool-Limits und ein konservativer Default-Timeout schützen vor hängenden
+Upstreams; per-Source-Timeout ist je Request überschreibbar
+(``per_source_timeout``), ohne den Pool zu vervielfachen. Der User-Agent trägt
 "InfraNode" plus Repo-URL auf JEDEM Request (Fair-Use, T-03-04).
 """
 
@@ -23,8 +23,8 @@ USER_AGENT = (
     "(+https://github.com/street1983nk/infranode-api; open data proxy)"
 )
 
-#: Prozessweiter Pool-Singleton. ``create_http_client`` gibt fuer denselben
-#: Prozess dieselbe Instanz zurueck (geteilter Connection-Pool, RES-01).
+#: Prozessweiter Pool-Singleton. ``create_http_client`` gibt für denselben
+#: Prozess dieselbe Instanz zurück (geteilter Connection-Pool, RES-01).
 _client: httpx.AsyncClient | None = None
 
 
@@ -46,14 +46,14 @@ def create_http_client(settings) -> httpx.AsyncClient:
                 max_keepalive_connections=20,
                 keepalive_expiry=30.0,
             ),
-            # Konservativer Default; per-Source per Request ueberschreibbar (T-03-03).
+            # Konservativer Default; per-Source per Request überschreibbar (T-03-03).
             timeout=httpx.Timeout(connect=2.0, read=5.0, write=5.0, pool=1.0),
             # KEINE automatischen Redirects (Audit MEDIUM-1, 2026-06-10): die
-            # SSRF-Invariante der Adapter (hartkodierte Hosts/Allowlists) schuetzt
+            # SSRF-Invariante der Adapter (hartkodierte Hosts/Allowlists) schützt
             # nur den ERSTEN Request; ein 30x eines (kompromittierten) Upstreams
-            # wuerde sonst blind verfolgt, auch auf interne Ziele (Metadaten-IP,
-            # redis). Ein legitimer Redirect schlaegt jetzt als Fehler durch und
-            # faellt in der Beta im Smoke/Monitoring auf; der betroffene Adapter
+            # würde sonst blind verfolgt, auch auf interne Ziele (Metadaten-IP,
+            # redis). Ein legitimer Redirect schlägt jetzt als Fehler durch und
+            # fällt in der Beta im Smoke/Monitoring auf; der betroffene Adapter
             # zieht dann gezielt auf die finale URL nach (wie divi_live auf www).
             follow_redirects=False,
         )
@@ -61,10 +61,10 @@ def create_http_client(settings) -> httpx.AsyncClient:
 
 
 def per_source_timeout(settings, *, source: str) -> httpx.Timeout:
-    """Liefert den per-Source-Timeout, der den Client-Default je Request ueberschreibt.
+    """Liefert den per-Source-Timeout, der den Client-Default je Request überschreibt.
 
     Der Pool bleibt EIN Singleton; nur der Timeout variiert je Quelle (eine
-    traege Quelle wie Wikidata-SPARQL darf laenger lesen als eine schnelle
+    träge Quelle wie Wikidata-SPARQL darf länger lesen als eine schnelle
     REST-Quelle, Pitfall 5).
     Quellenspezifische Werte kommen ab Phase 4 aus ``SourceConfig``; bis dahin
     gilt der konservative Default.

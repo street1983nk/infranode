@@ -53,7 +53,7 @@ def map_delfi_stop(
     wird injiziert (kein ``datetime.now()`` im Mapper). Die Join-Keys
     ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht (Default
     ``None``); ein ``TransitStopPayload`` nutzt ``stop_id`` als fachlichen
-    Schluessel, daher KEIN ``station_id``.
+    Schlüssel, daher KEIN ``station_id``.
     """
     return CanonicalRecord(
         city_slug=city_slug,

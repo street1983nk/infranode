@@ -1,9 +1,9 @@
 """Reiner Zensus-Gitter-Mapper map_population_density (DATA-OSM-Tier-2).
 
 Errechnet aus dem aggregierten raw-dict (Summe Einwohner + Zahl der bewohnten
-100m-Zellen) die bewohnte Flaeche (Zellen * 0.01 km2) und die Einwohnerdichte
-(Einwohner je km2 ueber die bewohnte Flaeche). Rein, deterministisch (kein now()).
-Lizenz DL-DE/BY 2.0 (Tier A), Quelle Zensus 2022 (Statistische Aemter).
+100m-Zellen) die bewohnte Fläche (Zellen * 0.01 km2) und die Einwohnerdichte
+(Einwohner je km2 über die bewohnte Fläche). Rein, deterministisch (kein now()).
+Lizenz DL-DE/BY 2.0 (Tier A), Quelle Zensus 2022 (Statistische Ämter).
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def map_population_density(
     """Bildet das aggregierte Zensus-Gitter-raw-dict auf einen ``CanonicalRecord`` ab.
 
     ``populated_area_km2`` = bewohnte Zellen * 0.01; ``density_per_km2`` = Einwohner
-    / bewohnte Flaeche (None, wenn keine bewohnten Zellen). Werte sind statisch
+    / bewohnte Fläche (None, wenn keine bewohnten Zellen). Werte sind statisch
     (Zensus-Stichtag), daher ``observed_at=None``; ``retrieved_at`` wird injiziert.
     """
     cells = raw.get("populated_cells", 0) or 0

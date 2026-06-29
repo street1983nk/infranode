@@ -1,15 +1,15 @@
 """Reiner GBFS-Sharing-Mapper ``map_sharing`` (DATA-33, Tier A).
 
-Uebersetzt das aggregierte GBFS-raw-dict (aus ``adapters.gbfs.fetch_sharing``)
+Übersetzt das aggregierte GBFS-raw-dict (aus ``adapters.gbfs.fetch_sharing``)
 deterministisch in einen ``CanonicalRecord`` mit ``SharingPayload``. Rein: kein
 HTTP, kein Logging, kein ``datetime.now()`` (``retrieved_at`` wird injiziert).
 
 Die Stadt-Kennzahlen (vehicles_available etc.) sind aus den Einzelfahrzeugen/
 Stationen VERRECHNET (Summen, BBox-Filter), daher ``modified=True``.
 
-Lizenz: Primaerquelle Nextbike ist CC0 (Tier A); je Anbieter wird die Lizenz im
-Adapter fail-closed gegen die Tier-A-Allowlist geprueft und im Payload je Anbieter
-ausgewiesen. Die record-weite Lizenz traegt die Primaerquelle CC0, Attribution
+Lizenz: Primärquelle Nextbike ist CC0 (Tier A); je Anbieter wird die Lizenz im
+Adapter fail-closed gegen die Tier-A-Allowlist geprüft und im Payload je Anbieter
+ausgewiesen. Die record-weite Lizenz trägt die Primärquelle CC0, Attribution
 wortgenau "nextbike GmbH / GBFS (CC0)" (muss verbatim in DATA-LICENSES.md +
 SOURCE_LICENSE stehen).
 """
@@ -44,14 +44,22 @@ def map_sharing(
 
     ``lat``/``lon`` stammen aus dem Register (die Kennzahl aggregiert Fahrzeuge/
     Stationen im Umkreis dieser Koordinate). ``modified=True``, weil die Stadt-
-    Aggregate aus den Einzelfahrzeugen berechnet sind. ``observed_at=None`` (der
-    Snapshot ist live, der Zeitbezug steckt in ``retrieved_at``).
+    Aggregate aus den Einzelfahrzeugen berechnet sind. ``observed_at`` kommt aus
+    dem jüngsten GBFS-``last_updated`` der Feeds (H9, UTC-ISO im raw-dict); fehlt
+    er, bleibt er ``None`` (der Zeitbezug steckt dann in ``retrieved_at``).
     """
     geo = GeoPoint(lat=lat, lon=lon) if lat is not None and lon is not None else None
+    observed_raw = raw.get("observed_at")
+    observed_at = None
+    if isinstance(observed_raw, str) and observed_raw:
+        try:
+            observed_at = datetime.fromisoformat(observed_raw)
+        except ValueError:
+            observed_at = None
     return CanonicalRecord(
         city_slug=raw["slug"],
         geo=geo,
-        observed_at=None,
+        observed_at=observed_at,
         retrieved_at=retrieved_at,
         source=SourceId.GBFS,
         license_id=LicenseId.CC0,

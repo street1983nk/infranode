@@ -1,6 +1,6 @@
 """Reiner Berlin-VIZ-Mapper map_berlin_road_events (DATA-15, Tier A DL-DE/BY).
 
-Uebersetzt das rohe Adapter-dict (``slug``/``events``) deterministisch in einen
+Übersetzt das rohe Adapter-dict (``slug``/``events``) deterministisch in einen
 ``CanonicalRecord`` mit ``RoadEventPayload``. Die Funktion ist rein: kein HTTP,
 keine Log-Aufrufe, keine Systemuhr. Der ``retrieved_at``-Zeitstempel wird
 keyword-only injiziert, damit Tests deterministisch bleiben.
@@ -38,7 +38,7 @@ def map_berlin_road_events(
 ) -> CanonicalRecord:
     """Bildet rohe Berliner Road-Events auf einen ``CanonicalRecord`` (Tier A) ab.
 
-    Die ``events`` (Baustellen/Sperrungen, DATA-15) wandern unveraendert in den
+    Die ``events`` (Baustellen/Sperrungen, DATA-15) wandern unverändert in den
     ``RoadEventPayload`` (``city_source="berlin_viz"``). Der ``retrieved_at``-
     Zeitstempel wird injiziert (keine Systemuhr im Mapper), damit das
     Ergebnis deterministisch bleibt. Die Join-Keys ``ags``/``wikidata_qid`` werden

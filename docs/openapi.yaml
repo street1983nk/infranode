@@ -39,10 +39,10 @@ tags:
       erhalten (kein Breaking Change).
   - name: stations
     description: >-
-      Per-Bahnhof-Live-Boards unter /api/v1/stations/{eva}. Abfahrten/Ankuenfte
-      JEDES DB-Bahnhofs ueber seine EVA-Nummer (aus dem Katalog
+      Per-Bahnhof-Live-Boards unter /api/v1/stations/{eva}. Abfahrten/Ankünfte
+      JEDES DB-Bahnhofs über seine EVA-Nummer (aus dem Katalog
       /cities/{slug}/stations), alle Gattungen inkl. Nahverkehr, mit Echtzeit-
-      Verspaetung und Stoerungen/Meldungen. Quelle: DB Timetables (CC BY 4.0).
+      Verspätung und Störungen/Meldungen. Quelle: DB Timetables (CC BY 4.0).
 paths:
   /api/v1/health:
     get:
@@ -1901,8 +1901,8 @@ paths:
       description: >-
         Liefert den Pkw-Bestand und den Elektro-Anteil einer Stadt aus dem offline
         aufbereiteten KBA-SQLite-Store im kanonischen Envelope. Die regionale
-        Aufloesung ist der Zulassungsbezirk (= Kreis bzw. kreisfreie Stadt) und
-        wird ueber district/district_key ehrlich ausgewiesen. Kein Upstream im
+        Auflösung ist der Zulassungsbezirk (= Kreis bzw. kreisfreie Stadt) und
+        wird über district/district_key ehrlich ausgewiesen. Kein Upstream im
         Request-Pfad, der Abruf liest nur den vorbereiteten Bestand. Deaktiviert ->
         200 source_status="disabled". Batch noch nicht gelaufen -> 200
         source_status="not_ingested" (nie 5xx).
@@ -1947,14 +1947,14 @@ paths:
   /api/v1/cities/{slug}/accidents:
     get:
       tags: [cities]
-      summary: Strassenverkehrsunfaelle je Stadt (Unfallatlas, Tier A)
+      summary: Straßenverkehrsunfälle je Stadt (Unfallatlas, Tier A)
       x-summary-en: Road traffic accidents per city (accident atlas, Tier A)
       description: >-
-        Liefert das jaehrliche Unfall-Aggregat einer Stadt aus dem offline
+        Liefert das jährliche Unfall-Aggregat einer Stadt aus dem offline
         aufbereiteten Unfallatlas-SQLite-Store im kanonischen Envelope: Gesamtzahl
-        sowie Aufschluesselung nach Unfallkategorie (Getoetete/Schwer-/
-        Leichtverletzte) und beteiligter Verkehrsart (Rad/Fuss/Pkw/Krad).
-        Regionale Aufloesung Kreis/kreisfreie Stadt. Kein Upstream im Request-Pfad.
+        sowie Aufschlüsselung nach Unfallkategorie (Getötete/Schwer-/
+        Leichtverletzte) und beteiligter Verkehrsart (Rad/Fuß/Pkw/Krad).
+        Regionale Auflösung Kreis/kreisfreie Stadt. Kein Upstream im Request-Pfad.
         Deaktiviert -> 200 source_status="disabled". Batch noch nicht gelaufen ->
         200 source_status="not_ingested" (nie 5xx).
       x-description-en: >-
@@ -2001,11 +2001,11 @@ paths:
       description: >-
         Liefert die polizeiliche Kriminalstatistik je Kreis aus dem offline
         aufbereiteten BKA-PKS-SQLite-Store im kanonischen Envelope: je
-        Hauptstraftatengruppe (z.B. Straftaten insgesamt, Gewaltkriminalitaet,
-        Wohnungseinbruchdiebstahl) die erfassten Faelle, die Haeufigkeitszahl je
-        100.000 Einwohner und die Aufklaerungsquote in Prozent, dazu Berichtsjahr
+        Hauptstraftatengruppe (z.B. Straftaten insgesamt, Gewaltkriminalität,
+        Wohnungseinbruchdiebstahl) die erfassten Fälle, die Häufigkeitszahl je
+        100.000 Einwohner und die Aufklärungsquote in Prozent, dazu Berichtsjahr
         (reference_year) und Version. Lizenz DL-DE/BY 2.0 (Tier A). Regionale
-        Aufloesung Kreis/kreisfreie Stadt. Kein Upstream im Request-Pfad.
+        Auflösung Kreis/kreisfreie Stadt. Kein Upstream im Request-Pfad.
         Sperr-/Leerwerte -> null. Deaktiviert -> 200 source_status="disabled".
         Batch noch nicht gelaufen -> 200 source_status="not_ingested" (nie 5xx).
       x-description-en: >-
@@ -2053,8 +2053,8 @@ paths:
       x-summary-en: Unemployment count and rate per city (GENESIS, Tier A)
       description: >-
         Liefert Arbeitslose (Anzahl) und Arbeitslosenquote (Prozent) einer Stadt
-        aus der Regionalstatistik (Arbeitsmarktstatistik der Bundesagentur fuer
-        Arbeit, Jahresdurchschnitt) im kanonischen Envelope. Regionale Aufloesung
+        aus der Regionalstatistik (Arbeitsmarktstatistik der Bundesagentur für
+        Arbeit, Jahresdurchschnitt) im kanonischen Envelope. Regionale Auflösung
         Kreis/kreisfreie Stadt (region_name). Quelle account-gated; deaktiviert ->
         200 source_status="disabled". Kein Wert -> 200 source_status="no_data".
       x-description-en: >-
@@ -2093,12 +2093,12 @@ paths:
   /api/v1/cities/{slug}/tourism:
     get:
       tags: [cities]
-      summary: Gaesteuebernachtungen und Ankuenfte je Stadt (GENESIS, Tier A)
+      summary: Gästeübernachtungen und Ankünfte je Stadt (GENESIS, Tier A)
       x-summary-en: Overnight stays and arrivals per city (GENESIS, Tier A)
       description: >-
-        Liefert Gaesteuebernachtungen und Gaesteankuenfte einer Stadt aus der
+        Liefert Gästeübernachtungen und Gästeankünfte einer Stadt aus der
         Regionalstatistik (Monatserhebung im Tourismus, Jahressumme) im
-        kanonischen Envelope. Regionale Aufloesung Kreis/kreisfreie Stadt. Quelle
+        kanonischen Envelope. Regionale Auflösung Kreis/kreisfreie Stadt. Quelle
         account-gated; deaktiviert -> 200 source_status="disabled". Kein Wert ->
         200 source_status="no_data".
       x-description-en: >-
@@ -2140,9 +2140,9 @@ paths:
       summary: Baugenehmigungen je Stadt (GENESIS, Tier A)
       x-summary-en: Building permits per city (GENESIS, Tier A)
       description: >-
-        Liefert genehmigte Wohngebaeude und Wohnungen einer Stadt aus der
+        Liefert genehmigte Wohngebäude und Wohnungen einer Stadt aus der
         Regionalstatistik (Statistik der Baugenehmigungen, Jahressumme) im
-        kanonischen Envelope. Regionale Aufloesung Kreis/kreisfreie Stadt. Quelle
+        kanonischen Envelope. Regionale Auflösung Kreis/kreisfreie Stadt. Quelle
         account-gated; deaktiviert -> 200 source_status="disabled". Kein Wert ->
         200 source_status="no_data".
       x-description-en: >-
@@ -2359,11 +2359,11 @@ paths:
   /api/v1/cities/{slug}/power-price:
     get:
       tags: [cities]
-      summary: Day-ahead-Boersenstrompreis bundesweit (SMARD, Tier A)
+      summary: Day-ahead-Börsenstrompreis bundesweit (SMARD, Tier A)
       x-summary-en: Day-ahead wholesale electricity price, nationwide (SMARD, Tier A)
       description: >-
-        Day-ahead-Grosshandelspreis der Gebotszone DE/LU als Tageswert in EUR/MWh
-        (bundesweit, fuer alle Staedte identisch). Quelle: Bundesnetzagentur |
+        Day-ahead-Großhandelspreis der Gebotszone DE/LU als Tageswert in EUR/MWh
+        (bundesweit, für alle Städte identisch). Quelle: Bundesnetzagentur |
         SMARD.de (CC BY 4.0). Deaktiviert -> 200 source_status="disabled".
       x-description-en: >-
         Day-ahead wholesale electricity price of the DE/LU bidding zone as a daily
@@ -2403,16 +2403,19 @@ paths:
       summary: Amtliche DWD-Wetterwarnungen je Stadt (Tier A)
       x-summary-en: Official DWD weather warnings per city (Tier A)
       description: >-
-        Aktive amtliche Wetterwarnungen des Deutschen Wetterdienstes fuer die
-        Stadt (Filterung ueber die Gemeinde-Warncell = "1"+AGS). Liefert
-        max_level (0 = keine Warnung, 1-4 = DWD-Warnstufe), count und die
-        Einzelwarnungen. Quelle: Deutscher Wetterdienst (GeoNutzV). Deaktiviert
-        -> 200 source_status="disabled".
+        Aktive amtliche Wetterwarnungen des Deutschen Wetterdienstes für die
+        Stadt (Filterung über die Gemeinde-Warncell = "1"+AGS). Liefert
+        max_level (0 = keine reguläre Warnung, 1-4 = DWD-Warnstufe), count und die
+        Einzelwarnungen. Hitze-/Sonderwarnungen (DWD-Code >= 50) zählen NICHT in
+        max_level, sondern stehen separat in special_warnings. Quelle: Deutscher
+        Wetterdienst (GeoNutzV). Deaktiviert -> 200 source_status="disabled".
       x-description-en: >-
         Active official weather warnings from the German Weather Service (DWD)
         for the city (filtered via the municipality warncell = "1"+AGS). Returns
         max_level (0 = none, 1-4 = DWD level), count and the individual warnings.
-        Source: Deutscher Wetterdienst (GeoNutzV).
+        Heat/special warnings (DWD code >= 50) do NOT count towards max_level and
+        are listed separately in special_warnings. Source: Deutscher Wetterdienst
+        (GeoNutzV).
       operationId: getCityWeatherWarnings
       parameters:
         - name: slug
@@ -2492,16 +2495,16 @@ paths:
   /api/v1/cities/{slug}/stations:
     get:
       tags: [cities]
-      summary: Bahnhofs-Katalog einer Stadt, alle DB-Bahnhoefe (StaDa, Tier A)
+      summary: Bahnhofs-Katalog einer Stadt, alle DB-Bahnhöfe (StaDa, Tier A)
       x-summary-en: City station catalog, all DB stations (StaDa, Tier A)
       description: >-
-        Liste ALLER DB-Bahnhoefe im Stadtgebiet (Zuordnung ueber den amtlichen
-        Gemeindeschluessel: StaDa municipalityCode == Stadt-ags), nicht nur der
-        Fernverkehrs-Hbf. Je Bahnhof eva (EVA-Nummer, fuettert
+        Liste ALLER DB-Bahnhöfe im Stadtgebiet (Zuordnung über den amtlichen
+        Gemeindeschlüssel: StaDa municipalityCode == Stadt-ags), nicht nur der
+        Fernverkehrs-Hbf. Je Bahnhof eva (EVA-Nummer, füttert
         GET /stations/{eva}/departures), name, category (1-7), lat, lon, zip.
         Quelle: Deutsche Bahn AG / StaDa (CC BY 4.0). Ohne Zugangsdaten ODER Toggle
         aus -> 200 source_status="disabled"; kein DB-Bahnhof im Stadtgebiet -> 200
-        source_status="no_data". Volle Abdeckung (alle Staedte).
+        source_status="no_data". Volle Abdeckung (alle Städte).
       x-description-en: >-
         List of ALL DB stations within the city (mapped via the official
         municipality key: StaDa municipalityCode == city ags), not just the
@@ -2544,16 +2547,16 @@ paths:
       summary: Live-Abfahrtstafel Haupt-Bahnhof der Stadt, alle Gattungen (DB Timetables, Tier A)
       x-summary-en: Live departure board for a city's main station, all categories (DB Timetables, Tier A)
       description: >-
-        Naechste Zugabfahrten am Haupt-Bahnhof der Stadt mit Echtzeit-Verspaetung:
+        Nächste Zugabfahrten am Haupt-Bahnhof der Stadt mit Echtzeit-Verspätung:
         Sollfahrplan (/plan) und aktuelle Abweichungen (/fchg) der
         DB-Timetables-API, je Bahnhof zu einer nach Abfahrt sortierten Liste
-        zusammengefuehrt (line, category, destination, planned_time, platform,
-        delay_minutes, cancelled, long_distance). Volle Abdeckung ueber alle 84
-        Staedte: der Haupt-Bahnhof wird automatisch aus dem amtlichen StaDa-Katalog
-        abgeleitet (fuer die grossen Knoten eine verifizierte Auswahl). Quelle:
+        zusammengeführt (line, category, destination, planned_time, platform,
+        delay_minutes, cancelled, long_distance). Volle Abdeckung über alle 84
+        Städte: der Haupt-Bahnhof wird automatisch aus dem amtlichen StaDa-Katalog
+        abgeleitet (für die großen Knoten eine verifizierte Auswahl). Quelle:
         Deutsche Bahn AG (CC BY 4.0). Ohne Zugangsdaten ODER Toggle aus -> 200
         source_status="disabled"; keine Abfahrt im Zeitfenster -> 200
-        source_status="no_data". Fuer einen bestimmten Bahnhof statt der
+        source_status="no_data". Für einen bestimmten Bahnhof statt der
         Stadt-Auswahl dient /api/v1/stations/{eva}/departures.
       x-description-en: >-
         Upcoming train departures at a city's main station with real-time delays:
@@ -2600,14 +2603,14 @@ paths:
       summary: Live-Ankunftstafel Haupt-Bahnhof der Stadt, alle Gattungen (DB Timetables, Tier A)
       x-summary-en: Live arrival board for a city's main station, all categories (DB Timetables, Tier A)
       description: >-
-        Spiegelbild zu station-departures: ankommende Zuege am Haupt-Bahnhof der
-        Stadt mit Echtzeit-Verspaetung (Soll /plan + Aenderungen /fchg gemerged),
+        Spiegelbild zu station-departures: ankommende Züge am Haupt-Bahnhof der
+        Stadt mit Echtzeit-Verspätung (Soll /plan + Änderungen /fchg gemerged),
         je Eintrag mit origin (Startbahnhof), line, category, planned_time,
-        platform, delay_minutes, cancelled, long_distance. Volle Abdeckung ueber
-        alle 84 Staedte: der Haupt-Bahnhof wird automatisch aus dem amtlichen
+        platform, delay_minutes, cancelled, long_distance. Volle Abdeckung über
+        alle 84 Städte: der Haupt-Bahnhof wird automatisch aus dem amtlichen
         StaDa-Katalog abgeleitet. Quelle: Deutsche Bahn AG (CC BY 4.0). Ohne
         Zugangsdaten ODER Toggle aus -> 200 source_status="disabled"; keine Ankunft
-        im Zeitfenster -> 200 source_status="no_data". Fuer einen bestimmten Bahnhof
+        im Zeitfenster -> 200 source_status="no_data". Für einen bestimmten Bahnhof
         statt der Stadt-Auswahl dient /api/v1/stations/{eva}/arrivals.
       x-description-en: >-
         Mirror of station-departures: incoming trains at a city's main station with
@@ -2653,12 +2656,12 @@ paths:
       summary: Live-Abfahrten eines beliebigen Bahnhofs per EVA, alle Gattungen (DB Timetables, Tier A)
       x-summary-en: Live departures for any station by EVA, all categories (DB Timetables, Tier A)
       description: >-
-        Live-Abfahrtstafel JEDES DB-Bahnhofs ueber seine EVA-Nummer (aus
+        Live-Abfahrtstafel JEDES DB-Bahnhofs über seine EVA-Nummer (aus
         GET /cities/{slug}/stations), inkl. Nahverkehr (alle Gattungen
-        ICE/IC/RE/RB/S), Echtzeit-Verspaetung und Stoerungen/Meldungen (messages je
+        ICE/IC/RE/RB/S), Echtzeit-Verspätung und Störungen/Meldungen (messages je
         Eintrag). Quelle: Deutsche Bahn AG (CC BY 4.0). Ohne Zugangsdaten ODER
         Toggle aus -> 200 source_status="disabled"; keine Abfahrt im Zeitfenster ->
-        200 source_status="no_data"; ungueltige EVA -> 422.
+        200 source_status="no_data"; ungültige EVA -> 422.
       x-description-en: >-
         Live departure board for ANY DB station via its EVA number (from
         GET /cities/{slug}/stations), including local/regional trains (all
@@ -2699,14 +2702,14 @@ paths:
   /api/v1/stations/{eva}/arrivals:
     get:
       tags: [stations]
-      summary: Live-Ankuenfte eines beliebigen Bahnhofs per EVA, alle Gattungen (DB Timetables, Tier A)
+      summary: Live-Ankünfte eines beliebigen Bahnhofs per EVA, alle Gattungen (DB Timetables, Tier A)
       x-summary-en: Live arrivals for any station by EVA, all categories (DB Timetables, Tier A)
       description: >-
-        Spiegelbild zu /stations/{eva}/departures: ankommende Zuege jedes DB-
-        Bahnhofs ueber seine EVA-Nummer (inkl. Nahverkehr, origin = Startbahnhof,
-        Echtzeit-Verspaetung, Stoerungen/Meldungen). Quelle: Deutsche Bahn AG (CC
+        Spiegelbild zu /stations/{eva}/departures: ankommende Züge jedes DB-
+        Bahnhofs über seine EVA-Nummer (inkl. Nahverkehr, origin = Startbahnhof,
+        Echtzeit-Verspätung, Störungen/Meldungen). Quelle: Deutsche Bahn AG (CC
         BY 4.0). Ohne Zugangsdaten ODER Toggle aus -> 200 source_status="disabled";
-        keine Ankunft im Zeitfenster -> 200 source_status="no_data"; ungueltige EVA
+        keine Ankunft im Zeitfenster -> 200 source_status="no_data"; ungültige EVA
         -> 422.
       x-description-en: >-
         Mirror of /stations/{eva}/departures: incoming trains for any DB station
@@ -2747,10 +2750,10 @@ paths:
   /api/v1/cities/{slug}/indicators:
     get:
       tags: [cities]
-      summary: Sozialoekonomische Indikatoren je Stadt (INKAR/BBSR, Tier A)
+      summary: Sozialökonomische Indikatoren je Stadt (INKAR/BBSR, Tier A)
       x-summary-en: Socioeconomic indicators per city (INKAR/BBSR, Tier A)
       description: >-
-        Kuratiertes, breites Set sozialoekonomischer Indikatoren je Kreis/
+        Kuratiertes, breites Set sozialökonomischer Indikatoren je Kreis/
         kreisfreie Stadt (Arbeitsmarkt, Wirtschaft, Einkommen, Demografie, Wohnen,
         Erreichbarkeit, Verkehr, Bildung, Gesundheit, Fläche), aus der offenen
         INKAR-Wizard-API des BBSR. Je Indikator der jüngste Jahreswert mit
@@ -3006,8 +3009,13 @@ paths:
         abgedeckt. Klimatologisches Mehrjahresmittel am Stadtzentrum, normiert auf
         1 kWp bei optimalem Neigungswinkel: annual_yield_kwh_kwp (Jahresertrag
         kWh/kWp), annual_irradiation_kwh_m2 (Globalstrahlung kWh/m²),
-        optimal_slope_deg/optimal_azimuth_deg und 12 Monatswerte (monthly). Kein
-        Messzeitpunkt, daher observed_at=null; der Bezugszeitraum steht als
+        optimal_slope_deg/optimal_azimuth_deg und 12 Monatswerte (monthly).
+        system_loss_pct ist der konfigurierte (gewollte) Systemverlust aus
+        Verkabelung/Wechselrichter/Verschmutzung (an PVGIS übergebener
+        loss-Parameter, i.d.R. 14 %), NICHT die Gesamt-Performance-Differenz;
+        diese steht separat als total_performance_delta_pct (PVGIS l_total, inkl.
+        Temperatur-/Einstrahlungs-/Winkel-Effekten, negativ = Gesamtminderung).
+        Kein Messzeitpunkt, daher observed_at=null; der Bezugszeitraum steht als
         period_start/period_end. Tier A (EU-Reuse-Policy). Toggle aus -> 200
         source_status="disabled"; toter Upstream ohne Cache -> 503 mit Hint.
       x-description-en: >-
@@ -3016,9 +3024,14 @@ paths:
         multi-year climatological average at the city centre, normalized to a
         1 kWp system at the optimal tilt: annual_yield_kwh_kwp (annual yield
         kWh/kWp), annual_irradiation_kwh_m2 (global irradiation kWh/m²),
-        optimal_slope_deg/optimal_azimuth_deg and 12 monthly values (monthly). No
-        observation timestamp, so observed_at=null; the reference period is carried
-        as period_start/period_end. Tier A (EU reuse policy). Toggle off -> 200
+        optimal_slope_deg/optimal_azimuth_deg and 12 monthly values (monthly).
+        system_loss_pct is the configured (intended) system loss from
+        cabling/inverter/soiling (the loss parameter passed to PVGIS, typically
+        14 %), NOT the overall performance delta; that is carried separately as
+        total_performance_delta_pct (PVGIS l_total, incl. temperature/irradiance/
+        angle effects, negative = overall reduction). No observation timestamp, so
+        observed_at=null; the reference period is carried as
+        period_start/period_end. Tier A (EU reuse policy). Toggle off -> 200
         source_status="disabled"; dead upstream with no cache -> 503 with a hint.
       operationId: getCitySolar
       parameters:
@@ -3178,7 +3191,7 @@ paths:
         (z.B. Hamburg nur Potenzial, keine Kategorien). Anders als /solar
         (PVGIS-Einstrahlung je kWp) trägt diese Route die Mengen je Stadt.
         Teilabgedeckt, föderiert je Bundesland: Toggle aus -> 200
-        source_status="disabled"; Stadt ausserhalb der abgedeckten Länder -> 200
+        source_status="disabled"; Stadt außerhalb der abgedeckten Länder -> 200
         source_status="not_covered" (mit covered_cities); abgedeckte Stadt ohne
         Seed-Eintrag -> 200 source_status="no_data".
       x-description-en: >-
@@ -4032,8 +4045,8 @@ paths:
       description: >-
         Liefert die Hamburger Echtzeit-Verkehrslage im Live-Envelope: eine
         Netz-Zusammenfassung (summary.total und by_state-Zählung je Zustandsklasse
-        fliessend/dicht/zäh/gestaut) sowie die priorisierte, gedeckelte Liste der
-        nicht-fliessenden Straßenabschnitte (measurements mit Zustand und
+        fließend/dicht/zäh/gestaut) sowie die priorisierte, gedeckelte Liste der
+        nicht-fließenden Straßenabschnitte (measurements mit Zustand und
         Mittelpunkt-Koordinate). Quelle ist der direkte, keylose offene Datensatz
         der Freien und Hansestadt Hamburg (api.hamburg.de, OGC API Features), nicht
         die Mobilithek. Der meta-Block trägt zusätzlich as_of (Datenstand) und
@@ -4964,6 +4977,12 @@ components:
           type: string
         count:
           type: integer
+        total_available:
+          type: integer
+          nullable: true
+        truncated:
+          type: boolean
+          default: false
         items:
           type: array
           items:
