@@ -119,6 +119,7 @@ async def fetch_heritage(
     }
     resp = await http.get(src.url, params=params)
     resp.raise_for_status()
+    data = resp.json()
     return {
         "slug": slug,
         "state": state,
@@ -126,5 +127,16 @@ async def fetch_heritage(
         "license_id": src.license_id,
         "license_tier": src.license_tier,
         "attribution": src.attribution,
-        "features": resp.json().get("features", []),
+        "features": data.get("features", []),
+        # Echter Gesamtbestand laut WFS (numberMatched, Audit 220) fuer ehrliche
+        # Truncation; kann "unknown" sein -> dann None.
+        "total_available": _coerce_count(data.get("numberMatched")),
     }
+
+
+def _coerce_count(value) -> int | None:
+    """WFS-``numberMatched`` defensiv zu ``int`` (oder ``None`` bei ``unknown``)."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

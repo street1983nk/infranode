@@ -76,7 +76,7 @@ mirrors every endpoint with real example responses, so you can try the
 [InfraNode API Postman collection](https://www.postman.com/alster83-7133231/infranode/collection/pft781f/infranode-api)
 in the browser without an API key.
 
-## Data (84+ cities, 45 endpoints)
+## Data (84 cities, 93 endpoints)
 
 Every category below is both a REST endpoint under `/api/v1/cities/{slug}/...`
 and an MCP tool of the same name.

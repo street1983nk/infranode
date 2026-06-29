@@ -51,6 +51,9 @@ def map_trees(
                 item[field] = value
         items.append(item)
 
+    total = raw.get("total_available")
+    truncated = total is not None and total > len(items)
+
     return CanonicalRecord(
         city_slug=raw["slug"],
         geo=None,
@@ -68,6 +71,8 @@ def map_trees(
         payload=PoiPayload(
             poi_type="trees",
             count=len(items),
+            total_available=total,
+            truncated=truncated,
             items=items,
         ),
     )

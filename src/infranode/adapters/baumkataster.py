@@ -88,11 +88,22 @@ async def fetch_trees(
     }
     resp = await http.get(src.url, params=params)
     resp.raise_for_status()
+    data = resp.json()
     return {
         "slug": slug,
         "fields": list(src.fields),
         "license_id": src.license_id,
         "license_tier": src.license_tier,
         "attribution": src.attribution,
-        "features": resp.json().get("features", []),
+        "features": data.get("features", []),
+        # Echter Gesamtbestand laut WFS (numberMatched, Audit 220); "unknown" -> None.
+        "total_available": _coerce_count(data.get("numberMatched")),
     }
+
+
+def _coerce_count(value) -> int | None:
+    """WFS-``numberMatched`` defensiv zu ``int`` (oder ``None`` bei ``unknown``)."""
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None

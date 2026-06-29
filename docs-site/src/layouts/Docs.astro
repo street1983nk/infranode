@@ -9,6 +9,7 @@ import SeoHead from "../components/SeoHead.astro";
 import PageActions from "../components/PageActions.astro";
 import { topics } from "../data/topics";
 import { mcpTopics } from "../data/mcp-topics";
+import { CATEGORIES, CATEGORY_OF } from "../data/endpoint-categories";
 import "../styles/global.css";
 
 interface Props {
@@ -69,22 +70,34 @@ const actionPrompt = isEndpointPage
   : "";
 
 // Nav-Einträge aus der endpoints-Collection (Single Source openapi.yaml),
-// nach tag gruppiert und je Gruppe nach id sortiert.
+// nach tag gruppiert und je Gruppe nach id sortiert. Aufgeteilt in zwei
+// sichtbare Menü-Gruppen: reguläre Stadt-Endpunkte vs. Live-Endpunkte
+// (Pfad-Segment ``/live/``; ``icu-live`` bleibt regulär).
+type NavEndpoint = { id: string; method: string; summary: string };
+// Zwei Sektionen (Live-Tag -> "Live Endpunkte", sonst "Endpunkte"); innerhalb
+// jeder Sektion nach thematischer Kategorie (endpoint-categories) gruppiert.
 const endpoints = await getCollection("endpoints");
-const groups = new Map<string, { id: string; method: string; summary: string }[]>();
+const cityByCat = new Map<string, NavEndpoint[]>();
+const liveByCat = new Map<string, NavEndpoint[]>();
 for (const entry of endpoints) {
-  const tag = entry.data.tag || "meta";
-  if (!groups.has(tag)) groups.set(tag, []);
-  groups.get(tag)!.push({
+  const byCat = entry.data.tag === "Live" ? liveByCat : cityByCat;
+  const cat = CATEGORY_OF[entry.data.id] ?? "sonstige";
+  if (!byCat.has(cat)) byCat.set(cat, []);
+  byCat.get(cat)!.push({
     id: entry.data.id,
     method: entry.data.method,
     summary: entry.data.summary,
   });
 }
-for (const list of groups.values()) {
-  list.sort((a, b) => a.id.localeCompare(b.id));
+for (const m of [cityByCat, liveByCat]) {
+  for (const list of m.values()) list.sort((a, b) => a.id.localeCompare(b.id));
 }
-const sortedTags = [...groups.keys()].sort();
+const sectionTotal = (m: Map<string, NavEndpoint[]>) =>
+  [...m.values()].reduce((n, l) => n + l.length, 0);
+const endpointSections = [
+  { title: isEn ? "Endpoints" : "Endpunkte", byCat: cityByCat, total: sectionTotal(cityByCat) },
+  { title: isEn ? "Live endpoints" : "Live Endpunkte", byCat: liveByCat, total: sectionTotal(liveByCat) },
+];
 ---
 
 <!doctype html>
@@ -314,35 +327,43 @@ const sortedTags = [...groups.keys()].sort();
             </div>
           )
         }
-        <details class="nav__sect" open={current !== "home"}>
-          <summary class="nav__sect-title">{isEn ? "API reference" : "API-Referenz"}</summary>
         {
-          sortedTags.map((tag) => (
+          endpointSections.map((sect, i) => (
             <details
-              class="nav__cat nav__group--sub"
-              open={groups.get(tag)!.some((ep) => ep.id === current)}
+              class="nav__sect"
+              open={i === 0 || [...sect.byCat.values()].some((l) => l.some((ep) => ep.id === current))}
             >
-              <summary class="nav__cat-title">
-                {tag}
-                <span class="nav__cat-count">{groups.get(tag)!.length}</span>
+              <summary class="nav__sect-title">
+                {sect.title}
+                <span class="nav__cat-count">{sect.total}</span>
               </summary>
-              <ul class="nav__list">
-                {groups.get(tag)!.map((ep) => (
-                  <li>
-                    <a
-                      class="nav__link"
-                      href={isEn ? `/en/api/${ep.id}/` : `/api/${ep.id}/`}
-                      aria-current={current === ep.id ? "page" : undefined}
-                    >
-                      {ep.id}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              {CATEGORIES.filter((cat) => sect.byCat.has(cat.id)).map((cat) => (
+                <details
+                  class="nav__cat nav__group--sub"
+                  open={sect.byCat.get(cat.id)!.some((ep) => ep.id === current)}
+                >
+                  <summary class="nav__cat-title">
+                    {isEn ? cat.en : cat.de}
+                    <span class="nav__cat-count">{sect.byCat.get(cat.id)!.length}</span>
+                  </summary>
+                  <ul class="nav__list">
+                    {sect.byCat.get(cat.id)!.map((ep) => (
+                      <li>
+                        <a
+                          class="nav__link"
+                          href={isEn ? `/en/api/${ep.id}/` : `/api/${ep.id}/`}
+                          aria-current={current === ep.id ? "page" : undefined}
+                        >
+                          {ep.id}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ))}
             </details>
           ))
         }
-        </details>
           </div>
         </details>
       </nav>

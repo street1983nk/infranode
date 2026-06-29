@@ -132,7 +132,7 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 | Tool | Argumente | Beschreibung | Quelle |
 | --- | --- | --- | --- |
 | `get_city` | `slug` | Base data for a German city (population, area, coordinates) | Wikidata |
-| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all ~53 data types with coverage status and the matching tool, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
+| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all data types with coverage status and the matching tool, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
 | `air_quality` | `slug` | Official air quality (PM10, PM2.5, NO2, O3, SO2) | UBA |
 | `air_quality_live` | `slug` | Live air quality readings (live-only, no history) | UBA |
 | `weather` | `slug` | Current weather observations (not a forecast) | DWD |
