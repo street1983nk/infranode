@@ -119,12 +119,24 @@ def _norm_departures(raw: dict) -> list[dict]:
             if text and text != "Unbekannte Ursache" and text not in alerts:
                 alerts.append(text[:500])
         delay = dep.get("delay")
+        delay_s = int(delay) if isinstance(delay, int | float) else None
+        time_offset = dep.get("timeOffset")
+        # Audit-Rerun (2026-06-29): in_minutes aus IST = Soll-Offset + Verspätung
+        # (analog VGN-Fix). Geofox' timeOffset ist der SOLL-Abstand in Minuten;
+        # ohne Einrechnung der Verspätung zeigt eine verspätete Abfahrt einen
+        # falschen negativen Countdown (z.B. -58 statt +12 min).
+        if isinstance(time_offset, int | float):
+            in_minutes: int | None = int(time_offset) + (
+                round(delay_s / 60) if delay_s else 0
+            )
+        else:
+            in_minutes = time_offset
         out.append(
             {
                 "line": line.get("name"),
                 "direction": line.get("direction"),
-                "in_minutes": dep.get("timeOffset"),
-                "delay_s": int(delay) if isinstance(delay, int | float) else None,
+                "in_minutes": in_minutes,
+                "delay_s": delay_s,
                 "alerts": alerts,
             }
         )

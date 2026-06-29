@@ -37,13 +37,20 @@ _LIMIT = 100
 
 
 def _occupancy(free: int | None, capacity: int | None) -> float | None:
-    """Auslastung 0..1 aus free/capacity (rein); unplausible Werte -> None."""
+    """Auslastung in PROZENT (0..100) aus free/capacity (rein); unplausibel -> None.
+
+    Audit-Rerun (2026-06-29): vorher 0..1 (Anteil) zurückgegeben, während alle
+    anderen Parken-Quellen (Wuppertal/Magdeburg/Frankfurt via Mobilithek, DATEX-3)
+    UND die MCP-Doku "occupancy %" Prozent liefern. Dortmund war der einzige
+    Ausreißer -> Konsumenten konnten occupancy nicht einheitlich interpretieren.
+    Jetzt einheitlich Prozent, eine Nachkommastelle (wie Magdeburg/Wuppertal).
+    """
     if not isinstance(free, int) or not isinstance(capacity, int) or capacity <= 0:
         return None
     used = capacity - free
     if used < 0:
         return None
-    return round(used / capacity, 4)
+    return round(used / capacity * 100, 1)
 
 
 def _facility(rec: dict) -> dict:

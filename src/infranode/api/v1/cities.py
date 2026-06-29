@@ -1696,8 +1696,9 @@ async def city_tree_cadastre(slug: str, request: Request) -> dict:
     ``disabled``), resilienter WFS-Fetch (GeoJSON-Punkte, gedeckelte Stichprobe),
     Mapping mit stadtabhängiger Lizenz (Berlin DL-DE/Zero 2.0), dann der Daten-
     Envelope. HINWEIS: Kataster sind sehr groß; die Antwort ist eine gedeckelte
-    Stichprobe (``count`` = ausgelieferte Bäume, nicht der Gesamtbestand). Toter
-    Upstream ohne Cache -> 503 mit Hint auf GET /api/v1/health."""
+    Stichprobe (``count`` = ausgelieferte Bäume; der echte Gesamtbestand steht in
+    ``total_available``, ``truncated=true`` zeigt die Deckelung an, Audit-220).
+    Toter Upstream ohne Cache -> 503 mit Hint auf GET /api/v1/health."""
     entry = get_city(slug)
 
     # Coverage-Guard (per Stadt): nicht abgedeckt -> ehrlich not_covered (200).

@@ -1,4 +1,4 @@
-"""GTFS-Entry-Streamer (cp1252, memory-konstant, DATA-05).
+"""GTFS-Entry-Streamer (utf-8, memory-konstant, DATA-05).
 
 ``stream_entry(zip_path, entry_name)`` öffnet AUSSCHLIESSLICH den benannten
 Entry der GTFS-ZIP per Name (kein ``extractall``, kein ``raw.read()``) und gibt
@@ -13,10 +13,12 @@ Memory-/Sicherheits-Vertrag (T-06-03/T-06-05/T-19-MEM/T-19-ZIP):
 - Auch ``stream_entry`` darf nur per Namen öffnen und zeilenweise streamen.
   ``stop_times.txt`` (mehrere GB) wird ausschließlich gestreamt und gefiltert,
   NIE komplett geladen (siehe ``transit/resolver.py``).
-- Dekodierung mit ``encoding="cp1252", errors="replace"``: DELFI liefert
-  Windows-1252-kodierte Feeds, in denen undefinierte Bytes (z.B. 0x8d) vorkommen
-  können. ``errors="replace"`` verhindert einen ungefangenen
-  ``UnicodeDecodeError`` und liefert stattdessen das Ersatzzeichen.
+- Dekodierung mit ``encoding="utf-8", errors="replace"``: die GTFS-Spezifikation
+  schreibt UTF-8 vor und der DELFI-Feed liefert es auch so (Audit-Rerun
+  2026-06-29 live verifiziert: ``stops.txt`` trägt für "ö" die Bytes ``c3 b6``,
+  Content-Type ``charset=utf-8``). Die frühere cp1252-Annahme erzeugte
+  Doppel-Mojibake ("Köln Hbf" -> "KÃ¶ln Hbf") bei jedem Halt mit Umlaut/ß.
+  ``errors="replace"`` bleibt als Schutz gegen vereinzelte ungültige Bytes.
 """
 
 from __future__ import annotations
@@ -29,7 +31,7 @@ from pathlib import Path
 
 
 def stream_entry(zip_path: str | Path, entry_name: str) -> Iterator[dict[str, str]]:
-    """Streamt die Zeilen eines beliebigen GTFS-Entries aus der ZIP (cp1252).
+    """Streamt die Zeilen eines beliebigen GTFS-Entries aus der ZIP (utf-8).
 
     Öffnet ausschließlich den Entry ``entry_name`` per Namen (``z.open``) und
     gibt jede CSV-Zeile als ``dict`` (Spaltenname -> Wert) zurück. Yield-basiert:
@@ -42,14 +44,12 @@ def stream_entry(zip_path: str | Path, entry_name: str) -> Iterator[dict[str, st
     """
     with zipfile.ZipFile(zip_path) as z:
         with z.open(entry_name) as raw:
-            text = io.TextIOWrapper(
-                raw, encoding="cp1252", errors="replace", newline=""
-            )
+            text = io.TextIOWrapper(raw, encoding="utf-8", errors="replace", newline="")
             yield from csv.DictReader(text)
 
 
 def stream_stops(zip_path: str | Path) -> Iterator[dict[str, str]]:
-    """Streamt die Zeilen von ``stops.txt`` aus der GTFS-ZIP (cp1252).
+    """Streamt die Zeilen von ``stops.txt`` aus der GTFS-ZIP (utf-8).
 
     Spezialisierung von :func:`stream_entry` auf ``stops.txt`` (kein
     Verhaltensbruch zur bisherigen Implementierung).

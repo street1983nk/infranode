@@ -86,15 +86,24 @@ def _deg_distance(alat: float, alon: float, blat: float, blon: float) -> float:
 
 
 def _nearest_stations(
-    stations: dict, lat: float, lon: float, *, limit: int
+    stations: dict, lat: float, lon: float, *, limit: int, today: str | None = None
 ) -> list[tuple[str, float, float]]:
-    """Liefert die ``limit`` nächsten Stationen zu (lat, lon), nach Distanz sortiert.
+    """Liefert die ``limit`` nächsten AKTIVEN Stationen zu (lat, lon), nach Distanz.
 
     ``indices`` ist die Spaltennamen-Liste, ``data`` ein dict
     ``station_id -> Werte-Array`` in ``indices``-Reihenfolge. Defensive Lesung:
     Stationen ohne gültige Koordinaten werden übersprungen. Rückgabe je Station
     ``(station_id, lat, lon)``; die erste ist die nächste (Audit K4: Basis für
     die Pro-Komponenten-Fallback-Kaskade).
+
+    Audit-Rerun (2026-06-29): STILLGELEGTE Stationen werden ausgeschlossen. Das
+    Feld ``station active to`` trägt das Betriebsende (``None``/leer = aktiv). Ohne
+    diesen Filter wählt die reine Distanz z.B. die DDR-Altstation "Alex_MD"
+    (aktiv bis 1990) als nächste Berlin-Station, die DEBW-Station in Hamburg
+    (bis 2013) bzw. Frankfurt-Römerberg (bis 2023) - alle liefern dann
+    durchgängig ``null`` (observed_at null), obwohl aktive Stationen wenige km
+    weiter messen. ``today`` (ISO ``YYYY-MM-DD``) ist injizierbar (Tests);
+    Default = heute (UTC). Fehlt die Spalte, wird nicht gefiltert (Format-Toleranz).
     """
     indices = stations.get("indices") or []
     try:
@@ -104,7 +113,15 @@ def _nearest_stations(
         # Format unerwartet -> keine Auswahl möglich.
         raise httpx.HTTPError("UBA /stations/json: erwartete Spalten fehlen") from None
 
+    try:
+        active_to_idx: int | None = indices.index("station active to")
+    except ValueError:
+        active_to_idx = None
+    if today is None:
+        today = datetime.now(UTC).strftime("%Y-%m-%d")
+
     candidates: list[tuple[float, str, float, float]] = []
+    active: list[tuple[float, str, float, float]] = []
     for station_id, row in (stations.get("data") or {}).items():
         if not isinstance(row, list) or len(row) <= max(lon_idx, lat_idx):
             continue
@@ -113,14 +130,25 @@ def _nearest_stations(
             slat = float(row[lat_idx])
         except (TypeError, ValueError):
             continue
-        dist = _deg_distance(lat, lon, slat, slon)
-        candidates.append((dist, str(station_id), slat, slon))
+        entry = (_deg_distance(lat, lon, slat, slon), str(station_id), slat, slon)
+        candidates.append(entry)
+        # Aktiv = kein Enddatum ODER Enddatum >= heute (ISO-Strings sortieren korrekt).
+        active_to = (
+            row[active_to_idx]
+            if active_to_idx is not None and len(row) > active_to_idx
+            else None
+        )
+        if not active_to or str(active_to) >= today:
+            active.append(entry)
 
-    if not candidates:
+    # Aktive Stationen bevorzugen; gibt es gar keine (Format-/Datenausfall),
+    # defensiv auf alle zurückfallen statt einen Fehler zu werfen.
+    pool = active or candidates
+    if not pool:
         raise httpx.HTTPError("UBA /stations/json: keine Station mit Koordinaten")
 
-    candidates.sort(key=lambda c: c[0])
-    return [(sid, slat, slon) for _, sid, slat, slon in candidates[:limit]]
+    pool.sort(key=lambda c: c[0])
+    return [(sid, slat, slon) for _, sid, slat, slon in pool[:limit]]
 
 
 def _nearest_station(
