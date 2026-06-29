@@ -117,6 +117,13 @@ class SourceId(StrEnum):
     # (parkingFacilityStatus/-Reference), getrennt vom Köln-parkingStatus-Pfad.
     # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
     WUPPERTAL_PARKING = "wuppertal_parking"
+    # Magdeburg Parkdaten (Mobilithek DATEX II V2 ParkingFacility-Profil, statisch
+    # + dynamisch gejoint; teilt den Wuppertal-V2-Parser). Anbieter ifak e.V.,
+    # Datenquelle Landeshauptstadt Magdeburg. Lizenz nur "freie Nutzung/Open Data"
+    # (Mobilithek LICENSE_FREE_USE_OPEN_DATA, keine benannte Standardlizenz, per
+    # DCAT-AP.de-Export 2026-06-29 verifiziert) -> license_id=unknown, Tier C
+    # (live-only, ehrlich; analog ParkenDD). Toggle-Name == SourceId-Wert.
+    MAGDEBURG_PARKING = "magdeburg_parking"
     # Phase 19: GTFS-Realtime Trip Updates, Tier B CC-BY-SA, gtfs.de/Mobilithek-
     # DELFI; kein neuer LicenseId-Wert (CC_BY_SA_4_0 existiert bereits), kein
     # Umlaut (StrEnum, ASCII-lowercase). Toggle-Name == SourceId-Wert ==

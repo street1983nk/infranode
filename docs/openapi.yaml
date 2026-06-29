@@ -1421,22 +1421,29 @@ paths:
         Baustellen (roadworks) und Verkehrswarnungen (warnings) im Umfeld einer
         Stadt aus der Autobahn-API im kanonischen Envelope. Die Meldungen werden
         per Bounding-Box um die Stadt-Koordinaten gefiltert, data enthält die
-        passenden Einträge. Teilabdeckung (kuratierte Autobahnen je Stadt): nur
-        berlin, hamburg, koeln, muenchen liefern Daten. Andere registrierte Städte
-        antworten ehrlich mit 200 source_status="not_covered", data=null und
-        meta.covered_cities (Liste der abgedeckten Städte), klar unterscheidbar
-        von no_data (abgedeckt, aber gerade keine Meldung). Weitere Sonderfälle:
+        passenden Einträge. Flächendeckend: jeder der 84 Städte sind die nahen
+        Autobahnen kuratiert zugeordnet (datengetrieben aus der Autobahn-API),
+        eine Stadt ohne aktuelle Meldung antwortet ehrlich mit no_data.
+        Stau/Verkehrslage:
+        jede Verkehrswarnung trägt zusätzlich ein congestion-Feld (level
+        stau/stockend/dicht/unspezifisch aus dem DATEX-abnormalTrafficType,
+        delay_minutes = Reisezeitverlust, blocked), und payload.congestion_summary
+        verdichtet die Stau-Lage je Stadt (count/stau/stockend/blocked/
+        max_delay_minutes; null wenn keine Stau-Meldung). Weitere Sonderfälle:
         deaktivierte Quelle liefert 200 mit source_status="disabled"; toter
         Upstream ohne Cache liefert 503 mit Hint auf GET /api/v1/health.
       x-description-en: >-
         Roadworks and traffic warnings around a city from the Autobahn API in the
         canonical envelope. Items are filtered by a bounding box around the
-        city's coordinates; data contains the matching entries. Partial coverage
-        (curated motorways per city): only berlin, hamburg, koeln, muenchen return
-        data. Other registered cities honestly respond with 200
-        source_status="not_covered", data=null and meta.covered_cities (the list
-        of covered cities), clearly distinct from no_data (covered, but currently
-        no message). Other special cases: a disabled source returns 200 with
+        city's coordinates; data contains the matching entries. Full coverage:
+        each of the 84 cities has its nearby motorways curated (data-driven from
+        the Autobahn API); a city with no current message honestly responds with
+        no_data. Congestion: each traffic warning additionally carries a
+        congestion field (level stau/stockend/dicht/unspezifisch derived from the
+        DATEX abnormalTrafficType, delay_minutes = travel-time loss, blocked), and
+        payload.congestion_summary aggregates the congestion situation per city
+        (count/stau/stockend/blocked/max_delay_minutes; null if no congestion
+        message). Other special cases: a disabled source returns 200 with
         source_status="disabled"; a dead upstream with no cache returns 503 with a
         hint to GET /api/v1/health.
       operationId: getCityTraffic
@@ -3511,23 +3518,18 @@ paths:
       description: >-
         Liefert Autobahn-Webcams (Koordinaten und Bild-URLs) im Umfeld einer
         Stadt aus dem schlüssellosen Autobahn-Webcam-Service. Die Webcams werden
-        per Bounding-Box um die Stadt gefiltert. Tier A. Teilabdeckung (kuratierte
-        Autobahnen je Stadt): nur berlin, hamburg, koeln, muenchen liefern Daten.
-        Andere registrierte Städte antworten ehrlich mit 200
-        source_status="not_covered", data=null und meta.covered_cities (Liste der
-        abgedeckten Städte), klar unterscheidbar von no_data (abgedeckt, aber
-        gerade keine Webcam). Weitere Sonderfälle: deaktiviert -> 200
+        per Bounding-Box um die Stadt gefiltert. Tier A. Flächendeckend: jeder der
+        84 Städte sind die nahen Autobahnen kuratiert zugeordnet; eine Stadt ohne
+        Webcam antwortet ehrlich mit no_data. Weitere Sonderfälle: deaktiviert -> 200
         source_status="disabled"; toter Upstream ohne Cache -> 503 mit Hint.
         Hinweis: Die Autobahn-Webcam-Quelle liefert aktuell bundesweit keine
         Webcams, daher antwortet der Endpunkt derzeit durchgehend mit no_data.
       x-description-en: >-
         Returns Autobahn webcams (coordinates and image URLs) around a city from
         the keyless Autobahn webcam service. The webcams are filtered by a
-        bounding box around the city. Tier A. Partial coverage (curated motorways
-        per city): only berlin, hamburg, koeln, muenchen return data. Other
-        registered cities honestly respond with 200 source_status="not_covered",
-        data=null and meta.covered_cities (the list of covered cities), clearly
-        distinct from no_data (covered, but currently no webcam). Other special
+        bounding box around the city. Tier A. Full coverage: each of the 84 cities
+        has its nearby motorways curated; a city with no webcam honestly responds
+        with no_data. Other special
         cases: disabled -> 200 source_status="disabled"; dead upstream with no
         cache -> 503 with a hint. Note: the Autobahn webcam source currently
         returns no webcams nationwide, so this endpoint currently always responds
@@ -3955,6 +3957,61 @@ paths:
         source_status="no_data". Licence Data licence Germany Attribution 2.0.
         Live data only, kept in the Redis cache.
       operationId: getLiveFrankfurtParking
+      responses:
+        "200":
+          description: Live-Parkbelegung-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/live/magdeburg/parking:
+    get:
+      tags: [Live]
+      summary: Live-Parkbelegung Magdeburg (Landeshauptstadt Magdeburg, Mobilithek DATEX II V2)
+      x-summary-en: Live parking occupancy for Magdeburg (City of Magdeburg, Mobilithek DATEX II V2)
+      description: >-
+        Liefert die Parkbelegung der Landeshauptstadt Magdeburg im Live-Envelope:
+        je Parkplatz freie Plätze, Auslastung in Prozent, Belegungstrend und Status
+        (facilities), angereichert um Name, Geo-Koordinate und Kapazität aus den
+        statischen Stammdaten. Quelle sind zwei Mobilithek-Abos (DATEX II V2
+        ParkingFacility, dynamisch + statisch, Anbieter ifak e.V.), die der Adapter
+        über die parkingFacility-ID joint. Der meta-Block trägt zusätzlich as_of
+        (Datenstand) und refresh_seconds (Aktualisierungstakt). Quelle deaktiviert
+        -> 200 source_status="disabled" (nie 5xx); keine Daten -> 200
+        source_status="no_data". Lizenz freie Nutzung/Open Data (keine benannte
+        Standardlizenz). Reine Live-Daten, nur im Redis-Cache gehalten.
+      x-description-en: >-
+        Returns the City of Magdeburg parking occupancy in the live envelope: per
+        car park the vacant spaces, occupancy percentage, occupancy trend and
+        status (facilities), enriched with name, geo coordinate and capacity from
+        the static master data. Source is two Mobilithek subscriptions (DATEX II
+        V2 ParkingFacility, dynamic + static, provider ifak e.V.) joined by the
+        adapter via the parkingFacility id. The meta block additionally carries
+        as_of (data timestamp) and refresh_seconds (update cadence). Source
+        disabled -> 200 source_status="disabled" (never 5xx); no data -> 200
+        source_status="no_data". Licence free use/Open Data (no named standard
+        licence). Live data only, kept in the Redis cache.
+      operationId: getLiveMagdeburgParking
       responses:
         "200":
           description: Live-Parkbelegung-Envelope (CanonicalRecord oder null)

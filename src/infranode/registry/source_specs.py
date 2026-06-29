@@ -271,6 +271,14 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         license_id="dl_de_zero_2_0",
         attribution="Stadt Wuppertal",
     ),
+    # Magdeburg-Parken (Mobilithek, ifak e.V.): nur "freie Nutzung/Open Data"
+    # (LICENSE_FREE_USE_OPEN_DATA, keine benannte Standardlizenz; DCAT-AP.de-Export
+    # 2026-06-29). -> license_id=unknown, ehrlich; Tier C (live-only) im Mapper.
+    SourceSpec(
+        name="magdeburg_parking",
+        license_id="unknown",
+        attribution="Landeshauptstadt Magdeburg",
+    ),
     SourceSpec(
         name="bremen_baustellen",
         license_id="dl_de_by_2_0",

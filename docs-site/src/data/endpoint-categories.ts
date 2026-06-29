@@ -37,7 +37,8 @@ const MEMBERS: Record<string, string[]> = {
     "getLiveBaustellen", "getLiveBerlinVerkehrsmeldungen",
     "getLiveHannoverVerkehrsmeldungen", "getLiveHamburgVerkehrslage",
     "getLiveEreignisse", "getLiveWebcams", "getLiveDortmundParking",
-    "getLiveFrankfurtParking", "getLiveWuppertalParking", "getLiveKielZaehlstellen",
+    "getLiveFrankfurtParking", "getLiveWuppertalParking", "getLiveMagdeburgParking",
+    "getLiveKielZaehlstellen",
   ],
   energie: [
     "getCityCharging", "getCityEnergy", "getCityPowerLoad", "getCityPowerPrice",

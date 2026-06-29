@@ -99,6 +99,12 @@ class TrafficEventPayload(BaseModel):
     station_id: str | None = None
     roadworks: list[dict] = Field(default_factory=list)
     warnings: list[dict] = Field(default_factory=list)
+    # DATA-08: Stau-/Verkehrslage-Verdichtung aus den ``warnings`` (Autobahn-
+    # warning-Feed, INRIX). Jede congestion-relevante Warnung trägt zusätzlich ein
+    # ``congestion``-Feld (level stau/stockend/dicht/unspezifisch, delay_minutes,
+    # blocked); ``congestion_summary`` fasst sie je Stadt zusammen (count/stau/
+    # stockend/blocked/max_delay_minutes). ``None`` = keine Stau-relevante Meldung.
+    congestion_summary: dict | None = None
 
 
 class TransitStopPayload(BaseModel):

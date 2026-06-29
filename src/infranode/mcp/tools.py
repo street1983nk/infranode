@@ -118,10 +118,12 @@ async def pois(
 
 
 async def traffic(slug: _Slug) -> ToolEnvelope:
-    """Get motorway roadworks and traffic messages for a city's region.
+    """Get motorway roadworks and live traffic messages (incl. congestion) for a city.
 
-    Sourced from the Autobahn API. Read-only. For inner-city closures use
-    ``road_events``.
+    Sourced from the Autobahn API. Each traffic warning carries a ``congestion``
+    field (level stau/stockend/dicht, delay_minutes, blocked) and
+    ``payload.congestion_summary`` aggregates the jam situation per city.
+    Read-only. For inner-city closures use ``road_events``.
     """
     return await client.get_resource(slug, "traffic")
 

@@ -45,6 +45,9 @@ _WUPPERTAL_ATTRIBUTION = "Stadt Wuppertal"
 _DL_DE_ZERO_URL = "https://www.govdata.de/dl-de/zero-2-0"
 _DORTMUND_ATTRIBUTION = "Stadt Dortmund"
 _KIEL_ATTRIBUTION = "Landeshauptstadt Kiel"
+# Magdeburg-Parken (Mobilithek, ifak e.V.): nur "freie Nutzung/Open Data", keine
+# benannte Standardlizenz -> keine license_url (DCAT-AP.de-Export 2026-06-29).
+_MAGDEBURG_ATTRIBUTION = "Landeshauptstadt Magdeburg"
 
 
 def _parse_as_of(raw: dict) -> datetime | None:
@@ -167,6 +170,49 @@ def map_wuppertal_parking(
         attribution=Attribution(
             text=_WUPPERTAL_ATTRIBUTION,
             license_url=_DL_DE_ZERO_URL,
+        ),
+        payload=ParkingPayload(
+            facilities=raw.get("facilities", []),
+        ),
+    )
+
+
+def map_magdeburg_parking(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet die Magdeburg-Parkdaten (parking) auf einen ``CanonicalRecord`` ab.
+
+    Die ``facilities`` (je Parkplatz facility_id + free/capacity/occupied/
+    occupancy/status/trend/observed_at aus dem dynamischen Feed, angereichert um
+    name/lat/lon aus dem statischen Pendant, DATEX II V2 ParkingFacility-Profil
+    gejoint im Adapter ``mobilithek_datex2``) wandern in den ``ParkingPayload``.
+    ``observed_at`` aus der DATEX-II ``publicationTime`` (``as_of``) des
+    dynamischen Feeds falls vorhanden. ``retrieved_at`` injiziert (keine Systemuhr
+    im Mapper).
+
+    Lizenz: das Mobilithek-Angebot (Anbieter ifak e.V., Datenquelle
+    Landeshauptstadt Magdeburg) nennt nur "freie Nutzung/Open Data"
+    (LICENSE_FREE_USE_OPEN_DATA, KEINE benannte Standardlizenz; per DCAT-AP.de-
+    Export 2026-06-29 verifiziert) -> ``license_id=UNKNOWN``, ``license_tier=C``
+    (live-only, ehrlich; analog ParkenDD), Attribution "Landeshauptstadt Magdeburg".
+    """
+    return CanonicalRecord(
+        city_slug=raw["slug"],
+        geo=None,
+        observed_at=_parse_as_of(raw),
+        retrieved_at=retrieved_at,
+        source=SourceId.MAGDEBURG_PARKING,
+        license_id=LicenseId.UNKNOWN,
+        license_tier=LicenseTier.C,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        attribution=Attribution(
+            text=_MAGDEBURG_ATTRIBUTION,
+            license_url=None,
         ),
         payload=ParkingPayload(
             facilities=raw.get("facilities", []),

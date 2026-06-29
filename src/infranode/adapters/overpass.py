@@ -50,6 +50,15 @@ import httpx
 # Host hartkodiert (T-05-12 SSRF): nur diese eine öffentliche Overpass-Instanz.
 _BASE = "https://overpass-api.de/api/interpreter"
 
+# Read-Timeout der Overpass-POSTs. Die QL traegt server-seitig ``[out:json]
+# [timeout:25]`` (25s Ausfuehrungsbudget); der Client-Read MUSS laenger sein als
+# dieses Budget, sonst laeuft jede stadtweite Area-Abfrage zwangslaeufig ins
+# ``ReadTimeout`` und der per-Source-Breaker flappt dauerhaft OPEN (alle OSM-
+# Endpunkte liefern dann 503/not-covered). Der konservative 5s-Client-Default
+# (infra/http.py) ist fuer Overpass also zu kurz; hier explizit pro Request
+# ueberschrieben (T-03-03), ohne den Default fuer schnelle Quellen zu lockern.
+_OVERPASS_TIMEOUT = httpx.Timeout(connect=5.0, read=30.0, write=5.0, pool=2.0)
+
 # Offset, mit dem Overpass aus einer OSM-Relation eine Area-ID bildet.
 _AREA_OFFSET = 3600000000
 
@@ -137,7 +146,7 @@ async def fetch_pois(
         f".r out center {max_elements};"
     )
 
-    resp = await http.post(base_url, data={"data": ql})
+    resp = await http.post(base_url, data={"data": ql}, timeout=_OVERPASS_TIMEOUT)
     resp.raise_for_status()
     total, pois = _split_count_element(resp.json().get("elements", []))
     return {
@@ -248,7 +257,7 @@ async def fetch_osm_feature(
     area_id = _AREA_OFFSET + osm_relation
     ql = _build_feature_ql(area_id, feature_def, max_elements)
 
-    resp = await http.post(base_url, data={"data": ql})
+    resp = await http.post(base_url, data={"data": ql}, timeout=_OVERPASS_TIMEOUT)
     resp.raise_for_status()
     total, pois = _split_count_element(resp.json().get("elements", []))
     return {

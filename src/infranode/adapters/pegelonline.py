@@ -125,7 +125,29 @@ async def fetch_water_level(
         "station": station.get("longname"),
         "uuid": uuid,
         "value": measurement.get("value"),
-        "unit": "cm",
+        "unit": await _fetch_unit(http, uuid),
         "observed_at": measurement.get("timestamp"),
         "water": (station.get("water") or {}).get("longname"),
     }
+
+
+async def _fetch_unit(http: httpx.AsyncClient, uuid: str) -> str:
+    """Liest die echte Mess-Einheit aus den W-Zeitreihen-Metadaten (Audit-155).
+
+    ``GET {_BASE}/stations/{uuid}/W.json`` trägt das Feld ``unit`` (für Wasserstand
+    quellenseitig durchgängig "cm", aber quellenecht statt hartkodiert). Der
+    ``currentmeasurement.json``-Endpunkt liefert die Einheit NICHT, daher dieser
+    kleine Zusatz-Request.
+
+    Bewusst DEFENSIV (kein ``raise_for_status``-Durchschlag): schlägt der
+    Zusatz-Request fehl oder fehlt das Feld, fällt die Einheit auf "cm" zurück.
+    Ein fehlendes Einheits-Label darf nicht den ganzen Pegel-Wert über den
+    STALE-ON-ERROR-Pfad verwerfen (der eigentliche Messwert kam bereits sauber).
+    """
+    try:
+        resp = await http.get(f"{_BASE}/stations/{uuid}/W.json")
+        resp.raise_for_status()
+        unit = resp.json().get("unit")
+    except (httpx.HTTPError, ValueError):
+        return "cm"
+    return unit if isinstance(unit, str) and unit else "cm"

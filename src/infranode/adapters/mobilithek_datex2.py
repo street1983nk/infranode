@@ -525,14 +525,23 @@ def _first_text_local(elem, local: str) -> str | None:
     return None
 
 
-def _extract_facility_status(wrapper) -> dict | None:
+def _extract_facility_status(
+    wrapper, *, occupancy_is_percent: bool = False
+) -> dict | None:
     """Liest facility_id + Belegung aus einem ``parkingFacilityStatus``-Wrapper (V2).
 
     Belegung NS-robust: ``free`` (totalNumberOfVacantParkingSpaces, int),
     ``capacity`` (totalParkingCapacityOverride, int), ``occupied`` (int),
-    ``occupancy`` (parkingFacilityOccupancy * 100 = Prozent), ``status`` (das
-    INNERE parkingFacilityStatus-Enum mit Text; der Wrapper selbst hat keinen
-    direkten Text), ``trend``, ``observed_at`` (parkingFacilityStatusTime).
+    ``occupancy`` (parkingFacilityOccupancy), ``status`` (das INNERE
+    parkingFacilityStatus-Enum mit Text; der Wrapper selbst hat keinen direkten
+    Text), ``trend``, ``observed_at`` (parkingFacilityStatusTime).
+
+    ``occupancy_is_percent``: bei ``False`` (Wuppertal-Default) ist
+    ``parkingFacilityOccupancy`` ein Anteil 0..1 und wird zu Prozent normalisiert
+    (*100); bei ``True`` (Magdeburg/ifak, verifiziert 2026-06-29) trägt das Feld
+    bereits Prozent (z.B. 8.0) und wird unverändert übernommen. Ein negativer
+    Occupancy-Wert (Magdeburg-Sentinel -100.0 bei geschlossenem Parkhaus) fällt
+    ehrlich auf ``None`` (Null statt irreführender Negativwert).
     """
     facility_id: str | None = None
     free: int | None = None
@@ -559,7 +568,8 @@ def _extract_facility_status(wrapper) -> dict | None:
             elif local == _FACILITY_OCCUPIED_TAG:
                 occupied = int(float(text))
             elif local == _FACILITY_OCCUPANCY_TAG:
-                occupancy = round(float(text) * 100, 2)
+                raw_occ = float(text)
+                occupancy = round(raw_occ if occupancy_is_percent else raw_occ * 100, 2)
             elif local == _FACILITY_STATUS_TAG and status is None:
                 status = text
             elif local == _FACILITY_TREND_TAG and trend is None:
@@ -572,14 +582,18 @@ def _extract_facility_status(wrapper) -> dict | None:
     if facility_id is None and free is None and occupancy is None:
         return None
 
+    # Negative Zaehl-/Belegungswerte sind physikalisch unmoeglich und werden als
+    # Sentinel fuer "geschlossen/unbekannt" geliefert (Magdeburg: occupied=-5,
+    # occupancy=-100.0 bei geschlossenem Parkhaus). Ehrlich auf None fallen lassen
+    # (Null statt irrefuehrender Negativzahl); der status="closed" bleibt erhalten.
     entry: dict = {"facility_id": facility_id}
-    if free is not None:
+    if free is not None and free >= 0:
         entry["free"] = free
-    if capacity is not None:
+    if capacity is not None and capacity >= 0:
         entry["capacity"] = capacity
-    if occupied is not None:
+    if occupied is not None and occupied >= 0:
         entry["occupied"] = occupied
-    if occupancy is not None:
+    if occupancy is not None and occupancy >= 0:
         entry["occupancy"] = occupancy
     if status is not None:
         entry["status"] = status
@@ -640,13 +654,16 @@ def _extract_facility_site(record) -> dict | None:
     return site
 
 
-def parse_facility_status_v2(xml_bytes: bytes, *, slug: str) -> dict:
+def parse_facility_status_v2(
+    xml_bytes: bytes, *, slug: str, occupancy_is_percent: bool = False
+) -> dict:
     """Parst eine DATEX-II-V2 ParkingFacilityTableStatusPublication (dynamisch).
 
     Nur der Wrapper ``parkingFacilityStatus`` (mit ``parkingFacilityReference``-
     Kind) wird verarbeitet; das gleichnamige innere Enum-Feld wird übersprungen.
-    Haertung: ``_guard`` vor ``iterparse``. Rückgabe ``{"slug", "facilities":
-    [...], "as_of"}``.
+    ``occupancy_is_percent`` wird an ``_extract_facility_status`` durchgereicht
+    (Wuppertal=Anteil 0..1, Magdeburg=bereits Prozent). Haertung: ``_guard`` vor
+    ``iterparse``. Rückgabe ``{"slug", "facilities": [...], "as_of"}``.
     """
     _guard(xml_bytes)
 
@@ -658,7 +675,9 @@ def parse_facility_status_v2(xml_bytes: bytes, *, slug: str) -> dict:
         # Wrapper hat ein parkingFacilityReference-Kind; inneres Enum nicht.
         if not any(_localname(c.tag) == _FACILITY_REF_TAG for c in elem):
             continue
-        entry = _extract_facility_status(elem)
+        entry = _extract_facility_status(
+            elem, occupancy_is_percent=occupancy_is_percent
+        )
         if entry is not None:
             facilities.append(entry)
         elem.clear()
@@ -703,20 +722,25 @@ def _join_facilities(status: dict, static: dict) -> list[dict]:
     return merged
 
 
-async def fetch_wuppertal_parking(
+async def _fetch_facility_parking_v2(
     mtls_client,
     *,
     abo_id: str,
     static_abo_id: str | None,
     slug: str,
+    occupancy_is_percent: bool = False,
 ) -> dict:
-    """Pullt Wuppertal-Parkdaten (dynamisch + statisch, V2) und joint sie.
+    """Pullt DATEX-II-V2-ParkingFacility-Parkdaten (dynamisch + statisch) und joint sie.
 
-    Pull-Stil "path" (Default ``build_pull_url``; verifiziert 2026-06-22, der
-    container-/query-Zugriff gibt 404). Das statische Abo ist optional: fehlt es
-    oder liefert es nichts, wird die dynamische Belegung ohne Stammdaten
-    zurückgegeben (ehrliche Degradation). HTTP 422 / ein vom Guard abgelehnter
-    Body liefern ein ehrliches leeres Ergebnis (no_data, kein ``raise``).
+    Gemeinsamer Kern für alle Städte mit dem V2-ParkingFacility-Profil (Wuppertal,
+    Magdeburg, ...). Pull-Stil "path" (Default ``build_pull_url``; verifiziert
+    2026-06-22, container-/query-Zugriff gibt 404). Das statische Abo ist optional:
+    fehlt es oder liefert es nichts, wird die dynamische Belegung ohne Stammdaten
+    zurückgegeben (ehrliche Degradation). HTTP 422 / ein vom Guard abgelehnter Body
+    liefern ein ehrliches leeres Ergebnis (no_data, kein ``raise``).
+
+    ``occupancy_is_percent`` wird an den Status-Parser durchgereicht (Wuppertal=
+    Anteil 0..1, Magdeburg=bereits Prozent).
 
     Rueckgabe: ``{"slug", "facilities": [...], "as_of"}``; jedes facility trägt
     facility_id + free/capacity/occupied/occupancy/status/trend/observed_at
@@ -728,7 +752,9 @@ async def fetch_wuppertal_parking(
         return {"slug": slug, "facilities": [], "as_of": None}
 
     try:
-        status = parse_facility_status_v2(dyn_result["body"], slug=slug)
+        status = parse_facility_status_v2(
+            dyn_result["body"], slug=slug, occupancy_is_percent=occupancy_is_percent
+        )
     except ValueError:
         return {"slug": slug, "facilities": [], "as_of": None}
 
@@ -748,3 +774,43 @@ async def fetch_wuppertal_parking(
         "facilities": _join_facilities(status, static),
         "as_of": status.get("as_of"),
     }
+
+
+async def fetch_wuppertal_parking(
+    mtls_client,
+    *,
+    abo_id: str,
+    static_abo_id: str | None,
+    slug: str,
+) -> dict:
+    """Pullt Wuppertal-Parkdaten (V2 ParkingFacility): occupancy = Anteil 0..1."""
+    return await _fetch_facility_parking_v2(
+        mtls_client,
+        abo_id=abo_id,
+        static_abo_id=static_abo_id,
+        slug=slug,
+        occupancy_is_percent=False,
+    )
+
+
+async def fetch_magdeburg_parking(
+    mtls_client,
+    *,
+    abo_id: str,
+    static_abo_id: str | None,
+    slug: str,
+) -> dict:
+    """Pullt Magdeburg-Parkdaten (ifak e.V., V2 ParkingFacility).
+
+    Identisches V2-Profil wie Wuppertal, ABER ``parkingFacilityOccupancy`` trägt
+    bereits Prozent (Live-Pull verifiziert 2026-06-29: PH01 occupancy=8.0 bei
+    occupied 10 / vacant 110), daher ``occupancy_is_percent=True``. Geschlossene
+    Parkhäuser tragen den Sentinel -100.0 -> occupancy fällt ehrlich auf None.
+    """
+    return await _fetch_facility_parking_v2(
+        mtls_client,
+        abo_id=abo_id,
+        static_abo_id=static_abo_id,
+        slug=slug,
+        occupancy_is_percent=True,
+    )

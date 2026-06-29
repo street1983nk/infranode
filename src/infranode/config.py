@@ -292,6 +292,10 @@ class SourceToggleSettings(BaseSettings):
     # Wuppertal Parkdaten (Mobilithek DATEX II V2 ParkingFacility, statisch +
     # dynamisch gejoint, DL-DE/Zero 2.0). Live = Cert + Abo -> Default False.
     enable_wuppertal_parking: bool = False
+    # Magdeburg Parkdaten (Mobilithek DATEX II V2 ParkingFacility, statisch +
+    # dynamisch). Teilt den Wuppertal-V2-Parser; Occupancy ist bei Magdeburg
+    # bereits Prozent (nicht Anteil 0..1). Default False, bis Abo-IDs + Live-Verify.
+    enable_magdeburg_parking: bool = False
 
 
 class CredentialSettings(BaseSettings):
@@ -364,6 +368,11 @@ class MobilithekSettings(BaseSettings):
     # dynamisch = Belegung, statisch = Stammdaten; Join über parkingFacility-ID.
     wuppertal_parking_abo_id: str | None = None
     wuppertal_parking_static_abo_id: str | None = None
+    # Magdeburg Parkdaten: ZWEI Abos (DATEX II V2 ParkingFacility, path-Pull).
+    # dynamisch = Belegung, statisch = Stammdaten; Join über parkingFacility-ID.
+    # Beide als SSRF-Allowlist (aboId NIE aus User-Input).
+    magdeburg_parking_abo_id: str | None = None
+    magdeburg_parking_static_abo_id: str | None = None
 
 
 class TransitSettings(BaseSettings):

@@ -31,6 +31,77 @@ from infranode.normalization import (
 
 _DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
 
+# DATA-08 Stau-Klassifizierung: ``abnormalTrafficType`` ist das ehrliche Quell-Feld
+# des Autobahn-warning-Feeds (INRIX-gespeist, DATEX-Stau-Typ). Wir labeln es nur in
+# eine grobe Stufe (kein Erfinden von Werten):
+#   QUEUING/STATIONARY -> "stau" (Stau/stehender Verkehr),
+#   SLOW -> "stockend", HEAVY -> "dicht", UNSPECIFIED -> "unspezifisch".
+_CONGESTION_LEVELS = {
+    "STATIONARY_TRAFFIC": "stau",
+    "QUEUING_TRAFFIC": "stau",
+    "SLOW_TRAFFIC": "stockend",
+    "HEAVY_TRAFFIC": "dicht",
+    "UNSPECIFIED_ABNORMAL_TRAFFIC": "unspezifisch",
+}
+
+
+def _classify_congestion(warning: dict) -> dict | None:
+    """Ehrliche Stau-Klassifizierung einer Autobahn-``warning`` (oder ``None``).
+
+    Liest das Quell-Feld ``abnormalTrafficType`` und labelt es über
+    ``_CONGESTION_LEVELS``. ``delay_minutes`` aus ``delayTimeValue`` (Reisezeit-
+    verlust, nur > 0), ``blocked`` aus ``isBlocked``. Eine Warnung OHNE bekannten
+    ``abnormalTrafficType`` ist KEIN Stau-Ereignis (z.B. reine Gefahren-/Sperr-
+    meldung) -> ``None``. Reine Klassifizierung, kein Erfinden von Werten.
+    """
+    raw_type = (warning.get("abnormalTrafficType") or "").strip().upper()
+    level = _CONGESTION_LEVELS.get(raw_type)
+    if level is None:
+        return None
+    out: dict = {"level": level, "abnormal_traffic_type": raw_type}
+    try:
+        delay = int(warning.get("delayTimeValue"))
+        if delay > 0:
+            out["delay_minutes"] = delay
+    except (TypeError, ValueError):
+        pass
+    if str(warning.get("isBlocked")).strip().lower() == "true":
+        out["blocked"] = True
+    return out
+
+
+def _enrich_warnings(warnings: list[dict]) -> list[dict]:
+    """Reichert jede Warnung um ein ``congestion``-Feld an (wenn Stau-relevant).
+
+    Die Original-Warnung bleibt unverändert erhalten; nur Stau-relevante Warnungen
+    bekommen zusätzlich den klassifizierten ``congestion``-Block.
+    """
+    enriched: list[dict] = []
+    for w in warnings:
+        congestion = _classify_congestion(w)
+        enriched.append({**w, "congestion": congestion} if congestion else w)
+    return enriched
+
+
+def _congestion_summary(enriched: list[dict]) -> dict | None:
+    """Fasst die Stau-Ereignisse einer Stadt zusammen (oder ``None``, wenn keine).
+
+    Zählt Stau-/Stockend-Ereignisse und gesperrte Abschnitte und nennt den größten
+    Reisezeitverlust. ``None``, wenn keine Warnung Stau-relevant ist (ehrlich:
+    keine Stau-Karte statt einer Null-Verdichtung).
+    """
+    events = [w["congestion"] for w in enriched if w.get("congestion")]
+    if not events:
+        return None
+    delays = [e["delay_minutes"] for e in events if "delay_minutes" in e]
+    return {
+        "count": len(events),
+        "stau": sum(1 for e in events if e["level"] == "stau"),
+        "stockend": sum(1 for e in events if e["level"] == "stockend"),
+        "blocked": sum(1 for e in events if e.get("blocked")),
+        "max_delay_minutes": max(delays) if delays else None,
+    }
+
 
 def map_autobahn_traffic(
     raw: dict,
@@ -49,7 +120,12 @@ def map_autobahn_traffic(
     aus dem Register durchgereicht (Default ``None``). Autobahn ist ein
     Event-Strom über das ganze Stadtgebiet, daher bewusst KEIN ``station_id``;
     die feingranulare ``identifier`` liegt je Event in ``roadworks``/``warnings``.
+
+    DATA-08 Stau: jede Verkehrswarnung wird um ein ``congestion``-Feld angereichert
+    (Stau-Klassifizierung aus ``abnormalTrafficType`` + Reisezeitverlust), und
+    ``congestion_summary`` verdichtet die Stau-Lage je Stadt.
     """
+    warnings = _enrich_warnings(raw.get("warnings", []))
     return CanonicalRecord(
         city_slug=raw["slug"],
         geo=None,
@@ -66,7 +142,8 @@ def map_autobahn_traffic(
         ),
         payload=TrafficEventPayload(
             roadworks=raw.get("roadworks", []),
-            warnings=raw.get("warnings", []),
+            warnings=warnings,
+            congestion_summary=_congestion_summary(warnings),
         ),
     )
 

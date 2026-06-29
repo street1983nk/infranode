@@ -260,6 +260,11 @@ async def _fetch_component(
             "station": station_id,
             "component": str(component_id),
             "scope": str(_SCOPE),
+            # Audit-156: index=id explizit. Die UBA-API liefert "id" zwar bereits
+            # als Default (im request-Echo sichtbar), aber _latest_value verlässt
+            # sich auf data->station_id->{datetime:[...]}; explizit setzen härtet
+            # gegen eine stille Default-Änderung der Quelle.
+            "index": "id",
         },
     )
     measures_resp.raise_for_status()

@@ -30,7 +30,11 @@ from infranode.adapters.dortmund_parking import fetch_dortmund_parking
 from infranode.adapters.hamburg_verkehrslage import fetch_hamburg_verkehrslage
 from infranode.adapters.hvv_geofox import fetch_hvv_departures
 from infranode.adapters.mobilithek_afir import fetch_afir
-from infranode.adapters.mobilithek_datex2 import fetch_datex2, fetch_wuppertal_parking
+from infranode.adapters.mobilithek_datex2 import (
+    fetch_datex2,
+    fetch_magdeburg_parking,
+    fetch_wuppertal_parking,
+)
 from infranode.adapters.mobilithek_datex3 import fetch_frankfurt_parking
 from infranode.adapters.vgn import fetch_vgn_departures
 from infranode.api.errors import UpstreamError, ValidationFailedError
@@ -58,6 +62,7 @@ from infranode.normalization.mappers.mobilithek_parken import (
     map_dortmund_parking,
     map_frankfurt_parking,
     map_kiel_counts,
+    map_magdeburg_parking,
     map_wuppertal_parking,
 )
 from infranode.normalization.mappers.mobilithek_stadt import (
@@ -721,6 +726,94 @@ async def live_wuppertal_parking(request: Request) -> dict:
         }
 
     record = map_wuppertal_parking(
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
+    observed = (
+        record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
+    )
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": _live_meta(
+            source_status="ok",
+            cache_status=status,
+            as_of=observed,
+            refresh_seconds=_LIVE_REFRESH_SECONDS,
+        ),
+    }
+
+
+@router.get("/magdeburg/parking")
+async def live_magdeburg_parking(request: Request) -> dict:
+    """Live-Parkbelegung Magdeburg (DATEX-II V2 ParkingFacility, statisch+dynamisch).
+
+    Eigene Route (analog Wuppertal), weil Magdeburg zwei Abos joint (dynamische
+    Belegung + statische Stammdaten) über das DATEX-II-V2-ParkingFacility-Profil
+    (Anbieter ifak e.V.; teilt ``fetch_magdeburg_parking``/den Wuppertal-V2-Parser,
+    aber ``parkingFacilityOccupancy`` ist bei Magdeburg bereits Prozent). Stadt-Slug
+    fix ``magdeburg``. Beide Abo-IDs aus der Settings-Allowlist (SSRF, T-20-SSRF).
+    Pull-Stil "path".
+
+    Graceful Degradation: Toggle aus ODER kein Cert ODER keine dynamische Abo-ID
+    -> 200 ``source_status="disabled"``. Leerer Feed -> 200 ``no_data``. Toter
+    Upstream ohne Cache -> 503. Lizenz "freie Nutzung/Open Data" (license_id
+    unknown, Tier C), Attribution "Landeshauptstadt Magdeburg". KEIN Archiv (reine
+    Live-Daten, T-20-ARCHIVE).
+    """
+    settings = Settings()
+    city = "magdeburg"
+    abo_id = settings.magdeburg_parking_abo_id
+    source = SourceId.MAGDEBURG_PARKING.value
+
+    entry = get_city(city)
+    mobilithek_http = getattr(request.app.state, "mobilithek_http", None)
+    if (
+        not getattr(settings, f"enable_{source}", False)
+        or mobilithek_http is None
+        or not abo_id
+    ):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="disabled",
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key(source, city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_magdeburg_parking(
+            mobilithek_http,
+            abo_id=abo_id,
+            static_abo_id=settings.magdeburg_parking_static_abo_id,
+            slug=entry.slug,
+        )
+
+    raw, status = await client.fetch(source, key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            f"Live-Quelle '{source}' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
+        )
+
+    if not raw.get("facilities"):
+        return {
+            "data": None,
+            "meta": _live_meta(
+                source_status="no_data",
+                cache_status=status,
+                as_of=raw.get("as_of"),
+                refresh_seconds=_LIVE_REFRESH_SECONDS,
+            ),
+        }
+
+    record = map_magdeburg_parking(
         raw,
         retrieved_at=datetime.now(UTC),
         ags=entry.ags,
