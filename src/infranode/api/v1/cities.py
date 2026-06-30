@@ -965,6 +965,62 @@ async def city_charging(slug: str) -> dict:
     }
 
 
+@router.get("/cities/{slug}/district-heating")
+async def city_district_heating(slug: str) -> dict:
+    """Liefert die Fernwärme-/Wärmenetz-Versorgung je Stadt im Envelope (DATA-41).
+
+    Aggregat aus den amtlichen Wärmenetz-Geodaten der kommunalen Wärmeplanung,
+    föderiert je Stadt-WFS (wie /solar-roofs, je Ursprung lizenzverifiziert):
+    Berlin (Energienetze, DL-DE/Zero 2.0) + Hamburg (Gebiete mit Wärmenetz,
+    DL-DE/BY 2.0), beide Tier A. Trägt je Stadt die Netzbetreiber, die Zahl der
+    Versorgungs-/Netzflächen und, je nach Quelle, die versorgte Fläche (Berlin)
+    bzw. Hausanschlüsse + Trassenlänge (Hamburg).
+
+    KRITISCH (kein WFS im Request-Pfad, T-08-DEP): liest AUSSCHLIESSLICH read-only
+    den jüngsten Snapshot aus ``tier_a/district_heating/`` (Batch-Ingest
+    ``python -m infranode.ingest.district_heating``), NIE den WFS, KEIN
+    ``resilient_client``.
+
+    Vier ``source_status``-Werte (analog /solar-roofs):
+    - ``disabled``: ``enable_district_heating`` per Env-Toggle aus -> data None
+    - ``not_covered``: Stadt außerhalb der abgedeckten Städte (mit covered_cities)
+    - ``not_ingested``: abgedeckte Stadt, aber kein Snapshot -> data None, KEIN 5xx
+    - ``ok``: jüngster Snapshot -> DistrictHeatingPayload mit Attribution
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_district_heating:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    if not is_covered("district-heating", entry.slug):
+        return _not_covered("district-heating")
+
+    records = read_records(source="district_heating", tier="A", city_slug=entry.slug)
+    if not records:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "not_ingested",
+            },
+        }
+
+    record = max(records, key=lambda r: r.retrieved_at)
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+        },
+    }
+
+
 @router.get("/cities/{slug}/air", deprecated=True)
 async def city_air(slug: str, request: Request, response: Response) -> dict:
     """Liefert normalisierte UBA-Luftqualität im kanonischen Envelope (DATA-10).

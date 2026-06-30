@@ -266,3 +266,12 @@ class SourceId(StrEnum):
     # (NUTS-3/PLZ). Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag:
     # getattr(settings, f"enable_{name}"). Wert ASCII (StrEnum), kein Umlaut.
     OEFFENTLICHEVERGABE = "oeffentlichevergabe"
+    # DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt aus der kommunalen
+    # Wärmeplanung. Föderiert je Stadt-WFS (wie BORIS/solar-roofs, je Ursprung
+    # lizenzverifiziert): Berlin = Energienetze-WFS (Fernwärme-Netzgebiet inkl.
+    # 250 m Puffer, DL-DE/Zero 2.0); Hamburg = WFS "Gebiete mit Wärmenetz" der
+    # kommunalen Wärmeplanung (DL-DE/BY 2.0). Beide Tier A. Batch-Ingest -> Archiv
+    # (kein WFS-Call im Request-Pfad, wie bnetza), Route liest read-only. Lizenz/
+    # Attribution stehen je Stadt im Record (Mapper liest sie aus der WFS-Registry).
+    # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
+    DISTRICT_HEATING = "district_heating"

@@ -746,3 +746,16 @@ async def bike_counts(slug: _Slug) -> ToolEnvelope:
     rental bikes/scooters use the ``sharing`` tool instead.
     """
     return await client.get_resource(slug, "bike-counts")
+
+
+async def district_heating(slug: _Slug) -> ToolEnvelope:
+    """Get district-heating / heat-network supply for a city.
+
+    Aggregated from official municipal heat-planning geodata, federated per-city
+    WFS (Berlin: heat-network supply areas incl. 250 m buffer, DL-DE/Zero 2.0;
+    Hamburg: areas with a heat network, DL-DE/BY 2.0). Returns the network
+    operators, the number of supply/network areas and, depending on the source,
+    the supplied area (Berlin) or the house connections and trench length
+    (Hamburg). Read-only. Coverage is partial (selected cities only).
+    """
+    return await client.get_resource(slug, "district-heating")

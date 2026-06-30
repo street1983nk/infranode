@@ -958,6 +958,45 @@ class SolarRoofsPayload(BaseModel):
     reference_date: str | None = None
 
 
+class DistrictHeatingPayload(BaseModel):
+    """Fernwärme-/Wärmenetz-Versorgung je Stadt (föderiert je Stadt-WFS, DATA-41).
+
+    Aggregat aus den amtlichen, offen lizenzierten Wärmenetz-/Fernwärme-Geodaten
+    der kommunalen Wärmeplanung (föderiert je Stadt wie ``solar-roofs``/BORIS, je
+    Ursprung lizenzverifiziert). Berlin: Energienetze-WFS, Netzgebiet Fernwärme
+    einschließlich 250 m Puffer (DL-DE/Zero 2.0); Hamburg: WFS "Gebiete mit
+    Wärmenetz" der kommunalen Wärmeplanung (DL-DE/BY 2.0). Der Batch-Ingest holt
+    den WFS, verdichtet die Flächen zu einem schlanken Stadt-Aggregat (KEINE
+    Geometrien im Payload) und schreibt EINEN Record je Stadt; die Route liest
+    read-only.
+
+    ``network_area_count`` = Anzahl der Wärmenetz-/Versorgungs-Flächen im Quell-
+    datensatz (Berlin: je Netzbetreiber ein Versorgungsgebiet; Hamburg: einzelne
+    Netzteilflächen). ``supplied_area_km2`` = Summe der Versorgungsflächen in km²
+    (planar aus den projizierten WFS-Koordinaten, EPSG:258xx, via Shoelace; bei
+    Berlin inkl. des 250-m-Puffers, siehe ``area_basis``). ``operators`` = sortierte
+    Liste der distinct Netzbetreiber, ``operator_count`` deren Anzahl.
+    ``house_connections`` = Summe der Hausanschlüsse (sofern der Quelldatensatz sie
+    führt, sonst None). ``network_length_km`` = Summe der Trassenlänge in km (dito).
+    ``networks`` = je Netzbetreiber ein schlankes dict (``operator`` plus, soweit
+    vorhanden, ``area_count``/``supplied_area_km2``/``house_connections``/
+    ``network_length_km``/``info_url``). ``area_basis`` beschreibt die Flächen-
+    Semantik wortgenau (z.B. "Versorgungsgebiet inkl. 250 m Puffer"). Mutable
+    Default via ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["district_heating"] = "district_heating"
+    network_area_count: int | None = None
+    supplied_area_km2: float | None = None
+    operator_count: int | None = None
+    operators: list[str] = Field(default_factory=list)
+    house_connections: int | None = None
+    network_length_km: float | None = None
+    networks: list[dict] = Field(default_factory=list)
+    area_basis: str | None = None
+    reference_date: str | None = None
+
+
 class SolarPayload(BaseModel):
     """Solar-Einstrahlung + normierter PV-Ertrag je Stadt (PVGIS/JRC, Tier A, DATA-38).
 
@@ -1053,6 +1092,7 @@ PayloadUnion = Annotated[
     | SharingPayload
     | SolarPayload
     | SolarRoofsPayload
+    | DistrictHeatingPayload
     | IndicatorsPayload
     | CrimeStatsPayload
     | LandValuesPayload

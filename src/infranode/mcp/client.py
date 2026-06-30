@@ -149,6 +149,9 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         # DATA-40: Kommunale Radzählstellen je Stadt (Dauerzählstellen, Tier A,
         # Teilabdeckung). NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
         "bike-counts",
+        # DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt (kommunale Wärmeplanung,
+        # föderiert je Stadt-WFS, Tier A, Teilabdeckung berlin/hamburg).
+        "district-heating",
     }
 )
 

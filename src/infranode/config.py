@@ -277,6 +277,10 @@ class SourceToggleSettings(BaseSettings):
     # Phase 21: Öffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de OCDS,
     # CC0 = Tier A). Bulk-Download, keylos. Default True.
     enable_oeffentlichevergabe: bool = True
+    # DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt (kommunale Wärmeplanung,
+    # föderiert je Stadt-WFS, keylos). Default True. Coverage-gated
+    # (registry.coverage), nur verifizierte offen lizenzierte Städte (berlin/hamburg).
+    enable_district_heating: bool = True
     enable_bkg: bool = True
     enable_bundeswahl: bool = True
     enable_feiertage: bool = True

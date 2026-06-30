@@ -198,4 +198,13 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "Radzählstellen",
         "Bike counters",
     ),
+    # DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt (kommunale Wärmeplanung,
+    # föderiert je Stadt-WFS, Tier A, Teilabdeckung berlin/hamburg). key/tool ASCII,
+    # Label mit korrektem Umlaut.
+    DataType(
+        "district-heating",
+        "district_heating",
+        "Fernwärme & Wärmenetze",
+        "District heating networks",
+    ),
 )

@@ -178,6 +178,10 @@ _register(tools.public_tenders)
 # Teilabdeckung). Zieht Zähldaten von externen kommunalen Quellen -> open_world=True.
 # NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
 _register(tools.bike_counts)
+# DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt (kommunale Wärmeplanung,
+# föderiert je Stadt-WFS, Tier A, Teilabdeckung berlin/hamburg). Read-only aus dem
+# Batch-Store -> open_world=False (kuratierte Abdeckung).
+_register(tools.district_heating)
 
 
 # MCP Resources: expose the coverage catalog as browsable resources, so clients

@@ -428,6 +428,16 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         ),
         ttl=(86400.0, 2592000.0),
     ),
+    # DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt (föderiert je Stadt-WFS,
+    # je Ursprung lizenzverifiziert). Berlin repräsentativ (DL-DE/Zero 2.0); Hamburg
+    # DL-DE/BY 2.0 trägt der Record je Stadt aus der WFS-Registry. Batch-Ingest, kein
+    # Live-Call im Request-Pfad (lange TTL).
+    SourceSpec(
+        name="district_heating",
+        license_id="dl_de_zero_2_0",
+        attribution="Geoportal Berlin / Energienetze",
+        ttl=(86400.0, 2592000.0),
+    ),
 )
 
 # --- Abgeleitete Sichten (Rückwärts-kompatibel zu den alten Strukturen) ---

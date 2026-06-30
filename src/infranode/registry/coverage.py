@@ -134,6 +134,14 @@ _HERITAGE_CITIES: frozenset[str] = frozenset(
 # verifiziert offen lizenzierten Städte. Eine neue Stadt erweitert automatisch.
 _TREE_CADASTRE_CITIES: frozenset[str] = frozenset(BAUM_WFS)
 
+# district-heating (DATA-41): Fernwärme-/Wärmenetz-Versorgung aus der kommunalen
+# Wärmeplanung, föderiert je Stadt-WFS. Die WFS-Registry (``DISTRICT_HEATING_WFS``)
+# lebt im PRIVATEN Ingest-Modul (``ingest.district_heating``, kein Public-Export);
+# daher wird die Slug-Menge hier gespiegelt (wie road-events/sharing) statt
+# importiert, damit der öffentliche Live-Proxy-Code ohne das private Modul lädt. Eine
+# Modul-Assertion in ``ingest.district_heating`` hält beide Mengen drift-synchron.
+_DISTRICT_HEATING_CITIES: frozenset[str] = frozenset({"berlin", "hamburg"})
+
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
 # Die Kennung entspricht dem letzten Pfadsegment der Route (``/cities/{slug}/<key>``).
 PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
@@ -148,6 +156,7 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "bike-counts": _BIKE_COUNTS_CITIES,
     "heritage": _HERITAGE_CITIES,
     "tree-cadastre": _TREE_CADASTRE_CITIES,
+    "district-heating": _DISTRICT_HEATING_CITIES,
 }
 
 

@@ -44,7 +44,7 @@ const MEMBERS: Record<string, string[]> = {
   ],
   energie: [
     "getCityCharging", "getCityEnergy", "getCityPowerLoad", "getCityPowerPrice",
-    "getLiveEroundCharging",
+    "getCityDistrictHeating", "getLiveEroundCharging",
   ],
   bevoelkerung: [
     "getCityDemographics", "getCityPopulationDensity", "getCityIndicators",
