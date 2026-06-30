@@ -28,6 +28,7 @@ from infranode.adapters.autobahn import fetch_traffic, fetch_webcams
 from infranode.adapters.baumkataster import fetch_trees
 from infranode.adapters.berlin_radzaehl import fetch_berlin_radzaehl
 from infranode.adapters.berlin_viz import fetch_berlin_road_events
+from infranode.adapters.db_fasta import fetch_station_facilities
 from infranode.adapters.db_timetables import (
     fetch_station_arrivals,
     fetch_station_departures,
@@ -36,12 +37,14 @@ from infranode.adapters.denkmal import fetch_heritage
 from infranode.adapters.destination_one import fetch_events
 from infranode.adapters.divi_live import fetch_icu_live
 from infranode.adapters.dwd import fetch_weather
+from infranode.adapters.dwd_fire import fetch_fire_danger
 from infranode.adapters.dwd_pollen import fetch_pollen_uv
 from infranode.adapters.dwd_warnings import (
     extract_warncell,
     fetch_dwd_warnings_all,
     warncell_for_ags,
 )
+from infranode.adapters.eea_bathing import fetch_bathing_water
 from infranode.adapters.gbfs import fetch_sharing
 from infranode.adapters.genesis import (
     fetch_demographics,
@@ -50,6 +53,7 @@ from infranode.adapters.genesis import (
 )
 from infranode.adapters.hamburg_radzaehl import fetch_hamburg_radzaehl
 from infranode.adapters.hamburg_transparenz import fetch_hamburg_road_events
+from infranode.adapters.klinik_atlas import fetch_hospital_atlas
 from infranode.adapters.koeln_arcgis import fetch_koeln_road_events
 from infranode.adapters.koeln_events import fetch_events as fetch_koeln_events
 from infranode.adapters.leipzig_radzaehl import fetch_leipzig_radzaehl
@@ -107,6 +111,7 @@ from infranode.normalization.mappers.bike_counts import (
 )
 from infranode.normalization.mappers.bka_pks import map_crime_stats
 from infranode.normalization.mappers.boris import map_land_values
+from infranode.normalization.mappers.db_fasta import map_station_facilities
 from infranode.normalization.mappers.db_timetables import (
     map_station_arrivals,
     map_station_departures,
@@ -116,8 +121,10 @@ from infranode.normalization.mappers.destination_one import (
     map_destination_one_events,
 )
 from infranode.normalization.mappers.dwd import map_weather
+from infranode.normalization.mappers.dwd_fire import map_fire_danger
 from infranode.normalization.mappers.dwd_pollen import map_pollen_uv
 from infranode.normalization.mappers.dwd_warnings import map_dwd_warnings
+from infranode.normalization.mappers.eea_bathing import map_bathing_water
 from infranode.normalization.mappers.gbfs import map_sharing
 from infranode.normalization.mappers.genesis import (
     map_demographics,
@@ -133,6 +140,7 @@ from infranode.normalization.mappers.hospital import (
 from infranode.normalization.mappers.icu_live import map_icu_live
 from infranode.normalization.mappers.inkar import map_indicators
 from infranode.normalization.mappers.kba import map_vehicle_registrations
+from infranode.normalization.mappers.klinik_atlas import map_hospital_atlas
 from infranode.normalization.mappers.koeln_arcgis import map_koeln_road_events
 from infranode.normalization.mappers.koeln_events import map_koeln_events
 from infranode.normalization.mappers.lhp import map_flood
@@ -1407,6 +1415,254 @@ async def city_pollen_uv(slug: str, request: Request) -> dict:
     }
 
 
+@router.get("/cities/{slug}/fire-danger")
+async def city_fire_danger(slug: str, request: Request) -> dict:
+    """Liefert den DWD-Waldbrand-/Graslandfeuerindex der naechsten Station.
+
+    Ablauf (API-01, GOV-02/03): Register-Lookup (unbekannter Slug -> 404 mit Hint),
+    Quellen-Toggle-Pruefung (deaktiviert -> 200 ``source_status=disabled``, nie
+    5xx), resilienter Fetch ueber die Fassade gegen den keylosen DWD-Daten-
+    FeatureServer (Waldbrandgefahrenindex + best-effort Graslandfeuerindex),
+    Mapping mit der GeoNutzV-Attribution (``modified=True``, Pitfall 5), dann der
+    Daten-Envelope.
+
+    KRITISCH (Pitfall 4, Ehrlichkeit): Der Index ist STATIONS-genau, NICHT
+    stadtgenau. ``data.payload.station_name``/``distance_km`` weisen die naechste
+    DWD-Station ehrlich aus. Graceful Degradation: toter Upstream ohne Cache ->
+    503 mit selbst-korrigierendem Hint (DX-06).
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_dwd_fire:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("dwd_fire", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_fire_danger(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+            base_url=Settings().dwd_fire_base_url,
+        )
+
+    raw, status = await client.fetch("dwd_fire", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'dwd_fire' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_fire_danger(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="dwd_fire")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/bathing-water")
+async def city_bathing_water(slug: str, request: Request) -> dict:
+    """Liefert die Badegewaesserqualitaet im Umkreis einer Stadt (EEA, Tier A).
+
+    Ablauf (API-01, GOV-02/03): Register-Lookup (unbekannter Slug -> 404 mit Hint),
+    Quellen-Toggle-Pruefung (deaktiviert -> 200 ``source_status=disabled``, nie
+    5xx), resilienter Fetch ueber die Fassade gegen den keylosen EEA-DiscoMap-Dienst
+    (EU-Badegewaesserrichtlinie 2006/7/EG), Mapping mit CC-BY-Attribution, dann der
+    Daten-Envelope.
+
+    KRITISCH (Pitfall 4, Ehrlichkeit): Badegewaesser liegen ORTSNAH (Umland), NICHT
+    stadtgenau; ``data.payload.sites[].distance_km`` weist das aus. Inland-Staedte
+    ohne Badegewaesser im Umkreis liefern ehrlich ``count=0``. Graceful Degradation:
+    toter Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint (DX-06).
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_eea_bathing:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("eea_bathing", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_bathing_water(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+            season_year=Settings().eea_bathing_year,
+            base_url=Settings().eea_bathing_base_url,
+        )
+
+    raw, status = await client.fetch("eea_bathing", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'eea_bathing' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_bathing_water(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="eea_bathing")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/hospitals-atlas")
+async def city_hospitals_atlas(slug: str, request: Request) -> dict:
+    """Liefert Krankenhausstandorte im Umkreis einer Stadt (Bundes-Klinik-Atlas).
+
+    FAIL-CLOSED: Der Bundes-Klinik-Atlas weist KEINE explizite offene Lizenz aus;
+    die Quelle ist daher per Default DEAKTIVIERT (``enable_klinik_atlas=False`` ->
+    200 ``source_status=disabled``) und als license_id UNKNOWN/Tier C getaggt, bis
+    BMG/IQTIG die Lizenz bestaetigt. Standortgenaue Liste (Name/Adresse/Betten/
+    Kontakt/Koordinaten), ORTSNAH gefiltert (Pitfall 4, ``distance_km`` je Standort).
+    Graceful Degradation: toter Upstream ohne Cache -> 503 mit Hint (DX-06).
+    """
+    entry = get_city(slug)
+
+    if not Settings().enable_klinik_atlas:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("klinik_atlas", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_hospital_atlas(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+            base_url=Settings().klinik_atlas_base_url,
+        )
+
+    raw, status = await client.fetch("klinik_atlas", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'klinik_atlas' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_hospital_atlas(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="klinik_atlas")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/station-facilities")
+async def city_station_facilities(slug: str, request: Request) -> dict:
+    """Liefert Aufzug-/Rolltreppen-Status an Bahnhoefen einer Stadt (DB FaSta).
+
+    KEY-GATED: Die FaSta-API verlangt einen kostenlosen DB-API-Marketplace-
+    Schluessel. Ohne ``db_fasta_client_id``/``db_fasta_api_key`` (oder bei
+    ``enable_db_fasta=False``) liefert die Route 200 ``source_status=disabled``
+    (nie 5xx). Echtzeit-Barrierefreiheit (ACTIVE/INACTIVE/UNKNOWN je Anlage),
+    ORTSNAH gefiltert (Pitfall 4, ``distance_km`` je Anlage). Graceful Degradation:
+    toter Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint (DX-06).
+    """
+    entry = get_city(slug)
+
+    settings = Settings()
+    client_id = settings.db_fasta_client_id
+    api_key = settings.db_fasta_api_key
+    # KEY-GATED: ohne Toggle ODER ohne Credentials -> ehrlich disabled (kein 5xx).
+    if not settings.enable_db_fasta or client_id is None or api_key is None:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key("db_fasta", city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_station_facilities(
+            request.app.state.http,
+            slug=entry.slug,
+            lat=entry.geo.lat,
+            lon=entry.geo.lon,
+            client_id=client_id.get_secret_value(),
+            api_key=api_key.get_secret_value(),
+            base_url=settings.db_fasta_base_url,
+        )
+
+    raw, status = await client.fetch("db_fasta", key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'db_fasta' voruebergehend nicht erreichbar, kein "
+            "gecachter Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    record = map_station_facilities(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+    await append_record(record, source="db_fasta")
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
 @router.get("/cities/{slug}/pois")
 async def city_pois(slug: str, request: Request, type: str) -> dict:
     """Liefert nach Typ gefilterte OSM-POIs im kanonischen Envelope (DATA-04).
@@ -1553,6 +1809,17 @@ async def city_drinking_water(slug: str, request: Request) -> dict:
     Hinweis: Die OSM-Abdeckung ist je Stadt unterschiedlich vollständig."""
     entry = get_city(slug)
     return await _osm_feature_response(request, entry, "drinking-water")
+
+
+@router.get("/cities/{slug}/public-toilets")
+async def city_public_toilets(slug: str, request: Request) -> dict:
+    """Liefert öffentliche Toiletten (OSM ``amenity=toilets``).
+
+    Je Element werden Barrierefreiheits-Tags ausgewiesen (``wheelchair``,
+    ``changing_table``) sowie ``fee``/``access``/``opening_hours``/``unisex``.
+    Hinweis: Die OSM-Abdeckung ist je Stadt unterschiedlich vollständig."""
+    entry = get_city(slug)
+    return await _osm_feature_response(request, entry, "public-toilets")
 
 
 @router.get("/cities/{slug}/markets")

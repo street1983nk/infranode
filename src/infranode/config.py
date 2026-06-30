@@ -168,6 +168,40 @@ class SourceToggleSettings(BaseSettings):
     enable_pegelonline: bool = True
     enable_lhp: bool = True
     enable_dwd_pollen: bool = True
+    # DWD Waldbrand-/Graslandfeuerindex (keylos, GeoNutzV, Tier A). Daten ueber
+    # einen oeffentlichen ArcGIS-FeatureServer (DWD-Daten-Re-Host). Host operator-
+    # konfigurierbar (INFRANODE_DWD_FIRE_BASE_URL); Env = Operator-Input (kein
+    # User-Input) -> SSRF-Invariante bleibt gewahrt.
+    enable_dwd_fire: bool = True
+    dwd_fire_base_url: str = "https://services2.arcgis.com/7wuv6DH7DYhDuwvU/ArcGIS/rest/services/DWD/FeatureServer"
+    # EEA Badegewaesserqualitaet (keylos, CC-BY 4.0, Tier A). Jahres-MapServer der
+    # EEA DiscoMap; der Jahres-Teil der URL + eea_bathing_year werden nachgezogen,
+    # sobald die EEA die neue Badesaison bewertet. Host operator-konfigurierbar
+    # (INFRANODE_EEA_BATHING_BASE_URL) -> SSRF-Invariante bleibt gewahrt.
+    enable_eea_bathing: bool = True
+    eea_bathing_base_url: str = (
+        "https://water.discomap.eea.europa.eu/arcgis/rest/services/BathingWater/"
+        "BathingWater_Dyna_WM_2025/MapServer/3"
+    )
+    eea_bathing_year: int = 2025
+    # Bundes-Klinik-Atlas (BMG/IQTIG): standortgenaue Krankenhausliste. FAIL-CLOSED:
+    # KEINE explizite offene Lizenz ausgewiesen -> Default DEAKTIVIERT (Tier C/UNKNOWN),
+    # bis BMG/IQTIG die Lizenz bestaetigt. Host operator-konfigurierbar.
+    enable_klinik_atlas: bool = False
+    klinik_atlas_base_url: str = (
+        "https://bundes-klinik-atlas.de/fileadmin/json/locations.json"
+    )
+    # DB FaSta Aufzug-/Rolltreppen-Status (DB API Marketplace, CC-BY 4.0, Tier A).
+    # KEY-GATED: braucht einen kostenlosen Marketplace-Schluessel (Plan Free4All).
+    # Toggle Default True, aber ohne db_fasta_client_id/db_fasta_api_key liefert die
+    # Route source_status=disabled (Konvention keyed Live-Quellen). Host operator-
+    # konfigurierbar; Secrets in der Box-.env.
+    enable_db_fasta: bool = True
+    db_fasta_base_url: str = (
+        "https://apis.deutschebahn.com/db-api-marketplace/apis/fasta/v2/facilities"
+    )
+    db_fasta_client_id: SecretStr | None = None
+    db_fasta_api_key: SecretStr | None = None
     # Phase 8: account-gated Quellen Default False (bis Credentials gesetzt sind);
     # keylose Bulk-/Seed-Quellen Default True (Toggle steuert nur die Route, nicht
     # den Offline-Ingest). enable_genesis = Demografie + Krankenhaus, enable_zensus

@@ -40,6 +40,25 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "weather-warnings", "weather_warnings", "Wetterwarnungen", "Weather warnings"
     ),
     DataType("pollen-uv", "pollen_uv", "Pollen & UV-Index", "Pollen & UV index"),
+    DataType("fire-danger", "fire_danger", "Waldbrandgefahr", "Wildfire danger"),
+    DataType(
+        "bathing-water",
+        "bathing_water",
+        "Badegewässerqualität",
+        "Bathing water quality",
+    ),
+    DataType(
+        "hospitals-atlas",
+        "hospitals_atlas",
+        "Krankenhausatlas",
+        "Hospital atlas",
+    ),
+    DataType(
+        "station-facilities",
+        "station_facilities",
+        "Aufzüge & Rolltreppen (Bahnhof)",
+        "Elevators & escalators (station)",
+    ),
     DataType("air", "air_quality_live", "Luftqualität (live)", "Air quality (live)"),
     DataType(
         "air-uba", "air_quality", "Luftqualität (amtlich)", "Air quality (official)"
@@ -129,6 +148,9 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "drinking_water",
         "Trinkwasserbrunnen",
         "Drinking water fountains",
+    ),
+    DataType(
+        "public-toilets", "public_toilets", "Öffentliche Toiletten", "Public toilets"
     ),
     DataType("markets", "markets", "Wochenmärkte", "Markets"),
     DataType("parcel-lockers", "parcel_lockers", "Paketstationen", "Parcel lockers"),

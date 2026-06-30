@@ -23,13 +23,15 @@ export const CATEGORIES: Category[] = [
 const MEMBERS: Record<string, string[]> = {
   umwelt: [
     "getCityAir", "getCityAirUba", "getCityWeather", "getCityWeatherWarnings",
-    "getCityPollenUv", "getCityWaterLevel", "getCityFlood", "getCitySolar",
+    "getCityPollenUv", "getCityFireDanger", "getCityBathingWater",
+    "getCityWaterLevel", "getCityFlood", "getCitySolar",
     "getCitySolarRoofs", "getLiveAir", "getLiveAirUba", "getLiveFlood",
     "getLiveWaterLevel", "getLiveKoelnUmweltzone",
   ],
   verkehr: [
     "getCityTransit", "getCityStationDepartures", "getCityStationArrivals",
-    "getCityStations", "getCityTraffic", "getCityRoadEvents", "getCityWebcams",
+    "getCityStations", "getCityStationFacilities", "getCityTraffic",
+    "getCityRoadEvents", "getCityWebcams",
     "getCitySharing", "getCityParking", "getCityFuelPrices", "getCityBikeCounts",
     "getStationArrivals", "getStationDepartures", "getLiveTransitDepartures",
     "getLiveTransitRouteStatus", "getLiveTransitTrip", "getLiveHamburgDepartures",
@@ -46,7 +48,8 @@ const MEMBERS: Record<string, string[]> = {
   ],
   bevoelkerung: [
     "getCityDemographics", "getCityPopulationDensity", "getCityIndicators",
-    "getCityUnemployment", "getCityHealth", "getCityIcuLive", "getCityEducation",
+    "getCityUnemployment", "getCityHealth", "getCityHospitalsAtlas",
+    "getCityIcuLive", "getCityEducation",
   ],
   wirtschaft: [
     "getCityBusinessRegistrations", "getCityInsolvencies", "getCityTaxRates",
@@ -55,7 +58,8 @@ const MEMBERS: Record<string, string[]> = {
   ],
   sicherheit: ["getCityCrimeStats", "getCityAccidents", "getCityElection"],
   orte: [
-    "getCityPlaygrounds", "getCityDrinkingWater", "getCityMarkets",
+    "getCityPlaygrounds", "getCityDrinkingWater", "getCityPublicToilets",
+    "getCityMarkets",
     "getCityParcelLockers", "getCityPostOffices", "getCityPostBoxes",
     "getCityPublicWifi", "getCityRecyclingCentres", "getCityGovernmentOffices",
     "getCityTreeCadastre", "getCityPois", "getCityEvents",

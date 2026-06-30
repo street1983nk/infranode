@@ -31,7 +31,7 @@ Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
 flowchart LR
     SRC["German open-data sources<br/>DWD, UBA, SMARD, BORIS,<br/>Mobilithek, GovData, ..."] --> CORE["InfraNode<br/>normalize, license-gate, cache"]
     CORE --> API["REST API<br/>infranode.dev/api/v1"]
-    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 65 tools"]
+    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 70 tools"]
     API --> APPS["Your apps &amp; dashboards"]
     MCP --> AGENTS["AI agents (Claude &amp; co.)"]
 ```
@@ -76,7 +76,7 @@ mirrors every endpoint with real example responses, so you can try the
 [InfraNode API Postman collection](https://www.postman.com/alster83-7133231/infranode/collection/pft781f/infranode-api)
 in the browser without an API key.
 
-## Data (84 cities, 93 endpoints)
+## Data (84 cities, 98 endpoints)
 
 Every category below is both a REST endpoint under `/api/v1/cities/{slug}/...`
 and an MCP tool of the same name.

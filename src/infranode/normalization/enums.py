@@ -61,6 +61,14 @@ class SourceId(StrEnum):
     PEGELONLINE = "pegelonline"
     HOCHWASSER = "hochwasser"
     DWD_POLLEN = "dwd_pollen"
+    # DWD Waldbrand-/Graslandfeuerindex (keylos, GeoNutzV, Tier A, stationsnah).
+    DWD_FIRE = "dwd_fire"
+    # EEA Badegewaesserqualitaet (keylos, CC-BY 4.0, Tier A, ortsnah/Umland).
+    EEA_BATHING = "eea_bathing"
+    # Bundes-Klinik-Atlas (keylos, Lizenz UNKNOWN -> Tier C fail-closed, ortsnah).
+    KLINIK_ATLAS = "klinik_atlas"
+    # DB FaSta Aufzug-/Rolltreppen-Status (key-gated DB-Marketplace, CC-BY, Tier A).
+    DB_FASTA = "db_fasta"
     # Phase 8: Statistik-, Energie- und Geo-Quellen. GENESIS und
     # ZENSUS sind account-gated (POST-API), MASTR/BKG/BUNDESWAHL/FEIERTAGE sind
     # keylose Bulk-/Seed-Quellen, DIVI ist die klinikscharfe Live-only-Quelle

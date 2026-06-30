@@ -69,6 +69,16 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "water-level",
         "flood",
         "pollen-uv",
+        # DWD Waldbrand-/Graslandfeuerindex je Stadt (keylos, GeoNutzV, Tier A).
+        "fire-danger",
+        # EEA Badegewaesserqualitaet im Umkreis (keylos, CC-BY 4.0, Tier A).
+        "bathing-water",
+        # Bundes-Klinik-Atlas Krankenhausstandorte (keylos; fail-closed Tier C,
+        # per Default deaktiviert bis Lizenzbestaetigung BMG/IQTIG).
+        "hospitals-atlas",
+        # DB FaSta Aufzug-/Rolltreppen-Status (key-gated DB-Marketplace, CC-BY,
+        # Tier A; disabled ohne Schluessel).
+        "station-facilities",
         "demographics",
         "energy",
         "geo",
@@ -118,6 +128,7 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         # DATA-OSM (Tier 1): 10 dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
         "playgrounds",
         "drinking-water",
+        "public-toilets",
         "markets",
         "parcel-lockers",
         "post-offices",

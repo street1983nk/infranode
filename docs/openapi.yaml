@@ -788,6 +788,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/public-toilets:
+    get:
+      tags: [cities]
+      summary: Öffentliche Toiletten je Stadt (OSM, Tier B)
+      x-summary-en: Public toilets per city (OSM, Tier B)
+      description: >-
+        Öffentliche Toiletten (OSM amenity=toilets) mit Barrierefreiheits-Tags
+        je Element (wheelchair, changing_table) sowie fee/access/opening_hours/
+        unisex. Die OSM-Abdeckung ist je Stadt unterschiedlich vollständig.
+        Tier B (ODbL). Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Public toilets (OSM amenity=toilets) with per-item accessibility tags
+        (wheelchair, changing_table) plus fee/access/opening_hours/unisex. OSM
+        coverage varies per city. Tier B (ODbL). Disabled -> 200
+        source_status="disabled".
+      operationId: getCityPublicToilets
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OSM-Feature-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/markets:
     get:
       tags: [cities]
@@ -1787,6 +1836,217 @@ paths:
       responses:
         "200":
           description: Pollen-/UV-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/fire-danger:
+    get:
+      tags: [cities]
+      summary: Waldbrand- und Graslandfeuerindex je Stadt (DWD, Tier A)
+      x-summary-en: Forest-fire and grassland-fire danger index per city (DWD, Tier A)
+      description: >-
+        Liefert den Waldbrandgefahrenindex (Stufe 1 sehr gering bis 5 sehr hoch)
+        und den Graslandfeuerindex der nächsten DWD-Station zu einer Stadt im
+        kanonischen Envelope. Der Index ist STATIONS-genau, NICHT stadtgenau
+        (station_name und distance_km im Payload weisen die Station aus).
+        Attribution mit modified=true (GeoNutzV). Tier A. Deaktiviert -> 200
+        source_status="disabled".
+      x-description-en: >-
+        Returns the forest-fire danger index (level 1 very low to 5 very high)
+        and the grassland-fire index of the nearest DWD station to a city in the
+        canonical envelope. The index is STATION-based, NOT city-precise
+        (station_name and distance_km in the payload identify the station).
+        Attribution with modified=true (GeoNutzV). Tier A. Disabled -> 200
+        source_status="disabled".
+      operationId: getCityFireDanger
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Waldbrand-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/bathing-water:
+    get:
+      tags: [cities]
+      summary: Badegewässerqualität im Umkreis einer Stadt (EEA, Tier A)
+      x-summary-en: Bathing water quality near a city (EEA, Tier A)
+      description: >-
+        Liefert die Badegewässerqualität (EU-Badegewässerrichtlinie 2006/7/EG,
+        EEA DiscoMap) im Umkreis einer Stadt im kanonischen Envelope. Je Badestelle
+        Klasse (Excellent/Good/Sufficient/Poor), Gewässertyp, Koordinaten, Distanz
+        und Profil-Link. ORTSNAH (Umland), NICHT stadtgenau (distance_km je Stelle);
+        Inland-Städte ohne Badegewässer liefern count=0. CC-BY 4.0, Tier A.
+        Deaktiviert -> 200 source_status="disabled".
+      x-description-en: >-
+        Returns bathing water quality (EU Bathing Water Directive 2006/7/EC, EEA
+        DiscoMap) near a city in the canonical envelope. Per site: class
+        (Excellent/Good/Sufficient/Poor), water category, coordinates, distance and
+        profile link. NEARBY (surroundings), NOT city-precise (distance_km per
+        site); inland cities without bathing waters return count=0. CC-BY 4.0,
+        Tier A. Disabled -> 200 source_status="disabled".
+      operationId: getCityBathingWater
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Badegewässer-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/hospitals-atlas:
+    get:
+      tags: [cities]
+      summary: Krankenhausstandorte je Stadt (Bundes-Klinik-Atlas, fail-closed)
+      x-summary-en: Hospital locations per city (Bundes-Klinik-Atlas, fail-closed)
+      description: >-
+        Liefert standortgenaue Krankenhausdaten (Name, Adresse, Betten, Kontakt,
+        Koordinaten) im Umkreis einer Stadt aus dem Bundes-Klinik-Atlas (BMG/IQTIG)
+        im kanonischen Envelope. FAIL-CLOSED: keine explizite offene Lizenz
+        ausgewiesen -> license_id UNKNOWN/Tier C und per Default DEAKTIVIERT
+        (-> 200 source_status="disabled"), bis BMG/IQTIG die Lizenz bestätigt.
+        ORTSNAH gefiltert (distance_km je Standort).
+      x-description-en: >-
+        Returns per-location hospital data (name, address, beds, contact,
+        coordinates) near a city from the Bundes-Klinik-Atlas (BMG/IQTIG) in the
+        canonical envelope. FAIL-CLOSED: no explicit open licence stated ->
+        license_id UNKNOWN/Tier C and disabled by default (-> 200
+        source_status="disabled") until BMG/IQTIG confirm the licence. Filtered
+        by proximity (distance_km per location).
+      operationId: getCityHospitalsAtlas
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Krankenhausatlas-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Quelle vorübergehend nicht erreichbar (kein Cache)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/station-facilities:
+    get:
+      tags: [cities]
+      summary: Aufzug-/Rolltreppen-Status an Bahnhöfen je Stadt (DB FaSta, Tier A)
+      x-summary-en: Elevator/escalator status at stations per city (DB FaSta, Tier A)
+      description: >-
+        Liefert den Echtzeit-Betriebsstatus von Aufzügen und Rolltreppen an
+        Bahnhöfen einer Stadt (DB FaSta) im kanonischen Envelope. Je Anlage Typ
+        (ELEVATOR/ESCALATOR), Status (ACTIVE/INACTIVE/UNKNOWN) + Begründung,
+        Bahnhofsnummer, Koordinaten und Distanz. KEY-GATED: ohne DB-API-Schlüssel
+        -> 200 source_status="disabled". CC-BY 4.0, Tier A. ORTSNAH (Bahnhöfe im
+        Stadtgebiet), distance_km je Anlage.
+      x-description-en: >-
+        Returns the real-time operational state of elevators and escalators at a
+        city's railway stations (DB FaSta) in the canonical envelope. Per facility:
+        type (ELEVATOR/ESCALATOR), state (ACTIVE/INACTIVE/UNKNOWN) + reason, station
+        number, coordinates and distance. KEY-GATED: without a DB API key -> 200
+        source_status="disabled". CC-BY 4.0, Tier A.
+      operationId: getCityStationFacilities
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Aufzug-/Rolltreppen-Envelope (CanonicalRecord oder null)
           content:
             application/json:
               schema:

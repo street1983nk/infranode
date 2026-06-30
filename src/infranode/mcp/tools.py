@@ -170,6 +170,48 @@ async def pollen_uv(slug: _Slug) -> ToolEnvelope:
     return await client.get_resource(slug, "pollen-uv")
 
 
+async def fire_danger(slug: _Slug) -> ToolEnvelope:
+    """Get the forest-fire and grassland-fire danger index near a German city.
+
+    Sourced from the Deutscher Wetterdienst (DWD). Read-only. The index is
+    station-based, not city-exact: the response names the nearest DWD station and
+    its distance. Levels run 1 (very low) to 5 (very high).
+    """
+    return await client.get_resource(slug, "fire-danger")
+
+
+async def bathing_water(slug: _Slug) -> ToolEnvelope:
+    """Get bathing-water quality near a German city (EEA). Read-only.
+
+    Sourced from the European Environment Agency under the EU Bathing Water
+    Directive 2006/7/EC. Sites are nearby (lakes/coast in the surroundings), not
+    city-exact: each site carries its distance. Inland cities without nearby
+    bathing waters honestly return count 0.
+    """
+    return await client.get_resource(slug, "bathing-water")
+
+
+async def hospitals_atlas(slug: _Slug) -> ToolEnvelope:
+    """List hospital locations near a German city (Bundes-Klinik-Atlas). Read-only.
+
+    Sourced from the Bundes-Klinik-Atlas (BMG/IQTIG): per-location name, address,
+    bed count and contact. Disabled by default until the data licence is confirmed
+    (returns source_status="disabled"). Distinct from the `health` tool.
+    """
+    return await client.get_resource(slug, "hospitals-atlas")
+
+
+async def station_facilities(slug: _Slug) -> ToolEnvelope:
+    """Get elevator/escalator status at a city's railway stations (DB FaSta).
+
+    Read-only. Sourced from Deutsche Bahn / DB InfraGO via the DB FaSta API:
+    per-facility type (elevator/escalator), real-time state
+    (ACTIVE/INACTIVE/UNKNOWN) and reason. Requires a DB API key; without it the
+    source returns source_status="disabled".
+    """
+    return await client.get_resource(slug, "station-facilities")
+
+
 async def demographics(slug: _Slug) -> ToolEnvelope:
     """Get demographic indicators for a German city.
 
@@ -586,6 +628,16 @@ async def drinking_water(slug: _Slug) -> ToolEnvelope:
     OSM coverage varies by city; a sparse result is a data gap, not an error.
     """
     return await client.get_resource(slug, "drinking-water")
+
+
+async def public_toilets(slug: _Slug) -> ToolEnvelope:
+    """List public toilets in a city (OpenStreetMap). Read-only.
+
+    Each item carries accessibility tags where tagged (wheelchair,
+    changing_table) plus fee/access/opening_hours/unisex. OSM coverage varies by
+    city; a sparse result is a data gap, not an error.
+    """
+    return await client.get_resource(slug, "public-toilets")
 
 
 async def markets(slug: _Slug) -> ToolEnvelope:

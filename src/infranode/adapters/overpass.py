@@ -179,6 +179,12 @@ class _Feature(NamedTuple):
 _OSM_FEATURES: dict[str, _Feature] = {
     "playgrounds": _Feature(((("leisure", "playground"),),), ()),
     "drinking-water": _Feature(((("amenity", "drinking_water"),),), ()),
+    # Oeffentliche Toiletten inkl. Barrierefreiheits-Tags (USP): wheelchair +
+    # changing_table je Element, plus fee/access/opening_hours/unisex.
+    "public-toilets": _Feature(
+        ((("amenity", "toilets"),),),
+        ("wheelchair", "changing_table", "fee", "access", "opening_hours", "unisex"),
+    ),
     "markets": _Feature(((("amenity", "marketplace"),),), ("opening_hours",)),
     "parcel-lockers": _Feature(
         ((("amenity", "parcel_locker"),),), ("operator", "brand")

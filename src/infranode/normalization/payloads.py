@@ -227,6 +227,84 @@ class PollenUvPayload(BaseModel):
     uv_index: float | None = None
 
 
+class FireDangerPayload(BaseModel):
+    """Waldbrand-/Graslandfeuerindex je Stadt (DWD, Tier A, taeglich).
+
+    Daten sind STATIONS-genau, NICHT stadtgenau: ``station_name``/``distance_km``
+    weisen die naechste DWD-Station ehrlich aus (Pitfall 4). ``wbi_level`` ist die
+    Waldbrandgefahrenstufe 1..5 (1=sehr gering ... 5=sehr hoch), ``wbi_label`` das
+    deutsche Klartext-Label. ``glfi_level``/``glfi_label`` tragen den
+    Graslandfeuerindex (best-effort, kann ``None`` sein). ``forecast_date`` ist das
+    Vorhersagedatum (ISO), ``updated_at`` der DWD-Aktualisierungszeitpunkt.
+    """
+
+    kind: Literal["fire_danger"] = "fire_danger"
+    wbi_level: int | None = None
+    wbi_label: str | None = None
+    glfi_level: int | None = None
+    glfi_label: str | None = None
+    station_name: str | None = None
+    station_id: str | None = None
+    bundesland: str | None = None
+    distance_km: float | None = None
+    forecast_date: str | None = None
+    updated_at: str | None = None
+
+
+class BathingWaterPayload(BaseModel):
+    """Badegewaesserqualitaet im Umkreis einer Stadt (EEA, Tier A, jaehrlich).
+
+    Daten je Badestelle aus der EU-Badegewaesserrichtlinie 2006/7/EG (EEA
+    DiscoMap), gefiltert auf einen Umkreis um die Stadt (Pitfall 4: ortsnah, nicht
+    stadtgenau, ``distance_km`` je Stelle). ``season_year`` ist die bewertete
+    Badesaison. ``counts`` zaehlt die Qualitaetsklassen (Excellent/Good/
+    Sufficient/Poor/not_classified). ``sites`` listet je Stelle Name, Klasse,
+    Gewaessertyp, Koordinaten, Distanz und Profil-Link. Mutable Defaults ueber
+    ``Field(default_factory=...)`` (ruff B006).
+    """
+
+    kind: Literal["bathing_water"] = "bathing_water"
+    season_year: int | None = None
+    count: int = 0
+    counts: dict = Field(default_factory=dict)
+    sites: list[dict] = Field(default_factory=list)
+    truncated: bool = False
+
+
+class HospitalAtlasPayload(BaseModel):
+    """Krankenhausstandorte im Umkreis einer Stadt (Bundes-Klinik-Atlas).
+
+    Standortgenaue Liste (Name, Adresse, Betten, Kontakt, Koordinaten) aus dem
+    Bundes-Klinik-Atlas (BMG/IQTIG). FAIL-CLOSED: Lizenz nicht ausgewiesen ->
+    license_id UNKNOWN, Tier C (live-only, kein Archiv) und Quelle per Default
+    deaktiviert, bis die Lizenz bestaetigt ist. Daten ortsnah gefiltert (Pitfall 4,
+    ``distance_km`` je Standort). Mutable Defaults via ``Field(default_factory=...)``.
+    """
+
+    kind: Literal["hospital_atlas"] = "hospital_atlas"
+    count: int = 0
+    total_beds: int | None = None
+    truncated: bool = False
+    hospitals: list[dict] = Field(default_factory=list)
+
+
+class StationFacilityPayload(BaseModel):
+    """Aufzug-/Rolltreppen-Status an Bahnhoefen einer Stadt (DB FaSta, Tier A).
+
+    Echtzeit-Barrierefreiheit: je Anlage Typ (ELEVATOR/ESCALATOR), Status
+    (ACTIVE/INACTIVE/UNKNOWN) + Begruendung, Bahnhofsnummer, Koordinaten und
+    Distanz. ``counts`` zaehlt je Status. Anlagen liegen an Bahnhoefen im
+    Stadtgebiet (Bbox-Filter, Pitfall 4: ``distance_km`` je Anlage). Mutable
+    Defaults via ``Field(default_factory=...)``.
+    """
+
+    kind: Literal["station_facilities"] = "station_facilities"
+    count: int = 0
+    counts: dict = Field(default_factory=dict)
+    facilities: list[dict] = Field(default_factory=list)
+    truncated: bool = False
+
+
 class DemographicsPayload(BaseModel):
     """Demografie-Zeitreihen je Stadt (GENESIS/Zensus, Tier A, DATA-17).
 
@@ -962,6 +1040,10 @@ PayloadUnion = Annotated[
     | PowerPayload
     | WeatherWarningPayload
     | PollenUvPayload
+    | FireDangerPayload
+    | BathingWaterPayload
+    | HospitalAtlasPayload
+    | StationFacilityPayload
     | DemographicsPayload
     | EnergyAssetPayload
     | VehicleRegistrationPayload

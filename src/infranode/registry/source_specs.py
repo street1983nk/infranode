@@ -99,6 +99,42 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Datenbasis: Deutscher Wetterdienst, eigene Elemente ergänzt",
     ),
     SourceSpec(
+        name="dwd_fire",
+        license_id="geonutzv",
+        attribution="Datenbasis: Deutscher Wetterdienst, eigene Elemente ergänzt",
+        # ArcGIS-Re-Host kann zeitweise traege/aus sein -> grosszuegigeres
+        # Cache-Fenster (taegliche Daten) + eigener HALF_OPEN-Cooldown.
+        ttl=(3600.0, 86400.0),
+        cooldown=900.0,
+    ),
+    SourceSpec(
+        name="eea_bathing",
+        license_id="cc_by_4_0",
+        attribution=(
+            "European Environment Agency (EEA), Bathing Water Directive 2006/7/EC"
+        ),
+        # Jahres-Saisonbewertung (quasi-statisch) -> langes Cache-Fenster.
+        ttl=(86400.0, 2592000.0),
+        cooldown=900.0,
+    ),
+    SourceSpec(
+        name="klinik_atlas",
+        # FAIL-CLOSED: Bundes-Klinik-Atlas weist keine explizite offene Lizenz aus
+        # -> UNKNOWN/Tier C, Quelle per Default deaktiviert (s. config), bis BMG/IQTIG
+        # die Lizenz bestaetigt.
+        license_id="unknown",
+        attribution="Bundes-Klinik-Atlas (BMG/IQTIG)",
+        ttl=(86400.0, 604800.0),
+    ),
+    SourceSpec(
+        name="db_fasta",
+        license_id="cc_by_4_0",
+        attribution="Deutsche Bahn / DB InfraGO AG",
+        # Echtzeit-Status -> kurzes Cache-Fenster.
+        ttl=(300.0, 3600.0),
+        cooldown=600.0,
+    ),
+    SourceSpec(
         name="genesis",
         license_id="dl_de_by_2_0",
         # H15 (Owner 2026-06-29): vereinheitlicht mit der regionalstatistik-Quelle
