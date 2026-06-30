@@ -45,9 +45,14 @@ _WUPPERTAL_ATTRIBUTION = "Stadt Wuppertal"
 _DL_DE_ZERO_URL = "https://www.govdata.de/dl-de/zero-2-0"
 _DORTMUND_ATTRIBUTION = "Stadt Dortmund"
 _KIEL_ATTRIBUTION = "Landeshauptstadt Kiel"
-# Magdeburg-Parken (Mobilithek, ifak e.V.): nur "freie Nutzung/Open Data", keine
-# benannte Standardlizenz -> keine license_url (DCAT-AP.de-Export 2026-06-29).
-_MAGDEBURG_ATTRIBUTION = "Landeshauptstadt Magdeburg"
+# Magdeburg-Parken (Mobilithek, ifak e.V.): Datenquelle ist die Stadt Magdeburg.
+# Deren Open-Data-Nutzungsbedingungen (magdeburg.de/.../Offene-Verwaltungsdaten)
+# legen mangels anderer Kennzeichnung Datenlizenz Deutschland Namensnennung 2.0
+# (DL-DE/BY 2.0) fest -> Tier A. Das vage "freie Nutzung/Open Data" des
+# Mobilithek-Angebots ist nur ifaks generisches Label; maßgeblich ist der
+# Daten-Eigner. Geforderte Quellenangabe verbatim (Veränderungshinweis bei
+# Änderung; hier modified=False wie die Schwester-Parken-Mapper). Recherche 2026-06-30.
+_MAGDEBURG_ATTRIBUTION = "Datenquelle: Landeshauptstadt Magdeburg, www.magdeburg.de"
 
 
 def _parse_as_of(raw: dict) -> datetime | None:
@@ -194,11 +199,13 @@ def map_magdeburg_parking(
     dynamischen Feeds falls vorhanden. ``retrieved_at`` injiziert (keine Systemuhr
     im Mapper).
 
-    Lizenz: das Mobilithek-Angebot (Anbieter ifak e.V., Datenquelle
-    Landeshauptstadt Magdeburg) nennt nur "freie Nutzung/Open Data"
-    (LICENSE_FREE_USE_OPEN_DATA, KEINE benannte Standardlizenz; per DCAT-AP.de-
-    Export 2026-06-29 verifiziert) -> ``license_id=UNKNOWN``, ``license_tier=C``
-    (live-only, ehrlich; analog ParkenDD), Attribution "Landeshauptstadt Magdeburg".
+    Lizenz: Datenquelle ist die Stadt Magdeburg; deren Open-Data-
+    Nutzungsbedingungen legen mangels anderer Kennzeichnung Datenlizenz
+    Deutschland Namensnennung 2.0 fest -> ``license_id=DL_DE_BY_2_0``,
+    ``license_tier=A`` (Recherche 2026-06-30: magdeburg.de Offene-Verwaltungsdaten,
+    geforderte Quellenangabe "Datenquelle: Landeshauptstadt Magdeburg,
+    www.magdeburg.de"). Das vage "freie Nutzung/Open Data" des Mobilithek-Angebots
+    war nur ifaks generisches Label, nicht die maßgebliche Lizenz des Eigners.
     """
     return CanonicalRecord(
         city_slug=raw["slug"],
@@ -206,13 +213,13 @@ def map_magdeburg_parking(
         observed_at=_parse_as_of(raw),
         retrieved_at=retrieved_at,
         source=SourceId.MAGDEBURG_PARKING,
-        license_id=LicenseId.UNKNOWN,
-        license_tier=LicenseTier.C,
+        license_id=LicenseId.DL_DE_BY_2_0,
+        license_tier=LicenseTier.A,
         ags=ags,
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text=_MAGDEBURG_ATTRIBUTION,
-            license_url=None,
+            license_url=_DL_DE_BY_URL,
         ),
         payload=ParkingPayload(
             facilities=raw.get("facilities", []),

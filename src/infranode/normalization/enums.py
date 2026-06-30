@@ -119,10 +119,10 @@ class SourceId(StrEnum):
     WUPPERTAL_PARKING = "wuppertal_parking"
     # Magdeburg Parkdaten (Mobilithek DATEX II V2 ParkingFacility-Profil, statisch
     # + dynamisch gejoint; teilt den Wuppertal-V2-Parser). Anbieter ifak e.V.,
-    # Datenquelle Landeshauptstadt Magdeburg. Lizenz nur "freie Nutzung/Open Data"
-    # (Mobilithek LICENSE_FREE_USE_OPEN_DATA, keine benannte Standardlizenz, per
-    # DCAT-AP.de-Export 2026-06-29 verifiziert) -> license_id=unknown, Tier C
-    # (live-only, ehrlich; analog ParkenDD). Toggle-Name == SourceId-Wert.
+    # Datenquelle Landeshauptstadt Magdeburg -> deren Open-Data-Nutzungsbedingungen
+    # legen mangels anderer Kennzeichnung Datenlizenz Deutschland Namensnennung 2.0
+    # fest (license_id=dl_de_by_2_0, Tier A; Recherche 2026-06-30, magdeburg.de
+    # Offene-Verwaltungsdaten). Toggle-Name == SourceId-Wert.
     MAGDEBURG_PARKING = "magdeburg_parking"
     # Phase 19: GTFS-Realtime Trip Updates, Tier B CC-BY-SA, gtfs.de/Mobilithek-
     # DELFI; kein neuer LicenseId-Wert (CC_BY_SA_4_0 existiert bereits), kein

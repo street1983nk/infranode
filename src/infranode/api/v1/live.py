@@ -758,9 +758,10 @@ async def live_magdeburg_parking(request: Request) -> dict:
 
     Graceful Degradation: Toggle aus ODER kein Cert ODER keine dynamische Abo-ID
     -> 200 ``source_status="disabled"``. Leerer Feed -> 200 ``no_data``. Toter
-    Upstream ohne Cache -> 503. Lizenz "freie Nutzung/Open Data" (license_id
-    unknown, Tier C), Attribution "Landeshauptstadt Magdeburg". KEIN Archiv (reine
-    Live-Daten, T-20-ARCHIVE).
+    Upstream ohne Cache -> 503. Lizenz Datenlizenz Deutschland Namensnennung 2.0
+    (license_id dl_de_by_2_0, Tier A; Datenquelle Stadt Magdeburg, Recherche
+    2026-06-30), Attribution "Datenquelle: Landeshauptstadt Magdeburg,
+    www.magdeburg.de". KEIN Archiv (reine Live-Daten, T-20-ARCHIVE).
     """
     settings = Settings()
     city = "magdeburg"
