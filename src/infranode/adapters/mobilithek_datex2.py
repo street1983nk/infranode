@@ -78,6 +78,14 @@ def _guard(xml_bytes: bytes) -> None:
     Body oder ein Body größer ``_MAX_BYTES`` wird mit ``ValueError`` abgelehnt,
     BEVOR der Parser ihn sieht (verhindert XXE / Billion-Laughs / DoS).
     """
+    # Leerer / reiner Whitespace-Body kann nie valides XML sein. Mobilithek liefert
+    # zeitweise einen leeren 200-Body (statt HTTP 422) -> ohne diesen Guard wirft
+    # iterparse eine ParseError ("no element found: line 1, column 0"), die KEINE
+    # ValueError ist und am ``except ValueError`` der Aufrufer vorbei den Breaker
+    # OPEN trippt (-> 503/Kuma rot). Als ValueError ablehnen = ehrliches no_data
+    # (Audit-Rerun-Followup 2026-06-30: magdeburg_parking).
+    if not xml_bytes or not xml_bytes.strip():
+        raise ValueError("Mobilithek-DATEX-II-Body leer (no_data, kein Parse)")
     # Size-Cap (T-20-XXE): zu große Bodies gar nicht erst parsen.
     if len(xml_bytes) > _MAX_BYTES:
         raise ValueError(
