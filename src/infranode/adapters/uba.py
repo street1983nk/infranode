@@ -65,11 +65,14 @@ _COMPONENTS: dict[str, int] = {"pm10": 1, "pm25": 9, "no2": 5, "o3": 3, "so2": 4
 # Stunden-Mittelwert-Scope (UBA scope-id 2). Adapter-lokal hartkodiert.
 _SCOPE = 2
 
-# Anzahl der nächsten Stationen, über die je Komponente eine Fallback-Kaskade
-# fährt (Audit K4). 5 deckt den typischen Fall ab, dass die nächste Station
-# eine Komponente (z.B. O3 an Verkehrsstationen) nicht misst, eine Nachbarstation
-# wenige km weiter aber schon. Höher = mehr Requests bei Lücken, daher gedeckelt.
-_FALLBACK_STATIONS = 5
+# Anzahl der nächsten AKTIVEN Stationen, über die je Komponente eine Fallback-
+# Kaskade fährt (Audit K4). Die Kaskade bricht je Komponente beim ersten Treffer
+# ab -> für Städte, deren nächste Station meldet, bleibt es bei 1 Request;
+# nur bei Lücken werden mehr Stationen probiert. 10 statt 5 (Audit-Rerun-Followup
+# 2026-06-30): in Frankfurt liefern die 8 nächsten aktiven Stationen zeitweise
+# GAR NICHTS, erst die 9.-nächste (669 "Friedberger Landstraße", ~1,7 km, also
+# weiterhin im Stadtgebiet) meldet -> mit Tiefe 5 kam /air dort leer/null zurück.
+_FALLBACK_STATIONS = 10
 
 
 def _deg_distance(alat: float, alon: float, blat: float, blon: float) -> float:

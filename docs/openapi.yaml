@@ -1289,6 +1289,18 @@ paths:
                               type: object
                           count:
                             type: integer
+                          license_id:
+                            type: string
+                            description: Lizenz des Datensatzes (CC0 = Tier A).
+                          license_tier:
+                            type: string
+                          attribution:
+                            type: object
+                            properties:
+                              text:
+                                type: string
+                              license_url:
+                                type: string
                       - type: "null"
                   meta:
                     $ref: "#/components/schemas/Meta"

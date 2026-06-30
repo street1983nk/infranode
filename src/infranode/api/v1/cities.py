@@ -167,6 +167,7 @@ from infranode.normalization.mappers.zensus_grid import map_population_density
 from infranode.registry import get_city, list_cities
 from infranode.registry.catalog import CITY_DATA_CATALOG
 from infranode.registry.coverage import PARTIAL_COVERAGE, covered_cities, is_covered
+from infranode.registry.source_specs import SOURCE_LICENSE
 
 router = APIRouter()
 
@@ -4289,6 +4290,12 @@ _TENDER_MATCH_ALLOWED = frozenset({"buyer_city", "place_of_performance"})
 _TENDER_LIMIT_DEFAULT = 50
 _TENDER_LIMIT_MAX = 200
 
+# Lizenz des Tender-Datensatzes (oeffentlichevergabe.de, CC0 = Tier A). Die Route
+# baut eine eigene Response (kein CanonicalRecord-Envelope), daher Lizenz +
+# Attribution explizit aus SOURCE_LICENSE durchreichen, damit der Datensatz NICHT
+# ohne Lizenzangabe ausgeliefert wird (Audit-Rerun-Followup 2026-06-30).
+_TENDER_LICENSE_URL = "https://creativecommons.org/publicdomain/zero/1.0/"
+
 
 def _tender_int_param(
     raw: str | None, *, name: str, default: int, minimum: int, maximum: int
@@ -4408,7 +4415,16 @@ async def city_public_tenders(slug: str, request: Request) -> dict:
         }
 
     return {
-        "data": {"notices": rows, "count": len(rows)},
+        "data": {
+            "notices": rows,
+            "count": len(rows),
+            "license_id": SOURCE_LICENSE["oeffentlichevergabe"]["license_id"],
+            "license_tier": "A",
+            "attribution": {
+                "text": SOURCE_LICENSE["oeffentlichevergabe"]["attribution"],
+                "license_url": _TENDER_LICENSE_URL,
+            },
+        },
         "meta": {
             "correlation_id": correlation_id.get(),
             "source_status": "ok",
