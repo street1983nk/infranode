@@ -1603,9 +1603,10 @@ async def city_hospitals_atlas(slug: str, request: Request) -> dict:
 async def city_station_facilities(slug: str, request: Request) -> dict:
     """Liefert Aufzug-/Rolltreppen-Status an Bahnhoefen einer Stadt (DB FaSta).
 
-    KEY-GATED: Die FaSta-API verlangt einen kostenlosen DB-API-Marketplace-
-    Schluessel. Ohne ``db_fasta_client_id``/``db_fasta_api_key`` (oder bei
-    ``enable_db_fasta=False``) liefert die Route 200 ``source_status=disabled``
+    KEY-GATED: Die FaSta-API laeuft ueber denselben DB-API-Marketplace wie
+    db_timetables/stada und nutzt die gemeinsamen ``db_client_id``/``db_api_key``
+    (gleiche "InfraNode"-Anwendung, kein eigener Key). Ohne diese Credentials (oder
+    bei ``enable_db_fasta=False``) liefert die Route 200 ``source_status=disabled``
     (nie 5xx). Echtzeit-Barrierefreiheit (ACTIVE/INACTIVE/UNKNOWN je Anlage),
     ORTSNAH gefiltert (Pitfall 4, ``distance_km`` je Anlage). Graceful Degradation:
     toter Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint (DX-06).
@@ -1613,8 +1614,9 @@ async def city_station_facilities(slug: str, request: Request) -> dict:
     entry = get_city(slug)
 
     settings = Settings()
-    client_id = settings.db_fasta_client_id
-    api_key = settings.db_fasta_api_key
+    # Gemeinsame DB-API-Marketplace-Credentials (wie db_timetables/stada).
+    client_id = settings.db_client_id
+    api_key = settings.db_api_key
     # KEY-GATED: ohne Toggle ODER ohne Credentials -> ehrlich disabled (kein 5xx).
     if not settings.enable_db_fasta or client_id is None or api_key is None:
         return {

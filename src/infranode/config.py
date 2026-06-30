@@ -193,15 +193,14 @@ class SourceToggleSettings(BaseSettings):
     )
     # DB FaSta Aufzug-/Rolltreppen-Status (DB API Marketplace, CC-BY 4.0, Tier A).
     # KEY-GATED: braucht einen kostenlosen Marketplace-Schluessel (Plan Free4All).
-    # Toggle Default True, aber ohne db_fasta_client_id/db_fasta_api_key liefert die
-    # Route source_status=disabled (Konvention keyed Live-Quellen). Host operator-
-    # konfigurierbar; Secrets in der Box-.env.
+    # KEYED ueber DENSELBEN DB-API-Marketplace wie db_timetables/stada: nutzt die
+    # gemeinsamen db_client_id/db_api_key (KEIN eigener Key, gleiche Anwendung
+    # "InfraNode"). Ohne diese Credentials liefert die Route source_status=disabled.
+    # Host operator-konfigurierbar.
     enable_db_fasta: bool = True
     db_fasta_base_url: str = (
         "https://apis.deutschebahn.com/db-api-marketplace/apis/fasta/v2/facilities"
     )
-    db_fasta_client_id: SecretStr | None = None
-    db_fasta_api_key: SecretStr | None = None
     # Phase 8: account-gated Quellen Default False (bis Credentials gesetzt sind);
     # keylose Bulk-/Seed-Quellen Default True (Toggle steuert nur die Route, nicht
     # den Offline-Ingest). enable_genesis = Demografie + Krankenhaus, enable_zensus
