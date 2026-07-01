@@ -1,6 +1,6 @@
 ---
 // MCP-Server-Seite (/mcp): erklärt kurz MCP für Devs, zeigt die Einrichtung
-// in Claude Code und Claude Desktop (CodeTabs) und listet die 70 Tools nach
+// in Claude Code und Claude Desktop (CodeTabs) und listet die 71 Tools nach
 // Thema gruppiert. Quelle der Einrichtungs-Snippets ist docs/mcp-install.md.
 import Docs from "../layouts/Docs.astro";
 import CodeTabs from "../components/CodeTabs.astro";
@@ -40,7 +40,7 @@ const mcpRemoteConfig = [
   `}`,
 ].join("\n");
 
-// Die 70 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
+// Die 71 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
 const toolGroups = [
   {
     title: "Stammdaten und Geo",
@@ -165,7 +165,7 @@ const faq = [
   },
   {
     q: "Welche Daten liefert der InfraNode-MCP-Server?",
-    a: "70 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Live-Parkbelegung, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Realsteuer-Hebesätze und Gewerbeanzeigen, Insolvenzen, Bike- und Scooter-Sharing, Radzählstellen, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, öffentliche Auftragsvergabe, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
+    a: "71 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Live-Parkbelegung, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Realsteuer-Hebesätze und Gewerbeanzeigen, Insolvenzen, Bike- und Scooter-Sharing, Radzählstellen, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, öffentliche Auftragsvergabe, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
   },
   {
     q: "Mein MCP-Client unterstützt nur lokale stdio-Server. Wie verbinde ich InfraNode?",
@@ -184,7 +184,7 @@ const faq = [
 
 <Docs
   title="Open-Data-MCP-Server Deutschland für KI-Agenten"
-  description="Open-Data-MCP-Server für deutsche Städte: 70 Tools für KI-Agenten wie Claude und ChatGPT, gehostet unter mcp.infranode.dev, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel, kostenlos."
+  description="Open-Data-MCP-Server für deutsche Städte: 71 Tools für KI-Agenten wie Claude und ChatGPT, gehostet unter mcp.infranode.dev, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel, kostenlos."
   current="mcp"
   lang="de"
   altLangPath="/en/mcp/"
@@ -193,14 +193,14 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP-Server"
-    description="Gehosteter MCP-Server mit 70 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
+    description="Gehosteter MCP-Server mit 71 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
   <h1>Open-Data-MCP-Server für deutsche Städte</h1>
   <p>
     Der InfraNode-MCP-Server ist ein kostenloser, gehosteter
-    Model-Context-Protocol-Server, der KI-Agenten über 70 Tools Zugriff auf
+    Model-Context-Protocol-Server, der KI-Agenten über 71 Tools Zugriff auf
     offene Daten von 84 deutschen Großstädten gibt, ohne API-Schlüssel. Er stellt
     die Stadtdaten als Werkzeuge bereit, die ein Agent direkt aufruft, ohne dass
     du HTTP-Aufrufe von Hand schreibst. Der Server ist im offiziellen
@@ -286,7 +286,7 @@ const faq = [
     labels={["Claude Code (Remote)", "Connector per URL", "Lokal (stdio)"]}
   />
   <p>
-    Nach dem Hinzufügen stehen die 65 InfraNode-Tools im Agenten zur Verfügung.
+    Nach dem Hinzufügen stehen die 71 InfraNode-Tools im Agenten zur Verfügung.
     Der Zugriff ist lesend und ohne Schlüssel.
   </p>
 
@@ -325,7 +325,7 @@ const faq = [
 
   <h2>Tool-Übersicht</h2>
   <p>
-    Der Server stellt insgesamt 70 Tools bereit. Die meisten erwarten einen
+    Der Server stellt insgesamt 71 Tools bereit. Die meisten erwarten einen
     Stadt-Slug (zum Beispiel <code>berlin</code> oder <code>hamburg</code>);
     <code>pois</code> verlangt zusätzlich den Pflichtparameter <code>type</code>
     (z.B. <code>hospital</code>, <code>school</code>, <code>pharmacy</code>),
