@@ -52,9 +52,14 @@ _KI_RE = re.compile(r"addLagePegel\((\d+)\)")
 # Register-Feld. Nur diese föderalen Pegelkennungen gelangen in den POST-Body
 # (nie User-Input). Ein unbekannter Slug -> leeres Tuple -> leere warnings
 # (ehrliche Teilabdeckung). [VERIFIED 2026-06-10] via POST get_lagepegel.php
-# (1724 Pegel, Spalten PGNR/PGNAME): max 1 Pegel je Register-Stadt, konservativ
-# nur eindeutige Treffer (PGNAME trägt den Stadtnamen). Städte ohne
-# eindeutigen Stadt-Pegel (z.B. Stuttgart, Bremen, Kiel) bleiben bewusst außen.
+# (1724 Pegel): max 1 Pegel je Register-Stadt, konservativ nur eindeutige
+# Treffer. [VERIFIED 2026-07-02] get_lagepegel.php liefert heute PGNR/LAT/LON
+# (kein PGNAME mehr) -> Zuordnung per Geo-Nächster-Pegel + Gegenprobe von
+# Pegelname/Gewässer via get_infospegel.php. Bremen ist so eindeutig geworden
+# (HB_4910050 Große Weserbrücke, 0,7 km vom Zentrum, Weser) und wurde ergänzt.
+# Stuttgart bleibt bewusst außen: nächster LHP-Pegel ist ~73 km entfernt
+# (Neu-Ulm/Donau), kein Neckar-Pegel im LHP-Datensatz. Kiel ebenso ohne
+# eindeutigen Stadt-Pegel.
 _CITY_PEGEL: dict[str, tuple[str, ...]] = {
     "berlin": ("BE_586290",),  # Berlin-Köpenick / Spree-Oder-Wasserstraße
     "hamburg": ("SH_5952050",),  # Hamburg St. Pauli / Elbe
@@ -70,6 +75,7 @@ _CITY_PEGEL: dict[str, tuple[str, ...]] = {
     "bonn": ("NW_2710080",),  # Bonn / Rhein
     "mainz": ("RP_25100100",),  # Mainz / Rhein
     "erfurt": ("TH_57421.0",),  # Erfurt-Möbisburg / Gera
+    "bremen": ("HB_4910050",),  # Bremen Große Weserbrücke / Weser
 }
 
 
