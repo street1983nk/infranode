@@ -96,14 +96,14 @@ export const mcpTopics: McpTopic[] = [
   },
   {
     id: "electricity-price",
-    tool: "power_price",
+    tool: "get_city_resource",
     de: {
       slug: "strompreis",
       dataSlug: "strompreis-api",
       metaTitle: "Strompreis-MCP-Server Deutschland (SMARD) für Claude",
       h1: "Strompreis-MCP-Server für Deutschland (SMARD)",
       lead: "Der bundesweite Day-Ahead-Börsenstrompreis (SMARD, Bundesnetzagentur) direkt in deinem KI-Assistenten, über das kostenlose, keylose MCP-Tool von InfraNode.",
-      what: "Das MCP-Tool power_price liefert den deutschlandweiten Day-Ahead-Börsenstrompreis als Tageswert. Frag deinen KI-Agenten nach dem Strompreis, und er ruft das Tool selbst auf, etwa um den günstigsten Ladezeitpunkt zu finden.",
+      what: "Die Datenart power-price (über das MCP-Tool get_city_resource) liefert den deutschlandweiten Day-Ahead-Börsenstrompreis als Tageswert. Frag deinen KI-Agenten nach dem Strompreis, und er ruft das Tool selbst auf, etwa um den günstigsten Ladezeitpunkt zu finden.",
       examplePrompt: "Wie hoch ist heute der Börsenstrompreis in Deutschland?",
       keywords: ["Strompreis MCP Server", "SMARD MCP Server", "Börsenstrompreis MCP", "MCP Server Strompreis", "Energie MCP Deutschland"],
       faq: [
@@ -117,7 +117,7 @@ export const mcpTopics: McpTopic[] = [
       metaTitle: "Germany Electricity Price MCP Server (SMARD) for Claude",
       h1: "Electricity price MCP server for Germany (SMARD)",
       lead: "The nationwide day-ahead spot electricity price (SMARD, Federal Network Agency) directly in your AI assistant, through InfraNode's free, keyless MCP tool.",
-      what: "The power_price MCP tool returns the Germany-wide day-ahead spot electricity price as a daily value. Ask your AI agent about the price and it calls the tool itself, for example to find the cheapest charging time.",
+      what: "The power-price data type (via the get_city_resource MCP tool) returns the Germany-wide day-ahead spot electricity price as a daily value. Ask your AI agent about the price and it calls the tool itself, for example to find the cheapest charging time.",
       examplePrompt: "What is today's spot electricity price in Germany?",
       keywords: ["electricity price MCP server", "SMARD MCP server", "spot price MCP", "Germany energy MCP", "power price MCP tool"],
       faq: [
@@ -128,14 +128,14 @@ export const mcpTopics: McpTopic[] = [
   },
   {
     id: "land-values",
-    tool: "land_values",
+    tool: "get_city_resource",
     de: {
       slug: "bodenrichtwerte",
       dataSlug: "bodenrichtwerte-api",
       metaTitle: "Bodenrichtwerte-MCP-Server Deutschland (BORIS) für KI",
       h1: "Bodenrichtwerte-MCP-Server für deutsche Städte (BORIS)",
       lead: "Amtliche Bodenrichtwerte (BORIS) je Stadt direkt in Claude oder ChatGPT, über das kostenlose, keylose MCP-Tool von InfraNode.",
-      what: "Das MCP-Tool land_values liefert eine Bauland-Kennzahl je Stadt: Median, Minimum und Maximum der Bodenrichtwerte in EUR pro Quadratmeter sowie den Stichtag. Der KI-Agent ruft es auf, wenn du nach Grundstückspreisen einer Stadt fragst.",
+      what: "Die Datenart land-values (über das MCP-Tool get_city_resource) liefert eine Bauland-Kennzahl je Stadt: Median, Minimum und Maximum der Bodenrichtwerte in EUR pro Quadratmeter sowie den Stichtag. Der KI-Agent ruft es auf, wenn du nach Grundstückspreisen einer Stadt fragst.",
       examplePrompt: "Was ist der Bodenrichtwert in Köln?",
       keywords: ["Bodenrichtwerte MCP Server", "BORIS MCP Server", "Grundstückspreise MCP", "MCP Server Immobilien Deutschland", "land values MCP"],
       faq: [
@@ -149,7 +149,7 @@ export const mcpTopics: McpTopic[] = [
       metaTitle: "Germany Land Values MCP Server (BORIS) for AI",
       h1: "Land values MCP server for German cities (BORIS)",
       lead: "Official standard land values (BORIS) per city directly in Claude or ChatGPT, through InfraNode's free, keyless MCP tool.",
-      what: "The land_values MCP tool returns a building-land metric per city: median, minimum and maximum standard land value in EUR per square meter plus the reference date. The AI agent calls it when you ask about a city's property prices.",
+      what: "The land-values data type (via the get_city_resource MCP tool) returns a building-land metric per city: median, minimum and maximum standard land value in EUR per square meter plus the reference date. The AI agent calls it when you ask about a city's property prices.",
       examplePrompt: "What is the standard land value in Cologne?",
       keywords: ["land values MCP server", "BORIS MCP server", "property prices MCP", "Germany real estate MCP", "land value MCP tool"],
       faq: [
@@ -160,14 +160,14 @@ export const mcpTopics: McpTopic[] = [
   },
   {
     id: "public-transport",
-    tool: "station_departures",
+    tool: "get_city_resource",
     de: {
       slug: "oepnv",
       dataSlug: "oepnv-echtzeit-api",
       metaTitle: "ÖPNV-MCP-Server Deutschland: Echtzeit-Abfahrten für KI",
       h1: "ÖPNV-MCP-Server für deutsche Städte",
       lead: "Echtzeit-Abfahrten an Haltestellen deutscher Großstädte direkt in deinem KI-Assistenten, über das kostenlose, keylose MCP-Tool von InfraNode (DELFI, GTFS, Verkehrsverbünde).",
-      what: "Das MCP-Tool station_departures liefert die nächsten Abfahrten an einer zentralen Haltestelle: Linie, Richtung, geplante und prognostizierte Abfahrtszeit, Verspätung. Der KI-Agent ruft es auf, wenn du nach Abfahrten in einer Stadt fragst.",
+      what: "Die Datenart station-departures (über das MCP-Tool get_city_resource) liefert die nächsten Abfahrten am Hauptbahnhof: Linie, Richtung, geplante und prognostizierte Abfahrtszeit, Verspätung. Der KI-Agent ruft es auf, wenn du nach Abfahrten in einer Stadt fragst.",
       examplePrompt: "Wann fahren die nächsten Bahnen in Hamburg?",
       keywords: ["ÖPNV MCP Server", "Abfahrten MCP", "GTFS MCP Server", "MCP Server ÖPNV Deutschland", "public transport MCP"],
       faq: [
@@ -181,7 +181,7 @@ export const mcpTopics: McpTopic[] = [
       metaTitle: "Germany Public Transport MCP Server: real-time departures",
       h1: "Public transport MCP server for German cities",
       lead: "Real-time departures at stops in major German cities directly in your AI assistant, through InfraNode's free, keyless MCP tool (DELFI, GTFS, transit associations).",
-      what: "The station_departures MCP tool returns the next departures at a central stop: line, direction, planned and predicted departure time and delay. The AI agent calls it when you ask about departures in a city.",
+      what: "The station-departures data type (via the get_city_resource MCP tool) returns the next departures at the main station: line, direction, planned and predicted departure time and delay. The AI agent calls it when you ask about departures in a city.",
       examplePrompt: "When do the next trains leave in Hamburg?",
       keywords: ["public transport MCP server", "departures MCP", "GTFS MCP server", "Germany transit MCP", "real-time transit MCP"],
       faq: [

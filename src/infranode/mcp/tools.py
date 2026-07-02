@@ -6,10 +6,19 @@ That keeps the function directly callable as a coroutine, independent of whether
 the decorator replaces the callable with a FunctionTool object.
 
 Every function is a thin wrapper: it calls ``client.get_resource`` with the
-fixed resource name and returns the normalized JSON 1:1. There is NO mapping or
+resource name and returns the normalized JSON 1:1. There is NO mapping or
 licensing logic here (that lives solely in the live API). The SSRF/injection
 gates (T-12-MCP-SSRF, T-12-MCP-INJECT) sit in ``client.get_resource`` and run
 before every request.
+
+TOOL SURFACE (Konsolidierung 2026-07-02): frueher trug jede Datenart ein
+eigenes Tool (71 Stueck, ~30k Tokens Tool-Liste, Cursor-80-Tool-Limit in
+Sichtweite). Jetzt gibt es wenige NAMENTLICHE Tools (Einstieg, Meta,
+parametrisierte Faehigkeiten, die zwei populaersten Datenarten) plus EIN
+generisches ``get_city_resource(slug, resource)`` fuer den gesamten Long-Tail.
+Die Discovery uebernimmt ``get_city_overview``/``infranode://catalog``: beide
+nennen je Datenart den ``resource``-Schluessel, und das ``resource``-Enum im
+inputSchema listet alle gueltigen Werte maschinenlesbar.
 
 SCHEMAS: parameters carry ``Annotated[str, Field(description=...)]`` so FastMCP
 emits a per-parameter ``description`` in the inputSchema, and every tool is
@@ -28,7 +37,7 @@ or failing source degrades gracefully instead of raising. City slugs come from
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -41,6 +50,26 @@ _Slug = Annotated[
     str,
     Field(
         description="City slug from the list_cities tool, e.g. 'berlin' or 'hamburg'."
+    ),
+]
+
+# Alle per get_city_resource abrufbaren Datenarten = die City-Allowlist OHNE
+# ``pois`` (braucht den Pflichtparameter ``type`` und hat deshalb ein eigenes
+# Tool). ``base``/``overview``/``weather``/``air-uba`` haben zwar ebenfalls
+# namentliche Tools, bleiben hier aber absichtlich drin: so gilt fuer JEDEN
+# Katalog-Schluessel ohne Ausnahme "get_city_resource(slug, <type>) liefert
+# ihn", und das Enum spiegelt den Katalog 1:1. Als Literal annotiert, damit
+# FastMCP ein ``enum`` im inputSchema emittiert (maschinenlesbare Discovery)
+# und Pydantic ungueltige Werte schon vor dem Request abweist.
+GENERIC_RESOURCES: tuple[str, ...] = tuple(sorted(client.ALLOWED_RESOURCES - {"pois"}))
+_ResourceKey = Annotated[
+    Literal[GENERIC_RESOURCES],
+    Field(
+        description=(
+            "Data type key to fetch, exactly as listed by get_city_overview / the "
+            "infranode://catalog resource (the 'type' field), e.g. 'charging', "
+            "'parking', 'demographics', 'solar', 'district-heating'."
+        )
     ),
 ]
 
@@ -59,34 +88,44 @@ async def get_city_overview(slug: _Slug) -> ToolEnvelope:
     """Get a ONE-CALL overview of everything InfraNode knows about a German city.
 
     Start here for any city question. Returns: the city's base data, a CATALOG of
-    all ~53 available data types (weather, air quality, public transit, trains,
+    all ~60 available data types (weather, air quality, public transit, trains,
     traffic, charging, parking, solar, energy, demographics, taxes, accidents,
     tourism, heritage, trees, population density, playgrounds, post boxes and many
-    more), each with its coverage status and the exact
-    tool to call next, plus a small live highlights snapshot (current weather, air
-    quality and train departures). Data types not yet covered for this city show
-    where they ARE available so you can pivot. InfraNode keeps adding data and cities,
-    so the catalog grows over time. Read-only.
+    more), each with its coverage status and the exact tool to call next (for most
+    data types that is ``get_city_resource(slug, resource=<type>)``), plus a small
+    live highlights snapshot (current weather, air quality and train departures).
+    Data types not yet covered for this city show where they ARE available so you
+    can pivot. InfraNode keeps adding data and cities, so the catalog grows over
+    time. Read-only.
     """
     return await client.get_resource(slug, "overview")
+
+
+async def get_city_resource(slug: _Slug, resource: _ResourceKey) -> ToolEnvelope:
+    """Fetch ANY per-city data type by its key (generic accessor, ~60 data types).
+
+    One tool for the whole breadth of InfraNode: live data (air, traffic, transit
+    stops, parking, charging, water-level, flood, sharing, fuel-prices, icu-live,
+    webcams, station-departures/-arrivals/stations, ...), statistics
+    (demographics, unemployment, tourism, accidents, crime-stats, indicators,
+    land-values, tax-rates, insolvencies, ...), infrastructure and environment
+    (solar, solar-roofs, district-heating, energy, heritage, tree-cadastre,
+    playgrounds, public-toilets, markets, education, ...) and more. Discover the
+    valid keys and per-city coverage with ``get_city_overview(slug)`` or the
+    ``infranode://catalog`` resource; the ``resource`` enum lists every key.
+    Uncovered types return ``source_status="not_covered"`` (plus where they ARE
+    available), never an error. Read-only.
+    """
+    return await client.get_resource(slug, resource)
 
 
 async def air_quality(slug: _Slug) -> ToolEnvelope:
     """Get official air quality for a German city (PM10, NO2 and more).
 
-    Sourced from the Umweltbundesamt (UBA). Read-only. For live station readings
-    use ``air_quality_live`` instead.
+    Sourced from the Umweltbundesamt (UBA). Read-only. For live nearest-station
+    hourly readings use ``get_city_resource(slug, resource='air')`` instead.
     """
     return await client.get_resource(slug, "air-uba")
-
-
-async def air_quality_live(slug: _Slug) -> ToolEnvelope:
-    """Get live air quality readings for a German city.
-
-    Sourced from the Umweltbundesamt (UBA), nearest-station hourly readings.
-    Read-only. For official, archived values use ``air_quality``.
-    """
-    return await client.get_resource(slug, "air")
 
 
 async def weather(slug: _Slug) -> ToolEnvelope:
@@ -94,9 +133,10 @@ async def weather(slug: _Slug) -> ToolEnvelope:
 
     Sourced from the Deutscher Wetterdienst (DWD): temperature, wind,
     precipitation and related fields. Read-only, current conditions only (not a
-    forecast). For warnings see ``weather_warnings``. For a broader question
-    about the city (not just weather) use ``get_city_overview`` instead, which
-    already includes a live weather highlight.
+    forecast). For warnings use ``get_city_resource(slug,
+    resource='weather-warnings')``. For a broader question about the city (not
+    just weather) use ``get_city_overview`` instead, which already includes a
+    live weather highlight.
     """
     return await client.get_resource(slug, "weather")
 
@@ -120,392 +160,13 @@ async def pois(
     return await client.get_resource(slug, "pois", params={"type": type})
 
 
-async def traffic(slug: _Slug) -> ToolEnvelope:
-    """Get motorway roadworks and live traffic messages (incl. congestion) for a city.
-
-    Sourced from the Autobahn API. Each traffic warning carries a ``congestion``
-    field (level stau/stockend/dicht, delay_minutes, blocked) and
-    ``payload.congestion_summary`` aggregates the jam situation per city.
-    Read-only. For inner-city closures use ``road_events``.
-    """
-    return await client.get_resource(slug, "traffic")
-
-
-async def transit(slug: _Slug) -> ToolEnvelope:
-    """Get public-transport stops for a German city (static).
-
-    Sourced from DELFI/GTFS (HVV in Hamburg). Read-only. For minute-fresh
-    departures with delays use ``transit_departures``. For a broader question
-    about the city (not just transit) use ``get_city_overview`` instead.
-    """
-    return await client.get_resource(slug, "transit")
-
-
-async def charging(slug: _Slug) -> ToolEnvelope:
-    """Get EV charging-station locations for a German city.
-
-    Sourced from the Bundesnetzagentur. Read-only.
-    """
-    return await client.get_resource(slug, "charging")
-
-
-async def water_level(slug: _Slug) -> ToolEnvelope:
-    """Get water levels on federal waterways near a German city.
-
-    Sourced from PEGELONLINE. Read-only. Coverage is partial (only cities on a
-    federal waterway return data).
-    """
-    return await client.get_resource(slug, "water-level")
-
-
-async def flood(slug: _Slug) -> ToolEnvelope:
-    """Get flood warning levels for a German city.
-
-    Sourced from the Länderhochwasserportal. Read-only. Coverage is partial.
-    """
-    return await client.get_resource(slug, "flood")
-
-
-async def pollen_uv(slug: _Slug) -> ToolEnvelope:
-    """Get pollen forecast and UV index for a city's wider region.
-
-    Sourced from the Deutscher Wetterdienst (DWD). Read-only.
-    """
-    return await client.get_resource(slug, "pollen-uv")
-
-
-async def fire_danger(slug: _Slug) -> ToolEnvelope:
-    """Get the forest-fire and grassland-fire danger index near a German city.
-
-    Sourced from the Deutscher Wetterdienst (DWD). Read-only. The index is
-    station-based, not city-exact: the response names the nearest DWD station and
-    its distance. Levels run 1 (very low) to 5 (very high).
-    """
-    return await client.get_resource(slug, "fire-danger")
-
-
-async def bathing_water(slug: _Slug) -> ToolEnvelope:
-    """Get bathing-water quality near a German city (EEA). Read-only.
-
-    Sourced from the European Environment Agency under the EU Bathing Water
-    Directive 2006/7/EC. Sites are nearby (lakes/coast in the surroundings), not
-    city-exact: each site carries its distance. Inland cities without nearby
-    bathing waters honestly return count 0.
-    """
-    return await client.get_resource(slug, "bathing-water")
-
-
-async def hospitals_atlas(slug: _Slug) -> ToolEnvelope:
-    """List hospital locations near a German city (Bundes-Klinik-Atlas). Read-only.
-
-    Sourced from the Bundes-Klinik-Atlas (BMG/IQTIG): per-location name, address,
-    bed count and contact. Disabled by default until the data licence is confirmed
-    (returns source_status="disabled"). Distinct from the `health` tool.
-    """
-    return await client.get_resource(slug, "hospitals-atlas")
-
-
-async def station_facilities(slug: _Slug) -> ToolEnvelope:
-    """Get elevator/escalator status at a city's railway stations (DB FaSta).
-
-    Read-only. Sourced from Deutsche Bahn / DB InfraGO via the DB FaSta API:
-    per-facility type (elevator/escalator), real-time state
-    (ACTIVE/INACTIVE/UNKNOWN) and reason. Requires a DB API key; without it the
-    source returns source_status="disabled".
-    """
-    return await client.get_resource(slug, "station-facilities")
-
-
-async def demographics(slug: _Slug) -> ToolEnvelope:
-    """Get demographic indicators for a German city.
-
-    Sourced from GENESIS/Regionalstatistik. Read-only.
-    """
-    return await client.get_resource(slug, "demographics")
-
-
-async def energy(slug: _Slug) -> ToolEnvelope:
-    """Get energy installation metrics for a German city.
-
-    Sourced from the Marktstammdatenregister (power-generation units). Read-only.
-    """
-    return await client.get_resource(slug, "energy")
-
-
-async def geo(slug: _Slug) -> ToolEnvelope:
-    """Get geodata and administrative boundaries for a German city. Read-only."""
-    return await client.get_resource(slug, "geo")
-
-
-async def election(slug: _Slug) -> ToolEnvelope:
-    """Get election results for a German city. Read-only."""
-    return await client.get_resource(slug, "election")
-
-
-async def holidays(slug: _Slug) -> ToolEnvelope:
-    """Get public holidays for a German city's federal state.
-
-    Read-only. Holidays are determined by the city's Bundesland.
-    """
-    return await client.get_resource(slug, "holidays")
-
-
-async def health(slug: _Slug) -> ToolEnvelope:
-    """Get the hospital directory for a German city.
-
-    Sourced from Regionalstatistik. Read-only.
-    """
-    return await client.get_resource(slug, "health")
-
-
-async def icu_live(slug: _Slug) -> ToolEnvelope:
-    """Get live ICU bed occupancy for a German city.
-
-    Sourced from DIVI (intensive-care register). Read-only, current snapshot.
-    """
-    return await client.get_resource(slug, "icu-live")
-
-
-async def road_events(slug: _Slug) -> ToolEnvelope:
-    """Get inner-city roadworks and closures for a German city.
-
-    Read-only. Coverage is partial (selected cities). For motorway traffic use
-    ``traffic``.
-    """
-    return await client.get_resource(slug, "road-events")
-
-
-async def events(slug: _Slug) -> ToolEnvelope:
-    """Get public events and happenings for a German city.
-
-    Read-only. Coverage is partial.
-    """
-    return await client.get_resource(slug, "events")
-
-
-async def webcams(slug: _Slug) -> ToolEnvelope:
-    """Get traffic webcams for a city's region.
-
-    Sourced from the Autobahn API. Read-only. Coverage is partial.
-    """
-    return await client.get_resource(slug, "webcams")
-
-
-async def power_load(slug: _Slug) -> ToolEnvelope:
-    """Get the daily grid load (electricity consumption) for a city's control zone.
-
-    Sourced from SMARD. Read-only, daily value.
-    """
-    return await client.get_resource(slug, "power-load")
-
-
-async def power_price(slug: _Slug) -> ToolEnvelope:
-    """Get the day-ahead wholesale electricity price (nationwide), daily.
-
-    Sourced from SMARD. Read-only. The price is nationwide; the slug only
-    anchors the request to a covered city.
-    """
-    return await client.get_resource(slug, "power-price")
-
-
-async def weather_warnings(slug: _Slug) -> ToolEnvelope:
-    """Get official weather warnings for a German city (highest active level).
-
-    Sourced from the Deutscher Wetterdienst (DWD). Read-only.
-    """
-    return await client.get_resource(slug, "weather-warnings")
-
-
-async def vehicle_registrations(slug: _Slug) -> ToolEnvelope:
-    """Get registered car stock and electric share for a city's registration district.
-
-    Sourced from the Kraftfahrt-Bundesamt (KBA). Read-only.
-    """
-    return await client.get_resource(slug, "vehicle-registrations")
-
-
-async def unemployment(slug: _Slug) -> ToolEnvelope:
-    """Get the number of unemployed and the unemployment rate for a city's district.
-
-    Sourced from Regionalstatistik. Read-only.
-    """
-    return await client.get_resource(slug, "unemployment")
-
-
-async def tourism(slug: _Slug) -> ToolEnvelope:
-    """Get guest overnight stays and arrivals for a city's district.
-
-    Sourced from Regionalstatistik. Read-only.
-    """
-    return await client.get_resource(slug, "tourism")
-
-
-async def construction(slug: _Slug) -> ToolEnvelope:
-    """Get building permits (residential buildings/dwellings) for a city's district.
-
-    Sourced from Regionalstatistik. Read-only.
-    """
-    return await client.get_resource(slug, "construction")
-
-
-async def accidents(slug: _Slug) -> ToolEnvelope:
-    """Get road-traffic accidents for a German city (yearly aggregate).
-
-    Sourced from the Unfallatlas. Read-only.
-    """
-    return await client.get_resource(slug, "accidents")
-
-
-async def crime_stats(slug: _Slug) -> ToolEnvelope:
-    """Get police crime statistics for a German city (per main offence group).
-
-    Sourced from the BKA Polizeiliche Kriminalstatistik (PKS): cases, frequency
-    per 100k inhabitants and clearance rate per main offence group. Read-only.
-    """
-    return await client.get_resource(slug, "crime-stats")
-
-
-async def fuel_prices(slug: _Slug) -> ToolEnvelope:
-    """Get current fuel prices for a German city, aggregated per fuel type.
-
-    Sourced from Tankerkönig. Returns average and minimum per fuel type
-    (E5/E10/diesel). Read-only, near-real-time.
-    """
-    return await client.get_resource(slug, "fuel-prices")
-
-
-async def sharing(slug: _Slug) -> ToolEnvelope:
-    """Get bike/scooter sharing availability for a German city, aggregated.
-
-    Sourced from GBFS feeds (primarily Nextbike). Returns vehicle and station
-    counts. Read-only, live. Coverage is partial.
-    """
-    return await client.get_resource(slug, "sharing")
-
-
-async def solar(slug: _Slug) -> ToolEnvelope:
-    """Get solar irradiation and normalized PV yield potential for a German city.
-
-    Sourced from PVGIS (European Commission JRC). Returns a multi-year
-    climatological average for the city centre, normalized to a 1 kWp system at the
-    optimal tilt: annual PV yield (kWh/kWp), annual global irradiation (kWh/m2), the
-    optimal tilt/azimuth and 12 monthly values. All 84 cities are covered.
-    Read-only.
-    """
-    return await client.get_resource(slug, "solar")
-
-
-async def solar_roofs(slug: _Slug) -> ToolEnvelope:
-    """Get rooftop solar cadastre potential and installed PV for a German city.
-
-    Sourced from the official state solar cadastre aggregates (NRW, Bavaria,
-    Berlin and Hamburg). Returns the total installable rooftop PV potential (kWp
-    and annual yield in MWh), the already installed rooftop PV, the exploitation
-    ratio and a per-building-category breakdown (scope varies by source).
-    Distinct from ``solar`` (PVGIS irradiation/yield per kWp). Coverage is partial
-    (federated per state). Read-only.
-    """
-    return await client.get_resource(slug, "solar-roofs")
-
-
-async def indicators(slug: _Slug) -> ToolEnvelope:
-    """Get socioeconomic indicators for a German city (district level, latest year).
-
-    Sourced from INKAR/BBSR (~70 curated indicators across labour market,
-    economy, income, demography, housing, mobility, health and more). Read-only.
-    """
-    return await client.get_resource(slug, "indicators")
-
-
-async def land_values(slug: _Slug) -> ToolEnvelope:
-    """Get aggregated official land values (Bodenrichtwerte) for a German city.
-
-    Sourced from BORIS (the surveyor committees' land-value information system),
-    federated per federal state. Returns a building-land summary
-    (residential/mixed/commercial, excluding forest/water/farmland): median, min
-    and max land value in EUR/m2, the number of zones, the valuation reference
-    date and the bounding-box radius the aggregate was computed over. Read-only.
-    Coverage is partial (per state); ``source_status`` is ``not_covered`` for
-    states without a BORIS WFS yet.
-    """
-    return await client.get_resource(slug, "land-values")
-
-
-async def tax_rates(slug: _Slug) -> ToolEnvelope:
-    """Get the local real-property tax multipliers (Hebesätze) for a German city.
-
-    Sourced from Regionalstatistik (German statistical offices, table 71231),
-    municipality-level: trade-tax multiplier (gewerbesteuer_hebesatz) and property
-    tax A/B/C (grundsteuer_a/b/c), all in percent, plus the reference date
-    (stichtag). An unset rate is null. Location/real-estate relevant. Read-only.
-    """
-    return await client.get_resource(slug, "tax-rates")
-
-
-async def business_registrations(slug: _Slug) -> ToolEnvelope:
-    """Get business registrations/deregistrations for a German city (district level).
-
-    Sourced from Regionalstatistik (German business notification statistics, table
-    52311, annual total), district-level: anmeldungen (registrations), abmeldungen
-    (deregistrations), saldo (net = registrations - deregistrations; positive = a
-    founding surplus) and the reporting year (jahr). A measure of founding
-    dynamics. Read-only.
-    """
-    return await client.get_resource(slug, "business-registrations")
-
-
-async def insolvencies(slug: _Slug) -> ToolEnvelope:
-    """Get insolvency filings for a German city (district level, annual).
-
-    Sourced from Regionalstatistik (German insolvency statistics, tables 52411-02
-    ISV006 + 52411-03 ISV007, annual total), district-level: unternehmensinsolvenzen
-    (corporate insolvencies) and uebrige_schuldner_insolvenzen (other debtors,
-    including consumers and former self-employed) plus the reporting year (jahr). A
-    measure of regional economic distress. Read-only.
-    """
-    return await client.get_resource(slug, "insolvencies")
-
-
-async def station_departures(slug: _Slug) -> ToolEnvelope:
-    """Get live train departures from a city's main station, all train categories.
-
-    Sourced from Deutsche Bahn Timetables, including delays and cancellations. All
-    84 cities are covered: the main station is auto-selected from the official
-    StaDa catalog. For a specific station use ``station_board_departures`` with its
-    EVA from ``stations``. Read-only.
-    """
-    return await client.get_resource(slug, "station-departures")
-
-
-async def station_arrivals(slug: _Slug) -> ToolEnvelope:
-    """Get live train arrivals at a city's main station, all train categories.
-
-    Sourced from Deutsche Bahn Timetables, including delays and cancellations. All
-    84 cities are covered: the main station is auto-selected from the official
-    StaDa catalog. For a specific station use ``station_board_arrivals`` with its
-    EVA from ``stations``. Read-only.
-    """
-    return await client.get_resource(slug, "station-arrivals")
-
-
-async def stations(slug: _Slug) -> ToolEnvelope:
-    """List all railway stations in a city (every station, not just the main hub).
-
-    Returns each Deutsche Bahn station in the city with its EVA number, name,
-    category, coordinates and ZIP. Use an EVA from here with
-    ``station_board_departures``/``station_board_arrivals`` for a live board of any
-    station, including local/regional trains. Sourced from DB StaDa. Read-only.
-    """
-    return await client.get_resource(slug, "stations")
-
-
 async def station_board_departures(
     eva: Annotated[
         str,
         Field(
             description=(
-                "Station EVA number (digits only) from the stations tool, "
-                "e.g. '8011160' (Berlin Hbf)."
+                "Station EVA number (digits only) from get_city_resource(slug, "
+                "resource='stations'), e.g. '8011160' (Berlin Hbf)."
             )
         ),
     ],
@@ -514,7 +175,7 @@ async def station_board_departures(
 
     Covers all train categories including local/regional (S/RB/RE) and long
     distance, with real-time delays, cancellations and disruption messages. Get
-    the EVA from ``stations``. Read-only.
+    the EVA from ``get_city_resource(slug, resource='stations')``. Read-only.
     """
     return await client.get_station_board(eva, "departures")
 
@@ -524,8 +185,8 @@ async def station_board_arrivals(
         str,
         Field(
             description=(
-                "Station EVA number (digits only) from the stations tool, "
-                "e.g. '8000105' (Frankfurt Hbf)."
+                "Station EVA number (digits only) from get_city_resource(slug, "
+                "resource='stations'), e.g. '8000105' (Frankfurt Hbf)."
             )
         ),
     ],
@@ -533,8 +194,8 @@ async def station_board_arrivals(
     """Get live arrivals for ANY railway station by its EVA number.
 
     Mirror of ``station_board_departures`` for arriving trains (all categories,
-    real-time delays, disruption messages). Get the EVA from ``stations``.
-    Read-only.
+    real-time delays, disruption messages). Get the EVA from
+    ``get_city_resource(slug, resource='stations')``. Read-only.
     """
     return await client.get_station_board(eva, "arrivals")
 
@@ -546,18 +207,20 @@ async def transit_departures(
         Field(
             description=(
                 "Required stop ID to fetch departures for. Discover a city's stop "
-                "IDs with the 'transit' tool first (each stop carries its id). "
-                "Format: DELFI 'de:<AGS>:<id>' or a numeric gtfs.de stop id."
+                "IDs with get_city_resource(slug, resource='transit') first (each "
+                "stop carries its id). Format: DELFI 'de:<AGS>:<id>' or a numeric "
+                "gtfs.de stop id."
             )
         ),
     ] = None,
 ) -> ToolEnvelope:
     """Get live public-transport departures with real-time delays for a stop.
 
-    Sourced from GTFS-RT/HVV/VGN. Unlike ``transit`` (static stops), this returns
-    minute-fresh departures including delay for ONE stop. A ``stop_id`` is
-    required: call the ``transit`` tool for this city to discover valid stop IDs,
-    then pass one here. Read-only.
+    Sourced from GTFS-RT/HVV/VGN. Unlike the static stop list
+    (``get_city_resource(slug, resource='transit')``), this returns minute-fresh
+    departures including delay for ONE stop. A ``stop_id`` is required: fetch the
+    city's transit stops first to discover valid stop IDs, then pass one here.
+    Read-only.
     """
     if not stop_id:
         # Ohne stop_id kann die Live-Quelle keine Abfahrten liefern. Statt eines
@@ -568,25 +231,14 @@ async def transit_departures(
                 "source_status": "no_data",
                 "note": (
                     "Provide a stop_id to get live departures. Discover valid stop "
-                    "IDs for this city with the 'transit' tool, then call again."
+                    "IDs for this city with get_city_resource(slug, "
+                    "resource='transit'), then call again."
                 ),
             },
         }
     return await client.get_live(
         slug, "transit/departures", params={"stop_id": stop_id}
     )
-
-
-async def parking(slug: _Slug) -> ToolEnvelope:
-    """Get parking data for a city (car parks, live occupancy where available).
-
-    Per car park: name, geo coordinate, capacity and, where the source is live,
-    vacant spaces and occupancy percentage. Sourced from ParkenDD (~22 cities,
-    live occupancy) with a static München fallback. Cities without a parking
-    source return source_status="not_covered" (plus the list of covered cities),
-    not an error. Read-only.
-    """
-    return await client.get_resource(slug, "parking")
 
 
 async def list_cities() -> ToolEnvelope:
@@ -636,149 +288,3 @@ async def compare(
     return await client.get_collection(
         "compare", params={"resource": resource, "cities": cities}
     )
-
-
-# DATA-OSM (Tier 1): dedizierte OSM-Overpass-Datenarten (ODbL, Tier B copyleft).
-# Dünne Wrapper wie oben; Tag-Whitelist + Overpass-QL liegen in der Live-API.
-async def playgrounds(slug: _Slug) -> ToolEnvelope:
-    """List public playgrounds in a city (OpenStreetMap). Read-only."""
-    return await client.get_resource(slug, "playgrounds")
-
-
-async def drinking_water(slug: _Slug) -> ToolEnvelope:
-    """List public drinking-water fountains in a city (OpenStreetMap). Read-only.
-
-    OSM coverage varies by city; a sparse result is a data gap, not an error.
-    """
-    return await client.get_resource(slug, "drinking-water")
-
-
-async def public_toilets(slug: _Slug) -> ToolEnvelope:
-    """List public toilets in a city (OpenStreetMap). Read-only.
-
-    Each item carries accessibility tags where tagged (wheelchair,
-    changing_table) plus fee/access/opening_hours/unisex. OSM coverage varies by
-    city; a sparse result is a data gap, not an error.
-    """
-    return await client.get_resource(slug, "public-toilets")
-
-
-async def markets(slug: _Slug) -> ToolEnvelope:
-    """List marketplaces in a city (OpenStreetMap). Read-only.
-
-    Market days/times come as optional opening_hours per item (often empty).
-    """
-    return await client.get_resource(slug, "markets")
-
-
-async def parcel_lockers(slug: _Slug) -> ToolEnvelope:
-    """List parcel lockers in a city (OpenStreetMap). Read-only.
-
-    operator/brand (DHL/Amazon/DPD/Hermes/GLS) per item where tagged.
-    """
-    return await client.get_resource(slug, "parcel-lockers")
-
-
-async def post_offices(slug: _Slug) -> ToolEnvelope:
-    """List post offices in a city (OpenStreetMap). Read-only."""
-    return await client.get_resource(slug, "post-offices")
-
-
-async def post_boxes(slug: _Slug) -> ToolEnvelope:
-    """List public post boxes in a city (OpenStreetMap). Read-only.
-
-    collection_times per item where tagged (~75%); missing = data gap.
-    """
-    return await client.get_resource(slug, "post-boxes")
-
-
-async def public_wifi(slug: _Slug) -> ToolEnvelope:
-    """List public Wi-Fi locations in a city (OpenStreetMap). Read-only."""
-    return await client.get_resource(slug, "public-wifi")
-
-
-async def recycling_centres(slug: _Slug) -> ToolEnvelope:
-    """List recycling centres (Wertstoffhöfe) in a city (OpenStreetMap). Read-only."""
-    return await client.get_resource(slug, "recycling-centres")
-
-
-async def government_offices(slug: _Slug) -> ToolEnvelope:
-    """List government offices in a city (OpenStreetMap). Read-only.
-
-    Consolidates citizen, administrative and other offices; subtype per item as
-    an optional government tag.
-    """
-    return await client.get_resource(slug, "government-offices")
-
-
-async def education(slug: _Slug) -> ToolEnvelope:
-    """List education facilities in a city (schools, universities, kindergartens).
-
-    Sourced from OpenStreetMap. Read-only.
-    """
-    return await client.get_resource(slug, "education")
-
-
-async def heritage(slug: _Slug) -> ToolEnvelope:
-    """List heritage/listed monuments in a city (state heritage registers).
-
-    Sourced from federal-state heritage WFS (e.g. Berlin, DL-DE/Zero). Coverage is
-    partial (heritage protection is a state matter); ``source_status`` is
-    ``not_covered`` for cities in states without a verified open WFS. Read-only.
-    """
-    return await client.get_resource(slug, "heritage")
-
-
-async def tree_cadastre(slug: _Slug) -> ToolEnvelope:
-    """List a city's street-tree cadastre (species, planting year, height).
-
-    Sourced from the municipal tree register WFS (e.g. Berlin, DL-DE/Zero). The
-    response is a capped sample (registers are very large; ``count`` is the number
-    of returned trees, not the full stock). Coverage is partial; ``source_status``
-    is ``not_covered`` for cities without a verified open WFS. Read-only.
-    """
-    return await client.get_resource(slug, "tree-cadastre")
-
-
-async def population_density(slug: _Slug) -> ToolEnvelope:
-    """Get a city's population density from the Census 2022 100m grid.
-
-    Aggregated exactly over the grid cells with the city's AGS (sum of inhabitants,
-    populated 100m cells, populated area, inhabitants per km2 over the populated
-    area). Sourced from the official Zensus 2022 grid (DL-DE/BY). Read-only.
-    """
-    return await client.get_resource(slug, "population-density")
-
-
-async def public_tenders(slug: _Slug) -> ToolEnvelope:
-    """Get public procurement notices for a German city.
-
-    Running tenders and awarded contracts, sourced from the German federal
-    procurement publication service (oeffentlichevergabe.de, OCDS, CC0).
-    Read-only.
-    """
-    return await client.get_resource(slug, "public-tenders")
-
-
-async def bike_counts(slug: _Slug) -> ToolEnvelope:
-    """Get municipal bike-counter (continuous cycling-count) stations for a city.
-
-    Permanent cycling-count stations operated by the city, sourced from municipal
-    cycling open data per city (DL-DE/CC-BY, varying by source). Read-only.
-    Coverage is partial (selected cities only). This is NOT bike sharing: for
-    rental bikes/scooters use the ``sharing`` tool instead.
-    """
-    return await client.get_resource(slug, "bike-counts")
-
-
-async def district_heating(slug: _Slug) -> ToolEnvelope:
-    """Get district-heating / heat-network supply for a city.
-
-    Aggregated from official municipal heat-planning geodata, federated per-city
-    WFS (Berlin: heat-network supply areas incl. 250 m buffer, DL-DE/Zero 2.0;
-    Hamburg: areas with a heat network, DL-DE/BY 2.0). Returns the network
-    operators, the number of supply/network areas and, depending on the source,
-    the supplied area (Berlin) or the house connections and trench length
-    (Hamburg). Read-only. Coverage is partial (selected cities only).
-    """
-    return await client.get_resource(slug, "district-heating")

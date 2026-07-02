@@ -16,7 +16,8 @@ departures), traffic, electricity price (SMARD), land values (BORIS), parking,
 charging, water levels, demographics, energy and more, for **84+ German cities**
 behind **one** interface. **No API key, no account.** Every response uses one
 canonical `{ data, meta }` envelope with per-record license and attribution. The
-same data is also exposed as an MCP server (71 read-only tools) for AI agents.
+same data is also exposed as an MCP server (12 lean read-only tools covering 64
+data types) for AI agents.
 Start with the one-call `get_city_overview`: it returns a catalog of every data
 type available for a city plus a live highlights snapshot, so agents discover the
 full breadth, not just weather. InfraNode is actively growing, with more data
@@ -31,7 +32,7 @@ Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
 flowchart LR
     SRC["German open-data sources<br/>DWD, UBA, SMARD, BORIS,<br/>Mobilithek, GovData, ..."] --> CORE["InfraNode<br/>normalize, license-gate, cache"]
     CORE --> API["REST API<br/>infranode.dev/api/v1"]
-    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 71 tools"]
+    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 12 tools / 64 data types"]
     API --> APPS["Your apps &amp; dashboards"]
     MCP --> AGENTS["AI agents (Claude &amp; co.)"]
 ```
@@ -78,17 +79,20 @@ in the browser without an API key.
 
 ## Data (84 cities, 98 endpoints)
 
-Every category below is both a REST endpoint under `/api/v1/cities/{slug}/...`
-and an MCP tool of the same name.
+Every category below is a REST endpoint under `/api/v1/cities/{slug}/<key>`.
+Over MCP the same data comes through 12 lean tools: a few named ones
+(`get_city_overview`, `weather`, `air_quality`, `pois`, `compare`, live boards)
+plus one generic `get_city_resource(slug, resource=<key>)` for every other data
+type (its `resource` enum lists all 64 keys).
 
-| Group | Endpoints / tools |
-|-------|-------------------|
-| **Discovery** | `list_cities`, `sources`, `compare` (one resource across many cities) |
-| **Weather & environment** | `weather`, `weather_warnings`, `air_quality`, `air_quality_live`, `pollen_uv`, `water_level`, `flood` |
-| **Mobility** | `transit`, `transit_departures`, `stations` (catalog), `station_board_departures`/`station_board_arrivals` (any station by EVA, incl. local trains + disruptions), `station_departures`, `station_arrivals`, `traffic`, `road_events`, `webcams`, `charging`, `parking` (live occupancy), `sharing`, `fuel_prices` |
-| **City & people** | `get_city`, `geo`, `demographics`, `indicators`, `unemployment`, `tourism`, `construction`, `accidents`, `health`, `icu_live`, `holidays`, `election`, `events`, `pois` |
-| **Economy & real estate** | `land_values`, `tax_rates` (trade/property tax multipliers per municipality), `business_registrations` (founding dynamics per district), `insolvencies` (insolvency filings per district: corporate and other debtors, annual), `public_tenders` (public procurement: running tenders and awarded contracts per city) |
-| **Energy & vehicles** | `power_load`, `power_price`, `energy`, `vehicle_registrations` |
+| Group | Data types (endpoint keys) |
+|-------|----------------------------|
+| **Discovery** | `list_cities`, `sources`, `compare` (one resource across many cities), `overview` (one-call catalog + live snapshot) |
+| **Weather & environment** | `weather`, `weather-warnings`, `air-uba` (official), `air` (live), `pollen-uv`, `water-level`, `flood`, `fire-danger`, `bathing-water` |
+| **Mobility** | `transit`, live stop departures (`transit_departures` tool), `stations` (catalog), station boards by EVA (`station_board_departures`/`station_board_arrivals` tools, incl. local trains + disruptions), `station-departures`, `station-arrivals`, `traffic`, `road-events`, `webcams`, `charging`, `parking` (live occupancy), `sharing`, `fuel-prices`, `bike-counts` |
+| **City & people** | `base`, `geo`, `demographics`, `indicators`, `unemployment`, `tourism`, `construction`, `accidents`, `crime-stats`, `health`, `icu-live`, `holidays`, `election`, `events`, `pois`, playgrounds/markets/toilets and more OSM types |
+| **Economy & real estate** | `land-values`, `tax-rates` (trade/property tax multipliers per municipality), `business-registrations` (founding dynamics per district), `insolvencies` (insolvency filings per district: corporate and other debtors, annual), `public-tenders` (public procurement: running tenders and awarded contracts per city) |
+| **Energy & vehicles** | `power-load`, `power-price`, `energy`, `solar`, `solar-roofs`, `district-heating`, `vehicle-registrations` |
 
 ## How it behaves
 

@@ -1,7 +1,8 @@
 ---
 // MCP-Server-Seite (/mcp): erklärt kurz MCP für Devs, zeigt die Einrichtung
-// in Claude Code und Claude Desktop (CodeTabs) und listet die 71 Tools nach
-// Thema gruppiert. Quelle der Einrichtungs-Snippets ist docs/mcp-install.md.
+// in Claude Code und Claude Desktop (CodeTabs) und listet die 12 Tools plus
+// die 64 Datenarten nach Thema gruppiert. Quelle der Einrichtungs-Snippets
+// ist docs/mcp-install.md.
 import Docs from "../layouts/Docs.astro";
 import CodeTabs from "../components/CodeTabs.astro";
 import JsonLd from "../components/JsonLd.astro";
@@ -40,85 +41,107 @@ const mcpRemoteConfig = [
   `}`,
 ].join("\n");
 
-// Die 71 Tools, thematisch gruppiert (Quelle docs/mcp-install.md).
-const toolGroups = [
+// Die 12 Tools des Servers (Quelle docs/mcp-install.md).
+const coreTools = [
+  ["get_city(slug)", "Stammdaten einer Stadt (Einwohner, Fläche, Koordinaten)"],
+  ["get_city_overview(slug)", "Ein-Aufruf-Überblick: Katalog aller 64 Datenarten mit Schlüssel und Abdeckungsstatus + Live-Highlights (Discovery-Einstieg)"],
+  ["get_city_resource(slug, resource)", "Generischer Zugriff auf alle 64 Datenarten per Datenarten-Schlüssel (siehe Liste unten)"],
+  ["air_quality(slug)", "Amtliche Luftqualität: PM10, PM2.5, NO2, O3, SO2 (UBA)"],
+  ["weather(slug)", "Aktuelle Wetterbeobachtungen (DWD, keine Vorhersage)"],
+  ["pois(slug, type)", "Points of Interest, gefiltert nach Typ (OpenStreetMap)"],
+  ["station_board_departures(eva)", "Live-Abfahrten jedes Bahnhofs per EVA-Nummer, alle Gattungen inkl. Nahverkehr + Störungen (DB Timetables)"],
+  ["station_board_arrivals(eva)", "Live-Ankünfte jedes Bahnhofs per EVA-Nummer, alle Gattungen inkl. Nahverkehr + Störungen (DB Timetables)"],
+  ["transit_departures(slug, stop_id?)", "ÖPNV-Echtzeit-Abfahrten mit Verspätung (GTFS-RT/HVV/VGN)"],
+  ["list_cities()", "Liste aller abgedeckten Städte (Slugs, Abdeckung)"],
+  ["sources()", "Alle Datenquellen mit Lizenz und Verfügbarkeit"],
+  ["compare(resource, cities)", "Eine Ressource (weather/air) über mehrere Städte vergleichen"],
+];
+
+// Die 64 Datenarten, thematisch gruppiert (Quelle docs/mcp-install.md).
+// Anzeige-Key = resource-Schlüssel für get_city_resource (kebab-case).
+// Datenarten mit eigenem Tool sind in der Beschreibung markiert.
+const dataTypeGroups = [
   {
     title: "Stammdaten und Geo",
-    tools: [
-      ["get_city", "Stammdaten einer Stadt"],
-      ["get_city_overview", "Ein-Aufruf-Überblick: Katalog aller Datenarten je Stadt mit Abdeckungsstatus + Live-Highlights (Discovery-Einstieg)"],
+    types: [
+      ["base", "Stammdaten einer Stadt. Eigenes Tool: get_city"],
+      ["overview", "Ein-Aufruf-Überblick: Katalog aller Datenarten je Stadt mit Abdeckungsstatus + Live-Highlights (Discovery-Einstieg). Eigenes Tool: get_city_overview"],
       ["geo", "Geodaten"],
       ["demographics", "Demografie"],
-      ["population_density", "Einwohnerdichte aus dem amtlichen Zensus-2022-100m-Gitter (Einwohner je km² über die bewohnte Fläche)"],
+      ["population-density", "Einwohnerdichte aus dem amtlichen Zensus-2022-100m-Gitter (Einwohner je km² über die bewohnte Fläche)"],
     ],
   },
   {
     title: "Umwelt und Wetter",
-    tools: [
-      ["air_quality", "Luftqualität"],
-      ["air_quality_live", "Luftqualität, Live-Messwerte"],
-      ["weather", "Wetter"],
-      ["weather_warnings", "Amtliche DWD-Wetterwarnungen (Unwetter, Warnstufe)"],
-      ["pollen_uv", "Pollen- und UV-Index"],
+    types: [
+      ["air-uba", "Amtliche Luftqualität. Eigenes Tool: air_quality"],
+      ["air", "Luftqualität, Live-Messwerte"],
+      ["weather", "Wetter. Eigenes Tool: weather"],
+      ["weather-warnings", "Amtliche DWD-Wetterwarnungen (Unwetter, Warnstufe)"],
+      ["pollen-uv", "Pollen- und UV-Index"],
+      ["fire-danger", "Waldbrand- und Graslandfeuer-Index (DWD)"],
     ],
   },
   {
     title: "Mobilität und Verkehr",
-    tools: [
+    types: [
       ["traffic", "Verkehrslage"],
       ["transit", "ÖPNV-Haltestellen"],
-      ["transit_departures", "ÖPNV-Echtzeit-Abfahrten mit Verspätung (Param stop_id)"],
       ["charging", "Ladesäulen"],
-      ["road_events", "Straßen- und Baustellenmeldungen"],
+      ["road-events", "Straßen- und Baustellenmeldungen"],
       ["parking", "Live-Parkbelegung je Stadt: freie Plätze und Auslastung (Dortmund, Frankfurt am Main, Wuppertal)"],
-      ["vehicle_registrations", "Pkw-Bestand und Elektroauto-Anteil (KBA)"],
+      ["vehicle-registrations", "Pkw-Bestand und Elektroauto-Anteil (KBA)"],
       ["accidents", "Verkehrsunfälle je Kreis (Unfallatlas)"],
-      ["crime_stats", "Kriminalstatistik je Hauptstraftatengruppe: Fälle, Häufigkeitszahl, Aufklärungsquote (BKA PKS)"],
-      ["fuel_prices", "Spritpreise je Stadt, aggregiert (Tankerkönig)"],
+      ["crime-stats", "Kriminalstatistik je Hauptstraftatengruppe: Fälle, Häufigkeitszahl, Aufklärungsquote (BKA PKS)"],
+      ["fuel-prices", "Spritpreise je Stadt, aggregiert (Tankerkönig)"],
       ["sharing", "Bike- und Scooter-Sharing je Stadt, aggregiert (GBFS/Nextbike)"],
-      ["bike_counts", "Radzählstellen je Stadt: kommunale Dauerzählstellen fuer den Radverkehr (kommunale Open Data, Teilabdeckung)"],
-      ["station_departures", "Live-Abfahrten am Haupt-Bahnhof jeder Stadt mit Verspätung (DB Timetables)"],
-      ["station_arrivals", "Live-Ankünfte am Haupt-Bahnhof jeder Stadt mit Verspätung (DB Timetables)"],
+      ["bike-counts", "Radzählstellen je Stadt: kommunale Dauerzählstellen für den Radverkehr (kommunale Open Data, Teilabdeckung)"],
+      ["station-departures", "Live-Abfahrten am Haupt-Bahnhof jeder Stadt mit Verspätung (DB Timetables)"],
+      ["station-arrivals", "Live-Ankünfte am Haupt-Bahnhof jeder Stadt mit Verspätung (DB Timetables)"],
       ["stations", "Katalog aller Bahnhöfe einer Stadt mit EVA-Nummer (DB StaDa)"],
-      ["station_board_departures", "Live-Abfahrten jedes Bahnhofs per EVA, alle Gattungen inkl. Nahverkehr + Störungen (DB Timetables)"],
-      ["station_board_arrivals", "Live-Ankünfte jedes Bahnhofs per EVA, alle Gattungen inkl. Nahverkehr + Störungen (DB Timetables)"],
+      ["station-facilities", "Bahnhofsausstattung: Aufzug- und Fahrtreppen-Status (DB FaSta, Teilabdeckung)"],
     ],
   },
   {
     title: "Wasser und Lage",
-    tools: [
-      ["water_level", "Pegelstände"],
+    types: [
+      ["water-level", "Pegelstände"],
       ["flood", "Hochwasserlage"],
+      ["bathing-water", "Badegewässerqualität im Umkreis (EEA)"],
     ],
   },
   {
     title: "Gesundheit und Energie",
-    tools: [
+    types: [
       ["health", "Gesundheitsdaten"],
-      ["icu_live", "Intensivbetten, Live"],
+      ["icu-live", "Intensivbetten, Live"],
+      ["hospitals-atlas", "Krankenhausstandorte aus dem Bundes-Klinik-Atlas"],
       ["energy", "Energieanlagen (Marktstammdatenregister)"],
-      ["power_load", "Stromverbrauch / Netzlast je Regelzone (SMARD)"],
-      ["power_price", "Börsenstrompreis Day-ahead (SMARD)"],
+      ["power-load", "Stromverbrauch / Netzlast je Regelzone (SMARD)"],
+      ["power-price", "Börsenstrompreis Day-ahead (SMARD)"],
+      ["solar", "Solar-Einstrahlung und normierter PV-Ertrag je kWp (PVGIS)"],
+      ["solar-roofs", "Dach-Solarkataster je Stadt: Solarpotenzial der Dächer (Teilabdeckung)"],
+      ["district-heating", "Fernwärme und Wärmenetze (kommunale Wärmeplanung, Teilabdeckung)"],
     ],
   },
   {
     title: "Wirtschaft und Statistik",
-    tools: [
+    types: [
       ["unemployment", "Arbeitslose und Arbeitslosenquote je Kreis"],
       ["tourism", "Gästeübernachtungen und Ankünfte (Tourismus)"],
       ["construction", "Baugenehmigungen (Wohngebäude und Wohnungen)"],
       ["indicators", "Sozialökonomische Indikatoren je Kreis (INKAR/BBSR, ~70 Kennzahlen)"],
-      ["land_values", "Amtliche Bodenrichtwerte je Stadt, aggregiert (BORIS, Bauland)"],
-      ["tax_rates", "Realsteuer-Hebesätze je Gemeinde: Gewerbe- und Grundsteuer A/B/C (Regionalstatistik)"],
-      ["business_registrations", "Gewerbean-/-abmeldungen und Saldo je Kreis (Regionalstatistik)"],
+      ["land-values", "Amtliche Bodenrichtwerte je Stadt, aggregiert (BORIS, Bauland)"],
+      ["tax-rates", "Realsteuer-Hebesätze je Gemeinde: Gewerbe- und Grundsteuer A/B/C (Regionalstatistik)"],
+      ["business-registrations", "Gewerbean-/-abmeldungen und Saldo je Kreis (Regionalstatistik)"],
       ["insolvencies", "Beantragte Insolvenzen je Kreis: Unternehmen und übrige Schuldner (inkl. Verbraucher), jährlich (Regionalstatistik)"],
-      ["public_tenders", "Öffentliche Auftragsvergabe je Stadt: laufende Ausschreibungen und vergebene Aufträge (Datenservice Öffentlicher Einkauf, OCDS/CC0)"],
+      ["public-tenders", "Öffentliche Auftragsvergabe je Stadt: laufende Ausschreibungen und vergebene Aufträge (Datenservice Öffentlicher Einkauf, OCDS/CC0)"],
     ],
   },
   {
     title: "Stadtleben und Politik",
-    tools: [
-      ["pois", "Points of Interest (Pflichtparameter type, z.B. hospital)"],
+    types: [
+      ["pois", "Points of Interest (Pflichtparameter type, z.B. hospital). Eigenes Tool: pois"],
       ["events", "Veranstaltungen"],
       ["webcams", "Webcams"],
       ["election", "Wahlergebnisse"],
@@ -128,26 +151,19 @@ const toolGroups = [
   },
   {
     title: "Stadtinfrastruktur (OpenStreetMap)",
-    tools: [
+    types: [
       ["playgrounds", "Öffentliche Spielplätze"],
-      ["drinking_water", "Öffentliche Trinkwasserbrunnen"],
+      ["drinking-water", "Öffentliche Trinkwasserbrunnen"],
+      ["public-toilets", "Öffentliche Toiletten"],
       ["markets", "Wochen- und Marktplätze (optional Markttage)"],
-      ["parcel_lockers", "Paketstationen/Locker (DHL, Amazon, DPD, Hermes, GLS)"],
-      ["post_offices", "Postfilialen"],
-      ["post_boxes", "Öffentliche Briefkästen mit Leerungszeiten"],
-      ["public_wifi", "Öffentliche WLAN-Standorte"],
-      ["recycling_centres", "Recycling-/Wertstoffhöfe"],
-      ["government_offices", "Behörden und Ämter (Bürgerämter, Verwaltung)"],
+      ["parcel-lockers", "Paketstationen/Locker (DHL, Amazon, DPD, Hermes, GLS)"],
+      ["post-offices", "Postfilialen"],
+      ["post-boxes", "Öffentliche Briefkästen mit Leerungszeiten"],
+      ["public-wifi", "Öffentliche WLAN-Standorte"],
+      ["recycling-centres", "Recycling-/Wertstoffhöfe"],
+      ["government-offices", "Behörden und Ämter (Bürgerämter, Verwaltung)"],
       ["education", "Bildungseinrichtungen (Schulen, Hochschulen, Kitas)"],
-      ["tree_cadastre", "Baumkataster je Stadt (Art, Pflanzjahr, Höhe; Berlin, DL-DE/Zero)"],
-    ],
-  },
-  {
-    title: "Übersicht und Meta",
-    tools: [
-      ["list_cities", "Liste aller abgedeckten Städte (Slugs, Abdeckung)"],
-      ["sources", "Alle Datenquellen mit Lizenz und Verfügbarkeit"],
-      ["compare", "Eine Ressource (weather/air) über mehrere Städte vergleichen"],
+      ["tree-cadastre", "Baumkataster je Stadt (Art, Pflanzjahr, Höhe; Berlin, DL-DE/Zero)"],
     ],
   },
 ];
@@ -165,7 +181,11 @@ const faq = [
   },
   {
     q: "Welche Daten liefert der InfraNode-MCP-Server?",
-    a: "71 Tools für offene Daten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Live-Parkbelegung, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Realsteuer-Hebesätze und Gewerbeanzeigen, Insolvenzen, Bike- und Scooter-Sharing, Radzählstellen, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, öffentliche Auftragsvergabe, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
+    a: "12 schlanke Tools für 64 Datenarten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Live-Parkbelegung, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Solar und Fernwärme, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Realsteuer-Hebesätze und Gewerbeanzeigen, Insolvenzen, Bike- und Scooter-Sharing, Radzählstellen, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, öffentliche Auftragsvergabe, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
+  },
+  {
+    q: "Warum hat der InfraNode-MCP-Server nur 12 Tools?",
+    a: "12 schlanke Tools decken 64 Datenarten ab: Der generische Zugriff get_city_resource(slug, resource) holt jede Datenart über ihren Schlüssel, get_city_overview liefert je Stadt alle Schlüssel mit Abdeckungsstatus. Das hält den Token-Footprint im Kontextfenster des Agenten minimal, bleibt weit unter den Tool-Limits gängiger Clients (z.B. 80 Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools dazukommen.",
   },
   {
     q: "Mein MCP-Client unterstützt nur lokale stdio-Server. Wie verbinde ich InfraNode?",
@@ -184,7 +204,7 @@ const faq = [
 
 <Docs
   title="Open-Data-MCP-Server Deutschland für KI-Agenten"
-  description="Open-Data-MCP-Server für deutsche Städte: 71 Tools für KI-Agenten wie Claude und ChatGPT, gehostet unter mcp.infranode.dev, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel, kostenlos."
+  description="Open-Data-MCP-Server für deutsche Städte: 12 schlanke Tools für 64 Datenarten, für KI-Agenten wie Claude und ChatGPT, gehostet unter mcp.infranode.dev, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel, kostenlos."
   current="mcp"
   lang="de"
   altLangPath="/en/mcp/"
@@ -193,17 +213,18 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP-Server"
-    description="Gehosteter MCP-Server mit 71 Tools für offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
+    description="Gehosteter MCP-Server mit 12 schlanken Tools für 64 Datenarten offener Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
   <h1>Open-Data-MCP-Server für deutsche Städte</h1>
   <p>
     Der InfraNode-MCP-Server ist ein kostenloser, gehosteter
-    Model-Context-Protocol-Server, der KI-Agenten über 71 Tools Zugriff auf
-    offene Daten von 84 deutschen Großstädten gibt, ohne API-Schlüssel. Er stellt
-    die Stadtdaten als Werkzeuge bereit, die ein Agent direkt aufruft, ohne dass
-    du HTTP-Aufrufe von Hand schreibst. Der Server ist im offiziellen
+    Model-Context-Protocol-Server, der KI-Agenten über 12 schlanke Tools Zugriff
+    auf 64 Datenarten offener Daten von 84 deutschen Großstädten gibt, ohne
+    API-Schlüssel. Er stellt die Stadtdaten als Werkzeuge bereit, die ein Agent
+    direkt aufruft, ohne dass du HTTP-Aufrufe von Hand schreibst. Der Server ist
+    im offiziellen
     <a href="https://registry.modelcontextprotocol.io">MCP Registry</a> unter dem
     Namen <code>dev.infranode/infranode</code> gelistet, mit Tool-Übersicht und
     Score auch bei <a href="https://glama.ai/mcp/servers/@street1983nk/infranode">Glama</a>.
@@ -257,9 +278,9 @@ const faq = [
   <pre class="codetabs__pre"><code>Baue mir ein Live-Dashboard für Köln</code></pre>
   <p>
     Der Agent ruft dafür <code>get_city_overview</code> plus ein paar gezielte
-    Live-Tools ab (Wetter, Luftqualität, Bahn-Abfahrten, Verkehrsereignisse) und
-    rendert daraus eigenständig eine vollständige Übersichtsseite, ganz ohne
-    dass InfraNode selbst ein UI vorgibt:
+    Live-Datenarten ab (Wetter, Luftqualität, Bahn-Abfahrten, Verkehrsereignisse
+    über <code>get_city_resource</code>) und rendert daraus eigenständig eine
+    vollständige Übersichtsseite, ganz ohne dass InfraNode selbst ein UI vorgibt:
   </p>
   <img
     src="/showcase/koeln-live-dashboard.png"
@@ -282,28 +303,81 @@ const faq = [
     für den lesenden Zugriff.
   </p>
 
-  <h2>Tool-Übersicht</h2>
+  <h2>Die 12 Tools</h2>
   <p>
-    Der Server stellt insgesamt 71 Tools bereit. Die meisten erwarten einen
-    Stadt-Slug (zum Beispiel <code>berlin</code> oder <code>hamburg</code>);
-    <code>pois</code> verlangt zusätzlich den Pflichtparameter <code>type</code>
-    (z.B. <code>hospital</code>, <code>school</code>, <code>pharmacy</code>),
+    Der Server stellt 12 schlanke Tools bereit, die zusammen 64 Datenarten
+    abdecken. Das hält den Token-Footprint im Kontextfenster des Agenten
+    minimal, bleibt weit unter den Tool-Limits gängiger MCP-Clients (z.B. 80
+    Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools
+    dazukommen.
+  </p>
+  <p>
+    <strong>Warum von 71 auf 12 Tools? (Umstellung Juli 2026):</strong> Bis
+    Juni 2026 trug jede Datenart ein eigenes Tool, insgesamt 71. Die Tool-Liste
+    kostete damit rund 30.000 Tokens im Kontextfenster jedes verbundenen
+    Agenten, bei jedem einzelnen Verbinden, und wäre mit jeder neuen Datenart
+    weiter gewachsen. Seit Juli 2026 bündelt <code>get_city_resource</code> den
+    gesamten Long-Tail: gleiche Daten, gleiche Antworten, aber nur noch rund
+    4.400 Tokens für die komplette Tool-Liste (85 Prozent weniger) und
+    dauerhaft Luft unter allen Client-Tool-Limits. Für bestehende Nutzer: wer
+    vorher ein Einzel-Tool wie <code>charging</code> oder <code>parking</code>
+    aufgerufen hat, nutzt jetzt
+    <code>get_city_resource(slug, resource="charging")</code>; der Schlüssel
+    ist der bisherige Tool-Name in Kebab-Schreibweise (etwa
+    <code>water_level</code> zu <code>water-level</code>). Die REST-API ist von
+    der Umstellung unberührt.
+  </p>
+  <table class="params">
+    <thead>
+      <tr>
+        <th>Tool</th>
+        <th>Beschreibung</th>
+      </tr>
+    </thead>
+    <tbody>
+      {coreTools.map(([name, desc]) => (
+        <tr>
+          <td>
+            <code>{name}</code>
+          </td>
+          <td>{desc}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <p>
+    Die meisten Tools erwarten einen Stadt-Slug (zum Beispiel
+    <code>berlin</code> oder <code>hamburg</code>); <code>pois</code> verlangt
+    zusätzlich den Pflichtparameter <code>type</code> (z.B.
+    <code>hospital</code>, <code>school</code>, <code>pharmacy</code>),
     <code>transit_departures</code> akzeptiert optional eine <code>stop_id</code>.
     <code>list_cities</code> und <code>sources</code> brauchen kein Argument.
   </p>
+
+  <h2>Die 64 Datenarten</h2>
+  <p>
+    Alle Datenarten ohne eigenes Tool holt der Agent über
+    <code>get_city_resource</code>, mit dem Datenarten-Schlüssel als
+    <code>resource</code>-Argument. Beispiel:
+    <code>get_city_resource(slug="berlin", resource="charging")</code> liefert
+    die Ladesäulen in Berlin. Welche Schlüssel eine Stadt abdeckt, zeigt
+    <code>get_city_overview(slug)</code> (je Datenart Schlüssel plus
+    Abdeckungsstatus); die Resource <code>infranode://catalog</code> listet alle
+    Datenarten.
+  </p>
   {
-    toolGroups.map((group) => (
+    dataTypeGroups.map((group) => (
       <>
         <h3>{group.title}</h3>
         <table class="params">
           <thead>
             <tr>
-              <th>Tool</th>
+              <th>Datenart</th>
               <th>Beschreibung</th>
             </tr>
           </thead>
           <tbody>
-            {group.tools.map(([name, desc]) => (
+            {group.types.map(([name, desc]) => (
               <tr>
                 <td>
                   <code>{name}</code>
@@ -320,10 +394,10 @@ const faq = [
   <h2>Beispiel-Aufruf</h2>
   <p>
     Ein Agent holt den Ein-Aufruf-Überblick für Berlin: Stammdaten, den
-    Katalog aller ~53 Datenarten mit Abdeckungsstatus und eine Live-Highlights-
-    Momentaufnahme. Guter Einstiegspunkt für jede Städtefrage, statt gezielt
-    ein einzelnes Tool zu raten. Das Ergebnis ist das normalisierte JSON der
-    Live-API, unverändert weitergereicht.
+    Katalog aller 64 Datenarten mit Schlüssel und Abdeckungsstatus und eine
+    Live-Highlights-Momentaufnahme. Guter Einstiegspunkt für jede Städtefrage,
+    statt gezielt eine einzelne Datenart zu raten. Das Ergebnis ist das
+    normalisierte JSON der Live-API, unverändert weitergereicht.
   </p>
   <pre class="codetabs__pre"><code>get_city_overview(slug="berlin")</code></pre>
 
@@ -353,7 +427,7 @@ const faq = [
     labels={["Claude Code (Remote)", "Connector per URL", "Lokal (stdio)"]}
   />
   <p>
-    Nach dem Hinzufügen stehen die 71 InfraNode-Tools im Agenten zur Verfügung.
+    Nach dem Hinzufügen stehen die 12 InfraNode-Tools im Agenten zur Verfügung.
     Der Zugriff ist lesend und ohne Schlüssel.
   </p>
 

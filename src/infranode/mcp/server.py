@@ -1,6 +1,8 @@
 """FastMCP-Server-Instanz des InfraNode-MCP-Servers (DX-05).
 
-Der Server registriert je Stadtdaten-Ressource ein Tool. Die eigentliche
+Der Server registriert wenige namentliche Tools (Einstieg/Meta/parametrisiert)
+plus ein generisches ``get_city_resource`` fuer alle uebrigen Datenarten
+(Konsolidierung 2026-07-02, s. Kommentar am Registrierungsblock). Die eigentliche
 Tool-Logik liegt als freistehende async-Funktion in ``infranode.mcp.tools``
 (Blocker-4-Aufrufvertrag): ``@mcp.tool()`` wird hier nur dünn über diese
 Funktionen gelegt, sodass sie direkt als Coroutine testbar bleiben und der
@@ -39,15 +41,18 @@ from infranode.registry.catalog import CITY_DATA_CATALOG
 # 2026-07-01) und ist fuer JEDEN Client bei JEDEM Connect sichtbar, nicht nur fuer
 # Claude Code mit eigenem Memory.
 _INSTRUCTIONS = (
-    "InfraNode is a keyless, read-only open-data API for 84 German cities, exposed "
-    "as {tool_count} MCP tools (count is live from this server, not a cached or "
-    "remembered number). To answer ANY city question, START with "
-    "get_city_overview(slug): it returns the city's base data, a catalog of ALL "
-    "available data types (each "
-    "with its coverage status and the exact tool to call next) and a small live "
-    "snapshot (weather, air, train departures). Find valid city slugs with "
-    "list_cities (or the infranode://cities resource); browse every data type with "
-    "the infranode://catalog resource; see sources and licenses with sources. "
+    "InfraNode is a keyless, read-only open-data API for 84 German cities with "
+    "~60 data types, exposed as {tool_count} MCP tools (count is live from this "
+    "server, not a cached or remembered number). To answer ANY city question, "
+    "START with get_city_overview(slug): it returns the city's base data, a "
+    "catalog of ALL available data types (each with its coverage status and the "
+    "exact tool to call next) and a small live snapshot (weather, air, train "
+    "departures). Most data types are fetched with ONE generic tool: "
+    "get_city_resource(slug, resource=<type>), where <type> is the catalog key "
+    "(e.g. 'parking', 'charging', 'demographics', 'solar'); its resource enum "
+    "lists every valid key. Find valid city slugs with list_cities (or the "
+    "infranode://cities resource); browse every data type with the "
+    "infranode://catalog resource; see sources and licenses with sources. "
     "Compare one metric across many cities in one call with compare. Every tool "
     "returns a canonical {data, meta} envelope; meta.source_status tells you whether "
     "a source delivered data (ok / no_data / not_covered / disabled / error), so a "
@@ -89,75 +94,16 @@ def _annotations(*, open_world: bool) -> ToolAnnotations:
 _TOOL_TITLES: dict[str, str] = {
     "get_city": "City Base Data",
     "get_city_overview": "City Overview",
+    "get_city_resource": "City Data by Type",
     "air_quality": "Air Quality",
-    "air_quality_live": "Air Quality (Live)",
     "weather": "Weather",
     "pois": "Points of Interest",
-    "traffic": "Traffic",
-    "transit": "Public Transit",
-    "charging": "EV Charging Stations",
-    "water_level": "Water Levels",
-    "flood": "Flood Warnings",
-    "pollen_uv": "Pollen & UV Index",
-    "fire_danger": "Wildfire Danger",
-    "bathing_water": "Bathing Water Quality",
-    "hospitals_atlas": "Hospitals",
-    "station_facilities": "Station Facilities",
-    "demographics": "Demographics",
-    "energy": "Energy",
-    "geo": "Geocoding",
-    "election": "Election Results",
-    "holidays": "Public Holidays",
-    "health": "Health Indicators",
-    "icu_live": "ICU Beds (Live)",
-    "road_events": "Road Events",
-    "events": "Events",
-    "webcams": "Webcams",
-    "power_load": "Power Load",
-    "power_price": "Electricity Price",
-    "weather_warnings": "Weather Warnings",
-    "vehicle_registrations": "Vehicle Registrations",
-    "unemployment": "Unemployment",
-    "tourism": "Tourism",
-    "construction": "Construction Sites",
-    "accidents": "Traffic Accidents",
-    "crime_stats": "Crime Statistics",
-    "fuel_prices": "Fuel Prices",
-    "sharing": "Shared Mobility",
-    "solar": "Solar Potential",
-    "solar_roofs": "Rooftop Solar Cadastre",
-    "indicators": "Regional Indicators",
-    "land_values": "Land Values",
-    "tax_rates": "Municipal Tax Rates",
-    "business_registrations": "Business Registrations",
-    "insolvencies": "Insolvencies",
-    "station_departures": "Train Departures",
-    "station_arrivals": "Train Arrivals",
-    "stations": "Train Stations",
     "station_board_departures": "Station Board: Departures",
     "station_board_arrivals": "Station Board: Arrivals",
     "transit_departures": "Transit Departures",
-    "parking": "Parking",
     "list_cities": "List Cities",
     "sources": "Data Sources",
     "compare": "Compare Cities",
-    "playgrounds": "Playgrounds",
-    "drinking_water": "Drinking Water Fountains",
-    "public_toilets": "Public Toilets",
-    "markets": "Weekly Markets",
-    "parcel_lockers": "Parcel Lockers",
-    "post_offices": "Post Offices",
-    "post_boxes": "Post Boxes",
-    "public_wifi": "Public Wi-Fi",
-    "recycling_centres": "Recycling Centres",
-    "government_offices": "Government Offices",
-    "education": "Schools & Education",
-    "heritage": "Heritage Monuments",
-    "tree_cadastre": "Tree Cadastre",
-    "population_density": "Population Density",
-    "public_tenders": "Public Tenders",
-    "bike_counts": "Bicycle Counts",
-    "district_heating": "District Heating",
 }
 
 
@@ -209,114 +155,38 @@ def _register(fn, *, open_world: bool = True) -> None:
     _registered_tool_names.append(fn.__name__)
 
 
+# TOOL-KONSOLIDIERUNG 2026-07-02: frueher 1 Tool pro Datenart (71 Tools, ~30k
+# Tokens Tool-Liste, Cursor-80-Tool-Limit in Sichtweite). Jetzt: wenige
+# namentliche Tools (Einstieg/Meta/parametrisiert/populaer) + EIN generisches
+# get_city_resource fuer den gesamten Long-Tail. Die Datenarten-Discovery
+# uebernimmt get_city_overview + infranode://catalog (je Datenart der
+# resource-Schluessel) + das resource-Enum im inputSchema des generischen Tools.
 _register(tools.get_city)
 # Owner 2026-06-24: Ein-Aufruf-Überblick (Basis + Katalog aller Datenarten +
 # Live-Highlights). Discovery-Einstieg, damit Agenten die ganze Breite je Stadt
 # sehen (nicht nur Wetter). Zieht Live-Highlights -> open_world=True.
 _register(tools.get_city_overview)
+# Generischer Long-Tail-Zugriff: JEDE Katalog-Datenart per resource-Schluessel
+# (Enum aus client.ALLOWED_RESOURCES ohne pois). Live-Quellen dahinter ->
+# open_world=True.
+_register(tools.get_city_resource)
+# Die zwei populaersten Datenarten behalten eigene Tools (Discoverability in
+# der Werkzeugauswahl); alles Weitere laeuft ueber get_city_resource.
 _register(tools.air_quality)
-_register(tools.air_quality_live)
 _register(tools.weather)
+# Parametrisierte Faehigkeiten (echte Eigenlogik, kein reiner Slug-Wrapper):
 _register(tools.pois)
-_register(tools.traffic)
-_register(tools.transit)
-_register(tools.charging)
-_register(tools.water_level)
-_register(tools.flood)
-_register(tools.pollen_uv)
-_register(tools.fire_danger)
-_register(tools.bathing_water)
-_register(tools.hospitals_atlas)
-_register(tools.station_facilities)
-_register(tools.demographics)
-_register(tools.energy)
-_register(tools.geo)
-_register(tools.election)
-_register(tools.holidays)
-_register(tools.health)
-_register(tools.icu_live)
-_register(tools.road_events)
-_register(tools.events)
-_register(tools.webcams)
-# SMARD/DWD (früher ergänzte Endpunkte, jetzt als MCP-Tools nachgezogen).
-_register(tools.power_load)
-_register(tools.power_price)
-_register(tools.weather_warnings)
-# DATA-27/28/29: KBA Pkw-Bestand + GENESIS-Trio + Unfallatlas (Tier A).
-_register(tools.vehicle_registrations)
-_register(tools.unemployment)
-_register(tools.tourism)
-_register(tools.construction)
-_register(tools.accidents)
-# PKS-01: BKA Polizeiliche Kriminalstatistik (Tier A, Kreis-Jahreswerte).
-_register(tools.crime_stats)
-# DATA-30: Tankerkönig Spritpreise (Tier A, aggregiert je Stadt).
-_register(tools.fuel_prices)
-# DATA-33: GBFS-Bike-/Scooter-Sharing (Tier A, aggregiert je Stadt).
-_register(tools.sharing)
-# DATA-38: PVGIS-Solar-Einstrahlung + normierter PV-Ertrag je Stadt (Tier A, alle 84).
-_register(tools.solar)
-# DATA-39: Dach-Solarkataster je Stadt (NRW-Pilot, Tier A, Teilabdeckung).
-_register(tools.solar_roofs)
-# DATA-32: INKAR/BBSR sozialökonomische Indikatoren je Kreis (Tier A).
-_register(tools.indicators)
-# DATA-35: BORIS amtliche Bodenrichtwerte je Stadt (Tier A, aggregiert, Bauland).
-_register(tools.land_values)
-# DATA-37: Regionalstatistik.de Realsteuer-Hebesätze (Gemeinde) + Gewerbean-/
-# -abmeldungen (Kreis), Tier A.
-_register(tools.tax_rates)
-_register(tools.business_registrations)
-# DATA-37: Regionalstatistik.de beantragte Insolvenzen je Kreis (52411-02
-# Unternehmen + 52411-03 übrige Schuldner), Tier A.
-_register(tools.insolvencies)
-# DATA-34: DB-Timetables Bahnhof-Abfahrten + -Ankünfte Metropolen-Hbf (Tier A).
-_register(tools.station_departures)
-_register(tools.station_arrivals)
-# DATA-36: StaDa Bahnhofs-Katalog je Stadt + Per-Bahnhof-Live-Boards (jede EVA,
-# alle Gattungen inkl. Nahverkehr, Stoerungen/Meldungen). Tier A.
-_register(tools.stations)
+# DATA-36: Per-Bahnhof-Live-Boards (jede EVA, alle Gattungen inkl. Nahverkehr).
 _register(tools.station_board_departures)
 _register(tools.station_board_arrivals)
-# DATA-26: Live-/Meta-Tools (echte neue Fähigkeiten, nicht slug-redundant):
-# Echtzeit-Abfahrten, Städte-Liste, Quellen-Übersicht. list_cities/sources
-# beschreiben die eigene Abdeckung -> geschlossene Domäne (open_world=False).
+# DATA-26: Echtzeit-Abfahrten je Haltestelle (stop_id aus resource='transit').
 _register(tools.transit_departures)
-# Frankfurt am Main Live-Parkbelegung (Mobilithek DATEX II V3, stadt-fix; weitere
-# Park-Städte folgen über dieselbe parking-Route -> Tool läuft automatisch mit).
-_register(tools.parking)
+# Meta-Tools: beschreiben die eigene Abdeckung -> geschlossene Domäne
+# (open_world=False).
 _register(tools.list_cities, open_world=False)
 _register(tools.sources, open_world=False)
 # API-05/D-06: Multi-City-Compare einer Ressource (weather/air) in einer Antwort.
 _register(tools.compare)
-# DATA-OSM (Tier 1): dedizierte OSM-Overpass-Datenarten (ODbL, Tier B).
-_register(tools.playgrounds)
-_register(tools.drinking_water)
-_register(tools.public_toilets)
-_register(tools.markets)
-_register(tools.parcel_lockers)
-_register(tools.post_offices)
-_register(tools.post_boxes)
-_register(tools.public_wifi)
-_register(tools.recycling_centres)
-_register(tools.government_offices)
-_register(tools.education)
-# DATA-OSM-Tier-2: Denkmallisten je Bundesland (Land-WFS, coverage-gated).
-_register(tools.heritage)
-# DATA-OSM-Tier-2: Baumkataster je Stadt (kommunaler WFS, coverage-gated).
-_register(tools.tree_cadastre)
-# DATA-OSM-Tier-2: Einwohnerdichte (Zensus-2022-100m-Gitter, alle Städte).
-_register(tools.population_density)
-# TENDER-05/06: Öffentliche Auftragsvergabe je Stadt (oeffentlichevergabe.de,
-# OCDS, CC0/Tier A). Zieht Live-/Store-Daten von der API -> open_world=True.
-_register(tools.public_tenders)
-# DATA-40: Kommunale Radzählstellen je Stadt (Dauerzählstellen, Tier A,
-# Teilabdeckung). Zieht Zähldaten von externen kommunalen Quellen -> open_world=True.
-# NICHT das sharing-Tool (GBFS-Leihfahrzeuge).
-_register(tools.bike_counts)
-# DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt (kommunale Wärmeplanung,
-# föderiert je Stadt-WFS, Tier A, Teilabdeckung berlin/hamburg). Read-only aus dem
-# Batch-Store -> open_world=False (kuratierte Abdeckung).
-_register(tools.district_heating)
 
 # Live-Tool-Zahl in die Instructions nachtragen: FastMCPs ``instructions`` ist
 # eine Property ohne Setter (nur ueber den Konstruktor gesetzt), daher ueber das
@@ -326,6 +196,69 @@ _register(tools.district_heating)
 mcp._mcp_server.instructions = _INSTRUCTIONS.replace(
     "{tool_count}", str(len(_registered_tool_names))
 )
+
+
+# Schema-Diaet (Token-Footprint 2026-07-02): Die Tool-Liste kostete ~30k Tokens,
+# davon ~55% ein 71x BYTE-IDENTISCH wiederholtes outputSchema (ToolEnvelope) samt
+# deutschem ToolMeta-Docstring und 9 Pydantic-Auto-``title``-Feldern pro Tool.
+# Dieser Pass entfernt NACH der Registrierung in-place:
+# - alle Auto-``title`` aus input- UND outputSchema (der Property-Key sagt schon
+#   alles; der ANZEIGE-Titel des Tools ist ein eigenes MCPTool-Feld und bleibt,
+#   Anthropic-Directory-Anforderung unberuehrt),
+# - ``description`` NUR im outputSchema (Klassen-Docstrings von ToolEnvelope/
+#   ToolMeta; die Parameter-Descriptions im inputSchema sind wertvoll fuer die
+#   Tool-Auswahl und BLEIBEN, test_every_tool_has_output_schema_and_param_
+#   descriptions sichert das).
+# Gemessen: ~-27% der gesamten Tool-Listen-Tokens. Die Laufzeit-Validierung
+# (fn_metadata.output_model) haengt nicht am Schema-Dict und bleibt unberuehrt.
+def _slim_schema(node: object, *, strip_descriptions: bool = False) -> None:
+    """Entfernt rekursiv Auto-``title`` (und optional ``description``) in-place.
+
+    Rekursion NUR in Schema-Positionen (properties-WERTE, items, $defs, anyOf,
+    ...): ein Datenfeld, das selbst "title" heisst, bleibt als Property-Key
+    erhalten, nur das Schema-Schluesselwort wird entfernt.
+    """
+    if not isinstance(node, dict):
+        return
+    node.pop("title", None)
+    if strip_descriptions:
+        node.pop("description", None)
+    for key in ("properties", "$defs", "definitions", "patternProperties"):
+        sub = node.get(key)
+        if isinstance(sub, dict):
+            for child in sub.values():
+                _slim_schema(child, strip_descriptions=strip_descriptions)
+    for key in (
+        "items",
+        "prefixItems",
+        "additionalProperties",
+        "anyOf",
+        "oneOf",
+        "allOf",
+        "not",
+    ):
+        sub = node.get(key)
+        if isinstance(sub, dict):
+            _slim_schema(sub, strip_descriptions=strip_descriptions)
+        elif isinstance(sub, list):
+            for child in sub:
+                _slim_schema(child, strip_descriptions=strip_descriptions)
+
+
+def _slim_all_tool_schemas() -> None:
+    """Wendet die Schema-Diaet auf alle registrierten Tools an (einmal, in-place).
+
+    ``tool.parameters`` (inputSchema) und ``fn_metadata.output_schema`` sind
+    plain dicts, die FastMCPs list_tools per Referenz ausliefert; das Slimming
+    hier wirkt damit fuer jeden Client und jede Listung.
+    """
+    for tool in mcp._tool_manager._tools.values():
+        _slim_schema(tool.parameters)
+        if tool.fn_metadata.output_schema is not None:
+            _slim_schema(tool.fn_metadata.output_schema, strip_descriptions=True)
+
+
+_slim_all_tool_schemas()
 
 
 # MCP Resources: expose the coverage catalog as browsable resources, so clients
@@ -362,7 +295,8 @@ async def catalog_resource() -> dict:
         ],
         "note": (
             "InfraNode keeps adding more data types and cities. Start with "
-            "get_city_overview(slug) for a live, per-city view."
+            "get_city_overview(slug) for a live, per-city view. Where 'tool' is "
+            "get_city_resource, pass the 'type' value as its resource argument."
         ),
     }
 
@@ -406,8 +340,8 @@ def commute_check(slug: str) -> str:
     return (
         f"Check the live commute situation in the German city '{slug}': pull "
         "real-time public-transport departures (transit_departures) and any "
-        "motorway roadworks/traffic, then tell me whether there are notable "
-        "delays right now."
+        "motorway roadworks/traffic (get_city_resource with resource='traffic'), "
+        "then tell me whether there are notable delays right now."
     )
 
 

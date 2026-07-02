@@ -209,3 +209,25 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "District heating networks",
     ),
 )
+
+# MCP-TOOL-KONSOLIDIERUNG 2026-07-02: Der Long-Tail läuft über EIN generisches
+# Tool ``get_city_resource(slug, resource=<key>)``; nur wenige Datenarten
+# behalten ein namentliches Tool. Statt alle Einträge oben umzuschreiben (und
+# jeden künftigen Eintrag daran zu erinnern), wird die Tool-Zuordnung hier
+# ABGELEITET: die historischen ``tool``-Werte in den Literalen oben sind damit
+# nur noch Dokumentation; maßgeblich ist diese Ableitung. Neue Datenarten
+# zeigen automatisch auf get_city_resource. Der Overview-/Katalog-Konsument
+# übergibt bei get_city_resource den ``type``-Schlüssel als resource-Argument
+# (Hinweis steht in der infranode://catalog-Note und den Server-Instructions).
+_NAMED_TOOLS: dict[str, str] = {
+    "base": "get_city",
+    "overview": "get_city_overview",
+    "weather": "weather",
+    "air-uba": "air_quality",
+    "pois": "pois",
+}
+
+CITY_DATA_CATALOG = tuple(
+    dt._replace(tool=_NAMED_TOOLS.get(dt.key, "get_city_resource"))
+    for dt in CITY_DATA_CATALOG
+)

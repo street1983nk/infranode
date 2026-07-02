@@ -15,7 +15,11 @@ dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
 deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie, öffentliche
-Auftragsvergabe und mehr) als 71 MCP-Tools.
+Auftragsvergabe und mehr) über 12 schlanke MCP-Tools, die zusammen 64
+Datenarten abdecken. Das hält den Token-Footprint im Kontextfenster des
+Agenten minimal, bleibt weit unter den Tool-Limits gängiger Clients (z.B. 80
+Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools
+dazukommen.
 
 ## Berechtigungen und Sicherheitsmodell
 
@@ -126,55 +130,18 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-71 Tools. Stadtbezogene Tools erwarten einen `slug` (z.B. `berlin`, `hamburg`);
-gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
+12 Tools, die zusammen 64 Datenarten abdecken. Stadtbezogene Tools erwarten
+einen `slug` (z.B. `berlin`, `hamburg`); gültige Slugs liefert `list_cities`.
+Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
 | --- | --- | --- | --- |
 | `get_city` | `slug` | Base data for a German city (population, area, coordinates) | Wikidata |
-| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all data types with coverage status and the matching tool, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
+| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all 64 data types with coverage status and the matching resource key, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
+| `get_city_resource` | `slug`, `resource` | Generic accessor: fetch ANY of the 64 data types by its resource key (kebab-case enum, see list below) | je Datenart |
 | `air_quality` | `slug` | Official air quality (PM10, PM2.5, NO2, O3, SO2) | UBA |
-| `air_quality_live` | `slug` | Live air quality readings (live-only, no history) | UBA |
 | `weather` | `slug` | Current weather observations (not a forecast) | DWD |
 | `pois` | `slug`, `type` | Points of interest, filtered by type | OpenStreetMap |
-| `traffic` | `slug` | Motorway roadworks and traffic messages (region) | Autobahn |
-| `transit` | `slug` | Public-transport stops (static) | DELFI/GTFS, HVV |
-| `charging` | `slug` | EV charging-station locations | Bundesnetzagentur |
-| `parking` | `slug` | Live parking occupancy: vacant spaces and occupancy (Dortmund, Frankfurt am Main, Wuppertal) | Stadt/Mobilithek |
-| `water_level` | `slug` | Water levels on federal waterways (partial coverage) | PEGELONLINE |
-| `flood` | `slug` | Flood warning levels (partial coverage) | Länderhochwasserportal |
-| `pollen_uv` | `slug` | Pollen forecast and UV index (region) | DWD |
-| `demographics` | `slug` | Demographic indicators | GENESIS/Regionalstatistik |
-| `energy` | `slug` | Energy installation metrics (power-generation units) | Marktstammdatenregister |
-| `geo` | `slug` | Geodata and administrative boundaries | diverse |
-| `election` | `slug` | Election results | diverse |
-| `holidays` | `slug` | Public holidays for the city's federal state | Bundesland-Kalender |
-| `health` | `slug` | Hospital directory | Regionalstatistik |
-| `icu_live` | `slug` | Live ICU bed occupancy (current snapshot) | DIVI |
-| `road_events` | `slug` | Inner-city roadworks and closures (partial coverage) | kommunal |
-| `events` | `slug` | Public events and happenings (partial coverage) | kommunal |
-| `webcams` | `slug` | Traffic webcams (region, partial coverage) | Autobahn |
-| `power_load` | `slug` | Daily grid load of the control zone | SMARD |
-| `power_price` | `slug` | Day-ahead wholesale electricity price (nationwide) | SMARD |
-| `weather_warnings` | `slug` | Official weather warnings (highest active level) | DWD |
-| `vehicle_registrations` | `slug` | Registered car stock and electric share | KBA |
-| `unemployment` | `slug` | Number of unemployed and unemployment rate (district) | Regionalstatistik |
-| `tourism` | `slug` | Guest overnight stays and arrivals (district) | Regionalstatistik |
-| `construction` | `slug` | Building permits (district) | Regionalstatistik |
-| `accidents` | `slug` | Road-traffic accidents (district, yearly) | Unfallatlas |
-| `crime_stats` | `slug` | Police crime statistics per main offence group: cases, frequency per 100k, clearance rate (district, yearly) | BKA Polizeiliche Kriminalstatistik (PKS) |
-| `fuel_prices` | `slug` | Current fuel prices, aggregated per fuel type | Tankerkönig |
-| `sharing` | `slug` | Bike/scooter sharing availability, aggregated (partial) | GBFS |
-| `bike_counts` | `slug` | Bike counter / continuous cycling-count stations per city (partial coverage) | municipal cycling open data (DL-DE/CC-BY) |
-| `indicators` | `slug` | Socioeconomic indicators (district, latest year) | INKAR/BBSR |
-| `land_values` | `slug` | Official land values, aggregated (building land, partial coverage) | BORIS |
-| `tax_rates` | `slug` | Local tax multipliers per municipality: trade tax, property tax A/B/C | Regionalstatistik |
-| `business_registrations` | `slug` | Business registrations/deregistrations and net per district | Regionalstatistik |
-| `insolvencies` | `slug` | Insolvency filings per district: corporate and other debtors (incl. consumers), annual | Regionalstatistik |
-| `public_tenders` | `slug` | Public procurement: running tenders and awarded contracts per city (running + awarded, coverage growing) | oeffentlichevergabe.de (OCDS) |
-| `station_departures` | `slug` | Live long-distance train departures (metro hubs) | DB Timetables |
-| `station_arrivals` | `slug` | Live long-distance train arrivals (metro hubs) | DB Timetables |
-| `stations` | `slug` | Catalog of all DB stations in a city (with EVA numbers) | DB StaDa |
 | `station_board_departures` | `eva` | Live departures of any station by EVA (all categories, incl. local trains + disruptions) | DB Timetables |
 | `station_board_arrivals` | `eva` | Live arrivals of any station by EVA (all categories, incl. local trains + disruptions) | DB Timetables |
 | `transit_departures` | `slug`, `stop_id?` | Live public-transport departures with real-time delays | GTFS-RT/HVV/VGN |
@@ -185,6 +152,88 @@ gültige Slugs liefert `list_cities`. Ausnahmen sind unten markiert.
 Das `pois`-Tool nimmt zusätzlich `type` aus der API-Whitelist (z.B. `hospital`,
 `school`, `pharmacy`, `restaurant`, `police`, `kindergarten`).
 `transit_departures` nimmt optional eine `stop_id`.
+
+### Datenarten: der `resource`-Parameter von `get_city_resource`
+
+Alle Datenarten ohne eigenes Tool holt der Agent über
+`get_city_resource(slug, resource="<schlüssel>")`. Beispiel:
+`get_city_resource(slug="berlin", resource="charging")` liefert die Ladesäulen
+in Berlin. Der `resource`-Parameter ist ein Enum mit 64 Schlüsseln
+(kebab-case). Welche Schlüssel eine Stadt abdeckt, zeigt
+`get_city_overview(slug)` (je Datenart Schlüssel plus Abdeckungsstatus); die
+Resource `infranode://catalog` listet alle Datenarten. Einige Datenarten haben
+ein eigenes Tool (unten markiert), sind aber teilweise auch über den
+generischen Zugriff erreichbar.
+
+| Datenart | Beschreibung |
+| --- | --- |
+| `base` | Stammdaten einer Stadt. Eigenes Tool: `get_city` |
+| `overview` | Ein-Aufruf-Überblick mit Katalog und Live-Highlights. Eigenes Tool: `get_city_overview` |
+| `geo` | Geodaten und Verwaltungsgrenzen |
+| `demographics` | Demografische Indikatoren |
+| `population-density` | Einwohnerdichte aus dem Zensus-2022-100m-Gitter |
+| `air-uba` | Amtliche Luftqualität (UBA). Eigenes Tool: `air_quality` |
+| `air` | Luftqualität, Live-Messwerte (ohne Historie) |
+| `weather` | Aktuelle Wetterbeobachtungen (DWD). Eigenes Tool: `weather` |
+| `weather-warnings` | Amtliche Wetterwarnungen (höchste aktive Stufe) |
+| `pollen-uv` | Pollenflug und UV-Index (Region) |
+| `fire-danger` | Waldbrand- und Graslandfeuer-Index (DWD) |
+| `traffic` | Autobahn-Baustellen und Verkehrsmeldungen (Region) |
+| `transit` | ÖPNV-Haltestellen (statisch) |
+| `charging` | Ladesäulen-Standorte (Bundesnetzagentur) |
+| `road-events` | Innerstädtische Baustellen und Sperrungen (Teilabdeckung) |
+| `parking` | Live-Parkbelegung (Dortmund, Frankfurt am Main, Wuppertal) |
+| `vehicle-registrations` | Pkw-Bestand und Elektroauto-Anteil (KBA) |
+| `accidents` | Verkehrsunfälle je Kreis, jährlich (Unfallatlas) |
+| `crime-stats` | Kriminalstatistik je Hauptstraftatengruppe (BKA PKS) |
+| `fuel-prices` | Aktuelle Spritpreise, aggregiert je Sorte (Tankerkönig) |
+| `sharing` | Bike-/Scooter-Sharing, aggregiert (GBFS, Teilabdeckung) |
+| `bike-counts` | Radzählstellen je Stadt (kommunale Open Data, Teilabdeckung) |
+| `station-departures` | Live-Fernverkehrs-Abfahrten am Haupt-Bahnhof (DB Timetables) |
+| `station-arrivals` | Live-Fernverkehrs-Ankünfte am Haupt-Bahnhof (DB Timetables) |
+| `stations` | Katalog aller DB-Bahnhöfe einer Stadt mit EVA-Nummern (DB StaDa) |
+| `station-facilities` | Bahnhofsausstattung: Aufzug-/Fahrtreppen-Status (DB FaSta, Teilabdeckung) |
+| `water-level` | Pegelstände an Bundeswasserstraßen (PEGELONLINE, Teilabdeckung) |
+| `flood` | Hochwasser-Warnstufen (Länderhochwasserportal, Teilabdeckung) |
+| `bathing-water` | Badegewässerqualität im Umkreis (EEA) |
+| `health` | Krankenhausverzeichnis (Regionalstatistik) |
+| `icu-live` | Intensivbetten-Belegung, Live (DIVI) |
+| `hospitals-atlas` | Krankenhausstandorte aus dem Bundes-Klinik-Atlas |
+| `energy` | Energieanlagen (Marktstammdatenregister) |
+| `power-load` | Tägliche Netzlast der Regelzone (SMARD) |
+| `power-price` | Börsenstrompreis Day-ahead (SMARD) |
+| `solar` | Solar-Einstrahlung und normierter PV-Ertrag je kWp (PVGIS) |
+| `solar-roofs` | Dach-Solarkataster je Stadt (Teilabdeckung) |
+| `district-heating` | Fernwärme und Wärmenetze (kommunale Wärmeplanung, Teilabdeckung) |
+| `unemployment` | Arbeitslose und Arbeitslosenquote je Kreis (Regionalstatistik) |
+| `tourism` | Gästeübernachtungen und Ankünfte je Kreis (Regionalstatistik) |
+| `construction` | Baugenehmigungen je Kreis (Regionalstatistik) |
+| `indicators` | Sozialökonomische Indikatoren je Kreis (INKAR/BBSR) |
+| `land-values` | Amtliche Bodenrichtwerte, aggregiert (BORIS, Teilabdeckung) |
+| `tax-rates` | Realsteuer-Hebesätze je Gemeinde (Regionalstatistik) |
+| `business-registrations` | Gewerbean-/-abmeldungen und Saldo je Kreis (Regionalstatistik) |
+| `insolvencies` | Beantragte Insolvenzen je Kreis, jährlich (Regionalstatistik) |
+| `public-tenders` | Öffentliche Auftragsvergabe: laufende und vergebene Aufträge (OCDS) |
+| `events` | Veranstaltungen (Teilabdeckung, kommunal) |
+| `webcams` | Verkehrs-Webcams (Region, Teilabdeckung, Autobahn) |
+| `election` | Wahlergebnisse |
+| `holidays` | Feiertage des Bundeslands |
+| `heritage` | Denkmäler/Baudenkmale aus der Landes-Denkmalliste (Berlin) |
+| `playgrounds` | Öffentliche Spielplätze (OpenStreetMap) |
+| `drinking-water` | Öffentliche Trinkwasserbrunnen (OpenStreetMap) |
+| `public-toilets` | Öffentliche Toiletten (OpenStreetMap) |
+| `markets` | Wochen- und Marktplätze (OpenStreetMap) |
+| `parcel-lockers` | Paketstationen/Locker (OpenStreetMap) |
+| `post-offices` | Postfilialen (OpenStreetMap) |
+| `post-boxes` | Öffentliche Briefkästen mit Leerungszeiten (OpenStreetMap) |
+| `public-wifi` | Öffentliche WLAN-Standorte (OpenStreetMap) |
+| `recycling-centres` | Recycling-/Wertstoffhöfe (OpenStreetMap) |
+| `government-offices` | Behörden und Ämter (OpenStreetMap) |
+| `education` | Bildungseinrichtungen (OpenStreetMap) |
+| `tree-cadastre` | Baumkataster je Stadt (Berlin) |
+
+Points of Interest laufen ausschließlich über das eigene Tool `pois`
+(Pflichtparameter `type`), da der generische Zugriff keinen Typ-Filter kennt.
 
 ## Beispiel-Argumente und echte Ausgaben
 
@@ -204,7 +253,7 @@ city question instead of guessing a single tool:
     "catalog": [
       { "resource": "weather", "tool": "weather", "covered": true },
       { "resource": "air-uba", "tool": "air_quality", "covered": true },
-      { "resource": "solar-roofs", "tool": "solar_roofs", "covered": true }
+      { "resource": "solar-roofs", "tool": "get_city_resource", "covered": true }
     ],
     "highlights": {
       "weather": { "temperature_c": 19.4, "condition": "dry" },
@@ -260,7 +309,8 @@ city question instead of guessing a single tool:
 }
 ```
 
-`public_tenders(slug="koeln")`:
+`get_city_resource(slug="koeln", resource="public-tenders")`, der generische
+Zugriff für jede Datenart ohne eigenes Tool:
 
 ```json
 {
@@ -294,8 +344,8 @@ Nutzer: Was gibt es an offenen Daten zu Köln?
 Agent -> Tool: get_city_overview(slug="koeln")
 Tool  -> Agent: { "data": { "base": { "population": 1073096, ... },
                   "catalog": [ { "resource": "weather", "tool": "weather", "covered": true },
-                               { "resource": "public-tenders", "tool": "public_tenders", "covered": true },
-                               ... ~53 weitere Datenarten ... ] },
+                               { "resource": "public-tenders", "tool": "get_city_resource", "covered": true },
+                               ... 62 weitere Datenarten ... ] },
                   "meta": { "source_status": "ok" } }
 
 Agent: Zu Köln gibt es u.a. Wetter, Luftqualität, ÖPNV, Verkehr, öffentliche

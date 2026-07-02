@@ -20,8 +20,10 @@ Sicherheit:
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
+import weakref
 from urllib.parse import quote, urlsplit
 
 import httpx
@@ -413,11 +415,37 @@ async def _request(
     url = f"{base}{path}"
     headers = {_MCP_SOURCE_HEADER: tag}
 
-    async with httpx.AsyncClient(timeout=_TIMEOUT_SECONDS) as client:
-        response = await client.get(url, params=params, headers=headers)
-        # Bei 4xx/5xx den strukturierten API-Fehler-Envelope als lesbare
-        # UpstreamError durchreichen, statt einen rohen Traceback an den Agenten
-        # zu geben (das Modell sieht so message + hint und kann sich korrigieren).
-        if response.is_error:
-            raise _build_upstream_error(response)
-        return response.json()
+    response = await _get_client().get(url, params=params, headers=headers)
+    # Bei 4xx/5xx den strukturierten API-Fehler-Envelope als lesbare
+    # UpstreamError durchreichen, statt einen rohen Traceback an den Agenten
+    # zu geben (das Modell sieht so message + hint und kann sich korrigieren).
+    if response.is_error:
+        raise _build_upstream_error(response)
+    return response.json()
+
+
+# Wiederverwendeter AsyncClient je Event-Loop (Latenz-Haertung 2026-07-02):
+# vorher oeffnete JEDER Tool-Call einen frischen ``httpx.AsyncClient`` und damit
+# eine neue TCP-Verbindung zur API; ueber eine Agenten-Session mit vielen Calls
+# summiert sich dieser Verbindungs-Overhead. Der Cache ist pro Event-Loop
+# geschluesselt, weil die gepoolten Verbindungen an den Loop gebunden sind, auf
+# dem sie entstanden: im Server-Betrieb (ein Loop) ergibt das genau EINEN
+# gepoolten Client mit Keep-Alive; in Tests (frischer Loop pro Test) je Loop
+# einen eigenen, statt einen loop-fremden (kaputten) wiederzuverwenden.
+# WeakKeyDictionary statt ``id(loop)``-Schluessel: ein GC-ter Loop nimmt seinen
+# Eintrag mit, und ein neuer Loop an derselben Speicheradresse kann nie den
+# toten Client erben. Kein explizites Schliessen noetig: der Prozess haelt
+# maximal eine Handvoll Clients, deren Loopback-Verbindungen der Peer idle-schliesst.
+_clients: weakref.WeakKeyDictionary[asyncio.AbstractEventLoop, httpx.AsyncClient] = (
+    weakref.WeakKeyDictionary()
+)
+
+
+def _get_client() -> httpx.AsyncClient:
+    """Gepoolter AsyncClient des laufenden Event-Loops (lazy, Keep-Alive)."""
+    loop = asyncio.get_running_loop()
+    client = _clients.get(loop)
+    if client is None or client.is_closed:
+        client = httpx.AsyncClient(timeout=_TIMEOUT_SECONDS)
+        _clients[loop] = client
+    return client

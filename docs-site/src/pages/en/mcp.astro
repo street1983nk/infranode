@@ -37,84 +37,107 @@ const mcpRemoteConfig = [
   `}`,
 ].join("\n");
 
-const toolGroups = [
+// The server's 12 tools (source: docs/mcp-install.md).
+const coreTools = [
+  ["get_city(slug)", "City master data (population, area, coordinates)"],
+  ["get_city_overview(slug)", "One-call overview: catalog of all 64 data types with key and coverage status + live highlights (discovery entry point)"],
+  ["get_city_resource(slug, resource)", "Generic access to all 64 data types by data type key (see list below)"],
+  ["air_quality(slug)", "Official air quality: PM10, PM2.5, NO2, O3, SO2 (UBA)"],
+  ["weather(slug)", "Current weather observations (DWD, not a forecast)"],
+  ["pois(slug, type)", "Points of interest, filtered by type (OpenStreetMap)"],
+  ["station_board_departures(eva)", "Live departures of any station by EVA number, all categories incl. local trains + disruptions (DB Timetables)"],
+  ["station_board_arrivals(eva)", "Live arrivals of any station by EVA number, all categories incl. local trains + disruptions (DB Timetables)"],
+  ["transit_departures(slug, stop_id?)", "Live public-transport departures with delays (GTFS-RT/HVV/VGN)"],
+  ["list_cities()", "List of all covered cities (slugs, coverage)"],
+  ["sources()", "All data sources with licence and availability"],
+  ["compare(resource, cities)", "Compare one resource (weather/air) across several cities"],
+];
+
+// The 64 data types, grouped by topic (source: docs/mcp-install.md).
+// Display key = resource key for get_city_resource (kebab-case).
+// Data types with a dedicated tool are marked in the description.
+const dataTypeGroups = [
   {
     title: "Core and geo",
-    tools: [
-      ["get_city", "City master data"],
-      ["get_city_overview", "One-call overview: catalog of all data types per city with coverage status + live highlights (discovery entry point)"],
+    types: [
+      ["base", "City master data. Dedicated tool: get_city"],
+      ["overview", "One-call overview: catalog of all data types per city with coverage status + live highlights (discovery entry point). Dedicated tool: get_city_overview"],
       ["geo", "Geo data"],
       ["demographics", "Demographics"],
-      ["population_density", "Population density from the official Census 2022 100m grid (inhabitants per km² over the populated area)"],
+      ["population-density", "Population density from the official Census 2022 100m grid (inhabitants per km² over the populated area)"],
     ],
   },
   {
     title: "Environment and weather",
-    tools: [
-      ["air_quality", "Air quality"],
-      ["air_quality_live", "Air quality, live readings"],
-      ["weather", "Weather"],
-      ["weather_warnings", "Official DWD weather warnings (severe weather, level)"],
-      ["pollen_uv", "Pollen and UV index"],
+    types: [
+      ["air-uba", "Official air quality. Dedicated tool: air_quality"],
+      ["air", "Air quality, live readings"],
+      ["weather", "Weather. Dedicated tool: weather"],
+      ["weather-warnings", "Official DWD weather warnings (severe weather, level)"],
+      ["pollen-uv", "Pollen and UV index"],
+      ["fire-danger", "Forest and grassland fire danger index (DWD)"],
     ],
   },
   {
     title: "Mobility and traffic",
-    tools: [
+    types: [
       ["traffic", "Traffic situation"],
       ["transit", "Public transit stops"],
-      ["transit_departures", "Live transit departures with delays (stop_id param)"],
       ["charging", "Charging stations"],
-      ["road_events", "Road and construction notices"],
+      ["road-events", "Road and construction notices"],
       ["parking", "Live parking occupancy per city: vacant spaces and occupancy (Dortmund, Frankfurt am Main, Wuppertal)"],
-      ["vehicle_registrations", "Car stock and electric vehicle share (KBA)"],
+      ["vehicle-registrations", "Car stock and electric vehicle share (KBA)"],
       ["accidents", "Road traffic accidents per county (accident atlas)"],
-      ["crime_stats", "Crime statistics per main offence group: cases, frequency per 100k, clearance rate (BKA PKS)"],
-      ["fuel_prices", "Fuel prices per city, aggregated (Tankerkönig)"],
+      ["crime-stats", "Crime statistics per main offence group: cases, frequency per 100k, clearance rate (BKA PKS)"],
+      ["fuel-prices", "Fuel prices per city, aggregated (Tankerkönig)"],
       ["sharing", "Bike and scooter sharing per city, aggregated (GBFS/Nextbike)"],
-      ["bike_counts", "Bike counters per city: municipal continuous cycling-count stations (municipal open data, partial coverage)"],
-      ["station_departures", "Live departures at each city's main station with delays (DB Timetables)"],
-      ["station_arrivals", "Live arrivals at each city's main station with delays (DB Timetables)"],
+      ["bike-counts", "Bike counters per city: municipal continuous cycling-count stations (municipal open data, partial coverage)"],
+      ["station-departures", "Live departures at each city's main station with delays (DB Timetables)"],
+      ["station-arrivals", "Live arrivals at each city's main station with delays (DB Timetables)"],
       ["stations", "Catalog of all stations in a city with EVA numbers (DB StaDa)"],
-      ["station_board_departures", "Live departures of any station by EVA, all categories incl. local trains + disruptions (DB Timetables)"],
-      ["station_board_arrivals", "Live arrivals of any station by EVA, all categories incl. local trains + disruptions (DB Timetables)"],
+      ["station-facilities", "Station facilities: lift and escalator status (DB FaSta, partial coverage)"],
     ],
   },
   {
     title: "Water and situation",
-    tools: [
-      ["water_level", "Water levels"],
+    types: [
+      ["water-level", "Water levels"],
       ["flood", "Flood situation"],
+      ["bathing-water", "Bathing water quality nearby (EEA)"],
     ],
   },
   {
     title: "Health and energy",
-    tools: [
+    types: [
       ["health", "Health data"],
-      ["icu_live", "ICU beds, live"],
+      ["icu-live", "ICU beds, live"],
+      ["hospitals-atlas", "Hospital locations from the federal clinic atlas"],
       ["energy", "Energy installations (market master data register)"],
-      ["power_load", "Electricity consumption / grid load per control zone (SMARD)"],
-      ["power_price", "Day-ahead wholesale power price (SMARD)"],
+      ["power-load", "Electricity consumption / grid load per control zone (SMARD)"],
+      ["power-price", "Day-ahead wholesale power price (SMARD)"],
+      ["solar", "Solar irradiation and normalised PV yield per kWp (PVGIS)"],
+      ["solar-roofs", "Rooftop solar cadastre per city: solar potential of roofs (partial coverage)"],
+      ["district-heating", "District heating networks (municipal heat planning, partial coverage)"],
     ],
   },
   {
     title: "Economy and statistics",
-    tools: [
+    types: [
       ["unemployment", "Unemployment count and rate per county"],
       ["tourism", "Guest overnight stays and arrivals (tourism)"],
       ["construction", "Building permits (residential buildings and dwellings)"],
       ["indicators", "Socioeconomic indicators per county (INKAR/BBSR, ~70 metrics)"],
-      ["land_values", "Official land values per city, aggregated (BORIS, building land)"],
-      ["tax_rates", "Local tax multipliers per municipality: trade tax and property tax A/B/C (Regionalstatistik)"],
-      ["business_registrations", "Business registrations/deregistrations and net per district (Regionalstatistik)"],
+      ["land-values", "Official land values per city, aggregated (BORIS, building land)"],
+      ["tax-rates", "Local tax multipliers per municipality: trade tax and property tax A/B/C (Regionalstatistik)"],
+      ["business-registrations", "Business registrations/deregistrations and net per district (Regionalstatistik)"],
       ["insolvencies", "Insolvency filings per district: corporate and other debtors (incl. consumers), annual (Regionalstatistik)"],
-      ["public_tenders", "Public procurement per city: running tenders and awarded contracts (German public procurement data service, OCDS/CC0)"],
+      ["public-tenders", "Public procurement per city: running tenders and awarded contracts (German public procurement data service, OCDS/CC0)"],
     ],
   },
   {
     title: "City life and politics",
-    tools: [
-      ["pois", "Points of interest (required type parameter, e.g. hospital)"],
+    types: [
+      ["pois", "Points of interest (required type parameter, e.g. hospital). Dedicated tool: pois"],
       ["events", "Events"],
       ["webcams", "Webcams"],
       ["election", "Election results"],
@@ -124,26 +147,19 @@ const toolGroups = [
   },
   {
     title: "City infrastructure (OpenStreetMap)",
-    tools: [
+    types: [
       ["playgrounds", "Public playgrounds"],
-      ["drinking_water", "Public drinking water fountains"],
+      ["drinking-water", "Public drinking water fountains"],
+      ["public-toilets", "Public toilets"],
       ["markets", "Markets and marketplaces (optional market days)"],
-      ["parcel_lockers", "Parcel lockers (DHL, Amazon, DPD, Hermes, GLS)"],
-      ["post_offices", "Post offices"],
-      ["post_boxes", "Public post boxes with collection times"],
-      ["public_wifi", "Public Wi-Fi locations"],
-      ["recycling_centres", "Recycling centres"],
-      ["government_offices", "Government offices (citizen and administrative offices)"],
+      ["parcel-lockers", "Parcel lockers (DHL, Amazon, DPD, Hermes, GLS)"],
+      ["post-offices", "Post offices"],
+      ["post-boxes", "Public post boxes with collection times"],
+      ["public-wifi", "Public Wi-Fi locations"],
+      ["recycling-centres", "Recycling centres"],
+      ["government-offices", "Government offices (citizen and administrative offices)"],
       ["education", "Education facilities (schools, universities, kindergartens)"],
-      ["tree_cadastre", "Municipal tree cadastre (species, planting year, height; Berlin, DL-DE/Zero)"],
-    ],
-  },
-  {
-    title: "Overview and meta",
-    tools: [
-      ["list_cities", "List of all covered cities (slugs, coverage)"],
-      ["sources", "All data sources with licence and availability"],
-      ["compare", "Compare one resource (weather/air) across several cities"],
+      ["tree-cadastre", "Municipal tree cadastre (species, planting year, height; Berlin, DL-DE/Zero)"],
     ],
   },
 ];
@@ -161,7 +177,11 @@ const faq = [
   },
   {
     q: "What data does the InfraNode MCP server provide?",
-    a: "71 tools for open data of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, insolvencies, bike and scooter sharing, bike counters, POIs, events, elections and holidays, station departures and arrivals, public procurement, plus a cities and a sources overview, and a multi-city comparison.",
+    a: "12 lean tools covering 64 data types of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, solar and district heating, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, insolvencies, bike and scooter sharing, bike counters, POIs, events, elections and holidays, station departures and arrivals, public procurement, plus a cities and a sources overview, and a multi-city comparison.",
+  },
+  {
+    q: "Why does the InfraNode MCP server have only 12 tools?",
+    a: "12 lean tools cover 64 data types: the generic accessor get_city_resource(slug, resource) fetches any data type by its key, and get_city_overview returns all keys with coverage status per city. This keeps the token footprint in the agent's context window minimal, stays well below client tool limits (e.g. 80 tools in Cursor), and the data breadth keeps growing without adding new tools.",
   },
   {
     q: "My MCP client only supports local stdio servers. How do I connect InfraNode?",
@@ -180,7 +200,7 @@ const faq = [
 
 <Docs
   title="Open Data MCP Server for Germany (AI agents)"
-  description="Open data MCP server for German cities: 71 tools for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
+  description="Open data MCP server for German cities: 12 lean tools covering 64 data types, for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
   current="mcp"
   lang="en"
   altLangPath="/mcp/"
@@ -189,17 +209,18 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP server"
-    description="Hosted MCP server with 71 tools for open city data of 84 major German cities, key-free and free of charge."
+    description="Hosted MCP server with 12 lean tools covering 64 data types of open city data for 84 major German cities, key-free and free of charge."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
   <h1>Open data MCP server for German cities</h1>
   <p>
     The InfraNode MCP server is a free, hosted Model Context Protocol server that
-    gives AI agents access to open data for 84 major German cities through 65
-    tools, with no API key. It exposes the city data as tools an agent calls
-    directly, so you do not write HTTP calls by hand. The server is listed in the
-    official <a href="https://registry.modelcontextprotocol.io">MCP Registry</a>
+    gives AI agents access to 64 data types of open data for 84 major German
+    cities through 12 lean tools, with no API key. It exposes the city data as
+    tools an agent calls directly, so you do not write HTTP calls by hand. The
+    server is listed in the official
+    <a href="https://registry.modelcontextprotocol.io">MCP Registry</a>
     under the name <code>dev.infranode/infranode</code>, with a tool overview and
     score also on <a href="https://glama.ai/mcp/servers/@street1983nk/infranode">Glama</a>.
   </p>
@@ -249,10 +270,10 @@ const faq = [
   </p>
   <pre class="codetabs__pre"><code>Build me a live dashboard for Cologne</code></pre>
   <p>
-    The agent calls <code>get_city_overview</code> plus a few targeted live
-    tools (weather, air quality, train departures, traffic events) and renders
-    a full overview page from that on its own, InfraNode itself never
-    prescribes any UI:
+    The agent calls <code>get_city_overview</code> plus a few targeted live data
+    types (weather, air quality, train departures, traffic events via
+    <code>get_city_resource</code>) and renders a full overview page from that
+    on its own, InfraNode itself never prescribes any UI:
   </p>
   <img
     src="/showcase/koeln-live-dashboard.png"
@@ -274,28 +295,78 @@ const faq = [
     no mapping logic in the server and no API key for read access.
   </p>
 
-  <h2>Tool overview</h2>
+  <h2>The 12 tools</h2>
   <p>
-    The server provides 71 tools in total. Most expect a city slug (for example
-    <code>berlin</code> or <code>hamburg</code>); <code>pois</code> also requires
-    a <code>type</code> parameter (e.g. <code>hospital</code>,
-    <code>school</code>, <code>pharmacy</code>), and
-    <code>transit_departures</code> optionally takes a <code>stop_id</code>.
-    <code>list_cities</code> and <code>sources</code> need no argument.
+    The server provides 12 lean tools that together cover 64 data types. This
+    keeps the token footprint in the agent's context window minimal, stays well
+    below the tool limits of common MCP clients (e.g. 80 tools in Cursor), and
+    the data breadth keeps growing without adding new tools.
+  </p>
+  <p>
+    <strong>Why 12 tools instead of 71? (July 2026 change):</strong> Until June
+    2026 every data type carried its own tool, 71 in total. That tool list cost
+    roughly 30,000 tokens in the context window of every connected agent, on
+    every single connect, and would have kept growing with each new data type.
+    Since July 2026 <code>get_city_resource</code> bundles the entire long
+    tail: same data, same responses, but only about 4,400 tokens for the whole
+    tool list (85 percent less) and permanent headroom under all client tool
+    limits. For existing users: if you previously called an individual tool
+    such as <code>charging</code> or <code>parking</code>, call
+    <code>get_city_resource(slug, resource="charging")</code> instead; the key
+    is the former tool name in kebab case (for example <code>water_level</code>
+    becomes <code>water-level</code>). The REST API is unaffected by this
+    change.
+  </p>
+  <table class="params">
+    <thead>
+      <tr>
+        <th>Tool</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {coreTools.map(([name, desc]) => (
+        <tr>
+          <td>
+            <code>{name}</code>
+          </td>
+          <td>{desc}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <p>
+    Most tools expect a city slug (for example <code>berlin</code> or
+    <code>hamburg</code>); <code>pois</code> also requires a <code>type</code>
+    parameter (e.g. <code>hospital</code>, <code>school</code>,
+    <code>pharmacy</code>), and <code>transit_departures</code> optionally takes
+    a <code>stop_id</code>. <code>list_cities</code> and <code>sources</code>
+    need no argument.
+  </p>
+
+  <h2>The 64 data types</h2>
+  <p>
+    Any data type without a dedicated tool is fetched via
+    <code>get_city_resource</code>, passing the data type key as the
+    <code>resource</code> argument. Example:
+    <code>get_city_resource(slug="berlin", resource="charging")</code> returns
+    the charging stations in Berlin. Which keys a city covers is shown by
+    <code>get_city_overview(slug)</code> (key plus coverage status per data
+    type); the <code>infranode://catalog</code> resource lists all data types.
   </p>
   {
-    toolGroups.map((group) => (
+    dataTypeGroups.map((group) => (
       <>
         <h3>{group.title}</h3>
         <table class="params">
           <thead>
             <tr>
-              <th>Tool</th>
+              <th>Data type</th>
               <th>Description</th>
             </tr>
           </thead>
           <tbody>
-            {group.tools.map(([name, desc]) => (
+            {group.types.map(([name, desc]) => (
               <tr>
                 <td>
                   <code>{name}</code>
@@ -312,10 +383,10 @@ const faq = [
   <h2>Example call</h2>
   <p>
     An agent fetches the one-call overview for Berlin: base data, a catalog of
-    all ~53 data types with coverage status, and a live-highlights snapshot.
-    A good entry point for any city question, instead of guessing a single
-    tool. The result is the live API's normalised JSON, passed through
-    unchanged.
+    all 64 data types with key and coverage status, and a live-highlights
+    snapshot. A good entry point for any city question, instead of guessing a
+    single data type. The result is the live API's normalised JSON, passed
+    through unchanged.
   </p>
   <pre class="codetabs__pre"><code>get_city_overview(slug="berlin")</code></pre>
 
@@ -346,7 +417,7 @@ const faq = [
     lang="en"
   />
   <p>
-    Once added, the 71 InfraNode tools are available in the agent. Access is
+    Once added, the 12 InfraNode tools are available in the agent. Access is
     read-only and key-free.
   </p>
 
