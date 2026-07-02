@@ -56,6 +56,7 @@ from infranode.adapters.hamburg_transparenz import fetch_hamburg_road_events
 from infranode.adapters.klinik_atlas import fetch_hospital_atlas
 from infranode.adapters.koeln_arcgis import fetch_koeln_road_events
 from infranode.adapters.koeln_events import fetch_events as fetch_koeln_events
+from infranode.adapters.koeln_radzaehl import fetch_koeln_radzaehl
 from infranode.adapters.leipzig_radzaehl import fetch_leipzig_radzaehl
 from infranode.adapters.lhp import fetch_flood
 from infranode.adapters.mobidata_bw import fetch_mobidata_road_events
@@ -112,6 +113,7 @@ from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
 from infranode.normalization.mappers.bike_counts import (
     map_berlin_radzaehl,
     map_hamburg_radzaehl,
+    map_koeln_radzaehl,
     map_leipzig_radzaehl,
     map_stuttgart_radzaehl,
 )
@@ -2006,6 +2008,9 @@ async def city_heritage(slug: str, request: Request) -> dict:
             request.app.state.http,
             slug=entry.slug,
             state=entry.state,
+            lat=entry.geo.lat if entry.geo else None,
+            lon=entry.geo.lon if entry.geo else None,
+            population=entry.population,
         )
 
     raw, status = await client.fetch("denkmal", key, fetch_fn)
@@ -2592,6 +2597,13 @@ async def _fetch_stuttgart_radzaehl(http, entry) -> dict:
     )
 
 
+async def _fetch_koeln_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Köln (Standard-Signatur)."""
+    return await fetch_koeln_radzaehl(
+        http, slug=entry.slug, lat=entry.geo.lat, lon=entry.geo.lon
+    )
+
+
 def _resolve_bike_counts_connector(slug: str):
     """Liefert ``(source, fetch_factory, map_fn)`` für bike-counts oder None."""
     if slug == "muenchen":
@@ -2608,6 +2620,8 @@ def _resolve_bike_counts_connector(slug: str):
             _fetch_stuttgart_radzaehl,
             map_stuttgart_radzaehl,
         )
+    if slug == "koeln":
+        return ("koeln_radzaehl", _fetch_koeln_radzaehl, map_koeln_radzaehl)
     return None
 
 

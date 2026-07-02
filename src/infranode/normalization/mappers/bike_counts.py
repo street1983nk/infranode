@@ -207,3 +207,32 @@ def map_stuttgart_radzaehl(
         attribution_text="Landeshauptstadt Stuttgart",
         license_url=_CC_BY_URL,
     )
+
+
+def map_koeln_radzaehl(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet die Kölner Rad-Jahreswerte ab (DL-DE/Zero 2.0, Tier A).
+
+    Je Station ``value`` = Jahres-Summenwert 2022, ``granularity`` "year",
+    ``period`` = Jahr; KEINE Koordinaten (Portal-CSV liefert keine).
+    ``observed_at`` None (Jahreswert ohne Stundenzeitstempel). Lizenz DL-DE/Zero
+    2.0 (keine Namensnennungspflicht), Attribution "Stadt Köln".
+    """
+    return build_bike_count_record(
+        raw["slug"],
+        _counts_from_stations(raw, "year"),
+        None,
+        retrieved_at=retrieved_at,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        source=SourceId.KOELN_RADZAEHL,
+        license_id=LicenseId.DL_DE_ZERO_2_0,
+        license_tier=LicenseTier.A,
+        attribution_text="Stadt Köln",
+        license_url=_DL_DE_ZERO_URL,
+    )

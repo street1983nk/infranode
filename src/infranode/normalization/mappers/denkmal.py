@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from infranode.adapters.denkmal import _representative_point
+from infranode.adapters.denkmal import _COUNT_CAP, _representative_point
 from infranode.normalization import (
     Attribution,
     CanonicalRecord,
@@ -22,6 +22,8 @@ from infranode.normalization import (
 )
 
 _DL_DE_ZERO_URL = "https://www.govdata.de/dl-de/zero-2-0"
+# Fallback nur, falls eine (ältere) raw-Quelle keine license_url mitführt;
+# neue Quellen setzen sie stets explizit (Berlin Zero, BW/HE/HH DL-DE/BY).
 
 
 def map_heritage(
@@ -51,7 +53,12 @@ def map_heritage(
         items.append(item)
 
     total = raw.get("total_available")
-    truncated = total is not None and total > len(items)
+    # Ehrliche Truncation: bei bekanntem Gesamtbestand direkt vergleichen; liefert
+    # der WFS keine Zahl (z.B. Hamburg geo+json ohne numberMatched), aber genau
+    # ``_COUNT_CAP`` Features, ist mit hoher Sicherheit abgeschnitten worden.
+    truncated = (total is not None and total > len(items)) or (
+        total is None and len(items) >= _COUNT_CAP
+    )
 
     return CanonicalRecord(
         city_slug=raw["slug"],
@@ -65,7 +72,7 @@ def map_heritage(
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text=raw["attribution"],
-            license_url=_DL_DE_ZERO_URL,
+            license_url=raw.get("license_url", _DL_DE_ZERO_URL),
         ),
         payload=PoiPayload(
             poi_type="heritage",

@@ -1430,14 +1430,14 @@ paths:
         Bau- und Denkmalobjekte einer Stadt aus der Denkmalliste des jeweiligen
         Bundeslandes (WFS), je Objekt ein Repräsentativpunkt plus Typ/Link.
         Denkmalschutz ist Ländersache: Teilabdeckung, nur Städte in Ländern mit
-        verifiziertem offenem WFS (aktuell Berlin, DL-DE/Zero 2.0). Andere Städte
+        verifiziertem offenem WFS (Berlin DL-DE/Zero 2.0; Hamburg, Baden-Württemberg, Hessen DL-DE/BY 2.0, Flächenländer per Stadt-Umkreis eingegrenzt). Andere Städte
         antworten ehrlich mit 200 source_status="not_covered", data=null und
         meta.covered_cities. Deaktiviert -> 200 source_status="disabled".
       x-description-en: >-
         A city's listed/heritage objects from the respective federal state's
         heritage register (WFS), each as a representative point plus type/link.
         Heritage protection is a state matter: partial coverage, only cities in
-        states with a verified open WFS (currently Berlin, DL-DE/Zero 2.0). Other
+        states with a verified open WFS (Berlin DL-DE/Zero 2.0; Hamburg, Baden-Württemberg, Hesse DL-DE/BY 2.0, area states narrowed to a city radius). Other
         cities honestly return 200 source_status="not_covered", data=null and
         meta.covered_cities. Disabled -> 200 source_status="disabled".
       operationId: getCityHeritage
@@ -3417,9 +3417,9 @@ paths:
         -> 200 source_status="disabled"; nicht-abgedeckte Stadt -> 200
         source_status="not_covered" (mit covered_cities); abgedeckte Stadt ohne
         Zählstelle -> 200 source_status="no_data". Granularität je Quelle (siehe
-        counts[].granularity): München Tag, Leipzig/Hamburg/Berlin Stunde, Stuttgart
-        Jahr. Lizenzen je Ursprung (München/Leipzig/Hamburg DL-DE/BY 2.0, Berlin
-        DL-DE/Zero 2.0, Stuttgart CC BY 4.0).
+        counts[].granularity): München Tag, Leipzig/Hamburg/Berlin Stunde,
+        Stuttgart/Köln Jahr. Lizenzen je Ursprung (München/Leipzig/Hamburg DL-DE/BY
+        2.0, Berlin/Köln DL-DE/Zero 2.0, Stuttgart CC BY 4.0).
       x-description-en: >-
         Bicycle counting stations (permanent counters) per city from municipal
         open-data sources, license-verified at origin. Each station (counts)

@@ -4,6 +4,7 @@
   "bike-counts": [
    "berlin",
    "hamburg",
+   "koeln",
    "leipzig",
    "muenchen",
    "stuttgart"
@@ -30,7 +31,23 @@
    "nuernberg"
   ],
   "heritage": [
-   "berlin"
+   "berlin",
+   "darmstadt",
+   "frankfurt-am-main",
+   "freiburg-im-breisgau",
+   "hamburg",
+   "hanau",
+   "heidelberg",
+   "heilbronn",
+   "karlsruhe",
+   "kassel",
+   "mannheim",
+   "offenbach-am-main",
+   "pforzheim",
+   "reutlingen",
+   "stuttgart",
+   "ulm",
+   "wiesbaden"
   ],
   "land-values": [
    "aachen",

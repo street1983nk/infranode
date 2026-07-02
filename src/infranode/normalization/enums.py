@@ -242,6 +242,7 @@ class SourceId(StrEnum):
     HAMBURG_RADZAEHL = "hamburg_radzaehl"
     BERLIN_RADZAEHL = "berlin_radzaehl"
     STUTTGART_RADZAEHL = "stuttgart_radzaehl"
+    KOELN_RADZAEHL = "koeln_radzaehl"
     # DATA-40: ParkenDD-Aggregator (api.parkendd.de, keylos) = bevorzugte Live-
     # Parkhaus-Belegung für viele Städte (EIN Adapter, Dedup-Prinzip). Lizenz
     # heterogen je Stadt -> UNKNOWN/Tier C (Tier-C-Muster), Attribution "ParkenDD".

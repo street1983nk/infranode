@@ -396,6 +396,12 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         ttl=(86400.0, 2592000.0),
     ),
     SourceSpec(
+        name="koeln_radzaehl",
+        license_id="dl_de_zero_2_0",
+        attribution="Stadt Köln",
+        ttl=(86400.0, 2592000.0),
+    ),
+    SourceSpec(
         name="parkendd",
         license_id="unknown",
         attribution="ParkenDD",
