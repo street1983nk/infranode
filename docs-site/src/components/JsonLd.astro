@@ -14,7 +14,8 @@ interface Props {
     | "FAQPage"
     | "SoftwareApplication"
     | "Dataset"
-    | "Organization";
+    | "Organization"
+    | "WebSite";
   // APIReference / SoftwareApplication / Dataset
   name?: string;
   abstract?: string;
@@ -122,6 +123,13 @@ if (type === "WebAPI") {
     "@type": "Organization",
     "@id": `${site}/#organization`,
     name: name ?? "InfraNode",
+    // alternateName + disambiguatingDescription schaerfen die Marken-Entitaet
+    // gegen gleichnamige Dritte (InfraNodus = Knowledge-Graph-Tool, Infranode =
+    // Infrastruktur-Investor infranode.eu), damit KI-Antwortmaschinen und der
+    // Knowledge-Graph infranode.dev korrekt zuordnen.
+    alternateName: ["InfraNode.dev", "InfraNode Open Data", "InfraNode MCP"],
+    disambiguatingDescription:
+      "InfraNode ist eine Open-Data-REST-API und ein MCP-Server für offene Daten deutscher Städte (infranode.dev). Kein Zusammenhang mit InfraNodus (Knowledge-Graph-Werkzeug) oder Infranode (Infrastruktur-Investor, infranode.eu).",
     url: `${site}/`,
     logo: `${site}/logo-infranode.png`,
     description:
@@ -130,7 +138,28 @@ if (type === "WebAPI") {
     sameAs: sameAs ?? [
       "https://github.com/street1983nk/infranode",
       "https://www.pulsemcp.com/servers/infranode",
+      "https://glama.ai/mcp/servers/@street1983nk/infranode",
+      "https://smithery.ai/server/infranode/infranode",
     ],
+  };
+} else if (type === "WebSite") {
+  // WebSite-Entitaet mit stabiler @id, verweist als publisher auf die
+  // Organization (#organization). Traegt die Marke + alternateName in den
+  // Knowledge-Graph (Brand-Disambiguierung, siehe Organization). Bewusst OHNE
+  // potentialAction/SearchAction: die Doku-Suche (Pagefind) laeuft rein
+  // clientseitig ohne Such-URL, ein SearchAction-Target waere unehrlich/ungueltig.
+  data = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${site}/#website`,
+    name: name ?? "InfraNode",
+    alternateName: ["InfraNode.dev", "InfraNode Open Data API", "InfraNode MCP"],
+    url: `${site}/`,
+    description:
+      description ??
+      "Offene Daten deutscher Großstädte über eine kostenlose, keylose REST-API und einen MCP-Server für KI-Agenten.",
+    inLanguage: ["de", "en"],
+    publisher: { "@id": `${site}/#organization` },
   };
 } else if (type === "Dataset") {
   data = {

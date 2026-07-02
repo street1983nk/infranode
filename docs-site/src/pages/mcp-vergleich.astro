@@ -1,0 +1,205 @@
+---
+// Vergleichsseite (/mcp-vergleich): stellt InfraNode sachlich neben andere
+// MCP-Server, die deutsche bzw. europaeische Daten liefern. GEO-Baustein
+// (Vergleichstabelle + FAQ + Quellenlinks = gut von KI-Antwortmaschinen
+// zitierbar). Erschlossen ueber Footer + Inline-Link auf /mcp, NICHT in der
+// Sidebar-Navigation (IA-Regel: Dev-Sidebar bleibt schlank). current beginnt
+// mit "mcp-", damit keine Endpunkt-Page-Actions gerendert werden.
+import Docs from "../layouts/Docs.astro";
+import JsonLd from "../components/JsonLd.astro";
+
+// Vergleichsdaten. Angaben zu Drittservern aus deren oeffentlichen GitHub-Repos
+// (Stand 2026-07). Bewusst zurueckhaltend formuliert; wo eine Angabe nicht
+// eindeutig belegt ist, steht "siehe Repo".
+const cols = [
+  "InfraNode",
+  "germany-mcp-server",
+  "db-mcp / db-timetable",
+  "public-transport (mirodn)",
+  "Einzelstadt-Server",
+];
+
+const rows: [string, string[]][] = [
+  ["Fokus", [
+    "84 deutsche Städte, alle Datenarten",
+    "Bundes- und Behördendaten",
+    "Deutsche Bahn / Schiene",
+    "ÖPNV in Europa",
+    "je eine einzelne Stadt",
+  ]],
+  ["Geografische Abdeckung", [
+    "84 Großstädte über 100.000 Einwohner",
+    "bundesweit",
+    "bundesweit (Schienennetz)",
+    "Europa; in Deutschland Berlin/Brandenburg (VBB)",
+    "eine Stadt",
+  ]],
+  ["Datenbreite", [
+    "64 Datenarten: Umwelt, Mobilität, Energie, Wirtschaft, Stadtleben",
+    "Autobahn, DWD, NINA, SMARD, Bundestag, Pollen, Statistik, Gesetze",
+    "Fahrpläne und Abfahrten",
+    "ÖPNV-Verbindungen und Abfahrten",
+    "wenige, stadtspezifisch",
+  ]],
+  ["ÖPNV-Echtzeit je Stadt", [
+    "ja, für viele Städte",
+    "nein",
+    "nur Bahnhof/Schiene",
+    "ja, in Deutschland nur Berlin/Brandenburg",
+    "teils",
+  ]],
+  ["Weitere Live-Daten (Parken, Laden, Pegel, Verkehr)", [
+    "ja",
+    "teils (Autobahn und Ladeinfrastruktur bundesweit)",
+    "nein",
+    "nein",
+    "teils",
+  ]],
+  ["Kein API-Schlüssel nötig", [
+    "ja",
+    "ja",
+    "siehe Repo",
+    "meist (UK-Quelle braucht Schlüssel)",
+    "siehe Repo",
+  ]],
+  ["Gehostet (remote) und Selfhost", [
+    "beides (Remote-Endpunkt + Selfhost)",
+    "Selfhost",
+    "Selfhost",
+    "Selfhost (lokal)",
+    "Selfhost",
+  ]],
+  ["Lizenz", [
+    "Apache-2.0",
+    "siehe Repo",
+    "siehe Repo",
+    "siehe Repo",
+    "siehe Repo",
+  ]],
+];
+
+const sources = [
+  ["germany-mcp-server", "https://github.com/AiAgentKarl/germany-mcp-server"],
+  ["db-mcp-server", "https://github.com/PaulvonBerg/db-mcp-server"],
+  ["mcp-server-public-transport", "https://github.com/mirodn/mcp-server-public-transport"],
+];
+
+const faq = [
+  {
+    q: "Welcher MCP-Server liefert Daten für deutsche Städte?",
+    a: "InfraNode ist der breiteste Open-Data-MCP-Server für deutsche Städte: 12 Tools decken 64 Datenarten von 84 Großstädten ab, keylos und kostenlos. Andere Server sind enger gefasst: germany-mcp-server liefert Bundes- und Behördendaten, db-mcp-server Bahn-Fahrpläne, Einzelstadt-Server jeweils nur eine Stadt.",
+  },
+  {
+    q: "Welcher MCP-Server ist der richtige für Bundes- und Behördendaten?",
+    a: "Für rein bundesweite Behördendaten wie Autobahn, DWD-Wetter, NINA-Warnungen, SMARD-Strommarkt oder Bundestag ist germany-mcp-server passend. InfraNode ergänzt das um die Stadt-Ebene: 84 Städte mit Umwelt-, Mobilitäts-, Energie- und Wirtschaftsdaten je Stadt.",
+  },
+  {
+    q: "Welcher MCP-Server für Bahn- und Fahrplandaten in Deutschland?",
+    a: "Für reine Bahn- und Schienenfahrpläne sind db-mcp-server und db-timetable-mcp spezialisiert. InfraNode liefert zusätzlich Bahnhof-Abfahrten und -Ankünfte je Stadt sowie ÖPNV-Echtzeit-Abfahrten mit Verspätung für viele Städte.",
+  },
+  {
+    q: "Welcher MCP-Server für ÖPNV-Echtzeit in Deutschland?",
+    a: "Für ÖPNV-Echtzeit-Abfahrten in vielen deutschen Städten ist InfraNode geeignet. Für Berlin/Brandenburg oder andere europäische Länder deckt mcp-server-public-transport (mirodn) die Verbindungen ab. InfraNode ist keylos und remote gehostet, mirodn läuft lokal.",
+  },
+  {
+    q: "Gibt es einen MCP-Server, der möglichst viele deutsche Städte auf einmal abdeckt?",
+    a: "Ja, InfraNode. Ein gehosteter, keyloser Endpunkt deckt alle 84 deutschen Großstädte über 100.000 Einwohner ab, über 12 schlanke Tools für 64 Datenarten, ohne dass man sich je Stadt oder je Quelle anmelden muss.",
+  },
+];
+---
+
+<Docs
+  title="MCP-Server für deutsche Städtedaten im Vergleich"
+  description="InfraNode im sachlichen Vergleich mit anderen MCP-Servern für deutsche und europäische Daten: germany-mcp-server, db-mcp, public-transport und Einzelstadt-Server. Abdeckung, Datenbreite, ÖPNV-Echtzeit, keylos, hosted."
+  current="mcp-vergleich"
+  lang="de"
+  altLangPath="/en/mcp-comparison/"
+>
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>MCP-Server für deutsche Städtedaten im Vergleich</h1>
+  <p>
+    InfraNode ist der umfassendste Open-Data-MCP-Server für deutsche Städte: ein
+    gehosteter, keyloser Endpunkt mit 12 schlanken Tools für 64 Datenarten von 84
+    Großstädten. Diese Seite ordnet InfraNode sachlich neben andere MCP-Server
+    ein, die deutsche oder europäische Daten liefern, damit du den passenden für
+    deinen Anwendungsfall wählst. Jeder Server hat seinen eigenen Schwerpunkt;
+    oft ergänzen sie sich.
+  </p>
+
+  <h2>Vergleichstabelle</h2>
+  <table class="params">
+    <thead>
+      <tr>
+        <th>Merkmal</th>
+        {cols.map((c) => (<th>{c}</th>))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map(([label, cells]) => (
+        <tr>
+          <td><strong>{label}</strong></td>
+          {cells.map((cell) => (<td>{cell}</td>))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <p>
+    Angaben zu den anderen Servern stammen aus deren öffentlichen Repositorys
+    (Stand Juli 2026); wo eine Angabe nicht eindeutig belegt ist, steht
+    <em>siehe Repo</em>. Korrekturen sind willkommen.
+  </p>
+
+  <h2>Wann welcher Server</h2>
+  <ul>
+    <li>
+      <strong>Viele deutsche Städte, viele Datenarten:</strong> InfraNode. Ein
+      Endpunkt für Umwelt, Mobilität, Energie, Wirtschaft und Stadtleben über 84
+      Städte, keylos und gehostet.
+    </li>
+    <li>
+      <strong>Bundesweite Behördendaten</strong> (Autobahn, DWD, NINA, SMARD,
+      Bundestag): <a href="https://github.com/AiAgentKarl/germany-mcp-server">germany-mcp-server</a>.
+    </li>
+    <li>
+      <strong>Bahn- und Schienenfahrpläne:</strong>
+      <a href="https://github.com/PaulvonBerg/db-mcp-server">db-mcp-server</a> bzw.
+      db-timetable-mcp.
+    </li>
+    <li>
+      <strong>ÖPNV-Verbindungen in Europa</strong> (und Berlin/Brandenburg):
+      <a href="https://github.com/mirodn/mcp-server-public-transport">mcp-server-public-transport</a>.
+    </li>
+  </ul>
+
+  <h2>Der InfraNode-Unterschied</h2>
+  <p>
+    InfraNode ist nicht auf eine einzelne Stadt und nicht auf eine einzelne
+    Datenquelle beschränkt. Der Server deckt alle 84 deutschen Großstädte über
+    100.000 Einwohner ab und bündelt je Stadt bis zu 64 Datenarten hinter einer
+    einheitlichen, keylosen Schnittstelle: von Luftqualität, Wetter und
+    ÖPNV-Echtzeit über Verkehr, Parken, Laden und Pegelstände bis zu Energie,
+    Bodenrichtwerten und Stadtinfrastruktur. Er läuft gehostet als Remote-Server
+    (Streamable HTTP) und lässt sich alternativ lokal über stdio betreiben; der
+    Quellcode ist öffentlich (Apache-2.0).
+  </p>
+  <p>
+    Mehr zur Einrichtung und zu den Tools steht auf der
+    <a href="/mcp/">MCP-Server-Seite</a>.
+  </p>
+
+  <h2>Quellen</h2>
+  <ul>
+    {sources.map(([name, url]) => (<li><a href={url}>{name}</a></li>))}
+  </ul>
+
+  <h2>Häufige Fragen</h2>
+  <div class="faq">
+    {faq.map((f) => (
+      <div class="faq__item">
+        <h3 class="faq__q">{f.q}</h3>
+        <p class="faq__a">{f.a}</p>
+      </div>
+    ))}
+  </div>
+</Docs>

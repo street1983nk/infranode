@@ -136,6 +136,22 @@ permission model and an example transcript are in
 [docs/mcp-install.md](./docs/mcp-install.md). The registry manifest is
 [server.json](./server.json).
 
+## Alternatives and how InfraNode compares
+
+Other MCP servers cover parts of the German or European data space. InfraNode is
+the broadest for city-level open data, and the projects below often complement
+each other:
+
+- **[germany-mcp-server](https://github.com/AiAgentKarl/germany-mcp-server)** federal and government data (Autobahn, DWD, NINA, SMARD, Bundestag). Nationwide, no per-city breadth.
+- **[db-mcp-server](https://github.com/PaulvonBerg/db-mcp-server)** / db-timetable-mcp Deutsche Bahn rail timetables only.
+- **[mcp-server-public-transport](https://github.com/mirodn/mcp-server-public-transport)** public transport across Europe; in Germany it covers Berlin/Brandenburg (VBB).
+- **Single-city servers** (e.g. Munich, Berlin) cover one city each.
+
+InfraNode covers **84 German cities and 64 data types** behind one keyless, hosted
+endpoint, from environment and mobility to energy, economy and city life. Full
+side-by-side comparison:
+[infranode.dev/en/mcp-comparison](https://infranode.dev/en/mcp-comparison/).
+
 ## Self-host (optional)
 
 You don't need to, the hosted endpoint above is the fastest path. But the code
