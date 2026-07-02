@@ -248,71 +248,30 @@ const faq = [
     </p>
   </div>
 
-  <h2>Ein-Klick-Installation</h2>
+  <h2>Direkt ausprobieren: ein Live-Dashboard bauen lassen</h2>
   <p>
-    Für Cursor und VS Code geht es per Klick. Da InfraNode keylos ist, entfällt
-    jeder Login, der Server ist sofort verbunden:
+    In Clients mit Canvas/Artefakt-Unterstützung (z.B. Claude Code, Claude.ai)
+    reicht ein einfacher Prompt, um aus den InfraNode-Daten eine fertige,
+    interaktive Seite zu machen. Zum Beispiel:
   </p>
-  <p class="install">
-    <a class="install__btn" href="https://cursor.com/install-mcp?name=infranode&config=eyJ1cmwiOiJodHRwczovL21jcC5pbmZyYW5vZGUuZGV2L21jcCJ9">In Cursor installieren</a>
-    <a class="install__btn install__btn--ghost" href="vscode:mcp/install?%7B%22name%22%3A%22infranode%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.infranode.dev%2Fmcp%22%7D">In VS Code installieren</a>
-  </p>
-
-  <h2>Was ist MCP</h2>
+  <pre class="codetabs__pre"><code>Baue mir ein Live-Dashboard für Köln</code></pre>
   <p>
-    Das Model Context Protocol (MCP) ist ein offener Standard, über den
-    KI-Agenten externe Werkzeuge und Datenquellen einbinden. Ein MCP-Server
-    meldet seine Tools beim Client an, der Agent ruft sie bei Bedarf mit
-    typisierten Argumenten auf und bekommt strukturiertes JSON zurück. Für dich
-    als Entwickler heißt das: Statt eine API-Integration zu bauen, verbindest du
-    den Server einmal, und dein Agent kann die Daten unmittelbar nutzen. Der
-    InfraNode-Server ist remote über Streamable HTTP erreichbar und braucht
-    keinen lokalen Prozess; alternativ läuft er lokal über stdio.
+    Der Agent ruft dafür <code>get_city_overview</code> plus ein paar gezielte
+    Live-Tools ab (Wetter, Luftqualität, Bahn-Abfahrten, Verkehrsereignisse) und
+    rendert daraus eigenständig eine vollständige Übersichtsseite, ganz ohne
+    dass InfraNode selbst ein UI vorgibt:
   </p>
-
-  <h2>Verbinden (Remote, empfohlen)</h2>
-  <p>
-    Der schnellste Weg: den gehosteten Endpunkt
-    <code>https://mcp.infranode.dev/mcp</code> als Connector einbinden. In Claude
-    Code genügt ein Befehl (erster Tab). Clients mit URL-Connector-Konfiguration
-    (Claude Desktop, ChatGPT und andere) nutzen die JSON-Form im zweiten Tab oder
-    tragen die URL direkt in der Connector-Oberfläche ein.
-  </p>
-  <CodeTabs
-    curl={claudeCodeRemote}
-    js={connectorConfig}
-    py={claudeCodeLocal}
-    id="codetabs-mcp-setup"
-    labels={["Claude Code (Remote)", "Connector per URL", "Lokal (stdio)"]}
+  <img
+    src="/showcase/koeln-live-dashboard.png"
+    alt="Von Claude aus InfraNode-Live-Daten generiertes Köln-Dashboard: Wetter, Luftqualität, Bahn-Abfahrten, Verkehrsereignisse und Datenabdeckung"
+    loading="lazy"
+    class="showcase-img"
   />
   <p>
-    Nach dem Hinzufügen stehen die 71 InfraNode-Tools im Agenten zur Verfügung.
-    Der Zugriff ist lesend und ohne Schlüssel.
-  </p>
-
-  <h2>stdio-Clients verbinden (npx mcp-remote)</h2>
-  <p>
-    Manche MCP-Clients unterstützen nur lokale stdio-Server, keine Remote-URL.
-    Für sie überbrückt das Standard-Tool <code>mcp-remote</code> die Lücke: Es
-    läuft lokal über <code>npx</code> und leitet stdio an den gehosteten Endpunkt
-    weiter. Kein Repo, kein Schlüssel, keine eigene InfraNode-Installation nötig.
-  </p>
-  <pre class="codetabs__pre"><code>{mcpRemoteConfig}</code></pre>
-  <p>
-    Beherrscht dein Client Remote-Connectoren per URL (Claude, ChatGPT), ist der
-    direkte Weg oben einfacher. <code>mcp-remote</code> ist nur der Fallback für
-    rein lokale stdio-Clients. Hinweis: ein eigenes Paket über
-    <code>pip</code>, <code>uvx</code> oder <code>npx infranode</code> gibt es
-    bewusst nicht, der gehostete Endpunkt ist der vorgesehene Weg.
-  </p>
-
-  <h2>Lokal betreiben (optional)</h2>
-  <p>
-    Wer den Server lieber selbst hostet, startet ihn lokal über stdio (dritter
-    Tab). Der Quellcode ist öffentlich auf GitHub verfügbar (Apache-2.0). Per
-    Umgebungsvariable <code>INFRANODE_MCP_API_BASE</code> lässt
-    sich die angesprochene API-Basis setzen (Default
-    <code>https://infranode.dev/api/v1</code>).
+    Das Ergebnis ist keine InfraNode-eigene Anwendung, sondern etwas, das der
+    Agent selbst aus den rohen JSON-Antworten der Tools erzeugt hat, mit
+    <code>get_city_overview</code> als Startpunkt. Funktioniert genauso für
+    jede der anderen 83 Städte.
   </p>
 
   <h2>Wogegen der Server läuft</h2>
@@ -360,8 +319,78 @@ const faq = [
 
   <h2>Beispiel-Aufruf</h2>
   <p>
-    Ein Agent holt die Stammdaten für Berlin. Das Ergebnis ist das
-    normalisierte JSON der Live-API, unverändert weitergereicht.
+    Ein Agent holt den Ein-Aufruf-Überblick für Berlin: Stammdaten, den
+    Katalog aller ~53 Datenarten mit Abdeckungsstatus und eine Live-Highlights-
+    Momentaufnahme. Guter Einstiegspunkt für jede Städtefrage, statt gezielt
+    ein einzelnes Tool zu raten. Das Ergebnis ist das normalisierte JSON der
+    Live-API, unverändert weitergereicht.
   </p>
-  <pre class="codetabs__pre"><code>get_city(slug="berlin")</code></pre>
+  <pre class="codetabs__pre"><code>get_city_overview(slug="berlin")</code></pre>
+
+  <h2>Ein-Klick-Installation</h2>
+  <p>
+    Für Cursor und VS Code geht es per Klick. Da InfraNode keylos ist, entfällt
+    jeder Login, der Server ist sofort verbunden:
+  </p>
+  <p class="install">
+    <a class="install__btn" href="https://cursor.com/install-mcp?name=infranode&config=eyJ1cmwiOiJodHRwczovL21jcC5pbmZyYW5vZGUuZGV2L21jcCJ9">In Cursor installieren</a>
+    <a class="install__btn install__btn--ghost" href="vscode:mcp/install?%7B%22name%22%3A%22infranode%22%2C%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.infranode.dev%2Fmcp%22%7D">In VS Code installieren</a>
+  </p>
+
+  <h2>Verbinden (Remote, empfohlen)</h2>
+  <p>
+    Der schnellste Weg: den gehosteten Endpunkt
+    <code>https://mcp.infranode.dev/mcp</code> als Connector einbinden. In Claude
+    Code genügt ein Befehl (erster Tab). Clients mit URL-Connector-Konfiguration
+    (Claude Desktop, ChatGPT und andere) nutzen die JSON-Form im zweiten Tab oder
+    tragen die URL direkt in der Connector-Oberfläche ein.
+  </p>
+  <CodeTabs
+    curl={claudeCodeRemote}
+    js={connectorConfig}
+    py={claudeCodeLocal}
+    id="codetabs-mcp-setup"
+    labels={["Claude Code (Remote)", "Connector per URL", "Lokal (stdio)"]}
+  />
+  <p>
+    Nach dem Hinzufügen stehen die 71 InfraNode-Tools im Agenten zur Verfügung.
+    Der Zugriff ist lesend und ohne Schlüssel.
+  </p>
+
+  <h2>stdio-Clients verbinden (npx mcp-remote)</h2>
+  <p>
+    Manche MCP-Clients unterstützen nur lokale stdio-Server, keine Remote-URL.
+    Für sie überbrückt das Standard-Tool <code>mcp-remote</code> die Lücke: Es
+    läuft lokal über <code>npx</code> und leitet stdio an den gehosteten Endpunkt
+    weiter. Kein Repo, kein Schlüssel, keine eigene InfraNode-Installation nötig.
+  </p>
+  <pre class="codetabs__pre"><code>{mcpRemoteConfig}</code></pre>
+  <p>
+    Beherrscht dein Client Remote-Connectoren per URL (Claude, ChatGPT), ist der
+    direkte Weg oben einfacher. <code>mcp-remote</code> ist nur der Fallback für
+    rein lokale stdio-Clients. Hinweis: ein eigenes Paket über
+    <code>pip</code>, <code>uvx</code> oder <code>npx infranode</code> gibt es
+    bewusst nicht, der gehostete Endpunkt ist der vorgesehene Weg.
+  </p>
+
+  <h2>Lokal betreiben (optional)</h2>
+  <p>
+    Wer den Server lieber selbst hostet, startet ihn lokal über stdio (dritter
+    Tab). Der Quellcode ist öffentlich auf GitHub verfügbar (Apache-2.0). Per
+    Umgebungsvariable <code>INFRANODE_MCP_API_BASE</code> lässt
+    sich die angesprochene API-Basis setzen (Default
+    <code>https://infranode.dev/api/v1</code>).
+  </p>
+
+  <h2>Was ist MCP</h2>
+  <p>
+    Das Model Context Protocol (MCP) ist ein offener Standard, über den
+    KI-Agenten externe Werkzeuge und Datenquellen einbinden. Ein MCP-Server
+    meldet seine Tools beim Client an, der Agent ruft sie bei Bedarf mit
+    typisierten Argumenten auf und bekommt strukturiertes JSON zurück. Für dich
+    als Entwickler heißt das: Statt eine API-Integration zu bauen, verbindest du
+    den Server einmal, und dein Agent kann die Daten unmittelbar nutzen. Der
+    InfraNode-Server ist remote über Streamable HTTP erreichbar und braucht
+    keinen lokalen Prozess; alternativ läuft er lokal über stdio.
+  </p>
 </Docs>

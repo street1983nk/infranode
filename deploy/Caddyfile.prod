@@ -123,6 +123,18 @@ mcp.{$INFRANODE_PUBLIC_DOMAIN} {
 		resolvers 1.1.1.1
 	}
 
+	# Browser-Redirect (Owner-Wunsch 2026-07-01): jemand, der mcp.<domain> oder
+	# mcp.<domain>/mcp im Browser aufruft (statt per MCP-Client zu verbinden),
+	# sah bisher nur einen rohen JSON-RPC-Fehler (406 "Client must accept
+	# text/event-stream") bzw. 404 auf der Root. Echte MCP-Clients senden nie
+	# Accept: text/html (nur application/json + text/event-stream), daher
+	# unterscheidet dieser Matcher zuverlaessig einen Menschen im Browser von
+	# einem MCP-Client und schickt nur den Menschen zur Doku-Seite weiter.
+	@browser {
+		header Accept *text/html*
+	}
+	redir @browser https://{$INFRANODE_PUBLIC_DOMAIN}/mcp/ 302
+
 	# Reine Maschinen-Schnittstelle (JSON-RPC/SSE), keine HTML-Auslieferung -> keine CSP.
 	header {
 		Strict-Transport-Security "max-age=31536000"

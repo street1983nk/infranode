@@ -193,7 +193,29 @@ plus Herkunft/Lizenz/Attribution, `meta` enthält Correlation-ID, Quell-Status
 und Cache-Status. Die folgenden Ausgaben sind echte, gekürzte Antworten der
 Live-API.
 
-`get_city(slug="berlin")`:
+`get_city_overview(slug="berlin")` — the discovery entry point, start here for any
+city question instead of guessing a single tool:
+
+```json
+{
+  "data": {
+    "city_slug": "berlin",
+    "base": { "population": 3782202, "area_km2": 891.12, "geo": { "lat": 52.52, "lon": 13.38 } },
+    "catalog": [
+      { "resource": "weather", "tool": "weather", "covered": true },
+      { "resource": "air-uba", "tool": "air_quality", "covered": true },
+      { "resource": "solar-roofs", "tool": "solar_roofs", "covered": true }
+    ],
+    "highlights": {
+      "weather": { "temperature_c": 19.4, "condition": "dry" },
+      "air": { "pm10": 12.0 }
+    }
+  },
+  "meta": { "source_status": "ok", "cache_status": "MISS" }
+}
+```
+
+`get_city(slug="berlin")` — for just the base facts, without the full catalog:
 
 ```json
 {
@@ -216,7 +238,7 @@ Live-API.
 }
 ```
 
-`weather(slug="berlin")`:
+`weather(slug="berlin")` — for a single known fact once you already know what you want:
 
 ```json
 {
@@ -262,8 +284,28 @@ Live-API.
 
 ## Beispiel-Transkript (inklusive Fehlerfall)
 
-Ein typischer Agent-Ablauf, der zuerst gültige Slugs ermittelt und dann Daten
-abruft. Der zweite Teil zeigt bewusst einen Fehlerfall.
+Bei einer offenen/allgemeinen Frage ist `get_city_overview` der richtige erste
+Aufruf statt ein einzelnes Tool zu raten: er liefert Stammdaten plus den
+Katalog aller Datenarten in einem Schritt.
+
+```
+Nutzer: Was gibt es an offenen Daten zu Köln?
+
+Agent -> Tool: get_city_overview(slug="koeln")
+Tool  -> Agent: { "data": { "base": { "population": 1073096, ... },
+                  "catalog": [ { "resource": "weather", "tool": "weather", "covered": true },
+                               { "resource": "public-tenders", "tool": "public_tenders", "covered": true },
+                               ... ~53 weitere Datenarten ... ] },
+                  "meta": { "source_status": "ok" } }
+
+Agent: Zu Köln gibt es u.a. Wetter, Luftqualität, ÖPNV, Verkehr, öffentliche
+Vergaben und mehr — soll ich zu einem Bereich ins Detail gehen?
+```
+
+Bei einer konkreten, bereits eindeutigen Frage ruft der Agent direkt das
+passende Einzel-Tool auf; ein typischer Ablauf, der zuerst gültige Slugs
+ermittelt und dann Daten abruft. Der zweite Teil zeigt bewusst einen
+Fehlerfall.
 
 ```
 Nutzer: Wie warm ist es gerade in Berlin?

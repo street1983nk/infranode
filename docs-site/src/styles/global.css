@@ -555,6 +555,16 @@ code {
   font-size: inherit;
 }
 
+/* Showcase-Screenshots (z.B. Live-Dashboard-Beispiel auf /mcp) */
+.showcase-img {
+  display: block;
+  max-width: 100%;
+  width: 100%;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  margin: 1rem 0;
+}
+
 /* Try it */
 .tryit {
   background: var(--bg-soft);

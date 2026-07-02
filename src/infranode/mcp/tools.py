@@ -49,7 +49,8 @@ async def get_city(slug: _Slug) -> ToolEnvelope:
     """Get base data for a German city (population, area, coordinates).
 
     Sourced from Wikidata. Read-only. Useful as a first lookup to confirm a city
-    exists and get its core attributes.
+    exists and get its core attributes. For a broader question about the city
+    (what data is available at all) use ``get_city_overview`` instead.
     """
     return await client.get_resource(slug, "base")
 
@@ -93,7 +94,9 @@ async def weather(slug: _Slug) -> ToolEnvelope:
 
     Sourced from the Deutscher Wetterdienst (DWD): temperature, wind,
     precipitation and related fields. Read-only, current conditions only (not a
-    forecast). For warnings see ``weather_warnings``.
+    forecast). For warnings see ``weather_warnings``. For a broader question
+    about the city (not just weather) use ``get_city_overview`` instead, which
+    already includes a live weather highlight.
     """
     return await client.get_resource(slug, "weather")
 
@@ -132,7 +135,8 @@ async def transit(slug: _Slug) -> ToolEnvelope:
     """Get public-transport stops for a German city (static).
 
     Sourced from DELFI/GTFS (HVV in Hamburg). Read-only. For minute-fresh
-    departures with delays use ``transit_departures``.
+    departures with delays use ``transit_departures``. For a broader question
+    about the city (not just transit) use ``get_city_overview`` instead.
     """
     return await client.get_resource(slug, "transit")
 
@@ -541,29 +545,48 @@ async def transit_departures(
         str | None,
         Field(
             description=(
-                "Optional stop ID; omit it to get the city's available departures."
+                "Required stop ID to fetch departures for. Discover a city's stop "
+                "IDs with the 'transit' tool first (each stop carries its id). "
+                "Format: DELFI 'de:<AGS>:<id>' or a numeric gtfs.de stop id."
             )
         ),
     ] = None,
 ) -> ToolEnvelope:
-    """Get live public-transport departures with real-time delays.
+    """Get live public-transport departures with real-time delays for a stop.
 
     Sourced from GTFS-RT/HVV/VGN. Unlike ``transit`` (static stops), this returns
-    minute-fresh departures including delay. Read-only.
+    minute-fresh departures including delay for ONE stop. A ``stop_id`` is
+    required: call the ``transit`` tool for this city to discover valid stop IDs,
+    then pass one here. Read-only.
     """
-    params = {"stop_id": stop_id} if stop_id else None
-    return await client.get_live(slug, "transit/departures", params=params)
+    if not stop_id:
+        # Ohne stop_id kann die Live-Quelle keine Abfahrten liefern. Statt eines
+        # harten Fehlers eine ehrliche, selbst-korrigierende Envelope zurueckgeben.
+        return {
+            "data": None,
+            "meta": {
+                "source_status": "no_data",
+                "note": (
+                    "Provide a stop_id to get live departures. Discover valid stop "
+                    "IDs for this city with the 'transit' tool, then call again."
+                ),
+            },
+        }
+    return await client.get_live(
+        slug, "transit/departures", params={"stop_id": stop_id}
+    )
 
 
 async def parking(slug: _Slug) -> ToolEnvelope:
-    """Get live parking occupancy (vacant spaces, occupancy %) for a city.
+    """Get parking data for a city (car parks, live occupancy where available).
 
-    Per car park: vacant spaces, occupancy percentage and graded occupancy,
-    enriched with name, geo coordinate and capacity. Sourced from the Mobilithek
-    (DATEX II V3). Currently available for ``frankfurt-am-main``; other slugs
-    return source_status="disabled". Read-only, live (minute-fresh).
+    Per car park: name, geo coordinate, capacity and, where the source is live,
+    vacant spaces and occupancy percentage. Sourced from ParkenDD (~22 cities,
+    live occupancy) with a static München fallback. Cities without a parking
+    source return source_status="not_covered" (plus the list of covered cities),
+    not an error. Read-only.
     """
-    return await client.get_live(slug, "parking")
+    return await client.get_resource(slug, "parking")
 
 
 async def list_cities() -> ToolEnvelope:

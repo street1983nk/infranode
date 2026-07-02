@@ -758,6 +758,16 @@ async def city_overview(slug: str, request: Request) -> dict:
     tasks.append(_bounded("departures", _snapshot_departures(entry, request)))
     highlights: dict[str, dict] = dict(await asyncio.gather(*tasks))
 
+    cities_total = len(list_cities())
+    # headline: macht die Breite fuer Nutzer/Agenten sofort greifbar (Owner-Wunsch:
+    # "verstehen, dass sie viele Daten bekommen koennen"). Der volle data_types-
+    # Katalog oben listet JEDE Datenart mit ihrem Tool; die headline fasst zusammen.
+    headline = (
+        f"InfraNode covers {len(catalog)} data types for German cities. "
+        f"{available} are available for {entry.slug} right now, each with the tool "
+        f"to call in the catalog above. Across {cities_total} cities and thousands "
+        "of live data streams, all keyless and free."
+    )
     return {
         "data": {
             "city": entry.model_dump(mode="json"),
@@ -766,7 +776,8 @@ async def city_overview(slug: str, request: Request) -> dict:
             "summary": {
                 "data_types_total": len(catalog),
                 "data_types_available": available,
-                "cities_total": len(list_cities()),
+                "cities_total": cities_total,
+                "headline": headline,
                 "note": OVERVIEW_GROWTH_NOTE,
             },
         },

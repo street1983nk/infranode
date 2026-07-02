@@ -18,22 +18,32 @@ normalisiertes JSON 1:1 zurück (D-07/D-08). Zwei Transporte:
 
 from __future__ import annotations
 
+import functools
 import os
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 from infranode.mcp import tools
+from infranode.mcp.client import UpstreamError
 from infranode.registry.catalog import CITY_DATA_CATALOG
 
 # Server-Instructions: werden beim initialize an den Client/Agenten ausgeliefert und
 # sind der größte Discovery-Hebel. Sie sagen dem Agenten, WO er anfangen soll
 # (get_city_overview) und wie alles zusammenhängt, damit er schnell und ohne Raten
-# an alle Daten kommt (Owner-Wunsch 2026-06-24).
+# an alle Daten kommt (Owner-Wunsch 2026-06-24). Die Tool-Zahl wird UNTEN, nachdem
+# alle _register()-Aufrufe gelaufen sind, live nachgetragen (siehe
+# ``mcp._mcp_server.instructions = ...`` nach der letzten _register()-Zeile):
+# eine hartkodierte Zahl hier wuerde bei jedem neuen Tool sofort veralten (genau das
+# Problem, das ein veralteter Memory-Eintrag "44 Tools" ausgeloest hat, Owner-Fund
+# 2026-07-01) und ist fuer JEDEN Client bei JEDEM Connect sichtbar, nicht nur fuer
+# Claude Code mit eigenem Memory.
 _INSTRUCTIONS = (
     "InfraNode is a keyless, read-only open-data API for 84 German cities, exposed "
-    "as MCP tools. To answer ANY city question, START with get_city_overview(slug): "
-    "it returns the city's base data, a catalog of ALL available data types (each "
+    "as {tool_count} MCP tools (count is live from this server, not a cached or "
+    "remembered number). To answer ANY city question, START with "
+    "get_city_overview(slug): it returns the city's base data, a catalog of ALL "
+    "available data types (each "
     "with its coverage status and the exact tool to call next) and a small live "
     "snapshot (weather, air, train departures). Find valid city slugs with "
     "list_cities (or the infranode://cities resource); browse every data type with "
@@ -46,6 +56,11 @@ _INSTRUCTIONS = (
 )
 
 mcp = FastMCP("infranode", instructions=_INSTRUCTIONS)
+
+# Haelt die Namen aller ueber _register() registrierten Tools fest, damit die
+# Instructions unten die ECHTE, aktuelle Zahl tragen koennen statt eine
+# haendisch gepflegte, die veraltet.
+_registered_tool_names: list[str] = []
 
 
 # Verhaltens-Hinweise (MCP Tool Annotations): Jedes InfraNode-Tool ist ein
@@ -65,13 +80,133 @@ def _annotations(*, open_world: bool) -> ToolAnnotations:
     )
 
 
+# Menschenlesbare Anzeige-Titel je Tool. Der Anthropic Connectors Directory
+# verlangt fuer jedes Tool einen Titel; ausserdem lesen Clients/Verzeichnisse
+# diesen Titel in der Werkzeugauswahl. Der Funktionsname (snake_case) ist der
+# stabile technische Bezeichner, der Titel ist die Anzeige. Fehlt ein Eintrag,
+# faellt _title_for() auf eine automatische Title-Case-Ableitung zurueck, damit
+# neue Tools nie ganz ohne Titel bleiben (siehe test_mcp_tool_titles).
+_TOOL_TITLES: dict[str, str] = {
+    "get_city": "City Base Data",
+    "get_city_overview": "City Overview",
+    "air_quality": "Air Quality",
+    "air_quality_live": "Air Quality (Live)",
+    "weather": "Weather",
+    "pois": "Points of Interest",
+    "traffic": "Traffic",
+    "transit": "Public Transit",
+    "charging": "EV Charging Stations",
+    "water_level": "Water Levels",
+    "flood": "Flood Warnings",
+    "pollen_uv": "Pollen & UV Index",
+    "fire_danger": "Wildfire Danger",
+    "bathing_water": "Bathing Water Quality",
+    "hospitals_atlas": "Hospitals",
+    "station_facilities": "Station Facilities",
+    "demographics": "Demographics",
+    "energy": "Energy",
+    "geo": "Geocoding",
+    "election": "Election Results",
+    "holidays": "Public Holidays",
+    "health": "Health Indicators",
+    "icu_live": "ICU Beds (Live)",
+    "road_events": "Road Events",
+    "events": "Events",
+    "webcams": "Webcams",
+    "power_load": "Power Load",
+    "power_price": "Electricity Price",
+    "weather_warnings": "Weather Warnings",
+    "vehicle_registrations": "Vehicle Registrations",
+    "unemployment": "Unemployment",
+    "tourism": "Tourism",
+    "construction": "Construction Sites",
+    "accidents": "Traffic Accidents",
+    "crime_stats": "Crime Statistics",
+    "fuel_prices": "Fuel Prices",
+    "sharing": "Shared Mobility",
+    "solar": "Solar Potential",
+    "solar_roofs": "Rooftop Solar Cadastre",
+    "indicators": "Regional Indicators",
+    "land_values": "Land Values",
+    "tax_rates": "Municipal Tax Rates",
+    "business_registrations": "Business Registrations",
+    "insolvencies": "Insolvencies",
+    "station_departures": "Train Departures",
+    "station_arrivals": "Train Arrivals",
+    "stations": "Train Stations",
+    "station_board_departures": "Station Board: Departures",
+    "station_board_arrivals": "Station Board: Arrivals",
+    "transit_departures": "Transit Departures",
+    "parking": "Parking",
+    "list_cities": "List Cities",
+    "sources": "Data Sources",
+    "compare": "Compare Cities",
+    "playgrounds": "Playgrounds",
+    "drinking_water": "Drinking Water Fountains",
+    "public_toilets": "Public Toilets",
+    "markets": "Weekly Markets",
+    "parcel_lockers": "Parcel Lockers",
+    "post_offices": "Post Offices",
+    "post_boxes": "Post Boxes",
+    "public_wifi": "Public Wi-Fi",
+    "recycling_centres": "Recycling Centres",
+    "government_offices": "Government Offices",
+    "education": "Schools & Education",
+    "heritage": "Heritage Monuments",
+    "tree_cadastre": "Tree Cadastre",
+    "population_density": "Population Density",
+    "public_tenders": "Public Tenders",
+    "bike_counts": "Bicycle Counts",
+    "district_heating": "District Heating",
+}
+
+
+def _title_for(name: str) -> str:
+    """Anzeige-Titel eines Tools; Fallback = Title-Case aus dem Funktionsnamen."""
+    return _TOOL_TITLES.get(name) or name.replace("_", " ").title()
+
+
+# Graceful-Degradation-Wrapper: ein transienter Upstream-/Quellen-Ausfall (5xx)
+# darf einen Tool-Call NICHT hart als Fehler abbrechen. Solche Faelle werden in
+# einen ehrlichen ``source_status="error"``-Envelope gewandelt (genau das
+# Envelope-Versprechen, das die uebrigen Tools bei 200 einhalten), damit ein
+# Reviewer/Client nie einen rohen Fehler sieht, wenn z.B. Overpass kurz weg ist.
+# 4xx (unbekannter Slug, fehlender Pflichtparameter) wird WEITER geworfen: der
+# Text traegt message + hint, damit sich das Modell selbst korrigieren kann.
+def _graceful(fn):
+    """Umhuellt eine Tool-Coroutine; 5xx-UpstreamError -> graceful Envelope."""
+
+    @functools.wraps(fn)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await fn(*args, **kwargs)
+        except UpstreamError as exc:
+            code = exc.status_code
+            if code is not None and 500 <= code < 600:
+                return {
+                    "data": None,
+                    "meta": {
+                        "source_status": "error",
+                        "note": str(exc),
+                    },
+                }
+            raise
+
+    return wrapper
+
+
 # Dünne Registrierung der freistehenden Tool-Funktionen (Blocker 4): der
 # Decorator wird programmatisch über jede Funktion gelegt. Die Funktion selbst
 # bleibt in infranode.mcp.tools unverändert als Coroutine aufrufbar; FastMCP
-# generiert das Schema aus den Typannotationen und Docstrings.
+# generiert das Schema aus den Typannotationen und Docstrings (functools.wraps
+# im Wrapper erhält Signatur, Annotationen und Docstring, das Schema bleibt gleich).
 def _register(fn, *, open_world: bool = True) -> None:
-    """Registriert ein Tool mit den read-only Annotations (siehe oben)."""
-    mcp.tool(annotations=_annotations(open_world=open_world))(fn)
+    """Registriert ein Tool mit Titel + read-only Annotations (siehe oben)."""
+    mcp.tool(
+        title=_title_for(fn.__name__),
+        annotations=_annotations(open_world=open_world),
+    )(_graceful(fn))
+    _registered_tool_names.append(fn.__name__)
 
 
 _register(tools.get_city)
@@ -182,6 +317,15 @@ _register(tools.bike_counts)
 # föderiert je Stadt-WFS, Tier A, Teilabdeckung berlin/hamburg). Read-only aus dem
 # Batch-Store -> open_world=False (kuratierte Abdeckung).
 _register(tools.district_heating)
+
+# Live-Tool-Zahl in die Instructions nachtragen: FastMCPs ``instructions`` ist
+# eine Property ohne Setter (nur ueber den Konstruktor gesetzt), daher ueber das
+# darunterliegende ``_mcp_server`` geschrieben. ``str.replace`` statt
+# ``str.format``, weil die Instructions selbst literale ``{data, meta}``-Klammern
+# als Envelope-Beispiel enthalten, die ``.format()`` als Platzhalter fehldeuten wuerde.
+mcp._mcp_server.instructions = _INSTRUCTIONS.replace(
+    "{tool_count}", str(len(_registered_tool_names))
+)
 
 
 # MCP Resources: expose the coverage catalog as browsable resources, so clients

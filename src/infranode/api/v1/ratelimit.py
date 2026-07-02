@@ -23,6 +23,7 @@ from slowapi import Limiter
 from slowapi.extension import HEADERS
 
 from infranode.config import Settings
+from infranode.infra.allowlist import ip_allowlisted, parse_allowlist
 
 # IETF-Standard-RateLimit-Header (D-02, ohne X--Präfix). slowapi nutzt per
 # Default X-RateLimit-*; dieses Mapping normalisiert die Namen.
@@ -110,6 +111,19 @@ def build_limiter(settings: Settings) -> Limiter:
 
     Die API ist keylos/offen: alle Clients teilen sich das IP-Budget (ANON_LIMIT),
     es gibt keine Key-/Tier-Differenzierung mehr.
+
+    ALLOWLIST-BYPASS (Connectors-Directory-Härtung 2026-07-02): der Wrapper um
+    ``_check_request_limit`` ist der EINE Choke-Point, durch den slowapi ALLE
+    Prüfungen zieht (default_limits via RateLimitMiddleware UND die
+    @limiter.limit-Decorator von /sources, /compare, /admin/login). CIDRs aus
+    INFRANODE_RATELIMIT_ALLOWLIST (z.B. Anthropic-Egress: viele Endnutzer
+    hinter wenigen IPs) werden dort nicht gezählt und nie gedrosselt.
+    AUSNAHME /admin*: das Admin-Login-Limit ist Brute-Force-Schutz (Auth-nah,
+    HIGH-1) und gilt IMMER, auch für allowlistete IPs (NUR Limit-Bypass, KEINE
+    Auth-Wirkung). Die Allowlist wird wie ANON_LIMIT pro Request frisch aus den
+    Settings gelesen (Test-Override-Konvention); parse_allowlist ist lru-gecacht,
+    pro Request fällt also nur der billige CIDR-Vergleich an. Fail-safe: leere/
+    kaputte Konfiguration allowlistet niemanden (infra/allowlist.py).
     """
     lim = Limiter(
         key_func=rate_key,
@@ -120,6 +134,28 @@ def build_limiter(settings: Settings) -> Limiter:
     # Vor dem ersten Request gesetzt: extension._init bewahrt vorhandene Einträge
     # (header_mapping.get(..., default)), also schlagen die Standard-Namen durch.
     lim._header_mapping.update(_STANDARD_HEADER_MAPPING)
+
+    orig_check = lim._check_request_limit
+
+    def _check_with_allowlist(
+        request: Request, endpoint_func, in_middleware: bool = False
+    ) -> None:  # noqa: ANN001 - slowapi-interne Signatur (Callable | None)
+        if not request.url.path.startswith("/admin") and ip_allowlisted(
+            real_client_ip(request), parse_allowlist(Settings().ratelimit_allowlist)
+        ):
+            # Bypass: keine Zählung, kein 429. view_rate_limit explizit auf
+            # None setzen, weil der slowapi-Decorator es nach der Route
+            # ungeprüft liest (request.state wirft sonst AttributeError);
+            # _inject_headers ist mit None ein No-op -> keine RateLimit-Header.
+            request.state.view_rate_limit = None
+            return
+        orig_check(request, endpoint_func, in_middleware)
+
+    # Bewusster Eingriff in die private Methode (Haus-Stil: slowapi 0.1.9 ist
+    # gepinnt, s. _header_mapping oben und _Limiter__marked_for_limiting in
+    # main.py); slowapi selbst bietet keinen request-basierten Exempt-Hook
+    # (exempt_when/_request_filters werden OHNE Request aufgerufen).
+    lim._check_request_limit = _check_with_allowlist
     return lim
 
 

@@ -30,6 +30,10 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+# stdlib-only Modul, zieht bewusst NICHT den FastAPI-/Settings-Pfad (s.o. die
+# Begründung bei client_ip; gleiche Entkopplung für den Allowlist-Check).
+from infranode.infra.allowlist import ENV_VAR, ip_allowlisted, parse_allowlist
+
 logger = logging.getLogger(__name__)
 
 # Default-Budget pro IP für den MCP-Endpunkt. Per INFRANODE_MCP_RATE_LIMIT
@@ -113,6 +117,11 @@ class MCPRateLimitMiddleware:
         )
         # Fenster in Sekunden für den Retry-After-Header.
         self._retry_after = str(self._item.get_expiry())
+        # Allowlist-Bypass (Connectors-Directory-Härtung 2026-07-02): CIDRs aus
+        # der Env umgehen das per-IP-Limit komplett (Anthropic-Egress bündelt
+        # viele Endnutzer hinter wenigen IPs). Einmal beim Start geparst, wie
+        # das Limit selbst; fail-safe leer = niemand (infra/allowlist.py).
+        self._allowlist = parse_allowlist(os.environ.get(ENV_VAR))
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -122,6 +131,11 @@ class MCPRateLimitMiddleware:
 
         request = Request(scope, receive=receive)
         ip = client_ip(request)
+        # Allowlistete Infrastruktur-IPs (z.B. Anthropic-Egress) werden nicht
+        # gezählt und nie gedrosselt; alle anderen laufen unverändert ins Limit.
+        if ip_allowlisted(ip, self._allowlist):
+            await self.app(scope, receive, send)
+            return
         # hit() zählt den Request und gibt False zurück, sobald das Budget
         # erschöpft ist. Namespace "mcp" trennt die Buckets sauber.
         if not self._limiter.hit(self._item, "mcp", ip):

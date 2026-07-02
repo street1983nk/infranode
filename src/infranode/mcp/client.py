@@ -65,6 +65,10 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "pois",
         "traffic",
         "transit",
+        # DATA-40: unified Parkhaus-Endpunkt je Stadt (ParkenDD ~22 Städte +
+        # München-Fallback). Loest die alte, frankfurt-fixe /live/{slug}/parking-
+        # Route ab; unabgedeckte Slugs -> 200 not_covered (kein 404).
+        "parking",
         "charging",
         "water-level",
         "flood",
@@ -197,7 +201,17 @@ class UpstreamError(RuntimeError):
     sieht; mit dieser Klasse trägt der Text die strukturierte API-Meldung inkl.
     ``hint``, sodass sich das Modell selbst korrigieren kann (z.B. ``list_cities``
     bei unbekanntem Slug aufrufen).
+
+    ``status_code`` trägt den HTTP-Status der Fehler-Response, damit die
+    Registrierungsschicht (server.py) 5xx (transiente Upstream-/Quellen-Ausfälle)
+    graceful in einen ``source_status="error"``-Envelope wandeln kann, 4xx
+    (z.B. unbekannter Slug, fehlender Pflichtparameter) aber weiter wirft, damit
+    sich das Modell selbst korrigiert.
     """
+
+    def __init__(self, *args: object, status_code: int | None = None) -> None:
+        super().__init__(*args)
+        self.status_code = status_code
 
 
 def _build_upstream_error(response: httpx.Response) -> UpstreamError:
@@ -219,7 +233,10 @@ def _build_upstream_error(response: httpx.Response) -> UpstreamError:
         )
     if not detail:
         detail = response.text[:200].strip() or response.reason_phrase
-    return UpstreamError(f"InfraNode-API {response.status_code}: {detail}")
+    return UpstreamError(
+        f"InfraNode-API {response.status_code}: {detail}",
+        status_code=response.status_code,
+    )
 
 
 def _base_url() -> str:

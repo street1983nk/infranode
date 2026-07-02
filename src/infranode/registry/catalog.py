@@ -86,6 +86,7 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
     ),
     DataType("webcams", "webcams", "Verkehrs-Webcams", "Traffic webcams"),
     DataType("charging", "charging", "Ladesäulen", "EV charging stations"),
+    DataType("parking", "parking", "Parkhäuser", "Car parks"),
     DataType("fuel-prices", "fuel_prices", "Spritpreise", "Fuel prices"),
     DataType("sharing", "sharing", "Bike- & Scooter-Sharing", "Bike & scooter sharing"),
     DataType("pois", "pois", "Points of Interest", "Points of interest"),

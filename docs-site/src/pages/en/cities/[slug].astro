@@ -142,8 +142,10 @@ const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;
   <p>
     All open data for {city.name} is also available through the free, keyless
     <a href="/en/mcp/">InfraNode MCP server</a> for AI agents. Connect it once to
-    Claude or ChatGPT and ask in natural language, for example "What is the
-    weather in {city.name}?" or "How is the air quality in {city.name}?". Here is
+    Claude or ChatGPT and ask in natural language, for example "Give me an
+    overview of {city.name}" (calls <code>get_city_overview</code>, the catalog
+    of all data types with live highlights) or more specifically "What is the
+    weather in {city.name}?". Here is
     how to set it up:
     <a href="/en/tutorials/set-up-mcp-server-claude/">set up the MCP server</a>.
   </p>

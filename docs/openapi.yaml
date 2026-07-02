@@ -571,8 +571,9 @@ paths:
                       summary:
                         type: object
                         description: >-
-                          data_types_total, data_types_available, cities_total und
-                          ein Roadmap-Hinweis (note).
+                          data_types_total, data_types_available, cities_total,
+                          eine headline (macht die verfügbare Breite in einem Satz
+                          greifbar) und ein Roadmap-Hinweis (note).
                   meta:
                     $ref: "#/components/schemas/Meta"
         "404":

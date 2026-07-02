@@ -33,6 +33,7 @@ from starlette.responses import Response
 
 from infranode.api.v1.ratelimit import real_client_ip
 from infranode.config import Settings
+from infranode.infra.allowlist import ip_allowlisted, parse_allowlist
 
 logger = logging.getLogger(__name__)
 
@@ -86,11 +87,23 @@ class AbuseGuardMiddleware(BaseHTTPMiddleware):
             MovingWindowRateLimiter(_make_storage(s)) if self._item else None
         )
         self._retry_after = str(self._item.get_expiry()) if self._item else "60"
+        # Allowlist-Bypass (Connectors-Directory-Härtung 2026-07-02): CIDRs aus
+        # INFRANODE_RATELIMIT_ALLOWLIST umgehen Subnetz-Limit UND Bot-Score-
+        # Block. Begründung Bot-Score: allowlistete Ranges sind ausdrücklich
+        # zugelassene AUTOMATISIERTE Infrastruktur (Anthropic-Egress); ein
+        # niedriger Bot-Score wäre dort erwartbar und ein 403 bräche den
+        # Directory-Traffic genauso wie das Limit. Fail-safe leer = niemand.
+        self._allowlist = parse_allowlist(s.ratelimit_allowlist)
 
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         from infranode.api.errors import _envelope
+
+        # 0. Allowlistete Infrastruktur-IPs (z.B. Anthropic-Egress) passieren
+        #    den AbuseGuard komplett (NUR dieser Guard; Auth bleibt unberührt).
+        if ip_allowlisted(real_client_ip(request), self._allowlist):
+            return await call_next(request)
 
         # 1. Optionaler Bot-Score-Block (No-op ohne cf-bot-score-Header).
         if self._bot_score_min > 0:

@@ -95,6 +95,18 @@ class RateLimitSettings(BaseSettings):
     limit_subnet: str = "3000/minute"
     subnet_ipv4_prefix: int = 24
     subnet_ipv6_prefix: int = 64
+    # IP-Allowlist für RATE-LIMIT-BYPASS (kommagetrennte CIDR-Liste, v4/v6
+    # gemischt, nackte IPs = /32 bzw. /128; z.B. "203.0.113.0/24,2001:db8::/32").
+    # Zweck: Remote-MCP-Traffic aus dem Anthropic Connectors Directory kommt
+    # serverseitig über WENIGE Anthropic-Egress-IPs; per-IP-/Subnetz-Limits
+    # würden dieses legitime Aggregat drosseln. Allowlistete IPs umgehen das
+    # slowapi-IP-Limit, das AbuseGuard-Subnetz-Limit und das MCP-Limit.
+    # NUR Limit-Bypass, KEINE Auth; das Admin-Login-Limit (Brute-Force-Schutz)
+    # gilt IMMER, auch für allowlistete IPs. FAIL-SAFE: leer (Default) oder
+    # Müll-Einträge = niemand allowlistet (Ist-Verhalten). Per Env
+    # INFRANODE_RATELIMIT_ALLOWLIST ohne Code-Deploy änderbar; dieselbe Env
+    # liest auch der MCP-Container (infra/allowlist.py, stdlib-only).
+    ratelimit_allowlist: str = ""
     # Optionaler Cloudflare-Bot-Score-Schwellwert (1-99; 0 = deaktiviert). Greift
     # NUR, wenn Cloudflare den Header ``cf-bot-score`` setzt (Bot Management /
     # Enterprise). Bei Free/Pro fehlt der Header -> der Check ist ein No-op-Hook,
