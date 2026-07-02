@@ -61,6 +61,7 @@ const faqJsonLd = JSON.stringify({
     name="InfraNode API"
     description="Kostenlose, öffentliche Open-Data-REST-API für normalisierte offene Daten deutscher Großstädte."
   />
+  <JsonLd slot="jsonld" type="Organization" />
   <script slot="jsonld" type="application/ld+json" set:html={faqJsonLd} />
 
   <p class="hero__eyebrow">Kostenlose, öffentliche Open-Data-API</p>

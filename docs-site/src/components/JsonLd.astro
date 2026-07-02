@@ -13,7 +13,8 @@ interface Props {
     | "APIReference"
     | "FAQPage"
     | "SoftwareApplication"
-    | "Dataset";
+    | "Dataset"
+    | "Organization";
   // APIReference / SoftwareApplication / Dataset
   name?: string;
   abstract?: string;
@@ -110,6 +111,26 @@ if (type === "WebAPI") {
       "@type": "Organization",
       name: "InfraNode",
     },
+  };
+} else if (type === "Organization") {
+  // Marken-Entitaet mit stabiler @id, damit DE- und EN-Startseite dieselbe
+  // Organisation referenzieren. sameAs = autoritative Profile (GitHub-Repo,
+  // PulseMCP-Listing) zur Entitaets-Disambiguierung gegen fremde Namensvettern
+  // ("InfraNodus" / infranode.eu), GEO/Knowledge-Graph-Signal.
+  data = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${site}/#organization`,
+    name: name ?? "InfraNode",
+    url: `${site}/`,
+    logo: `${site}/logo-infranode.png`,
+    description:
+      description ??
+      "Open-Data-REST-API und MCP-Server für normalisierte offene Daten deutscher Großstädte, keylos und kostenlos.",
+    sameAs: sameAs ?? [
+      "https://github.com/street1983nk/infranode",
+      "https://www.pulsemcp.com/servers/infranode",
+    ],
   };
 } else if (type === "Dataset") {
   data = {
