@@ -244,6 +244,11 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Landeshauptstadt München",
     ),
     SourceSpec(
+        name="dortmund_baustellen",
+        license_id="dl_de_zero_2_0",
+        attribution="Stadt Dortmund",
+    ),
+    SourceSpec(
         name="mobidata_bw",
         license_id="dl_de_by_2_0",
         attribution="Verkehrsministerium Baden-Württemberg / MobiData BW",
@@ -399,6 +404,12 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         name="koeln_radzaehl",
         license_id="dl_de_zero_2_0",
         attribution="Stadt Köln",
+        ttl=(86400.0, 2592000.0),
+    ),
+    SourceSpec(
+        name="essen_radzaehl",
+        license_id="dl_de_by_2_0",
+        attribution="Stadt Essen",
         ttl=(86400.0, 2592000.0),
     ),
     SourceSpec(

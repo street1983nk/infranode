@@ -3418,8 +3418,8 @@ paths:
         source_status="not_covered" (mit covered_cities); abgedeckte Stadt ohne
         Zählstelle -> 200 source_status="no_data". Granularität je Quelle (siehe
         counts[].granularity): München Tag, Leipzig/Hamburg/Berlin Stunde,
-        Stuttgart/Köln Jahr. Lizenzen je Ursprung (München/Leipzig/Hamburg DL-DE/BY
-        2.0, Berlin/Köln DL-DE/Zero 2.0, Stuttgart CC BY 4.0).
+        Stuttgart/Köln/Essen Jahr. Lizenzen je Ursprung (München/Leipzig/Hamburg/Essen
+        DL-DE/BY 2.0, Berlin/Köln DL-DE/Zero 2.0, Stuttgart CC BY 4.0).
       x-description-en: >-
         Bicycle counting stations (permanent counters) per city from municipal
         open-data sources, license-verified at origin. Each station (counts)
@@ -3742,18 +3742,18 @@ paths:
       description: >-
         Liefert innerstädtische Baustellen und Sperrungen einer Stadt aus den
         schlüssellosen Pro-Stadt-Quellen (Berlin VIZ, Hamburg, Köln, München,
-        MobiData BW) im kanonischen Envelope. Teilabdeckung (kuratierte
-        Connectoren): nur berlin, hamburg, koeln, muenchen, stuttgart liefern
-        Daten. Eine Stadt ohne Connector antwortet ehrlich mit 200
+        MobiData BW, Dortmund) im kanonischen Envelope. Teilabdeckung (kuratierte
+        Connectoren): berlin, hamburg, koeln, muenchen, stuttgart, dortmund, bremen
+        liefern Daten. Eine Stadt ohne Connector antwortet ehrlich mit 200
         source_status="not_covered", data=null und meta.covered_cities (Liste der
         abgedeckten Städte), klar unterscheidbar von no_data (Connector vorhanden,
         aber gerade keine Ereignisse). Tier A. Deaktiviert -> 200
         source_status="disabled". Toter Upstream ohne Cache -> 503 mit Hint.
       x-description-en: >-
         Returns a city's inner-city roadworks and closures from the keyless
-        per-city sources (Berlin VIZ, Hamburg, Cologne, Munich, MobiData BW) in
+        per-city sources (Berlin VIZ, Hamburg, Cologne, Munich, MobiData BW, Dortmund) in
         the canonical envelope. Partial coverage (curated connectors): only
-        berlin, hamburg, koeln, muenchen, stuttgart return data. A city without a
+        berlin, hamburg, koeln, muenchen, stuttgart, dortmund, bremen return data. A city without a
         connector honestly responds with 200 source_status="not_covered",
         data=null and meta.covered_cities (the list of covered cities), clearly
         distinct from no_data (connector present, but currently no events).
@@ -5726,7 +5726,7 @@ components:
           format: date-time
         source:
           type: string
-          enum: [wikidata, dwd, osm, autobahn, bnetza, uba, delfi, hvv, pegelonline, hochwasser, dwd_pollen, genesis, zensus, mastr, bkg, bundeswahl, divi, feiertage, berlin_viz, hamburg_baustellen, koeln_verkehr, muenchen_baustellen, mobidata_bw]
+          enum: [wikidata, dwd, osm, autobahn, bnetza, uba, delfi, hvv, pegelonline, hochwasser, dwd_pollen, genesis, zensus, mastr, bkg, bundeswahl, divi, feiertage, berlin_viz, hamburg_baustellen, koeln_verkehr, muenchen_baustellen, dortmund_baustellen, mobidata_bw]
         license_id:
           type: string
           enum: [cc0, cc_by_4_0, dl_de_by_2_0, dl_de_zero_2_0, geonutzv, odbl, cc_by_sa_4_0, unknown]

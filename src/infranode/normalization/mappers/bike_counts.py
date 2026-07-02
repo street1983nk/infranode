@@ -236,3 +236,32 @@ def map_koeln_radzaehl(
         attribution_text="Stadt Köln",
         license_url=_DL_DE_ZERO_URL,
     )
+
+
+def map_essen_radzaehl(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet die Essener Rad-Jahreswerte ab (DL-DE/BY 2.0, Tier A).
+
+    Je Station ``value`` = Jahres-Summenwert, ``granularity`` "year", ``period``
+    = Jahr; KEINE Koordinaten (Portal-CSV liefert keine). ``observed_at`` None
+    (Jahreswert ohne Stundenzeitstempel). Lizenz DL-DE/BY 2.0, Attribution
+    "Stadt Essen".
+    """
+    return build_bike_count_record(
+        raw["slug"],
+        _counts_from_stations(raw, "year"),
+        None,
+        retrieved_at=retrieved_at,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        source=SourceId.ESSEN_RADZAEHL,
+        license_id=LicenseId.DL_DE_BY_2_0,
+        license_tier=LicenseTier.A,
+        attribution_text="Stadt Essen",
+        license_url=_DL_DE_BY_URL,
+    )

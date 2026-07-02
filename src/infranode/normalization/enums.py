@@ -92,6 +92,7 @@ class SourceId(StrEnum):
     HAMBURG_BAUSTELLEN = "hamburg_baustellen"
     KOELN_VERKEHR = "koeln_verkehr"
     MUENCHEN_BAUSTELLEN = "muenchen_baustellen"
+    DORTMUND_BAUSTELLEN = "dortmund_baustellen"
     MOBIDATA_BW = "mobidata_bw"
     # Phase 10: Stadt-Events/Veranstaltungen. DESTINATION_ONE ist die account-
     # gated eT4.META-Quelle (licensekey, gemischte Lizenzen pro Record, GOV-04),
@@ -243,6 +244,7 @@ class SourceId(StrEnum):
     BERLIN_RADZAEHL = "berlin_radzaehl"
     STUTTGART_RADZAEHL = "stuttgart_radzaehl"
     KOELN_RADZAEHL = "koeln_radzaehl"
+    ESSEN_RADZAEHL = "essen_radzaehl"
     # DATA-40: ParkenDD-Aggregator (api.parkendd.de, keylos) = bevorzugte Live-
     # Parkhaus-Belegung für viele Städte (EIN Adapter, Dedup-Prinzip). Lizenz
     # heterogen je Stadt -> UNKNOWN/Tier C (Tier-C-Muster), Attribution "ParkenDD".

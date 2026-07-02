@@ -36,6 +36,7 @@ from infranode.adapters.db_timetables import (
 from infranode.adapters.denkmal import fetch_heritage
 from infranode.adapters.destination_one import fetch_events
 from infranode.adapters.divi_live import fetch_icu_live
+from infranode.adapters.dortmund_baustellen import fetch_dortmund_road_events
 from infranode.adapters.dwd import fetch_weather
 from infranode.adapters.dwd_fire import fetch_fire_danger
 from infranode.adapters.dwd_pollen import fetch_pollen_uv
@@ -45,6 +46,7 @@ from infranode.adapters.dwd_warnings import (
     warncell_for_ags,
 )
 from infranode.adapters.eea_bathing import fetch_bathing_water
+from infranode.adapters.essen_radzaehl import fetch_essen_radzaehl
 from infranode.adapters.gbfs import fetch_sharing
 from infranode.adapters.genesis import (
     fetch_demographics,
@@ -112,6 +114,7 @@ from infranode.normalization.mappers.baumkataster import map_trees
 from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
 from infranode.normalization.mappers.bike_counts import (
     map_berlin_radzaehl,
+    map_essen_radzaehl,
     map_hamburg_radzaehl,
     map_koeln_radzaehl,
     map_leipzig_radzaehl,
@@ -127,6 +130,9 @@ from infranode.normalization.mappers.db_timetables import (
 from infranode.normalization.mappers.denkmal import map_heritage
 from infranode.normalization.mappers.destination_one import (
     map_destination_one_events,
+)
+from infranode.normalization.mappers.dortmund_baustellen import (
+    map_dortmund_road_events,
 )
 from infranode.normalization.mappers.dwd import map_weather
 from infranode.normalization.mappers.dwd_fire import map_fire_danger
@@ -257,6 +263,11 @@ CONNECTOR_MAP: dict[str, tuple] = {
         "mobidata_bw",
         fetch_mobidata_road_events,
         map_mobidata_road_events,
+    ),
+    "dortmund": (
+        "dortmund_baustellen",
+        fetch_dortmund_road_events,
+        map_dortmund_road_events,
     ),
     # DATA-31: Bremen kommt NICHT keylos, sondern über den Mobilithek-mTLS-Pull
     # (VMZ Bremen, DATEX II Situation). fetch_fn=None signalisiert dem
@@ -2604,6 +2615,13 @@ async def _fetch_koeln_radzaehl(http, entry) -> dict:
     )
 
 
+async def _fetch_essen_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Essen (Standard-Signatur)."""
+    return await fetch_essen_radzaehl(
+        http, slug=entry.slug, lat=entry.geo.lat, lon=entry.geo.lon
+    )
+
+
 def _resolve_bike_counts_connector(slug: str):
     """Liefert ``(source, fetch_factory, map_fn)`` für bike-counts oder None."""
     if slug == "muenchen":
@@ -2622,6 +2640,8 @@ def _resolve_bike_counts_connector(slug: str):
         )
     if slug == "koeln":
         return ("koeln_radzaehl", _fetch_koeln_radzaehl, map_koeln_radzaehl)
+    if slug == "essen":
+        return ("essen_radzaehl", _fetch_essen_radzaehl, map_essen_radzaehl)
     return None
 
 

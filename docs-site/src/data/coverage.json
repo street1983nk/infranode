@@ -3,6 +3,7 @@
  "partial": {
   "bike-counts": [
    "berlin",
+   "essen",
    "hamburg",
    "koeln",
    "leipzig",
@@ -129,6 +130,7 @@
   "road-events": [
    "berlin",
    "bremen",
+   "dortmund",
    "hamburg",
    "koeln",
    "muenchen",

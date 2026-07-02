@@ -43,7 +43,7 @@ from infranode.registry.cities import CITY_REGISTRY
 # road-events: gespiegelt aus ``api.v1.cities.CONNECTOR_MAP`` (siehe Modul-Docstring).
 # Die Assertion in cities.py hält diese Liste mit der CONNECTOR_MAP synchron.
 _ROAD_EVENTS_CITIES: frozenset[str] = frozenset(
-    {"berlin", "koeln", "hamburg", "muenchen", "stuttgart", "bremen"}
+    {"berlin", "koeln", "hamburg", "muenchen", "stuttgart", "bremen", "dortmund"}
 )
 
 # sharing (DATA-33): gespiegelt aus ``api.v1.cities.GBFS_SYSTEMS`` (kuratierte
@@ -124,7 +124,7 @@ _PARKING_CITIES: frozenset[str] = (
 # Stadt (muss synchron zu ``_resolve_bike_counts_connector`` in api/v1/cities.py
 # bleiben).
 _BIKE_COUNTS_CITIES: frozenset[str] = frozenset(
-    {"muenchen", "leipzig", "hamburg", "berlin", "stuttgart", "koeln"}
+    {"muenchen", "leipzig", "hamburg", "berlin", "stuttgart", "koeln", "essen"}
 )
 
 # heritage (DATA-OSM-Tier-2): Denkmallisten sind LANDESsache -> föderiert per WFS

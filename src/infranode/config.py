@@ -275,6 +275,7 @@ class SourceToggleSettings(BaseSettings):
     enable_berlin_radzaehl: bool = True
     enable_stuttgart_radzaehl: bool = True
     enable_koeln_radzaehl: bool = True
+    enable_essen_radzaehl: bool = True
     # DATA-40: ParkenDD-Aggregator (keylos) = bevorzugte Live-Parkbelegung für
     # viele Städte. Default True (keylos). Löst /live/dortmund/parking ab (Dedup).
     enable_parkendd: bool = True
@@ -303,6 +304,7 @@ class SourceToggleSettings(BaseSettings):
     enable_hamburg_baustellen: bool = True
     enable_koeln_verkehr: bool = True
     enable_muenchen_baustellen: bool = True
+    enable_dortmund_baustellen: bool = True
     enable_mobidata_bw: bool = True
     enable_autobahn_webcam: bool = True
     # Phase 10: Stadt-Events/Veranstaltungen. destination.one ist KEYLOS (Experience
