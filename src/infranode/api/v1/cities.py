@@ -59,7 +59,12 @@ from infranode.adapters.koeln_events import fetch_events as fetch_koeln_events
 from infranode.adapters.leipzig_radzaehl import fetch_leipzig_radzaehl
 from infranode.adapters.lhp import fetch_flood
 from infranode.adapters.mobidata_bw import fetch_mobidata_road_events
-from infranode.adapters.mobilithek_datex2 import fetch_datex2
+from infranode.adapters.mobilithek_datex2 import (
+    fetch_datex2,
+    fetch_magdeburg_parking,
+    fetch_wuppertal_parking,
+)
+from infranode.adapters.mobilithek_datex3 import fetch_frankfurt_parking
 from infranode.adapters.muenchen_opendata import (
     fetch_muenchen_parking,
     fetch_muenchen_road_events,
@@ -97,6 +102,7 @@ from infranode.archive.transit_store import read_stops
 from infranode.archive.unfallatlas_db import read_accidents
 from infranode.config import Settings
 from infranode.infra.cache import build_cache_key
+from infranode.normalization.enums import SourceId
 from infranode.normalization.mappers.autobahn import (
     map_autobahn_traffic,
     map_autobahn_webcams,
@@ -147,6 +153,11 @@ from infranode.normalization.mappers.lhp import map_flood
 from infranode.normalization.mappers.mastr import map_mastr_assets
 from infranode.normalization.mappers.mobidata_bw import map_mobidata_road_events
 from infranode.normalization.mappers.mobilithek_bremen import map_bremen_road_events
+from infranode.normalization.mappers.mobilithek_parken import (
+    map_frankfurt_parking,
+    map_magdeburg_parking,
+    map_wuppertal_parking,
+)
 from infranode.normalization.mappers.muenchen_opendata import (
     map_muenchen_parking,
     map_muenchen_road_events,
@@ -2391,6 +2402,40 @@ def _resolve_parking_connector(slug: str):
     return None
 
 
+# Mobilithek-Park-Städte im UNIFIED Endpunkt (Lücken-Schluss 2026-07-02): die
+# drei mTLS-Quellen existierten bislang NUR als /live/{stadt}/parking-Routen;
+# /cities/frankfurt-am-main/parking antwortete not_covered, obwohl die Quelle
+# längst integriert war (Owner-Fund: Lücken-Matrix der Top-12). Eintrag:
+# slug -> (source, fetch_fn, abo_id-Settings-Feld, static_abo_id-Feld, mapper).
+# Die fetch_fn-Signatur (mobilithek_http, abo_id=, static_abo_id=, slug=) weicht
+# vom (http, slug, lat, lon)-Connector oben ab, daher der eigene Zweig in
+# ``city_parking`` (gleiches Muster wie Bremen-road-events). Die /live-Routen
+# bleiben als deprecated-kompatible Aliase bestehen.
+_MOBILITHEK_PARKING: dict[str, tuple[str, object, str, str, object]] = {
+    "frankfurt-am-main": (
+        SourceId.FRANKFURT_PARKING.value,
+        fetch_frankfurt_parking,
+        "frankfurt_parking_abo_id",
+        "frankfurt_parking_static_abo_id",
+        map_frankfurt_parking,
+    ),
+    "wuppertal": (
+        SourceId.WUPPERTAL_PARKING.value,
+        fetch_wuppertal_parking,
+        "wuppertal_parking_abo_id",
+        "wuppertal_parking_static_abo_id",
+        map_wuppertal_parking,
+    ),
+    "magdeburg": (
+        SourceId.MAGDEBURG_PARKING.value,
+        fetch_magdeburg_parking,
+        "magdeburg_parking_abo_id",
+        "magdeburg_parking_static_abo_id",
+        map_magdeburg_parking,
+    ),
+}
+
+
 @router.get("/cities/{slug}/parking")
 async def city_parking(slug: str, request: Request) -> dict:
     """Liefert Parkhaus-Daten je Stadt im kanonischen Envelope (DATA-40, Dedup).
@@ -2399,41 +2444,74 @@ async def city_parking(slug: str, request: Request) -> dict:
     /live/dortmund/parking ab): bevorzugt ParkenDD-Live-Belegung (frei/gesamt je
     Parkhaus, ~22 Städte keylos, Lizenz pro Stadt am Ursprung verifiziert), für
     München den statischen CKAN-Standortkatalog (Fallback ohne Live-Belegung,
-    Tier A DL-DE/BY).
+    Tier A DL-DE/BY) und für Frankfurt am Main/Wuppertal/Magdeburg die
+    Mobilithek-mTLS-Quellen (DATEX II, statisch+dynamisch gejoint; bislang nur
+    als /live-Routen erreichbar, Lücken-Schluss 2026-07-02).
 
     Ablauf wie ``city_road_events``: Register-Lookup (404 bei unbekanntem Slug),
     Coverage-/Connector-Prüfung (nicht abgedeckt -> 200 ``not_covered`` +
-    covered_cities), Quellen-Toggle (aus -> 200 ``disabled``), resilienter Fetch
+    covered_cities), Quellen-Toggle (aus -> 200 ``disabled``; bei den
+    Mobilithek-Städten auch ohne Cert/Abo-ID), resilienter Fetch
     über die Fassade, Mapping. Quelle erreichbar aber leer -> ``no_data``; toter
     Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint. KEIN Archiv-Write
     (Live-/Standortdaten).
     """
     entry = get_city(slug)
 
-    connector = _resolve_parking_connector(entry.slug)
-    if connector is None:
-        return _not_covered("parking")
-    source, fetch_parking, map_parking = connector
+    settings = Settings()
+    fetch_fn = None
+    if entry.slug in _MOBILITHEK_PARKING:
+        # Mobilithek-Zweig (mTLS + Abo-Paar statt (http, slug, lat, lon)-Signatur).
+        source, mob_fetch, abo_attr, static_attr, map_parking = _MOBILITHEK_PARKING[
+            entry.slug
+        ]
+        mobilithek_http = getattr(request.app.state, "mobilithek_http", None)
+        abo_id = getattr(settings, abo_attr)
+        if (
+            not getattr(settings, f"enable_{source}", False)
+            or mobilithek_http is None
+            or not abo_id
+        ):
+            return {
+                "data": None,
+                "meta": {
+                    "correlation_id": correlation_id.get(),
+                    "source_status": "disabled",
+                },
+            }
 
-    if not getattr(Settings(), f"enable_{source}"):
-        return {
-            "data": None,
-            "meta": {
-                "correlation_id": correlation_id.get(),
-                "source_status": "disabled",
-            },
-        }
+        async def fetch_fn():
+            return await mob_fetch(
+                mobilithek_http,
+                abo_id=abo_id,
+                static_abo_id=getattr(settings, static_attr),
+                slug=entry.slug,
+            )
+    else:
+        connector = _resolve_parking_connector(entry.slug)
+        if connector is None:
+            return _not_covered("parking")
+        source, fetch_parking, map_parking = connector
+
+        if not getattr(settings, f"enable_{source}"):
+            return {
+                "data": None,
+                "meta": {
+                    "correlation_id": correlation_id.get(),
+                    "source_status": "disabled",
+                },
+            }
+
+        async def fetch_fn():
+            return await fetch_parking(
+                request.app.state.http,
+                slug=entry.slug,
+                lat=entry.geo.lat,
+                lon=entry.geo.lon,
+            )
 
     client = request.app.state.resilient_client
     key = build_cache_key(source, city_slug=entry.slug)
-
-    async def fetch_fn():
-        return await fetch_parking(
-            request.app.state.http,
-            slug=entry.slug,
-            lat=entry.geo.lat,
-            lon=entry.geo.lon,
-        )
 
     raw, status = await client.fetch(source, key, fetch_fn)
 

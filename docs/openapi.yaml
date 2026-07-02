@@ -3350,7 +3350,9 @@ paths:
         Parkhaus-Daten je Stadt aus EINEM Endpunkt mit Quellen-Fallback (Dedup):
         bevorzugt ParkenDD-Live-Belegung (frei/gesamt je Parkhaus, 13 Städte mit
         verifiziert offener Lizenz, keylos), für München der statische
-        Open-Data-Standortkatalog (DL-DE/BY 2.0, ohne Live-Belegung). Lizenz/Tier
+        Open-Data-Standortkatalog (DL-DE/BY 2.0, ohne Live-Belegung), für
+        Frankfurt am Main, Wuppertal und Magdeburg die Mobilithek-Quellen der
+        Städte (DATEX II, Live-Belegung + Stammdaten, DL-DE/BY bzw. DL-DE/Zero). Lizenz/Tier
         kommen pro Datensatz aus der am Ursprung verifizierten Quelle (alle Tier A:
         z.B. Köln/Dortmund DL-DE/Zero 2.0, Hamburg DL-DE/BY 2.0, Aachen/Ulm CC0,
         Karlsruhe/Heidelberg CC BY 4.0). Löst den deprecateten
@@ -3362,7 +3364,9 @@ paths:
         Per-city parking data from ONE endpoint with a source fallback (dedup):
         prefers ParkenDD live occupancy (free/total per facility, 13 cities with a
         verified open license, key-less), and for Munich the static open-data
-        location catalogue (DL-DE/BY 2.0, no live occupancy). License/tier are per
+        location catalogue (DL-DE/BY 2.0, no live occupancy), and for Frankfurt,
+        Wuppertal and Magdeburg the cities own Mobilithek sources (DATEX II,
+        live occupancy + master data, DL-DE/BY or DL-DE/Zero). License/tier are per
         record from the source verified at origin (all Tier A: e.g. Cologne/Dortmund
         DL-DE/Zero 2.0, Hamburg DL-DE/BY 2.0, Aachen/Ulm CC0, Karlsruhe/Heidelberg
         CC BY 4.0). Supersedes the

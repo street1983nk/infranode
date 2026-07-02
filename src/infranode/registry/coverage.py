@@ -108,8 +108,15 @@ _SOLAR_ROOFS_CITIES: frozenset[str] = frozenset(
 # Bevorzugt ParkenDD-Live-Belegung (aus ``adapters.parkendd.PARKENDD_CITIES``
 # abgeleitet, 22 Städte), zusätzlich München über den statischen CKAN-
 # Standortkatalog (Fallback ohne Live-Belegung). Eine neue ParkenDD-Stadt
-# erweitert die Abdeckung automatisch.
-_PARKING_CITIES: frozenset[str] = frozenset(PARKENDD_CITIES) | {"muenchen"}
+# erweitert die Abdeckung automatisch. Seit 2026-07-02 (Lücken-Schluss Top-12)
+# zusätzlich die drei Mobilithek-mTLS-Städte, deren Quellen vorher NUR als
+# /live-Routen verdrahtet waren (``_MOBILITHEK_PARKING`` in api/v1/cities.py,
+# muss mit dieser Menge synchron bleiben).
+_PARKING_CITIES: frozenset[str] = (
+    frozenset(PARKENDD_CITIES)
+    | {"muenchen"}
+    | {"frankfurt-am-main", "wuppertal", "magdeburg"}
+)
 
 # bike-counts (DATA-40): kommunale Radzählstellen-Open-Data je Stadt (KEIN
 # Eco-Counter: Lizenz ungeklärt, Owner-Entscheidung 2026-06-23). Jede Stadt eine

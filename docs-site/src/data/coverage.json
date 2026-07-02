@@ -8,6 +8,10 @@
    "muenchen",
    "stuttgart"
   ],
+  "district-heating": [
+   "berlin",
+   "hamburg"
+  ],
   "flood": [
    "berlin",
    "bonn",
@@ -89,6 +93,7 @@
    "aachen",
    "dortmund",
    "dresden",
+   "frankfurt-am-main",
    "freiburg-im-breisgau",
    "hamburg",
    "heidelberg",
@@ -96,10 +101,12 @@
    "kaiserslautern",
    "karlsruhe",
    "koeln",
+   "magdeburg",
    "muenchen",
    "muenster",
    "oldenburg",
-   "ulm"
+   "ulm",
+   "wuppertal"
   ],
   "road-events": [
    "berlin",
@@ -145,6 +152,7 @@
    "bochum",
    "bonn",
    "bottrop",
+   "cottbus",
    "dortmund",
    "duesseldorf",
    "duisburg",
@@ -170,6 +178,7 @@
    "nuernberg",
    "oberhausen",
    "paderborn",
+   "potsdam",
    "recklinghausen",
    "regensburg",
    "remscheid",
