@@ -40,10 +40,15 @@ from infranode.infra.mobilithek import build_pull_url, pull_subscription
 # größerer Body wird gar nicht erst geparst. Identisch zum V2-Adapter.
 _MAX_BYTES = 64 * 1024 * 1024  # 64 MiB
 
-# DATEX-II-V3 Publication-Typ des AFIR-Recharging-Profils (Pitfall 4). Nur dieser
-# Typ trägt refillPointStatus-Einträge; ein anderer Publication-Typ (z.B. ein
-# V2-SituationPublication-Body) liefert ehrlich leere points.
-_PUBLICATION_TYPE = "EnergyInfrastructureStatusPublication"
+# DATEX-II-V3 AFIR-Recharging-Profil (real verifiziert 2026-07-03 nach dem
+# Feed-Update des Anbieters). Die Belegung liegt unter
+# messageContainer.payload[].aegiEnergyInfrastructureStatusPublication ->
+# energyInfrastructureSiteStatus[] -> energyInfrastructureStationStatus[] ->
+# refillPointStatus[] -> aegiElectricChargingPointStatus. Fehlt der
+# Publication-Key (fremder/V2-Body), bleiben die points ehrlich leer statt eines
+# Fehl-Parse (Pitfall 4).
+_PUBLICATION_KEY = "aegiEnergyInfrastructureStatusPublication"
+_CHARGING_POINT_KEY = "aegiElectricChargingPointStatus"
 
 
 def _coerce_list(value) -> list:
@@ -63,31 +68,52 @@ def _coerce_list(value) -> list:
 def _extract_refill_point(entry: dict) -> dict | None:
     """Liest refill_point_id + status (+ observed_at) aus einem refillPointStatus.
 
-    ``refill_point_id`` aus der ``reference.id`` (oder einem flachen ``id``).
-    ``status`` aus dem ``status``-Feld (z.B. "available"/"occupied").
-    ``observed_at`` aus ``lastUpdated`` falls vorhanden. Felder optional; ein
-    komplett leerer Eintrag -> ``None`` (fällt aus, statt 500).
+    Der eigentliche Ladepunkt-Status liegt in einem typspezifischen Wrapper
+    (real: ``aegiElectricChargingPointStatus``); für Robustheit gegen Profil-/
+    Präfix-Varianten wird sonst das erste verschachtelte dict mit ``status``/
+    ``reference`` genommen. ``refill_point_id`` aus ``reference.idG`` (oder
+    ``id``), ``status`` aus ``status.value`` (z.B. "available"/"occupied", oder
+    flach), ``observed_at`` aus dem ersten ``energyRateUpdate[].lastUpdated``
+    (oder flachem ``lastUpdated``). Ein komplett leerer Eintrag -> ``None``
+    (fällt aus, statt 500).
     """
     if not isinstance(entry, dict):
         return None
 
+    cps = entry.get(_CHARGING_POINT_KEY)
+    if not isinstance(cps, dict):
+        cps = next(
+            (
+                v
+                for v in entry.values()
+                if isinstance(v, dict) and ("status" in v or "reference" in v)
+            ),
+            entry,
+        )
+
     refill_point_id: str | None = None
-    ref = entry.get("reference")
+    ref = cps.get("reference")
     if isinstance(ref, dict):
-        rid = ref.get("id")
+        rid = ref.get("idG") or ref.get("id")
         if rid is not None:
             refill_point_id = str(rid)
-    if refill_point_id is None and entry.get("id") is not None:
-        refill_point_id = str(entry["id"])
+    if refill_point_id is None and cps.get("id") is not None:
+        refill_point_id = str(cps["id"])
 
-    status = entry.get("status")
+    status = cps.get("status")
     if isinstance(status, dict):
-        # Manche V3-Serialisierungen kapseln den Wert (z.B. {"value": "..."}).
+        # V3 kapselt den Wert als {"value": "available"}.
         status = status.get("value")
     status = str(status) if status is not None else None
 
-    observed_at = entry.get("lastUpdated") or entry.get("timeStamp")
-    observed_at = str(observed_at) if observed_at is not None else None
+    observed_at: str | None = None
+    for rate in _coerce_list(cps.get("energyRateUpdate")):
+        if isinstance(rate, dict) and rate.get("lastUpdated"):
+            observed_at = str(rate["lastUpdated"])
+            break
+    if observed_at is None:
+        flat = cps.get("lastUpdated") or cps.get("timeStamp")
+        observed_at = str(flat) if flat is not None else None
 
     if refill_point_id is None and status is None:
         return None
@@ -101,17 +127,18 @@ def _extract_refill_point(entry: dict) -> dict | None:
 
 
 def parse_afir_v3(body: bytes, *, slug: str) -> dict:
-    """Parst eine DATEX-II-V3-``EnergyInfrastructureStatusPublication`` (JSON, LIVE-11).
+    """Parst eine DATEX-II-V3 AFIR-``EnergyInfrastructureStatusPublication`` (JSON).
 
-    Liest je ``refillPointStatus`` den Ladepunkt-Status (status/availability je
-    Ladepunkt) und gibt ``{"slug": slug, "points": [...], "as_of": <publicationTime>}``
-    zurück. Reiner, synchroner Parse (testbar ohne Netz).
+    Navigiert ``messageContainer.payload[].aegiEnergyInfrastructureStatusPublication``
+    -> ``energyInfrastructureSiteStatus[]`` -> ``energyInfrastructureStationStatus[]``
+    -> ``refillPointStatus[]`` und liest je Ladepunkt Status + observed_at. Gibt
+    ``{"slug": slug, "points": [...], "as_of": <publicationTime>}`` zurück. Reiner,
+    synchroner Parse (testbar ohne Netz).
 
     Haertung: Size-Cap VOR ``json.loads`` (DoS, T-20-XXE). Ein nicht-JSON-Body
-    -> ``ValueError`` (ehrlicher Fehlpfad). Root-Typ-Verzweigung (Pitfall 4): nur
-    der V3-Publication-Typ ``EnergyInfrastructureStatusPublication`` wird
-    ausgelesen; ein fremder/V2-Body liefert leere ``points`` statt eines
-    Fehl-Parse.
+    -> ``ValueError`` (ehrlicher Fehlpfad). Fehlt der Publication-Key
+    ``aegiEnergyInfrastructureStatusPublication`` (fremder/V2-Body), bleiben die
+    ``points`` leer statt eines Fehl-Parse (Pitfall 4).
     """
     # Size-Cap (T-20-XXE/DoS): zu große Bodies gar nicht erst parsen.
     if len(body) > _MAX_BYTES:
@@ -129,27 +156,35 @@ def parse_afir_v3(body: bytes, *, slug: str) -> dict:
     if not isinstance(doc, dict):
         return {"slug": slug, "points": [], "as_of": None}
 
-    # Der Payload kann direkt oder unter "payload" liegen (DATEX-II-JSON-Profil).
-    payload = doc.get("payload") if isinstance(doc.get("payload"), dict) else doc
-
-    # Root-Typ-Verzweigung (Pitfall 4): nur den V3-AFIR-Publication-Typ auslesen.
-    pub_type = payload.get("type")
-    if pub_type is not None and _PUBLICATION_TYPE not in str(pub_type):
-        return {"slug": slug, "points": [], "as_of": None}
+    # Container: real unter "messageContainer", sonst doc selbst (Profil-Varianz).
+    container = doc.get("messageContainer")
+    if not isinstance(container, dict):
+        container = doc
 
     points: list[dict] = []
-    for status_container in _coerce_list(payload.get("energyInfrastructureStatus")):
-        if not isinstance(status_container, dict):
+    as_of: str | None = None
+    # payload[] -> aegiEnergyInfrastructureStatusPublication -> siteStatus[] ->
+    # stationStatus[] -> refillPointStatus[] (jede Ebene dict ODER Liste).
+    for payload in _coerce_list(container.get("payload")):
+        if not isinstance(payload, dict):
             continue
-        for rp in _coerce_list(status_container.get("refillPointStatus")):
-            point = _extract_refill_point(rp)
-            if point is not None:
-                points.append(point)
+        pub = payload.get(_PUBLICATION_KEY)
+        if not isinstance(pub, dict):
+            continue
+        if as_of is None and pub.get("publicationTime"):
+            as_of = str(pub["publicationTime"])
+        for site in _coerce_list(pub.get("energyInfrastructureSiteStatus")):
+            if not isinstance(site, dict):
+                continue
+            for station in _coerce_list(site.get("energyInfrastructureStationStatus")):
+                if not isinstance(station, dict):
+                    continue
+                for rp in _coerce_list(station.get("refillPointStatus")):
+                    point = _extract_refill_point(rp)
+                    if point is not None:
+                        points.append(point)
 
-    # Wenn der Body weder den V3-Typ noch energyInfrastructureStatus trägt
-    # (fremder/V2-Body ohne explizites type), bleibt points leer (Pitfall 4).
-    as_of = payload.get("publicationTime")
-    return {"slug": slug, "points": points, "as_of": str(as_of) if as_of else None}
+    return {"slug": slug, "points": points, "as_of": as_of}
 
 
 async def fetch_afir(mtls_client, *, abo_id: str, slug: str) -> dict:
