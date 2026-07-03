@@ -605,6 +605,28 @@ class ChargingStatusPayload(BaseModel):
     points: list[dict] = Field(default_factory=list)
 
 
+class ChargingStatusCityPayload(BaseModel):
+    """Aggregierte Live-Ladesäulen-Belegung je Stadt (DATA-42, eRound AFIR).
+
+    Join aus Geo-Map (``charging/geomap``: refill_point_id -> Stadt + Koordinaten
+    aus dem statischen Vollbestand) und akkumuliertem Delta-State
+    (``charging/store``: Status je Ladepunkt, TTL 24 h). ``total_points`` =
+    bekannte eRound-Ladepunkte im Stadtumkreis; ``reported_points`` = davon mit
+    frischem Live-Status; ``status_counts`` zählt je Status (available/occupied/
+    charging/unavailable/...). ``points`` je gemeldetem Ladepunkt ein schlankes
+    dict (refill_point_id, lat, lon, status, observed_at), in der Route gekappt
+    (``truncated`` markiert ehrlich). Mutable Container IMMER via
+    ``Field(default_factory=...)`` (ruff B006).
+    """
+
+    kind: Literal["charging_status_city"] = "charging_status_city"
+    total_points: int = 0
+    reported_points: int = 0
+    status_counts: dict[str, int] = Field(default_factory=dict)
+    points: list[dict] = Field(default_factory=list)
+    truncated: bool = False
+
+
 class TransitDeparturePayload(BaseModel):
     """Live-Abfahrten je Halt mit Verspätung (GTFS-RT, Phase 19).
 
@@ -1115,6 +1137,7 @@ PayloadUnion = Annotated[
     | ParkingPayload
     | CountStationPayload
     | ChargingStatusPayload
+    | ChargingStatusCityPayload
     | TransitDeparturePayload
     | TransitTripPayload
     | TransitRouteStatusPayload

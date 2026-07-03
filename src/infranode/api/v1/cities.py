@@ -103,6 +103,8 @@ from infranode.archive.store import append_record, read_records
 from infranode.archive.tender_db import read_public_tenders
 from infranode.archive.transit_store import read_stops
 from infranode.archive.unfallatlas_db import read_accidents
+from infranode.charging.geomap import load_city_points
+from infranode.charging.store import get_point_statuses
 from infranode.config import Settings
 from infranode.infra.cache import build_cache_key
 from infranode.normalization.enums import SourceId
@@ -160,6 +162,7 @@ from infranode.normalization.mappers.koeln_events import map_koeln_events
 from infranode.normalization.mappers.lhp import map_flood
 from infranode.normalization.mappers.mastr import map_mastr_assets
 from infranode.normalization.mappers.mobidata_bw import map_mobidata_road_events
+from infranode.normalization.mappers.mobilithek_afir import map_city_charging_status
 from infranode.normalization.mappers.mobilithek_bremen import map_bremen_road_events
 from infranode.normalization.mappers.mobilithek_parken import (
     map_frankfurt_parking,
@@ -2558,6 +2561,101 @@ async def city_parking(slug: str, request: Request) -> dict:
             "correlation_id": correlation_id.get(),
             "source_status": "ok",
             "cache_status": status,
+        },
+    }
+
+
+# eRound-Ladebelegung (DATA-42): Cap der Einzelpunkt-Liste (Muster denkmal
+# _COUNT_CAP). Hamburg hat ~2700 Ladepunkte; ``status_counts`` zählt IMMER alle
+# gemeldeten Punkte, nur die points-Liste wird gekappt (``truncated`` ehrlich).
+_CHARGING_STATUS_POINTS_CAP = 500
+
+
+@router.get("/cities/{slug}/charging-status")
+async def city_charging_status(slug: str, request: Request) -> dict:
+    """Live-Ladesäulen-Belegung je Stadt (DATA-42, eRound AFIR, CC0/Tier A).
+
+    Join aus zwei Zuständen, KEIN Upstream-Call im Request-Pfad:
+    - Geo-Map (``charging/geomap``): refill_point_id -> Stadt + Koordinaten aus
+      dem statischen eRound-Vollbestand (täglicher Ingest ins Daten-Volume,
+      Fallback committeter Seed; alle 84 Städte abgedeckt).
+    - Belegungs-State (``charging/store``): vom Hintergrund-Poller akkumulierte
+      Deltas des dynamischen Abos (Drain-Queue), TTL 24 h = Staleness-Fenster.
+
+    Toggle aus -> ``disabled``. Stadt ohne bekannte Ladepunkte ODER (noch) ohne
+    akkumulierten Live-Status -> ehrliches ``no_data`` (200). Unbekannter Slug
+    -> 404 (Register-Lookup). KEIN Archiv-Write (reine Live-Daten, T-20-ARCHIVE).
+    """
+    entry = get_city(slug)
+    settings = Settings()
+    source = SourceId.EROUND_CHARGING.value
+
+    if not getattr(settings, f"enable_{source}", False):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    rp_map = load_city_points(settings.eround_geo_map_path).get(entry.slug) or {}
+    statuses = (
+        await get_point_statuses(request.app.state.redis, rp_map.keys())
+        if rp_map
+        else {}
+    )
+
+    # Keine bekannten Ladepunkte im Stadtumkreis ODER noch kein akkumulierter
+    # Live-Status (Poller frisch gestartet/TTL abgelaufen) -> ehrliches no_data.
+    if not statuses:
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "no_data",
+            },
+        }
+
+    status_counts: dict[str, int] = {}
+    points: list[dict] = []
+    for rp_id in sorted(statuses):
+        value = statuses[rp_id]
+        state = str(value.get("status"))
+        status_counts[state] = status_counts.get(state, 0) + 1
+        coords = rp_map.get(rp_id) or [None, None]
+        points.append(
+            {
+                "refill_point_id": rp_id,
+                "lat": coords[0],
+                "lon": coords[1],
+                "status": state,
+                "observed_at": value.get("observed_at"),
+            }
+        )
+
+    truncated = len(points) > _CHARGING_STATUS_POINTS_CAP
+    raw = {
+        "slug": entry.slug,
+        "total_points": len(rp_map),
+        "reported_points": len(statuses),
+        "status_counts": status_counts,
+        "points": points[:_CHARGING_STATUS_POINTS_CAP],
+        "truncated": truncated,
+    }
+    record = map_city_charging_status(
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+        geo=entry.geo,
+    )
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
         },
     }
 

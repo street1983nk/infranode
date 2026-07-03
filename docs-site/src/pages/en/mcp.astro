@@ -40,8 +40,8 @@ const mcpRemoteConfig = [
 // The server's 12 tools (source: docs/mcp-install.md).
 const coreTools = [
   ["get_city(slug)", "City master data (population, area, coordinates)"],
-  ["get_city_overview(slug)", "One-call overview: catalog of all 64 data types with key and coverage status + live highlights (discovery entry point)"],
-  ["get_city_resource(slug, resource)", "Generic access to all 64 data types by data type key (see list below)"],
+  ["get_city_overview(slug)", "One-call overview: catalog of all 65 data types with key and coverage status + live highlights (discovery entry point)"],
+  ["get_city_resource(slug, resource)", "Generic access to all 65 data types by data type key (see list below)"],
   ["air_quality(slug)", "Official air quality: PM10, PM2.5, NO2, O3, SO2 (UBA)"],
   ["weather(slug)", "Current weather observations (DWD, not a forecast)"],
   ["pois(slug, type)", "Points of interest, filtered by type (OpenStreetMap)"],
@@ -53,7 +53,7 @@ const coreTools = [
   ["compare(resource, cities)", "Compare one resource (weather/air) across several cities"],
 ];
 
-// The 64 data types, grouped by topic (source: docs/mcp-install.md).
+// The 65 data types, grouped by topic (source: docs/mcp-install.md).
 // Display key = resource key for get_city_resource (kebab-case).
 // Data types with a dedicated tool are marked in the description.
 const dataTypeGroups = [
@@ -84,6 +84,7 @@ const dataTypeGroups = [
       ["traffic", "Traffic situation"],
       ["transit", "Public transit stops"],
       ["charging", "Charging stations"],
+      ["charging-status", "EV charging occupancy (live, all 84 cities)"],
       ["road-events", "Road and construction notices"],
       ["parking", "Live parking occupancy per city: vacant spaces and occupancy (Dortmund, Frankfurt am Main, Wuppertal)"],
       ["vehicle-registrations", "Car stock and electric vehicle share (KBA)"],
@@ -177,11 +178,11 @@ const faq = [
   },
   {
     q: "What data does the InfraNode MCP server provide?",
-    a: "12 lean tools covering 64 data types of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, solar and district heating, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, insolvencies, bike and scooter sharing, bike counters, POIs, events, elections and holidays, station departures and arrivals, public procurement, plus a cities and a sources overview, and a multi-city comparison.",
+    a: "12 lean tools covering 65 data types of 84 major German cities: master data, air quality, weather and weather warnings, public transit incl. live departures, traffic, live parking occupancy, water levels and flooding, health, energy and power market, solar and district heating, car stock and electric share, unemployment, tourism, building permits, road accidents, fuel prices, land values, local tax multipliers and business registrations, insolvencies, bike and scooter sharing, bike counters, POIs, events, elections and holidays, station departures and arrivals, public procurement, plus a cities and a sources overview, and a multi-city comparison.",
   },
   {
     q: "Why does the InfraNode MCP server have only 12 tools?",
-    a: "12 lean tools cover 64 data types: the generic accessor get_city_resource(slug, resource) fetches any data type by its key, and get_city_overview returns all keys with coverage status per city. This keeps the token footprint in the agent's context window minimal, stays well below client tool limits (e.g. 80 tools in Cursor), and the data breadth keeps growing without adding new tools.",
+    a: "12 lean tools cover 65 data types: the generic accessor get_city_resource(slug, resource) fetches any data type by its key, and get_city_overview returns all keys with coverage status per city. This keeps the token footprint in the agent's context window minimal, stays well below client tool limits (e.g. 80 tools in Cursor), and the data breadth keeps growing without adding new tools.",
   },
   {
     q: "My MCP client only supports local stdio servers. How do I connect InfraNode?",
@@ -200,7 +201,7 @@ const faq = [
 
 <Docs
   title="Open Data MCP Server for Germany (AI agents)"
-  description="Open data MCP server for German cities: 12 lean tools covering 64 data types, for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
+  description="Open data MCP server for German cities: 12 lean tools covering 65 data types, for AI agents like Claude and ChatGPT, hosted at mcp.infranode.dev, remote over Streamable HTTP, no install, no API key, free."
   current="mcp"
   lang="en"
   altLangPath="/mcp/"
@@ -209,14 +210,14 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP server"
-    description="Hosted MCP server with 12 lean tools covering 64 data types of open city data for 84 major German cities, key-free and free of charge."
+    description="Hosted MCP server with 12 lean tools covering 65 data types of open city data for 84 major German cities, key-free and free of charge."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
   <h1>Open data MCP server for German cities</h1>
   <p>
     The InfraNode MCP server is a free, hosted Model Context Protocol server that
-    gives AI agents access to 64 data types of open data for 84 major German
+    gives AI agents access to 65 data types of open data for 84 major German
     cities through 12 lean tools, with no API key. It exposes the city data as
     tools an agent calls directly, so you do not write HTTP calls by hand. The
     server is listed in the official
@@ -299,7 +300,7 @@ const faq = [
 
   <h2>The 12 tools</h2>
   <p>
-    The server provides 12 lean tools that together cover 64 data types. This
+    The server provides 12 lean tools that together cover 65 data types. This
     keeps the token footprint in the agent's context window minimal, stays well
     below the tool limits of common MCP clients (e.g. 80 tools in Cursor), and
     the data breadth keeps growing without adding new tools.
@@ -346,7 +347,7 @@ const faq = [
     need no argument.
   </p>
 
-  <h2>The 64 data types</h2>
+  <h2>The 65 data types</h2>
   <p>
     Any data type without a dedicated tool is fetched via
     <code>get_city_resource</code>, passing the data type key as the
@@ -385,7 +386,7 @@ const faq = [
   <h2>Example call</h2>
   <p>
     An agent fetches the one-call overview for Berlin: base data, a catalog of
-    all 64 data types with key and coverage status, and a live-highlights
+    all 65 data types with key and coverage status, and a live-highlights
     snapshot. A good entry point for any city question, instead of guessing a
     single data type. The result is the live API's normalised JSON, passed
     through unchanged.

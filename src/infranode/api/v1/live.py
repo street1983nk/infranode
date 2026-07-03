@@ -29,7 +29,6 @@ from fastapi import APIRouter, Request, Response
 from infranode.adapters.dortmund_parking import fetch_dortmund_parking
 from infranode.adapters.hamburg_verkehrslage import fetch_hamburg_verkehrslage
 from infranode.adapters.hvv_geofox import fetch_hvv_departures
-from infranode.adapters.mobilithek_afir import fetch_afir
 from infranode.adapters.mobilithek_datex2 import (
     fetch_datex2,
     fetch_magdeburg_parking,
@@ -39,6 +38,7 @@ from infranode.adapters.mobilithek_datex3 import fetch_frankfurt_parking
 from infranode.adapters.vgn import fetch_vgn_departures
 from infranode.api.errors import UpstreamError, ValidationFailedError
 from infranode.api.v1 import cities
+from infranode.charging.store import read_latest_delta
 from infranode.config import Settings
 from infranode.infra.cache import build_cache_key
 from infranode.normalization.enums import SourceId
@@ -481,18 +481,25 @@ async def live_kiel_zaehlstellen(request: Request) -> dict:
 
 @router.get("/eround/charging")
 async def live_eround_charging(request: Request) -> dict:
-    """Live-Ladesäulen-Belegung eRound (AFIR DATEX-II V3, LIVE-11).
+    """Live-Ladesäulen-Belegung eRound (AFIR DATEX-II V3, LIVE-11/DATA-42).
 
-    Die EINZIGE DATEX-II-V3-Quelle der Phase (EnergyInfrastructureStatus-
-    Publication, eigener Parser ``fetch_afir`` getrennt vom V2-Pfad). Schließt
-    die zweite Hälfte der DATA-09-Belegungslücke (Laden). REALITÄT (Mobilithek-
-    Portal 2026-06-12): Syntax JSON (nicht XML), Zugriffspunkt mit Query-URL-
-    Variante (``build_pull_url`` style="query", im Adapter gesetzt). Lizenz CC0 ->
-    Tier A (Owner-Verifikation, Checkpoint cc0-tier-a). Stadt-Slug fix ``koeln``
-    als Aufhänger (eRound liefert HH-/bundesweite Standorte; der Slug dient nur
-    dem Register-Lookup/Geo-Kontext). Abo-ID aus der Settings-Allowlist (SSRF,
-    T-20-SSRF). KEIN Archiv (reine Live-Daten, T-20-ARCHIVE), auch bei Tier A
-    (RESEARCH "Live NICHT archivieren").
+    Liest AUSSCHLIESSLICH aus Redis (Muster GTFS-RT, T-19-REQPARSE analog):
+    der Hintergrund-Poller (``charging/poller``) ist der EINZIGE Upstream-
+    Puller und legt je Tick das jüngste Delta-Pull-Ergebnis als Snapshot ab
+    (``charging/store.store_latest_delta``). Datenupdates sind damit STRIKT
+    vom Request-Worker entkoppelt: kein Upstream-Call, kein Redis-Write im
+    Request-Pfad (schließt zugleich die Last-Write-Wins-Race zwischen Route
+    und Poller strukturell - es gibt nur noch einen, per Redis-Lock
+    serialisierten Schreiber). Der eRound-Feed ist eine Drain-Queue; ein
+    Request-Pull würde dem Poller Deltas wegnehmen.
+
+    Stadt-Slug fix ``koeln`` als Aufhänger (eRound liefert bundesweite
+    Standorte; der Slug dient nur dem Register-Lookup). Lizenz CC0 -> Tier A
+    (Checkpoint cc0-tier-a). Toggle aus / kein Cert / keine Abo-ID ->
+    ``disabled`` (ohne Cert läuft auch der Poller nie). Kein/leerer/
+    abgelaufener Snapshot (TTL 900 s = 3 Poll-Ticks) -> ehrliches ``no_data``.
+    KEIN Archiv (reine Live-Daten, T-20-ARCHIVE). Je-Stadt-Aggregation:
+    ``/cities/{slug}/charging-status``.
     """
     settings = Settings()
     city = "koeln"
@@ -501,7 +508,8 @@ async def live_eround_charging(request: Request) -> dict:
 
     entry = get_city(city)
     mobilithek_http = getattr(request.app.state, "mobilithek_http", None)
-    # disabled: Toggle aus ODER kein Cert (mTLS-Client None) ODER keine Abo-ID.
+    # disabled: Toggle aus ODER kein Cert (dann laeuft auch der Poller nicht)
+    # ODER keine Abo-ID. Ehrlicher als ein ewiges no_data.
     if (
         not getattr(settings, f"enable_{source}", False)
         or mobilithek_http is None
@@ -515,36 +523,26 @@ async def live_eround_charging(request: Request) -> dict:
             ),
         }
 
-    client = request.app.state.resilient_client
-    key = build_cache_key(source, city_slug=entry.slug)
+    latest = await read_latest_delta(request.app.state.redis)
 
-    async def fetch_fn():
-        return await fetch_afir(mobilithek_http, abo_id=abo_id, slug=entry.slug)
-
-    raw, status = await client.fetch(source, key, fetch_fn)
-
-    # raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper geprüft werden.
-    if raw is None:
-        raise UpstreamError(
-            f"Live-Quelle '{source}' voruebergehend nicht erreichbar, kein "
-            "gecachter Wert vorhanden.",
-            hint="Erneut versuchen oder GET /api/v1/health für Quellen-Status.",
-        )
-
-    # Leerer Feed (422/keine Daten) -> ehrliches no_data (200) OHNE Mapper.
-    if not raw.get("points"):
+    # Kein Snapshot (Poller noch nicht gelaufen/TTL abgelaufen) ODER leerer
+    # Feed (422/keine Deltas im Tick) -> ehrliches no_data (200) OHNE Mapper.
+    if latest is None or not latest.get("points"):
         return {
             "data": None,
             "meta": _live_meta(
                 source_status="no_data",
-                cache_status=status,
-                as_of=raw.get("as_of"),
+                as_of=(latest or {}).get("as_of"),
                 refresh_seconds=_LIVE_REFRESH_SECONDS,
             ),
         }
 
     record = map_eround_charging(
-        raw,
+        {
+            "slug": entry.slug,
+            "points": latest["points"],
+            "as_of": latest.get("as_of"),
+        },
         retrieved_at=datetime.now(UTC),
         ags=entry.ags,
         wikidata_qid=entry.qid,
@@ -552,13 +550,12 @@ async def live_eround_charging(request: Request) -> dict:
     # KEIN Archiv-Write für reine Live-Daten (T-20-ARCHIVE)! Auch bei Tier A:
     # reine Live-Belegung wird nicht archiviert (RESEARCH "Live NICHT archivieren").
     observed = (
-        record.observed_at.isoformat() if record.observed_at else raw.get("as_of")
+        record.observed_at.isoformat() if record.observed_at else latest.get("as_of")
     )
     return {
         "data": record.model_dump(mode="json"),
         "meta": _live_meta(
             source_status="ok",
-            cache_status=status,
             as_of=observed,
             refresh_seconds=_LIVE_REFRESH_SECONDS,
         ),

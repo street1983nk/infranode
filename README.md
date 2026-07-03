@@ -16,7 +16,7 @@ departures), traffic, electricity price (SMARD), land values (BORIS), parking,
 charging, water levels, demographics, energy and more, for **84+ German cities**
 behind **one** interface. **No API key, no account.** Every response uses one
 canonical `{ data, meta }` envelope with per-record license and attribution. The
-same data is also exposed as an MCP server (12 lean read-only tools covering 64
+same data is also exposed as an MCP server (12 lean read-only tools covering 65
 data types) for AI agents.
 Start with the one-call `get_city_overview`: it returns a catalog of every data
 type available for a city plus a live highlights snapshot, so agents discover the
@@ -32,7 +32,7 @@ Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
 flowchart LR
     SRC["German open-data sources<br/>DWD, UBA, SMARD, BORIS,<br/>Mobilithek, GovData, ..."] --> CORE["InfraNode<br/>normalize, license-gate, cache"]
     CORE --> API["REST API<br/>infranode.dev/api/v1"]
-    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 12 tools / 64 data types"]
+    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 12 tools / 65 data types"]
     API --> APPS["Your apps &amp; dashboards"]
     MCP --> AGENTS["AI agents (Claude &amp; co.)"]
 ```
@@ -83,7 +83,7 @@ Every category below is a REST endpoint under `/api/v1/cities/{slug}/<key>`.
 Over MCP the same data comes through 12 lean tools: a few named ones
 (`get_city_overview`, `weather`, `air_quality`, `pois`, `compare`, live boards)
 plus one generic `get_city_resource(slug, resource=<key>)` for every other data
-type (its `resource` enum lists all 64 keys).
+type (its `resource` enum lists all 65 keys).
 
 | Group | Data types (endpoint keys) |
 |-------|----------------------------|
@@ -147,7 +147,7 @@ each other:
 - **[mcp-server-public-transport](https://github.com/mirodn/mcp-server-public-transport)** public transport across Europe; in Germany it covers Berlin/Brandenburg (VBB).
 - **Single-city servers** (e.g. Munich, Berlin) cover one city each.
 
-InfraNode covers **84 German cities and 64 data types** behind one keyless, hosted
+InfraNode covers **84 German cities and 65 data types** behind one keyless, hosted
 endpoint, from environment and mobility to energy, economy and city life. Full
 side-by-side comparison:
 [infranode.dev/en/mcp-comparison](https://infranode.dev/en/mcp-comparison/).

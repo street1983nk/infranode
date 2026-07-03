@@ -1645,6 +1645,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/charging-status:
+    get:
+      tags: [cities]
+      summary: Live-Ladesäulen-Belegung je Stadt (eRound, CC0/Tier A)
+      x-summary-en: Live EV charging occupancy per city (eRound, CC0/Tier A)
+      description: >-
+        Liefert die aggregierte Live-Ladesäulen-Belegung einer Stadt (eRound
+        AFIR-Recharging, DATEX-II V3, CC0) im kanonischen Envelope. Join aus
+        zwei Zuständen, kein Upstream-Abruf im Request: der statische
+        eRound-Standort-Vollbestand liefert die Zuordnung Ladepunkt -> Stadt
+        + Koordinaten (täglicher Ingest, alle 84 Städte abgedeckt), der
+        dynamische Belegungs-Feed wird als Delta-Strom akkumuliert (Status je
+        Ladepunkt, Staleness-Fenster 24 h). Payload: total_points (bekannte
+        Ladepunkte im Stadtumkreis), reported_points (davon mit frischem
+        Live-Status), status_counts (available/occupied/charging/unavailable
+        u. a.) sowie die Einzelpunkte (refill_point_id, lat/lon, status,
+        observed_at; Liste auf 500 gekappt, truncated markiert ehrlich).
+        Quelle deaktiviert -> 200 source_status="disabled"; noch kein
+        akkumulierter Live-Status -> 200 source_status="no_data".
+      x-description-en: >-
+        Returns a city's aggregated live EV charging occupancy (eRound AFIR
+        recharging, DATEX-II V3, CC0) in the canonical envelope. A join of
+        two states with no upstream call at request time: the static eRound
+        location inventory maps each charging point to a city + coordinates
+        (daily ingest, all 84 cities covered), while the dynamic occupancy
+        feed is accumulated as a delta stream (status per charging point,
+        24 h staleness window). Payload: total_points (known charging points
+        within the city radius), reported_points (of which with a fresh live
+        status), status_counts (available/occupied/charging/unavailable
+        etc.) plus the individual points (refill_point_id, lat/lon, status,
+        observed_at; list capped at 500, truncated flags honestly).
+        Source disabled -> 200 source_status="disabled"; no accumulated
+        live status yet -> 200 source_status="no_data".
+      operationId: getCityChargingStatus
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ladebelegungs-Envelope (CanonicalRecord oder null)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/air-uba:
     get:
       tags: [cities]
@@ -4544,23 +4605,28 @@ paths:
       summary: Live-Ladesäulen-Belegung eRound (Mobilithek DATEX-II V3)
       x-summary-en: Live EV charging-station occupancy via eRound (Mobilithek DATEX-II V3)
       description: >-
-        Liefert die eRound-Ladesäulen-Belegung (AFIR-Recharging, DATEX-II V3
-        EnergyInfrastructureStatusPublication, JSON-Syntax) im Live-Envelope.
-        Bislang die einzige V3-Quelle; sie liefert die Echtzeit-Belegung der
-        Ladesäulen. Der meta-Block trägt zusätzlich as_of (Datenstand) und
-        refresh_seconds (Aktualisierungstakt). Lizenz Creative Commons CC Zero
-        (Tier A). Solange Zertifikat und Abo nicht gesetzt sind -> 200
-        source_status="disabled" (nie 5xx); kein Datenpaket -> 200
-        source_status="no_data". Reine Live-Daten, nur im Redis-Cache gehalten.
+        Liefert das jüngste eRound-Belegungs-Delta (AFIR-Recharging, DATEX-II
+        V3 EnergyInfrastructureStatusPublication, JSON-Syntax) im Live-Envelope.
+        Der Feed wird ausschließlich von einem Hintergrund-Poller gepullt
+        (alle 5 Minuten); dieser Endpunkt liest nur dessen Redis-Snapshot,
+        es findet kein Upstream-Abruf im Request statt. Der meta-Block trägt
+        zusätzlich as_of (Datenstand) und refresh_seconds (Poll-Takt). Lizenz
+        Creative Commons CC Zero (Tier A). Ohne Zertifikat/Abo -> 200
+        source_status="disabled" (nie 5xx); kein/abgelaufener Snapshot oder
+        leeres Delta -> 200 source_status="no_data". Reine Live-Daten, nur in
+        Redis gehalten. Je-Stadt-Aggregation: /cities/{slug}/charging-status.
       x-description-en: >-
-        Returns eRound EV charging-station occupancy (AFIR recharging, DATEX-II
-        V3 EnergyInfrastructureStatusPublication, JSON syntax) in the live
-        envelope. So far the only V3 source; it provides real-time occupancy of
-        the charging stations. The meta block additionally carries as_of (data
-        timestamp) and refresh_seconds (update cadence). License Creative Commons
-        CC Zero (Tier A). As long as the certificate and subscription are not set
-        up -> 200 source_status="disabled" (never 5xx); no data packet -> 200
-        source_status="no_data". Live data only, kept in the Redis cache.
+        Returns the most recent eRound occupancy delta (AFIR recharging,
+        DATEX-II V3 EnergyInfrastructureStatusPublication, JSON syntax) in the
+        live envelope. The feed is pulled exclusively by a background poller
+        (every 5 minutes); this endpoint only reads its Redis snapshot, no
+        upstream call happens at request time. The meta block additionally
+        carries as_of (data timestamp) and refresh_seconds (poll cadence).
+        License Creative Commons CC Zero (Tier A). Without certificate/
+        subscription -> 200 source_status="disabled" (never 5xx); missing/
+        expired snapshot or an empty delta -> 200 source_status="no_data".
+        Live data only, kept in Redis. Per-city aggregation:
+        /cities/{slug}/charging-status.
       operationId: getLiveEroundCharging
       responses:
         "200":

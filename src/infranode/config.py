@@ -405,6 +405,14 @@ class MobilithekSettings(BaseSettings):
     dortmund_parking_abo_id: str | None = None
     kiel_zaehlstellen_abo_id: str | None = None
     eround_charging_abo_id: str | None = None
+    # eRound-STAT-Abo (DATA-42 Stufe 1): statischer Standort-Vollbestand
+    # (aegiEnergyInfrastructureTablePublication, ~94 MB JSON) für die tägliche
+    # Geo-Map (refill_point_id -> Stadt). NUR vom Batch-Ingest
+    # (ingest.eround_geo) gepullt, NIE im Request-Pfad. SSRF-Allowlist.
+    eround_locations_abo_id: str | None = None
+    # Ziel-/Lesepfad der eRound-Geo-Map im persistenten Daten-Volume. Der
+    # Request-Pfad fällt auf den committeten Seed zurück, wenn die Datei fehlt.
+    eround_geo_map_path: str = "data/eround/eround_geo_map.json"
     bremen_baustellen_abo_id: str | None = None
     # Hannover Verkehrsmeldungen (DATEX II V2 SituationPublication, path-Pull).
     # Abo-ID aus dem Portal (Detailseite HTTPS-Zugriffspunkt); SSRF-Allowlist

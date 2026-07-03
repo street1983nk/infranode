@@ -15,7 +15,7 @@ dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
 deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie, öffentliche
-Auftragsvergabe und mehr) über 12 schlanke MCP-Tools, die zusammen 64
+Auftragsvergabe und mehr) über 12 schlanke MCP-Tools, die zusammen 65
 Datenarten abdecken. Das hält den Token-Footprint im Kontextfenster des
 Agenten minimal, bleibt weit unter den Tool-Limits gängiger Clients (z.B. 80
 Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools
@@ -130,15 +130,15 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-12 Tools, die zusammen 64 Datenarten abdecken. Stadtbezogene Tools erwarten
+12 Tools, die zusammen 65 Datenarten abdecken. Stadtbezogene Tools erwarten
 einen `slug` (z.B. `berlin`, `hamburg`); gültige Slugs liefert `list_cities`.
 Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
 | --- | --- | --- | --- |
 | `get_city` | `slug` | Base data for a German city (population, area, coordinates) | Wikidata |
-| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all 64 data types with coverage status and the matching resource key, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
-| `get_city_resource` | `slug`, `resource` | Generic accessor: fetch ANY of the 64 data types by its resource key (kebab-case enum, see list below) | je Datenart |
+| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all 65 data types with coverage status and the matching resource key, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
+| `get_city_resource` | `slug`, `resource` | Generic accessor: fetch ANY of the 65 data types by its resource key (kebab-case enum, see list below) | je Datenart |
 | `air_quality` | `slug` | Official air quality (PM10, PM2.5, NO2, O3, SO2) | UBA |
 | `weather` | `slug` | Current weather observations (not a forecast) | DWD |
 | `pois` | `slug`, `type` | Points of interest, filtered by type | OpenStreetMap |
@@ -158,7 +158,7 @@ Das `pois`-Tool nimmt zusätzlich `type` aus der API-Whitelist (z.B. `hospital`,
 Alle Datenarten ohne eigenes Tool holt der Agent über
 `get_city_resource(slug, resource="<schlüssel>")`. Beispiel:
 `get_city_resource(slug="berlin", resource="charging")` liefert die Ladesäulen
-in Berlin. Der `resource`-Parameter ist ein Enum mit 64 Schlüsseln
+in Berlin. Der `resource`-Parameter ist ein Enum mit 65 Schlüsseln
 (kebab-case). Welche Schlüssel eine Stadt abdeckt, zeigt
 `get_city_overview(slug)` (je Datenart Schlüssel plus Abdeckungsstatus); die
 Resource `infranode://catalog` listet alle Datenarten. Einige Datenarten haben
@@ -181,6 +181,7 @@ generischen Zugriff erreichbar.
 | `traffic` | Autobahn-Baustellen und Verkehrsmeldungen (Region) |
 | `transit` | ÖPNV-Haltestellen (statisch) |
 | `charging` | Ladesäulen-Standorte (Bundesnetzagentur) |
+| `charging-status` | Live-Ladesäulen-Belegung je Stadt (eRound, alle 84 Städte) |
 | `road-events` | Innerstädtische Baustellen und Sperrungen (Teilabdeckung) |
 | `parking` | Live-Parkbelegung (Dortmund, Frankfurt am Main, Wuppertal) |
 | `vehicle-registrations` | Pkw-Bestand und Elektroauto-Anteil (KBA) |

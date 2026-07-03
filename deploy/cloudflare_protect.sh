@@ -99,12 +99,18 @@ echo
 # --- Phase 1: Rate Limiting Rule -------------------------------------------------
 # characteristics enthaelt cf.colo.id: auf Free-/Pro-Plaenen zaehlt Cloudflare
 # pro Rechenzentrum (per-colo). ip.src ist der eigentliche Schluessel.
+# "not cf.client.bot" (2026-07-03): VERIFIZIERTE Bots (Googlebot/Bingbot etc.,
+# von Cloudflare per IP-Range validiert, UA-Spoofing zaehlt NICHT) sind vom
+# Edge-Flood-Limit ausgenommen. Grund: ein paralleler Test-Crawl der ~430
+# Doku-Seiten lief nach ~100 Requests in 429/1015; dasselbe kann Suchmaschinen-
+# Crawler beim Burst-Crawlen treffen (GSC-Indexierungsfehler). Das feine
+# App-Limit (120/min) gilt fuer sie weiterhin auf /api/v1.
 RL_BODY="$(jq -n \
   --argjson req "$RL_REQUESTS" --argjson per "$RL_PERIOD" --argjson to "$RL_TIMEOUT" '{
   rules: [{
     action: "block",
-    description: "InfraNode: harte IP-Volumengrenze (Flood-Schutz; feines Limit macht die App)",
-    expression: "(http.host eq \"infranode.dev\") or (http.host eq \"mcp.infranode.dev\")",
+    description: "InfraNode: harte IP-Volumengrenze (Flood-Schutz; feines Limit macht die App; verifizierte Crawler ausgenommen)",
+    expression: "((http.host eq \"infranode.dev\") or (http.host eq \"mcp.infranode.dev\")) and (not cf.client.bot)",
     ratelimit: {
       characteristics: ["ip.src", "cf.colo.id"],
       period: $per,

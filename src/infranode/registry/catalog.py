@@ -86,6 +86,14 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
     ),
     DataType("webcams", "webcams", "Verkehrs-Webcams", "Traffic webcams"),
     DataType("charging", "charging", "Ladesäulen", "EV charging stations"),
+    # DATA-42: eRound-Live-Ladebelegung je Stadt (AFIR DATEX-II V3, CC0). Join
+    # aus Geo-Map (statischer Vollbestand) + akkumulierten Belegungs-Deltas.
+    DataType(
+        "charging-status",
+        "charging_status",
+        "Ladesäulen-Belegung (live)",
+        "EV charging occupancy (live)",
+    ),
     DataType("parking", "parking", "Parkhäuser", "Car parks"),
     DataType("fuel-prices", "fuel_prices", "Spritpreise", "Fuel prices"),
     DataType("sharing", "sharing", "Bike- & Scooter-Sharing", "Bike & scooter sharing"),

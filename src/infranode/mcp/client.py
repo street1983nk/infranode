@@ -72,6 +72,8 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         # Route ab; unabgedeckte Slugs -> 200 not_covered (kein 404).
         "parking",
         "charging",
+        # DATA-42: eRound-Live-Ladebelegung je Stadt (Join Geo-Map + Delta-State).
+        "charging-status",
         "water-level",
         "flood",
         "pollen-uv",

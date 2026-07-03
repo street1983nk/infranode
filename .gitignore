@@ -46,6 +46,9 @@ data/cache/
 # (WAL inkl. -wal/-shm) + Roh-Snapshots. Nie committen.
 data/ops/
 data/snapshots/
+# eRound-Geo-Map-Laufzeitkopie (DATA-42, taeglicher Ingest ins Volume); der
+# committete Erststand liegt als Seed unter data/seeds/eround_geo_map.json.
+data/eround/
 *.gtfs
 *.zip
 *.parquet

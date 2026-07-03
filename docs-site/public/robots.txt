@@ -1,7 +1,11 @@
 # InfraNode Doku, robots.txt
-# Allgemein: alles erlaubt.
+# Allgemein: alles erlaubt, AUSSER der rohen REST-API unter /api/v1 (liefert
+# JSON, gehoert nicht in den Suchindex; verhindert 404/5xx/4xx-Crawling-Fehler
+# in der Search Console, 2026-07-03). Die Doku-Seiten zu den Endpunkten bleiben
+# crawlbar: /api/* (DE) und /en/api/* (EN) sind NICHT betroffen.
 User-agent: *
 Allow: /
+Disallow: /api/v1
 
 # KI- und Antwort-Bots ausdruecklich erlaubt (GEO).
 User-agent: GPTBot

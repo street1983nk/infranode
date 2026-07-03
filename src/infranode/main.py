@@ -30,6 +30,7 @@ from .api.errors import register_exception_handlers
 from .api.v1 import api_v1
 from .api.v1.abuse_guard import AbuseGuardMiddleware
 from .api.v1.ratelimit import limiter, real_client_ip
+from .charging.poller import maybe_start_eround_poller
 from .config import get_settings
 from .infra.etag import cache_control_for, compute_etag
 from .infra.http import close_http_client, create_http_client
@@ -104,6 +105,10 @@ async def lifespan(app: FastAPI):
     # + Abo-ID); nutzt das bestehende _schedule/bg_tasks-Muster (GC-Schutz). Bei
     # Default (enable_gtfs_rt False) entsteht KEIN Task (kein Verhaltensbruch).
     maybe_start_gtfs_rt_poller(app, settings, _schedule)
+    # eRound-Belegungs-Poller (DATA-42): akkumuliert die Drain-Queue-Deltas des
+    # dynamischen eRound-Abos in Redis (Muster GTFS-RT-Poller). Nur bei aktivem
+    # enable_eround_charging + Cert + Abo-ID; sonst KEIN Task (kein Verhaltensbruch).
+    maybe_start_eround_poller(app, settings, _schedule)
     try:
         yield
     finally:
