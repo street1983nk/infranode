@@ -283,6 +283,7 @@ class SourceToggleSettings(BaseSettings):
     enable_stuttgart_radzaehl: bool = True
     enable_koeln_radzaehl: bool = True
     enable_essen_radzaehl: bool = True
+    enable_duesseldorf_radzaehl: bool = True
     # DATA-40: ParkenDD-Aggregator (keylos) = bevorzugte Live-Parkbelegung für
     # viele Städte. Default True (keylos). Löst /live/dortmund/parking ab (Dedup).
     enable_parkendd: bool = True

@@ -134,7 +134,16 @@ _PARKING_CITIES: frozenset[str] = (
 # Stadt (muss synchron zu ``_resolve_bike_counts_connector`` in api/v1/cities.py
 # bleiben).
 _BIKE_COUNTS_CITIES: frozenset[str] = frozenset(
-    {"muenchen", "leipzig", "hamburg", "berlin", "stuttgart", "koeln", "essen"}
+    {
+        "muenchen",
+        "leipzig",
+        "hamburg",
+        "berlin",
+        "stuttgart",
+        "koeln",
+        "essen",
+        "duesseldorf",
+    }
 )
 
 # heritage (DATA-OSM-Tier-2): Denkmallisten sind LANDESsache -> föderiert per WFS

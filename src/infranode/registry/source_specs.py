@@ -418,6 +418,12 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         ttl=(86400.0, 2592000.0),
     ),
     SourceSpec(
+        name="duesseldorf_radzaehl",
+        license_id="dl_de_by_2_0",
+        attribution="Landeshauptstadt Düsseldorf",
+        ttl=(86400.0, 2592000.0),
+    ),
+    SourceSpec(
         name="parkendd",
         license_id="unknown",
         attribution="ParkenDD",

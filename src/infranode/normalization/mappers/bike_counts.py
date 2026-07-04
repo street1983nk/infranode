@@ -63,8 +63,13 @@ def build_bike_count_record(
     license_tier: LicenseTier,
     attribution_text: str,
     license_url: str,
+    modified: bool = False,
 ) -> CanonicalRecord:
-    """Baut den kanonischen ``CountStationPayload``-Record einer bike-counts-Quelle."""
+    """Baut den kanonischen ``CountStationPayload``-Record einer bike-counts-Quelle.
+
+    ``modified=True`` setzt den Veränderungshinweis der Attribution (Pflicht
+    nach DL-DE/BY 2.0, wenn Quelldaten aggregiert/verändert wurden).
+    """
     return CanonicalRecord(
         city_slug=slug,
         geo=None,
@@ -75,7 +80,9 @@ def build_bike_count_record(
         license_tier=license_tier,
         ags=ags,
         wikidata_qid=wikidata_qid,
-        attribution=Attribution(text=attribution_text, license_url=license_url),
+        attribution=Attribution(
+            text=attribution_text, license_url=license_url, modified=modified
+        ),
         payload=CountStationPayload(counts=counts),
     )
 
@@ -264,4 +271,36 @@ def map_essen_radzaehl(
         license_tier=LicenseTier.A,
         attribution_text="Stadt Essen",
         license_url=_DL_DE_BY_URL,
+    )
+
+
+def map_duesseldorf_radzaehl(
+    raw: dict,
+    *,
+    retrieved_at: datetime,
+    ags: str | None = None,
+    wikidata_qid: str | None = None,
+) -> CanonicalRecord:
+    """Bildet die Düsseldorfer Rad-Jahreswerte ab (DL-DE/BY 2.0, Tier A).
+
+    Je Station ``value`` = Jahres-Summe der Stundenwerte 2025, ``granularity``
+    "year", ``period`` = Jahr; KEINE Koordinaten (Jahrgangs-CSVs liefern
+    keine). ``observed_at`` None (Jahreswert ohne Stundenzeitstempel).
+    Attribution DREITEILIG: "Landeshauptstadt Düsseldorf" + Lizenz-URL +
+    ``modified=True`` (Stundenwerte je Station zu Jahressummen aggregiert =
+    Veränderungshinweis-Pflicht nach DL-DE/BY 2.0).
+    """
+    return build_bike_count_record(
+        raw["slug"],
+        _counts_from_stations(raw, "year"),
+        None,
+        retrieved_at=retrieved_at,
+        ags=ags,
+        wikidata_qid=wikidata_qid,
+        source=SourceId.DUESSELDORF_RADZAEHL,
+        license_id=LicenseId.DL_DE_BY_2_0,
+        license_tier=LicenseTier.A,
+        attribution_text="Landeshauptstadt Düsseldorf",
+        license_url=_DL_DE_BY_URL,
+        modified=True,
     )

@@ -37,6 +37,7 @@ from infranode.adapters.denkmal import fetch_heritage
 from infranode.adapters.destination_one import fetch_events
 from infranode.adapters.divi_live import fetch_icu_live
 from infranode.adapters.dortmund_baustellen import fetch_dortmund_road_events
+from infranode.adapters.duesseldorf_radzaehl import fetch_duesseldorf_radzaehl
 from infranode.adapters.dwd import fetch_weather
 from infranode.adapters.dwd_fire import fetch_fire_danger
 from infranode.adapters.dwd_pollen import fetch_pollen_uv
@@ -117,6 +118,7 @@ from infranode.normalization.mappers.baumkataster import map_trees
 from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
 from infranode.normalization.mappers.bike_counts import (
     map_berlin_radzaehl,
+    map_duesseldorf_radzaehl,
     map_essen_radzaehl,
     map_hamburg_radzaehl,
     map_koeln_radzaehl,
@@ -2738,6 +2740,13 @@ async def _fetch_essen_radzaehl(http, entry) -> dict:
     )
 
 
+async def _fetch_duesseldorf_radzaehl(http, entry) -> dict:
+    """Adapter-Wrapper Düsseldorf (Standard-Signatur)."""
+    return await fetch_duesseldorf_radzaehl(
+        http, slug=entry.slug, lat=entry.geo.lat, lon=entry.geo.lon
+    )
+
+
 def _resolve_bike_counts_connector(slug: str):
     """Liefert ``(source, fetch_factory, map_fn)`` für bike-counts oder None."""
     if slug == "muenchen":
@@ -2758,6 +2767,12 @@ def _resolve_bike_counts_connector(slug: str):
         return ("koeln_radzaehl", _fetch_koeln_radzaehl, map_koeln_radzaehl)
     if slug == "essen":
         return ("essen_radzaehl", _fetch_essen_radzaehl, map_essen_radzaehl)
+    if slug == "duesseldorf":
+        return (
+            "duesseldorf_radzaehl",
+            _fetch_duesseldorf_radzaehl,
+            map_duesseldorf_radzaehl,
+        )
     return None
 
 

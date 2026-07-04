@@ -3492,7 +3492,7 @@ paths:
         source_status="not_covered" (mit covered_cities); abgedeckte Stadt ohne
         Zählstelle -> 200 source_status="no_data". Granularität je Quelle (siehe
         counts[].granularity): München Tag, Leipzig/Hamburg/Berlin Stunde,
-        Stuttgart/Köln/Essen Jahr. Lizenzen je Ursprung (München/Leipzig/Hamburg/Essen
+        Stuttgart/Köln/Essen/Düsseldorf Jahr. Lizenzen je Ursprung (München/Leipzig/Hamburg/Essen/Düsseldorf
         DL-DE/BY 2.0, Berlin/Köln DL-DE/Zero 2.0, Stuttgart CC BY 4.0).
       x-description-en: >-
         Bicycle counting stations (permanent counters) per city from municipal
