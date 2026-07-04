@@ -43,7 +43,17 @@ from infranode.registry.cities import CITY_REGISTRY
 # road-events: gespiegelt aus ``api.v1.cities.CONNECTOR_MAP`` (siehe Modul-Docstring).
 # Die Assertion in cities.py hält diese Liste mit der CONNECTOR_MAP synchron.
 _ROAD_EVENTS_CITIES: frozenset[str] = frozenset(
-    {"berlin", "koeln", "hamburg", "muenchen", "stuttgart", "bremen", "dortmund"}
+    {
+        "berlin",
+        "koeln",
+        "hamburg",
+        "muenchen",
+        "stuttgart",
+        "bremen",
+        "dortmund",
+        "dresden",
+        "leipzig",
+    }
 )
 
 # sharing (DATA-33): gespiegelt aus ``api.v1.cities.GBFS_SYSTEMS`` (kuratierte

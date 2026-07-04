@@ -93,6 +93,9 @@ class SourceId(StrEnum):
     KOELN_VERKEHR = "koeln_verkehr"
     MUENCHEN_BAUSTELLEN = "muenchen_baustellen"
     DORTMUND_BAUSTELLEN = "dortmund_baustellen"
+    # SPERRINFOSYS Sachsen (LISt GmbH): EINE sachsenweite Quelle für Dresden +
+    # Leipzig (VKZ-Filter im Adapter), DL-DE/BY 2.0.
+    SPERRINFOSYS = "sperrinfosys"
     MOBIDATA_BW = "mobidata_bw"
     # Phase 10: Stadt-Events/Veranstaltungen. DESTINATION_ONE ist die account-
     # gated eT4.META-Quelle (licensekey, gemischte Lizenzen pro Record, GOV-04),

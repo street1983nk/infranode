@@ -107,6 +107,13 @@ class RateLimitSettings(BaseSettings):
     # INFRANODE_RATELIMIT_ALLOWLIST ohne Code-Deploy änderbar; dieselbe Env
     # liest auch der MCP-Container (infra/allowlist.py, stdlib-only).
     ratelimit_allowlist: str = ""
+    # Rate-Limit je ChatGPT-GPT-Nutzer (api/v1/gpt_guard.py): OpenAI-Actions-
+    # Traffic kommt über WENIGE Egress-IPs (openai.com/chatgpt-actions.json),
+    # die dafür auf der Allowlist stehen; dieses Limit ist der Backstop je
+    # ephemerer OpenAI-Nutzer-Kennung. Default wie der MCP-Endpunkt (480/min,
+    # Owner-Historie s. mcp/ratelimit.py). Leer ("") = deaktiviert. Per
+    # INFRANODE_LIMIT_GPT überschreibbar.
+    limit_gpt: str = "480/minute"
     # Optionaler Cloudflare-Bot-Score-Schwellwert (1-99; 0 = deaktiviert). Greift
     # NUR, wenn Cloudflare den Header ``cf-bot-score`` setzt (Bot Management /
     # Enterprise). Bei Free/Pro fehlt der Header -> der Check ist ein No-op-Hook,
@@ -305,6 +312,8 @@ class SourceToggleSettings(BaseSettings):
     enable_koeln_verkehr: bool = True
     enable_muenchen_baustellen: bool = True
     enable_dortmund_baustellen: bool = True
+    # SPERRINFOSYS Sachsen: keylos, EINE Quelle für Dresden + Leipzig.
+    enable_sperrinfosys: bool = True
     enable_mobidata_bw: bool = True
     enable_autobahn_webcam: bool = True
     # Phase 10: Stadt-Events/Veranstaltungen. destination.one ist KEYLOS (Experience

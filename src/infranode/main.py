@@ -29,10 +29,12 @@ from infranode.api.responses import OrjsonResponse
 from .api.errors import register_exception_handlers
 from .api.v1 import api_v1
 from .api.v1.abuse_guard import AbuseGuardMiddleware
+from .api.v1.gpt_guard import GPTActionLimitMiddleware
 from .api.v1.ratelimit import limiter, real_client_ip
 from .charging.poller import maybe_start_eround_poller
 from .config import get_settings
 from .infra.etag import cache_control_for, compute_etag
+from .infra.gpt_actions import is_gpt_action
 from .infra.http import close_http_client, create_http_client
 from .infra.metrics import incr_daily, incr_request, push_log, record_consumer
 from .infra.mobilithek import close_mobilithek_client, create_mobilithek_client
@@ -235,6 +237,10 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         # Dashboard sichtbar (eigenes Feld + eigener Counter "mcp:<endpoint>") und
         # nicht mit normalem API-Traffic vermischt (Owner-Wunsch: MCP verfolgen).
         mcp_resource = request.headers.get("x-infranode-mcp")
+        # GPT-Actions kennzeichnen (OpenAI-Header/ChatGPT-UA, infra/gpt_actions):
+        # eigener Kanal "gpt" analog zu "mcp", damit ChatGPT-Traffic im Dashboard/
+        # Digest sichtbar ist und nicht mit API-Traffic vermischt wird.
+        via_gpt = not mcp_resource and is_gpt_action(request.headers)
 
         try:
             redis = request.app.state.redis
@@ -249,10 +255,18 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             if mcp_resource:
                 entry["via_mcp"] = True
                 entry["mcp_ressource"] = mcp_resource
+            if via_gpt:
+                entry["via_gpt"] = True
+            if mcp_resource:
+                counter_endpoint = f"mcp:{endpoint}"
+            elif via_gpt:
+                counter_endpoint = f"gpt:{endpoint}"
+            else:
+                counter_endpoint = endpoint
             await push_log(redis, entry)
             await incr_request(
                 redis,
-                endpoint=f"mcp:{endpoint}" if mcp_resource else endpoint,
+                endpoint=counter_endpoint,
                 status_code=response.status_code,
             )
             # Aktive-Consumer-Tracking (nur echte Datenabrufe unter /api/v1/, ohne
@@ -263,7 +277,15 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                 ("/api/v1/health", "/api/v1/openapi")
             ):
                 now = datetime.now(UTC)
-                ident = "mcp" if mcp_resource else real_client_ip(request)
+                if mcp_resource:
+                    ident = "mcp"
+                elif via_gpt:
+                    # Aggregiert wie "mcp" (bewusst NICHT die ephemere Nutzer-ID:
+                    # begrenzte Kardinalität der Stunden-Buckets); die pseudonyme
+                    # Nutzer-Kennung steht im per-Aufruf-Push (note_gpt_action).
+                    ident = "gpt"
+                else:
+                    ident = real_client_ip(request)
                 await record_consumer(
                     redis,
                     ident=ident,
@@ -272,12 +294,16 @@ class MetricsMiddleware(BaseHTTPMiddleware):
                     status_code=response.status_code,
                     now=now,
                 )
-                # Tages-Counter je Kanal (api|mcp) für den täglichen 00:05-Digest.
-                # Gleiche Abgrenzung wie das Consumer-Tracking (nur echte Datenabrufe
-                # unter /api/v1/, ohne Health/OpenAPI); MCP getrennt via Header.
-                await incr_daily(
-                    redis, channel="mcp" if mcp_resource else "api", now=now
-                )
+                # Tages-Counter je Kanal (api|mcp|gpt) für den täglichen 00:05-
+                # Digest. Gleiche Abgrenzung wie das Consumer-Tracking (nur echte
+                # Datenabrufe unter /api/v1/, ohne Health/OpenAPI).
+                if mcp_resource:
+                    channel = "mcp"
+                elif via_gpt:
+                    channel = "gpt"
+                else:
+                    channel = "api"
+                await incr_daily(redis, channel=channel, now=now)
         except Exception as exc:  # noqa: BLE001 - Metrik-Verlust crasht nie den Request
             # Graceful Degradation: ein Metrik-/Redis-Fehler darf den Request-Pfad
             # nie crashen; nur als Debug protokollieren (vermeidet S110 bare pass).
@@ -297,6 +323,17 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             pass  # MCP-Telemetrie ist privat (entfernt im Public-Build)
         except Exception as exc:  # noqa: BLE001 - MCP-Push crasht nie den Request
             log.debug("mcp_action_middleware_failed", error=str(exc))
+
+        # GPT-Action per ntfy verfolgen (feuert nur bei erkanntem ChatGPT-
+        # Traffic). Eigene Kapselung, best-effort, crasht den Request nie.
+        try:
+            await note_gpt_action(
+                request,
+                settings=request.app.state.settings,
+                status_code=response.status_code,
+            )
+        except Exception as exc:  # noqa: BLE001 - GPT-Push crasht nie den Request
+            log.debug("gpt_action_middleware_failed", error=str(exc))
 
         return response
 
@@ -414,6 +451,11 @@ def create_app() -> FastAPI:
     # City-/Meta-GETs ohne eigenen @limiter.limit-Decorator. Ohne diese Middleware
     # griff nur das per-Route-Decorator-Limit (admin-login), die GET-Reads blieben
     # ungedrosselt und ohne RateLimit-Header.
+    # GPT-Action-Limit VOR RateLimitMiddleware added -> läuft knapp DANACH
+    # (innerste Schutzschicht). Backstop je ChatGPT-Nutzer für die per Allowlist
+    # vom IP-Limit ausgenommenen OpenAI-Egress-IPs; feuert NUR bei erkanntem
+    # GPT-Action-Traffic (Details: api/v1/gpt_guard.py).
+    app.add_middleware(GPTActionLimitMiddleware)
     app.add_middleware(RateLimitMiddleware)
     # AbuseGuard NACH RateLimitMiddleware added -> läuft knapp DAVOR (Starlette:
     # zuletzt added = äußerste Schicht = zuerst ausgeführt). Grobe, billige

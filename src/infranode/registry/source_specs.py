@@ -249,6 +249,11 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Stadt Dortmund",
     ),
     SourceSpec(
+        name="sperrinfosys",
+        license_id="dl_de_by_2_0",
+        attribution="Freistaat Sachsen / LISt GmbH (SPERRINFOSYS)",
+    ),
+    SourceSpec(
         name="mobidata_bw",
         license_id="dl_de_by_2_0",
         attribution="Verkehrsministerium Baden-Württemberg / MobiData BW",

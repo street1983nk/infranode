@@ -36,7 +36,7 @@ export const mcpTopics: McpTopic[] = [
     de: {
       slug: "wetter",
       dataSlug: "wetter-api",
-      metaTitle: "Wetter-MCP-Server Deutschland (DWD) für Claude und ChatGPT",
+      metaTitle: "Wetter-MCP-Server Deutschland (DWD) für KI-Agenten",
       h1: "Wetter-MCP-Server für deutsche Städte (DWD)",
       lead: "Aktuelle Wetterdaten des Deutschen Wetterdienstes (DWD) für 84 deutsche Großstädte direkt in deinem KI-Assistenten, über das kostenlose, keylose MCP-Tool von InfraNode. Kein API-Schlüssel, keine Installation.",
       what: "Das MCP-Tool weather liefert die nächstgelegene DWD-Messung einer Stadt: Temperatur, Luftfeuchte, Windgeschwindigkeit und Wetterlage. Dein KI-Agent (Claude, ChatGPT u.a.) ruft es selbst auf, sobald du nach dem Wetter einer Stadt fragst.",
@@ -50,7 +50,7 @@ export const mcpTopics: McpTopic[] = [
     en: {
       slug: "weather",
       dataSlug: "weather-api",
-      metaTitle: "Germany Weather MCP Server (DWD) for Claude and ChatGPT",
+      metaTitle: "Germany Weather MCP Server (DWD) for AI agents",
       h1: "Weather MCP server for German cities (DWD)",
       lead: "Current German Weather Service (DWD) data for 84 major German cities directly in your AI assistant, through InfraNode's free, keyless MCP tool. No API key, no install.",
       what: "The weather MCP tool returns the nearest DWD observation for a city: temperature, humidity, wind speed and condition. Your AI agent (Claude, ChatGPT and others) calls it automatically when you ask about a city's weather.",
@@ -68,7 +68,7 @@ export const mcpTopics: McpTopic[] = [
     de: {
       slug: "luftqualitaet",
       dataSlug: "luftqualitaet-api",
-      metaTitle: "Luftqualitäts-MCP-Server Deutschland (UBA) für KI-Agenten",
+      metaTitle: "Luftqualitäts-MCP-Server Deutschland (UBA)",
       h1: "Luftqualitäts-MCP-Server für deutsche Städte (UBA)",
       lead: "Aktuelle Luftqualitätsdaten des Umweltbundesamts (UBA) für deutsche Großstädte direkt in Claude oder ChatGPT, über das kostenlose, keylose MCP-Tool von InfraNode.",
       what: "Das MCP-Tool air_quality liefert die Messwerte der nächstgelegenen UBA-Station: Feinstaub PM10 und PM2.5, Stickstoffdioxid NO2, Ozon O3 und Schwefeldioxid SO2. Der KI-Agent ruft es auf, wenn du nach der Luftqualität einer Stadt fragst.",
@@ -114,7 +114,7 @@ export const mcpTopics: McpTopic[] = [
     en: {
       slug: "electricity-price",
       dataSlug: "electricity-price-api",
-      metaTitle: "Germany Electricity Price MCP Server (SMARD) for Claude",
+      metaTitle: "Germany Electricity Price MCP Server (SMARD)",
       h1: "Electricity price MCP server for Germany (SMARD)",
       lead: "The nationwide day-ahead spot electricity price (SMARD, Federal Network Agency) directly in your AI assistant, through InfraNode's free, keyless MCP tool.",
       what: "The power-price data type (via the get_city_resource MCP tool) returns the Germany-wide day-ahead spot electricity price as a daily value. Ask your AI agent about the price and it calls the tool itself, for example to find the cheapest charging time.",
@@ -164,7 +164,7 @@ export const mcpTopics: McpTopic[] = [
     de: {
       slug: "oepnv",
       dataSlug: "oepnv-echtzeit-api",
-      metaTitle: "ÖPNV-MCP-Server Deutschland: Echtzeit-Abfahrten für KI",
+      metaTitle: "ÖPNV-MCP-Server Deutschland: Echtzeit-Abfahrten",
       h1: "ÖPNV-MCP-Server für deutsche Städte",
       lead: "Echtzeit-Abfahrten an Haltestellen deutscher Großstädte direkt in deinem KI-Assistenten, über das kostenlose, keylose MCP-Tool von InfraNode (DELFI, GTFS, Verkehrsverbünde).",
       what: "Die Datenart station-departures (über das MCP-Tool get_city_resource) liefert die nächsten Abfahrten am Hauptbahnhof: Linie, Richtung, geplante und prognostizierte Abfahrtszeit, Verspätung. Der KI-Agent ruft es auf, wenn du nach Abfahrten in einer Stadt fragst.",
@@ -178,7 +178,7 @@ export const mcpTopics: McpTopic[] = [
     en: {
       slug: "public-transport",
       dataSlug: "public-transport-api",
-      metaTitle: "Germany Public Transport MCP Server: real-time departures",
+      metaTitle: "Public Transport MCP Server Germany: real-time",
       h1: "Public transport MCP server for German cities",
       lead: "Real-time departures at stops in major German cities directly in your AI assistant, through InfraNode's free, keyless MCP tool (DELFI, GTFS, transit associations).",
       what: "The station-departures data type (via the get_city_resource MCP tool) returns the next departures at the main station: line, direction, planned and predicted departure time and delay. The AI agent calls it when you ask about departures in a city.",

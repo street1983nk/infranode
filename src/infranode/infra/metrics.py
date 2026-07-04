@@ -228,19 +228,19 @@ async def incr_daily(redis, *, channel: str, now) -> None:
 
 
 async def read_daily(redis, *, day: str) -> dict[str, int]:
-    """Liest die Tages-Counter beider Kanäle (``api``|``mcp``) für ``day``.
+    """Liest die Tages-Counter aller Kanäle (``api``|``mcp``|``gpt``) für ``day``.
 
     ``day`` ist ein UTC-Datum ``YYYY-MM-DD``. Fehlende Keys -> 0. Graceful: bei
-    einem Redis-Fehler -> beide 0 (nie ein Crash im Digest).
+    einem Redis-Fehler -> alle 0 (nie ein Crash im Digest).
     """
-    out = {"api": 0, "mcp": 0}
+    out = {"api": 0, "mcp": 0, "gpt": 0}
     try:
         for channel in out:
             raw = await redis.get(f"{_DAILY_PREFIX}{channel}:{day}")
             if raw is not None:
                 out[channel] = int(raw)
     except Exception:
-        return {"api": 0, "mcp": 0}
+        return {"api": 0, "mcp": 0, "gpt": 0}
     return out
 
 

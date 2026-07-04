@@ -138,7 +138,10 @@ permission model and an example transcript are in
 
 ## Use it in ChatGPT (Custom GPT action)
 
-For the OpenAI ecosystem, InfraNode ships a curated OpenAPI spec for GPT
+**Ready-made GPT:** [German City Data (InfraNode)](https://chatgpt.com/g/g-6a48bf065e648191b062bc86256c1897-infranode-live-data-for-german-cities)
+is listed in the GPT Store (Research & Analysis) and works out of the box.
+
+To build your own: InfraNode ships a curated OpenAPI spec for GPT
 actions: 23 of the most useful operations (ChatGPT allows at most 30 per
 action), keyless, all GET.
 

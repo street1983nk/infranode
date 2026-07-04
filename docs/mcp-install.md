@@ -147,7 +147,7 @@ Ausnahmen sind unten markiert.
 | `transit_departures` | `slug`, `stop_id?` | Live public-transport departures with real-time delays | GTFS-RT/HVV/VGN |
 | `list_cities` | keine | List all covered cities (slug, state, population, coverage) | InfraNode |
 | `sources` | keine | List all data sources with license, attribution and status | InfraNode |
-| `compare` | `resource`, `cities` | Compare one resource (`weather`/`air`) across multiple cities | InfraNode |
+| `compare` | `resource`, `cities` | Compare one resource (weather, air, indicators, demographics, unemployment, tourism, charging-status, weather-warnings) across multiple cities | InfraNode |
 
 Das `pois`-Tool nimmt zusätzlich `type` aus der API-Whitelist (z.B. `hospital`,
 `school`, `pharmacy`, `restaurant`, `police`, `kindergarten`).

@@ -37,7 +37,11 @@ const cityEndpoints = (await getCollection("endpoints"))
     example: e.data.path.replace(/\{[^}]+\}/, city.slug),
   }))
   .sort((a, b) => a.summary.localeCompare(b.summary, "en"));
-const metaTitle = `Open data API for ${city.name}: free and keyless`;
+// Title budget: 53 chars (SeoHead appends " | InfraNode", total max 65,
+// Bing scan 2026-07-01). Use the long form only if it fits, otherwise a
+// compact form for long city names (e.g. Ludwigshafen am Rhein).
+const metaTitleLong = `Open data API for ${city.name}: free and keyless`;
+const metaTitle = metaTitleLong.length <= 53 ? metaTitleLong : `Open data API for ${city.name}, keyless`;
 const lead = `Open data for ${city.name} (${stateName}) through a free, keyless REST API: weather, air quality, electricity price and more, delivered as consistent JSON with source and license on every response. No API key, no sign-up.`;
 const weatherExample = `${API_BASE}/api/v1/cities/${city.slug}/weather`;
 const airExample = `${API_BASE}/api/v1/cities/${city.slug}/air-uba`;

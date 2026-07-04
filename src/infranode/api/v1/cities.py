@@ -82,6 +82,7 @@ from infranode.adapters.parkendd import PARKENDD_CITIES, fetch_parkendd
 from infranode.adapters.pegelonline import fetch_water_level
 from infranode.adapters.smard import fetch_smard
 from infranode.adapters.solar import fetch_solar
+from infranode.adapters.sperrinfosys import fetch_sperrinfosys_road_events
 from infranode.adapters.stada import fetch_all_stations
 from infranode.adapters.stuttgart_radzaehl import fetch_stuttgart_radzaehl
 from infranode.adapters.tankerkoenig import fetch_fuel_prices
@@ -188,6 +189,9 @@ from infranode.normalization.mappers.solar_cadastre import (
     load_solar_roofs,
     map_solar_roofs,
 )
+from infranode.normalization.mappers.sperrinfosys import (
+    map_sperrinfosys_road_events,
+)
 from infranode.normalization.mappers.stada import map_station_catalog
 from infranode.normalization.mappers.tankerkoenig import map_fuel_prices
 from infranode.normalization.mappers.uba import map_air_uba
@@ -271,6 +275,20 @@ CONNECTOR_MAP: dict[str, tuple] = {
         "dortmund_baustellen",
         fetch_dortmund_road_events,
         map_dortmund_road_events,
+    ),
+    # SPERRINFOSYS Sachsen (LISt GmbH, DL-DE/BY 2.0): EINE sachsenweite Quelle
+    # für Dresden UND Leipzig; der VKZ-Filter im Adapter trennt die Städte.
+    # Der Cache-Key ist stadt-scharf (build_cache_key mit city_slug), daher
+    # existiert je Stadt ein eigener Cache-Eintrag trotz gemeinsamer Quelle.
+    "dresden": (
+        "sperrinfosys",
+        fetch_sperrinfosys_road_events,
+        map_sperrinfosys_road_events,
+    ),
+    "leipzig": (
+        "sperrinfosys",
+        fetch_sperrinfosys_road_events,
+        map_sperrinfosys_road_events,
     ),
     # DATA-31: Bremen kommt NICHT keylos, sondern über den Mobilithek-mTLS-Pull
     # (VMZ Bremen, DATEX II Situation). fetch_fn=None signalisiert dem

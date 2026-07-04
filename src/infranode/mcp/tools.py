@@ -268,8 +268,12 @@ async def compare(
         str,
         Field(
             description=(
-                "Resource to compare. Currently supported: 'weather' (DWD) or "
-                "'air' (UBA air quality)."
+                "Resource to compare. Supported: 'weather' (DWD), 'air' (UBA "
+                "air quality), 'indicators' (INKAR socioeconomic indicators "
+                "incl. unemployment rate and EV charging coverage), "
+                "'demographics', 'unemployment', 'tourism', 'charging-status' "
+                "(live EV charging occupancy, aggregates only) and "
+                "'weather-warnings' (official DWD warning level per city)."
             )
         ),
     ],

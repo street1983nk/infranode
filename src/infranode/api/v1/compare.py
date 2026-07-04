@@ -45,6 +45,36 @@ RESOURCE_MAP: dict[str, tuple] = {
     "air": ("uba", fetch_air_uba, map_air_uba, "enable_uba"),
 }
 
+
+def _delegated_resources() -> dict:
+    """Ressource -> bestehender City-Route-Handler (Compare-Ausbau 2026-07-04).
+
+    Zweiter Zweig neben RESOURCE_MAP: statt eines Adapter-Fetches wird der
+    EXISTIERENDE Route-Handler je Stadt aufgerufen (identisches Verhalten
+    inkl. Toggles, Fallbacks, no_data/not_ingested und Attribution; keine
+    Logik-Duplikate). Nur billige Kandidaten sind gelistet: Store-Reads
+    (indicators), gecachte Quellen (GENESIS-Regio, DWD-Warnungen: EIN
+    bundesweiter Fetch fuer alle Staedte) und der Redis-Join
+    (charging-status). BEWUSST NICHT dabei: fuel-prices (Tankerkoenig-ToS
+    verlangt on-demand ohne Cache, ein 28-Staedte-Fan-out je Request waere
+    ein ToS-/Limit-Risiko).
+
+    Lazy als Funktion statt Modul-Konstante: cities.py importiert beim Laden
+    viel Adapter-Geflecht; der lokale Import vermeidet Import-Zyklen ueber
+    api.v1.__init__ und haelt die Modul-Ladezeit von compare.py klein.
+    """
+    from infranode.api.v1 import cities as city_routes
+
+    return {
+        "indicators": city_routes.city_indicators,
+        "demographics": city_routes.city_demographics,
+        "unemployment": city_routes.city_unemployment,
+        "tourism": city_routes.city_tourism,
+        "charging-status": city_routes.city_charging_status,
+        "weather-warnings": city_routes.city_weather_warnings,
+    }
+
+
 # Obergrenze für die Anzahl verglichener Städte (T-11-CMP-DOS): begrenzt den
 # Fan-out unabhängig von der Register-Größe, damit ein langer cities-String
 # nicht beliebig viele parallele Upstream-Calls auslöst.
@@ -120,6 +150,54 @@ async def _one(slug: str, request: Request, resource: str) -> dict:
     }
 
 
+async def _one_delegated(slug: str, request: Request, resource: str) -> dict:
+    """Holt eine delegierte Ressource für EINE Stadt über den Route-Handler.
+
+    Gleicher D-06-Vertrag wie ``_one``: unbekannter Slug -> ``not_found``,
+    JEDER Handler-Fehler (inkl. UpstreamError-503 des Einzel-Endpunkts) wird
+    zu per-Stadt ``error`` degradiert, nie zu einem Gesamt-5xx. Der
+    ``source_status`` des Handler-Envelopes (ok/disabled/no_data/
+    not_ingested/...) wird unverändert durchgereicht, ``cache_status``/
+    ``fallback`` ebenso.
+
+    Sonderfall charging-status: die Einzelpunkt-Liste (bis 500 je Stadt)
+    wird im Compare weggelassen (``points_omitted``-Marker statt Liste),
+    sonst wüchse eine 28-Städte-Antwort auf Megabyte; für den Vergleich
+    zählen die Aggregate (total/reported/status_counts).
+    """
+    try:
+        entry = get_city(slug)
+    except NotFoundError:
+        return {"city": slug, "data": None, "source_status": "not_found"}
+
+    handler = _delegated_resources()[resource]
+    try:
+        envelope = await handler(entry.slug, request)
+    except Exception:  # noqa: BLE001 - per-Stadt still degradieren (D-06)
+        return {"city": entry.slug, "data": None, "source_status": "error"}
+
+    data = envelope.get("data")
+    meta = envelope.get("meta") or {}
+
+    if resource == "charging-status" and isinstance(data, dict):
+        payload = data.get("payload")
+        if isinstance(payload, dict) and "points" in payload:
+            payload = {k: v for k, v in payload.items() if k != "points"}
+            payload["points_omitted"] = True
+            data = {**data, "payload": payload}
+
+    row = {
+        "city": entry.slug,
+        "data": data,
+        "source_status": meta.get("source_status", "ok"),
+    }
+    if meta.get("cache_status") is not None:
+        row["cache_status"] = meta["cache_status"]
+    if meta.get("fallback"):
+        row["fallback"] = meta["fallback"]
+    return row
+
+
 @router.get("/compare")
 @limiter.limit(ANON_LIMIT)
 async def compare(
@@ -138,11 +216,13 @@ async def compare(
     (API-04, Whitelist {city, source_status}).
     """
     # resource gegen die Whitelist (T-11-FILTER-INJ): unbekannt -> 400, BEVOR der
-    # rohe Wert in einen Cache-Key/Fetch gelangt.
-    if resource not in RESOURCE_MAP:
+    # rohe Wert in einen Cache-Key/Fetch gelangt. Erlaubt sind die Adapter-
+    # Ressourcen (RESOURCE_MAP) plus die delegierten Route-Ressourcen.
+    delegated = _delegated_resources()
+    if resource not in RESOURCE_MAP and resource not in delegated:
         raise ValidationFailedError(
             f"Unbekannte resource '{resource}'.",
-            hint=f"Erlaubt: {', '.join(sorted(RESOURCE_MAP))}.",
+            hint=f"Erlaubt: {', '.join(sorted([*RESOURCE_MAP, *delegated]))}.",
         )
 
     slugs = [s.strip() for s in cities.split(",") if s.strip()]
@@ -154,7 +234,12 @@ async def compare(
     # Fan-out-Größe begrenzen (T-11-CMP-DOS).
     slugs = slugs[:_MAX_CITIES]
 
-    results = await asyncio.gather(*[_one(s, request, resource) for s in slugs])
+    if resource in delegated:
+        results = await asyncio.gather(
+            *[_one_delegated(s, request, resource) for s in slugs]
+        )
+    else:
+        results = await asyncio.gather(*[_one(s, request, resource) for s in slugs])
 
     # Optionale Whitelist-gesicherte Sortierung + Paginierung der Compare-Liste
     # (API-04): unbekanntes sort -> 400, Offset-Overflow -> leere 200-Seite.

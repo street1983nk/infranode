@@ -48,7 +48,7 @@ export const topics: Topic[] = [
     coverageKey: "all",
     de: {
       slug: "wetter-api",
-      metaTitle: "Wetter-API Deutschland (DWD): kostenlos und keylos je Stadt",
+      metaTitle: "Wetter-API Deutschland (DWD): kostenlos und keylos",
       h1: "Wetter-API für deutsche Städte (DWD)",
       lead: "Aktuelle Wetterdaten für 84 deutsche Großstädte über eine kostenlose, keylose REST-API. Quelle ist der Deutsche Wetterdienst (DWD), ausgeliefert in einem einheitlichen JSON-Envelope mit Quelle, Lizenz und Zeitstempel je Antwort.",
       dataDesc:
@@ -98,7 +98,7 @@ export const topics: Topic[] = [
     coverageKey: "all",
     de: {
       slug: "luftqualitaet-api",
-      metaTitle: "Luftqualitäts-API Deutschland (Umweltbundesamt), keylos",
+      metaTitle: "Luftqualitäts-API Deutschland (UBA), keylos",
       h1: "Luftqualitäts-API für deutsche Städte (UBA)",
       lead: "Aktuelle Luftqualitätsdaten für deutsche Großstädte über eine kostenlose, keylose REST-API. Quelle ist das Umweltbundesamt (UBA) mit seinem amtlichen Messnetz, einheitlich als JSON mit Quelle und Lizenz je Antwort.",
       dataDesc:
@@ -170,7 +170,7 @@ export const topics: Topic[] = [
     },
     en: {
       slug: "electricity-price-api",
-      metaTitle: "Germany Electricity Price API (SMARD): day-ahead, keyless",
+      metaTitle: "Germany Electricity Price API (SMARD), keyless",
       h1: "Electricity price API for Germany (SMARD)",
       lead: "The nationwide day-ahead spot electricity price through a free, keyless REST API. The source is SMARD by the Federal Network Agency, delivered as consistent JSON with source, license and timestamp on every response.",
       dataDesc:
@@ -198,7 +198,7 @@ export const topics: Topic[] = [
     coverageKey: "land-values",
     de: {
       slug: "bodenrichtwerte-api",
-      metaTitle: "Bodenrichtwerte-API Deutschland (BORIS), keylos und frei",
+      metaTitle: "Bodenrichtwerte-API Deutschland (BORIS), keylos",
       h1: "Bodenrichtwerte-API für deutsche Städte (BORIS)",
       lead: "Amtliche Bodenrichtwerte je Stadt über eine kostenlose, keylose REST-API. Quelle sind die BORIS-Geodatendienste der Länder, aggregiert zu einer Bauland-Kennzahl je Stadt und einheitlich als JSON ausgeliefert.",
       dataDesc:
@@ -248,7 +248,7 @@ export const topics: Topic[] = [
     coverageKey: "all",
     de: {
       slug: "solar-api",
-      metaTitle: "Solar-API Deutschland (PVGIS): PV-Ertrag und Einstrahlung, keylos",
+      metaTitle: "Solar-API Deutschland (PVGIS): PV-Ertrag, keylos",
       h1: "Solar-API für deutsche Städte (PVGIS)",
       lead: "Solar-Potenzial je Stadt über eine kostenlose, keylose REST-API. Quelle ist PVGIS der Europäischen Kommission (JRC), aggregiert zu einer vergleichbaren Kennzahl je Stadt und einheitlich als JSON mit Quelle, Lizenz und Bezugszeitraum je Antwort.",
       dataDesc:
@@ -270,7 +270,7 @@ export const topics: Topic[] = [
     },
     en: {
       slug: "solar-api",
-      metaTitle: "Germany Solar API (PVGIS): PV yield and irradiation, keyless",
+      metaTitle: "Germany Solar API (PVGIS): PV yield, keyless",
       h1: "Solar API for German cities (PVGIS)",
       lead: "Solar potential per city through a free, keyless REST API. The source is PVGIS by the European Commission (JRC), aggregated to a comparable metric per city and delivered as consistent JSON with source, license and reference period on every response.",
       dataDesc:
@@ -298,7 +298,7 @@ export const topics: Topic[] = [
     coverageKey: "solar-roofs",
     de: {
       slug: "solarkataster-api",
-      metaTitle: "Solarkataster-API (Dach-PV): Potenzial je Stadt, keylos (NRW, Bayern, Berlin, Hamburg)",
+      metaTitle: "Solarkataster-API: Dach-PV-Potenzial je Stadt, keylos",
       h1: "Solarkataster-API für deutsche Städte (Dach-PV)",
       lead: "Das Dach-Photovoltaik-Potenzial je Stadt über eine kostenlose, keylose REST-API. Quelle sind die amtlichen Solarkataster der Länder (NRW: LANUK/Geobasis NRW/MaStR; Bayern: Bayerisches Landesamt für Umwelt; Berlin: Umweltatlas/SenMVKU; Hamburg: LGV), je Gemeinde aggregiert und einheitlich als JSON mit Quelle und Lizenz je Antwort.",
       dataDesc:
@@ -320,7 +320,7 @@ export const topics: Topic[] = [
     },
     en: {
       slug: "solar-cadastre-api",
-      metaTitle: "Solar Cadastre API (rooftop PV): potential per city, keyless (NRW, Bavaria, Berlin, Hamburg)",
+      metaTitle: "Solar Cadastre API: rooftop PV potential, keyless",
       h1: "Solar cadastre API for German cities (rooftop PV)",
       lead: "Rooftop photovoltaic potential per city through a free, keyless REST API. The sources are the official state solar cadastres (NRW: LANUK/Geobasis NRW/MaStR; Bavaria: Bavarian Environment Agency; Berlin: Umweltatlas/SenMVKU; Hamburg: LGV), aggregated per municipality and delivered as consistent JSON with source and license on every response.",
       dataDesc:
@@ -351,7 +351,7 @@ export const topics: Topic[] = [
     coverageKey: "all",
     de: {
       slug: "oepnv-echtzeit-api",
-      metaTitle: "ÖPNV-Echtzeit-API Deutschland: Abfahrten je Stadt, keylos",
+      metaTitle: "ÖPNV-Echtzeit-API Deutschland: Abfahrten, keylos",
       h1: "ÖPNV-Echtzeit-API für deutsche Städte",
       lead: "Echtzeit-Abfahrten an Haltestellen deutscher Großstädte über eine kostenlose, keylose REST-API. Datengrundlage sind DELFI und GTFS sowie regionale Verkehrsverbünde, einheitlich als JSON mit Quelle und Zeitstempel je Antwort.",
       dataDesc:
@@ -373,7 +373,7 @@ export const topics: Topic[] = [
     },
     en: {
       slug: "public-transport-api",
-      metaTitle: "Germany Public Transport API: real-time departures, keyless",
+      metaTitle: "Public Transport API Germany: real-time, keyless",
       h1: "Real-time public transport API for German cities",
       lead: "Real-time departures at stops in major German cities through a free, keyless REST API. The data is based on DELFI and GTFS plus regional transit associations, delivered as consistent JSON with source and timestamp on every response.",
       dataDesc:
@@ -402,7 +402,7 @@ export const topics: Topic[] = [
     coverageKey: "all",
     de: {
       slug: "vergabe-api",
-      metaTitle: "Vergabe-API Deutschland: öffentliche Aufträge je Stadt, keylos",
+      metaTitle: "Vergabe-API Deutschland: öffentliche Aufträge, keylos",
       h1: "API für öffentliche Auftragsvergabe deutscher Städte",
       lead: "Laufende Ausschreibungen und vergebene Aufträge deutscher Städte über eine kostenlose, keylose REST-API. Quelle ist der Datenservice Öffentlicher Einkauf (oeffentlichevergabe.de) im OCDS-Standard, einheitlich als JSON mit Quelle, Lizenz und Zeitstempel je Antwort.",
       dataDesc:
@@ -424,7 +424,7 @@ export const topics: Topic[] = [
     },
     en: {
       slug: "public-procurement-api",
-      metaTitle: "Germany Public Procurement API: tenders per city, keyless",
+      metaTitle: "Germany Public Procurement API: tenders, keyless",
       h1: "Public procurement API for German cities",
       lead: "Running tenders and awarded contracts for German cities through a free, keyless REST API. The source is the German public procurement data service (oeffentlichevergabe.de) in the OCDS standard, delivered as consistent JSON with source, license and timestamp on every response.",
       dataDesc:

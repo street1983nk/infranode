@@ -45,7 +45,36 @@ const py = pyFor(endpoint);
 const summary = endpoint.summaryEn || endpoint.summary;
 const description = endpoint.descriptionEn || endpoint.description;
 
-const seoTitle = `${endpoint.method} ${endpoint.path}`;
+// SEO: speaking, keyword-bearing title from the English summary instead of
+// raw METHOD + path. Budget: 53 chars (SeoHead appends " | InfraNode",
+// 12 chars, total max 65, Bing scan 2026-07-01). JSON-LD keeps the full
+// form with method + path in name (jsonLdName).
+// Measured against the HTML-escaped length (Astro escapes e.g. ' to &#39;),
+// so the raw <title> content in the build also stays within budget.
+function escLen(s: string): number {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;").length;
+}
+function shortTitle(text: string | undefined, max = 53): string {
+  if (!text) return "";
+  if (escLen(text) <= max) return text;
+  let cut = "";
+  for (const word of text.split(" ")) {
+    const next = cut ? `${cut} ${word}` : word;
+    if (escLen(next) + 1 > max) break;
+    cut = next;
+  }
+  if (!cut) cut = text.slice(0, max - 1);
+  return `${cut.replace(/[\s,;:]+$/, "")}…`;
+}
+const seoTitle = shortTitle(summary) || `${endpoint.method} ${endpoint.path}`;
+const jsonLdName = summary
+  ? `${summary} (${endpoint.method} ${endpoint.path})`
+  : `${endpoint.method} ${endpoint.path}`;
 const seoDescription = summary || description;
 const site = Astro.site?.toString().replace(/\/$/, "") ?? "";
 const pageUrl = `${site}/en/api/${endpoint.id}/`;
@@ -62,7 +91,7 @@ const altLangPath = `/api/${endpoint.id}/`;
   <JsonLd
     slot="jsonld"
     type="APIReference"
-    name={seoTitle}
+    name={jsonLdName}
     abstract={seoDescription}
     url={pageUrl}
   />

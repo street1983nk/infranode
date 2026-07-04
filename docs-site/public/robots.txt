@@ -3,9 +3,12 @@
 # JSON, gehoert nicht in den Suchindex; verhindert 404/5xx/4xx-Crawling-Fehler
 # in der Search Console, 2026-07-03). Die Doku-Seiten zu den Endpunkten bleiben
 # crawlbar: /api/* (DE) und /en/api/* (EN) sind NICHT betroffen.
+# /cdn-cgi/ sind Cloudflares Email-Protection-Pseudo-URLs, die 4xx liefern
+# (Bing-Scan 2026-07-01) und nicht gecrawlt werden sollen.
 User-agent: *
 Allow: /
 Disallow: /api/v1
+Disallow: /cdn-cgi/
 
 # KI- und Antwort-Bots ausdruecklich erlaubt (GEO).
 User-agent: GPTBot

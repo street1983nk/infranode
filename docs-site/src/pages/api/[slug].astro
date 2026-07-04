@@ -45,10 +45,36 @@ const curl = curlFor(endpoint);
 const js = jsFor(endpoint);
 const py = pyFor(endpoint);
 
-// SEO: keyword-reicher Title aus der sprechenden Summary (statt nur METHOD /pfad),
-// damit die ~58 Longtail-Endpunktseiten suchrelevante Begriffe im Title tragen.
-// APIReference-JSON-LD nutzt name (Methode + Pfad), abstract (summary) und URL.
-const seoTitle = endpoint.summary
+// SEO: keyword-reicher Title aus der sprechenden Summary (statt METHOD /pfad),
+// damit die Longtail-Endpunktseiten suchrelevante Begriffe im Title tragen.
+// Titel-Budget: 53 Zeichen (SeoHead haengt " | InfraNode" an, 12 Zeichen,
+// Gesamt max 65, Bing-Scan 2026-07-01). Zu lange Summaries werden an der
+// letzten Wortgrenze gekuerzt. APIReference-JSON-LD behaelt die volle Form
+// mit Methode + Pfad im name (jsonLdName).
+// Gemessen wird die HTML-escapte Laenge (Astro escapt z.B. ' zu &#39;),
+// damit auch der rohe <title>-Inhalt im Build das Budget einhaelt.
+function escLen(s: string): number {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;").length;
+}
+function shortTitle(text: string | undefined, max = 53): string {
+  if (!text) return "";
+  if (escLen(text) <= max) return text;
+  let cut = "";
+  for (const word of text.split(" ")) {
+    const next = cut ? `${cut} ${word}` : word;
+    if (escLen(next) + 1 > max) break;
+    cut = next;
+  }
+  if (!cut) cut = text.slice(0, max - 1);
+  return `${cut.replace(/[\s,;:]+$/, "")}…`;
+}
+const seoTitle = shortTitle(endpoint.summary) || `${endpoint.method} ${endpoint.path}`;
+const jsonLdName = endpoint.summary
   ? `${endpoint.summary} (${endpoint.method} ${endpoint.path})`
   : `${endpoint.method} ${endpoint.path}`;
 const seoDescription = endpoint.summary || endpoint.description;
@@ -60,7 +86,7 @@ const pageUrl = `${site}/api/${endpoint.id}/`;
   <JsonLd
     slot="jsonld"
     type="APIReference"
-    name={seoTitle}
+    name={jsonLdName}
     abstract={seoDescription}
     url={pageUrl}
   />
