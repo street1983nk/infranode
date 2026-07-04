@@ -77,7 +77,7 @@ mirrors every endpoint with real example responses, so you can try the
 [InfraNode API Postman collection](https://www.postman.com/alster83-7133231/infranode/collection/pft781f/infranode-api)
 in the browser without an API key.
 
-## Data (84 cities, 98 endpoints)
+## Data (84 cities, 101 endpoints)
 
 Every category below is a REST endpoint under `/api/v1/cities/{slug}/<key>`.
 Over MCP the same data comes through 12 lean tools: a few named ones
@@ -135,6 +135,25 @@ Full install guide, the complete tool manifest with example outputs, the
 permission model and an example transcript are in
 [docs/mcp-install.md](./docs/mcp-install.md). The registry manifest is
 [server.json](./server.json).
+
+## Use it in ChatGPT (Custom GPT action)
+
+For the OpenAI ecosystem, InfraNode ships a curated OpenAPI spec for GPT
+actions: 23 of the most useful operations (ChatGPT allows at most 30 per
+action), keyless, all GET.
+
+1. In the [GPT editor](https://chatgpt.com/gpts/editor) open **Configure →
+   Actions → Create new action → Import from URL** and paste
+   `https://infranode.dev/actions/openapi.json`.
+2. Leave authentication at **None**; as privacy policy use
+   `https://infranode.dev/en/privacy/`.
+3. Tell the GPT in its instructions to start with `getCityOverview(slug)`,
+   resolve city names via `getCities`, and cite `data.attribution` (the data
+   licences require attribution).
+
+Details and recommended instructions:
+[infranode.dev/en/chatgpt/](https://infranode.dev/en/chatgpt/). The spec is
+generated from `docs/openapi.yaml` by `scripts/build_actions_spec.py`.
 
 ## Alternatives and how InfraNode compares
 

@@ -907,38 +907,118 @@ code {
   max-width: 44rem;
 }
 
-/* Zahlen-Badges */
+/* Zahlen-Kacheln: Datenblatt-Kennzahlen statt Button-artiger Chips (Polish
+   2026-07-04, Stitch-inspiriert). Grosse Mono-Zahl oben, kleines Label
+   darunter; flach, Hairline-Border, kein Schatten (Design-Sprache). */
 .stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 1px;
   margin: 1.6rem 0 0;
   padding: 0;
   list-style: none;
+  background: var(--border-strong);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .stat {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.45rem;
-  padding: 0.45rem 0.85rem;
-  background: var(--bg-soft);
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem 0.8rem;
+  background: var(--bg);
+  font-size: 0.82rem;
   color: var(--fg-muted);
+  transition: background 0.18s ease;
+}
+
+.stat:hover {
+  background: var(--bg-soft);
 }
 
 .stat a {
   color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.stat a:hover {
+  text-decoration: none;
 }
 
 .stat strong {
   font-family: var(--mono);
-  font-size: 1.02rem;
+  font-size: 1.45rem;
+  line-height: 1.15;
   color: var(--color-primary);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+}
+
+/* Hero-Terminal: ein einziger curl-Aufruf plus Envelope-Auszug direkt im
+   Hero ("in Sekunden integriert"). Nutzt die Code-Block-Variablen; die
+   Kopfleiste traegt drei dezente Fenster-Punkte. */
+.hero-code {
+  margin: 1.8rem 0 0;
+  max-width: 44rem;
+  border-radius: 10px;
+  border: 1px solid var(--code-border);
+  background: var(--code-bg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+.hero-code__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hero-code__bar i {
+  width: 0.62rem;
+  height: 0.62rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.hero-code__bar span {
+  margin-left: 0.35rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: rgba(232, 240, 241, 0.55);
+}
+
+.hero-code pre {
+  margin: 0;
+  padding: 0.95rem 1.1rem 1.05rem;
+  background: transparent;
+  border: 0;
+  font-family: var(--mono);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--code-fg);
+  overflow-x: auto;
+}
+
+.hero-code .c-cmd {
+  color: #9fd374;
+}
+
+.hero-code .c-key {
+  color: #7fd1c0;
+}
+
+.hero-code .c-str {
+  color: #e8c37a;
+}
+
+.hero-code .c-dim {
+  color: rgba(232, 240, 241, 0.45);
 }
 
 /* Feature-Raster: zusammenhaengendes Datenblatt statt schwebender Karten.

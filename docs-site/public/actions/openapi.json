@@ -1,0 +1,779 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "InfraNode, offene Stadtdaten Deutschland",
+  "version": "1.0.0",
+  "description": "Kostenlose, keylose Open-Data-API fuer 84 deutsche Grossstaedte. Einstieg: getCities liefert alle Stadt-Slugs, getCityOverview(slug) liefert Stammdaten, den Katalog aller Datenarten mit Abdeckungsstatus und einen Live-Schnappschuss. Jede Antwort traegt data.attribution (Lizenz/Quelle, bei Nennung IMMER wiedergeben) und meta.source_status."
+ },
+ "servers": [
+  {
+   "url": "https://infranode.dev"
+  }
+ ],
+ "paths": {
+  "/api/v1/sources": {
+   "get": {
+    "operationId": "getSources",
+    "summary": "Status aller Upstream-Quellen",
+    "description": "Listet je bekannter Quelle den enabled-Zustand (aus den Settings) und den Circuit-Breaker-Zustand (CLOSED/OPEN/HALF_OPEN). So ist auf einen Blick sichtbar, welche Quelle gerade liefert und welche pausiert ist.",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "page",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 50
+      },
+      "description": "Seitengröße. Wird auf MAX_LIMIT (200) gedeckelt: zu große Werte liefern eine 200er-Seite mit 200 Einträgen statt eines Fehlers.",
+      "x-description-en": "Page size. Capped at MAX_LIMIT (200): larger values return a 200 page of 200 items instead of an error."
+     },
+     {
+      "in": "query",
+      "name": "offset",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      },
+      "description": "Ein zu großer Offset liefert eine leere Seite (200), nie 500.",
+      "x-description-en": "An offset past the end returns an empty page (200), never 500."
+     },
+     {
+      "in": "query",
+      "name": "sort",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "source",
+        "enabled",
+        "license"
+       ]
+      },
+      "description": "Nur die gelisteten Felder sind erlaubt; ein unbekanntes Feld wird mit 400 (invalid_request) abgewiesen, bevor es ausgewertet wird.",
+      "x-description-en": "Only the listed fields are allowed; an unknown field is rejected with 400 (invalid_request) before it is evaluated."
+     },
+     {
+      "in": "query",
+      "name": "order",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "asc",
+        "desc"
+       ],
+       "default": "asc"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/compare": {
+   "get": {
+    "operationId": "compareCities",
+    "summary": "Eine Ressource über mehrere Städte vergleichen",
+    "description": "Vergleicht EINE Ressource (resource) über mehrere Städte (cities, kommasepariert) in einer einzigen Antwort. Jede Stadt trägt einen eigenen source_status (ok/disabled/no_data/error/not_found); eine fehlende oder tote Stadt-Quelle führt nicht zu einem Gesamt-5xx, sondern wird pro Stadt ehrlich ausgewiesen. resource wird gegen eine feste Liste geprüft (unbekannt -> 400). Das Ergebnis ist paginierbar (page/limit/offset/sort).",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "cities",
+      "required": true,
+      "schema": {
+       "type": "string"
+      },
+      "example": "berlin,koeln,hamburg",
+      "description": "Kommaseparierte Stadt-Slugs (auf MAX_CITIES begrenzt).",
+      "x-description-en": "Comma-separated city slugs (limited to MAX_CITIES)."
+     },
+     {
+      "in": "query",
+      "name": "resource",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "enum": [
+        "weather",
+        "air"
+       ]
+      },
+      "description": "Zu vergleichende Ressource (aus der festen Liste); unbekannt -> 400 invalid_request.",
+      "x-description-en": "Resource to compare (from the fixed list); unknown -> 400 invalid_request."
+     },
+     {
+      "in": "query",
+      "name": "page",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 1
+      }
+     },
+     {
+      "in": "query",
+      "name": "limit",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "default": 50
+      }
+     },
+     {
+      "in": "query",
+      "name": "offset",
+      "schema": {
+       "type": "integer",
+       "minimum": 0,
+       "default": 0
+      }
+     },
+     {
+      "in": "query",
+      "name": "sort",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "city",
+        "source_status"
+       ]
+      }
+     },
+     {
+      "in": "query",
+      "name": "order",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "asc",
+        "desc"
+       ],
+       "default": "asc"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities": {
+   "get": {
+    "operationId": "getCities",
+    "summary": "Alle bekannten Städte auflisten",
+    "description": "Listet die Einträge des Stadt-Registers: 84 deutsche Großstädte über 100.000 Einwohner, davon 28 Kern-Städte mit voller Quellen-Abdeckung. Jeder Eintrag trägt den Slug, den du als {slug}-Pfadparameter in allen weiteren Endpunkten verwendest.",
+    "parameters": [],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}": {
+   "get": {
+    "operationId": "getCity",
+    "summary": "Eine Stadt aus dem Register holen",
+    "description": "Liefert den Register-Eintrag zur Stadt mit dem angegebenen {slug}. Ein unbekannter Slug löst den 404-Fehler-Envelope aus, dessen Hint auf die Stadt-Liste verweist.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/air": {
+   "get": {
+    "operationId": "getCityAir",
+    "summary": "Luftqualität je Stadt (Umweltbundesamt)",
+    "description": "Aktuelle Luftqualitäts-Messwerte einer Stadt aus der Luftdaten-API des Umweltbundesamts im kanonischen Envelope. Die fünf Schadstoff-Messwerte (PM10, PM2.5, NO2, O3, SO2) stehen in data, Quelle und source_status in meta. Werte sind live (kein Zwischenbestand). Sonderfälle: deaktivierte Quelle liefert 200 mit data=null und source_status=\"disabled\"; toter Upstream ohne Cache liefert 503 mit Hint auf GET /api/v1/health.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/overview": {
+   "get": {
+    "operationId": "getCityOverview",
+    "summary": "Stadt-Überblick (Katalog aller Datenarten + Live-Highlights)",
+    "description": "Ein-Aufruf-Überblick einer Stadt: Basisdaten, ein Katalog ALLER verfügbaren Datenarten (je mit Abdeckungsstatus und dem passenden MCP-Tool) sowie ein kleiner Live-Highlight-Snapshot (Wetter, Luft, Bahn-Abfahrten), parallel und zeitgedeckelt. Ideal als Einstieg, um die ganze Breite je Stadt zu sehen (nicht nur Wetter). Eine noch nicht abgedeckte Datenart wird ehrlich, aber vorwärts gewandt dargestellt (sie nennt die bereits abgedeckten Städte plus einen Roadmap-Hinweis, weil InfraNode laufend mehr Daten und Städte bekommt). Unbekannte Stadt liefert 404.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/weather": {
+   "get": {
+    "operationId": "getCityWeather",
+    "summary": "Wetter je Stadt (DWD über Bright Sky)",
+    "description": "Aktuelle Wetter-Messwerte einer Stadt vom Deutschen Wetterdienst (über Bright Sky) im kanonischen Envelope. data trägt die Messwerte, attribution den GeoNutzV-Bearbeitungshinweis (modified=true). Sonderfälle: deaktivierte Quelle liefert 200 mit source_status=\"disabled\"; toter Upstream ohne Cache liefert 503 mit Hint auf GET /api/v1/health.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/pois": {
+   "get": {
+    "operationId": "getCityPois",
+    "summary": "POIs je Stadt, nach Typ gefiltert (OSM/Overpass, Tier B)",
+    "description": "Liefert POIs einer Stadt aus OpenStreetMap (über Overpass) im kanonischen Envelope, gefiltert nach dem Query-Parameter type. Der Typ wird gegen eine feste Liste geprüft; ein unbekannter Typ löst 422 aus (kein roher Input in die Overpass-Query). Tier B (copyleft). Deaktiviert -> 200 source_status=\"disabled\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "type",
+      "in": "query",
+      "required": true,
+      "description": "POI-Typ aus der erlaubten Liste (z.B. hospital, school, pharmacy).",
+      "x-description-en": "POI type from the allowed list (e.g. hospital, school, pharmacy).",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/traffic": {
+   "get": {
+    "operationId": "getCityTraffic",
+    "summary": "Baustellen und Verkehrsmeldungen je Stadt (Autobahn-API)",
+    "description": "Baustellen (roadworks) und Verkehrswarnungen (warnings) im Umfeld einer Stadt aus der Autobahn-API im kanonischen Envelope. Die Meldungen werden per Bounding-Box um die Stadt-Koordinaten gefiltert, data enthält die passenden Einträge. Flächendeckend: jeder der 84 Städte sind die nahen Autobahnen kuratiert zugeordnet (datengetrieben aus der Autobahn-API), eine Stadt ohne aktuelle Meldung antwortet ehrlich mit no_data. Stau/Verkehrslage: jede Verkehrswarnung trägt zusätzlich ein congestion-Feld (level stau/stockend/dicht/unspezifisch aus dem DATEX-abnormalTrafficType, delay_minutes = Reisezeitverlust, blocked), und payload.congestion_summary verdichtet die Stau-Lage je Stadt (count/stau/stockend/blocked/ max_delay_minutes; null wenn keine Stau-Meldung). Weitere Sonderfälle: deaktivierte Quelle liefert 200 mit source_status=\"disabled\"; toter Upstream ohne Cache liefert 503 mit Hint auf GET /api/v1/health.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/charging": {
+   "get": {
+    "operationId": "getCityCharging",
+    "summary": "E-Ladesäulen-Standorte je Stadt (BNetzA, Tier A)",
+    "description": "Liefert die E-Ladesäulen-Standorte einer Stadt (nur Stammdaten, KEINE Belegung) aus dem BNetzA-Ladesäulenregister im kanonischen Envelope. Die Daten stammen aus dem CSV-Bulk-Download der BNetzA (data.bundesnetzagentur.de) und werden periodisch aktualisiert; die Route liefert den jüngsten aufbereiteten Stand, keinen Live-Abruf. Deaktiviert -> 200 source_status=\"disabled\"; kein Snapshot -> 200 source_status=\"not_ingested\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/charging-status": {
+   "get": {
+    "operationId": "getCityChargingStatus",
+    "summary": "Live-Ladesäulen-Belegung je Stadt (eRound, CC0/Tier A)",
+    "description": "Liefert die aggregierte Live-Ladesäulen-Belegung einer Stadt (eRound AFIR-Recharging, DATEX-II V3, CC0) im kanonischen Envelope. Join aus zwei Zuständen, kein Upstream-Abruf im Request: der statische eRound-Standort-Vollbestand liefert die Zuordnung Ladepunkt -> Stadt + Koordinaten (täglicher Ingest, alle 84 Städte abgedeckt), der dynamische Belegungs-Feed wird als Delta-Strom akkumuliert (Status je Ladepunkt, Staleness-Fenster 24 h). Payload: total_points (bekannte Ladepunkte im Stadtumkreis), reported_points (davon mit frischem Live-Status), status_counts (available/occupied/charging/unavailable u. a.) sowie die Einzelpunkte (refill_point_id, lat/lon, status, observed_at; Liste auf 500 gekappt, truncated markiert ehrlich). Quelle deaktiviert -> 200 source_status=\"disabled\"; noch kein akkumulierter Live-Status -> 200 source_status=\"no_data\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/water-level": {
+   "get": {
+    "operationId": "getCityWaterLevel",
+    "summary": "Pegelstand je Stadt (PEGELONLINE, Tier A, Teilabdeckung)",
+    "description": "Liefert den aktuellen Pegelstand der nächstgelegenen Station einer Stadt aus PEGELONLINE im kanonischen Envelope. Teilabdeckung: nur Städte an Bundeswasserstraßen haben eine Station, sonst kommt 200 mit source_status=\"no_data\" (kein 5xx). Tier A. Deaktiviert -> 200 source_status=\"disabled\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/flood": {
+   "get": {
+    "operationId": "getCityFlood",
+    "summary": "Hochwasser-Warnstufen je Stadt (LHP, Tier A)",
+    "description": "Liefert die aktuellen Hochwasser-Warnstufen der kuratierten Pegel einer Stadt aus dem Länderübergreifenden Hochwasserportal (LHP) im kanonischen Envelope. Die Attribution trägt den \"Stand:\"-Zeitstempel (Pflicht). Tier A. Teilabdeckung (kuratierte Pegel je Stadt): nur berlin, bonn, dresden, duesseldorf, duisburg, erfurt, essen, frankfurt-am-main, hamburg, koeln, leipzig, mainz, muenchen, nuernberg liefern Daten. Andere registrierte Städte antworten ehrlich mit 200 source_status=\"not_covered\", data=null und meta.covered_cities (Liste der abgedeckten Städte). Weitere Sonderfälle: deaktiviert -> 200 source_status=\"disabled\"; toter Upstream ohne Cache -> 503 mit Hint.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/pollen-uv": {
+   "get": {
+    "operationId": "getCityPollenUv",
+    "summary": "Pollenflug und UV-Index je Stadt (DWD opendata, Tier A)",
+    "description": "Liefert Pollenflug-Gefahrenindex und UV-Index für die Großregion einer Stadt aus DWD opendata im kanonischen Envelope. Die Daten sind nach DWD-Großregionen gegliedert, NICHT stadtgenau (region_name im Payload). Attribution mit modified=true (GeoNutzV). Tier A. Deaktiviert -> 200 source_status=\"disabled\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/demographics": {
+   "get": {
+    "operationId": "getCityDemographics",
+    "summary": "Demografie-Zeitreihen je Stadt (GENESIS/Regionalstatistik, Tier A)",
+    "description": "Liefert Demografie-Stammwerte und Zeitreihen einer Stadt aus der POST-API der GENESIS-/Regionalstatistik im kanonischen Envelope. Der Zugang ist account-gebunden: ohne hinterlegte Zugangsdaten oder bei deaktivierter Quelle antwortet der Endpunkt mit 200 source_status=\"disabled\". Tier A. Toter Upstream ohne Cache -> 503 mit Hint.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/power-price": {
+   "get": {
+    "operationId": "getCityPowerPrice",
+    "summary": "Day-ahead-Börsenstrompreis bundesweit (SMARD, Tier A)",
+    "description": "Day-ahead-Großhandelspreis der Gebotszone DE/LU als Tageswert in EUR/MWh (bundesweit, für alle Städte identisch). Quelle: Bundesnetzagentur | SMARD.de (CC BY 4.0). Deaktiviert -> 200 source_status=\"disabled\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/weather-warnings": {
+   "get": {
+    "operationId": "getCityWeatherWarnings",
+    "summary": "Amtliche DWD-Wetterwarnungen je Stadt (Tier A)",
+    "description": "Aktive amtliche Wetterwarnungen des Deutschen Wetterdienstes für die Stadt (Filterung über die Gemeinde-Warncell = \"1\"+AGS). Liefert max_level (0 = keine reguläre Warnung, 1-4 = DWD-Warnstufe), count und die Einzelwarnungen. Hitze-/Sonderwarnungen (DWD-Code >= 50) zählen NICHT in max_level, sondern stehen separat in special_warnings. Quelle: Deutscher Wetterdienst (GeoNutzV). Deaktiviert -> 200 source_status=\"disabled\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/fuel-prices": {
+   "get": {
+    "operationId": "getCityFuelPrices",
+    "summary": "Aktuelle Spritpreise je Stadt, aggregiert (Tankerkönig/MTS-K, Tier A)",
+    "description": "Aktuelle Spritpreise im Umkreis der Stadtkoordinate, aggregiert zu einer Stadt-Kennzahl: Durchschnitts- und Minimal-Preis je Sorte (e5/e10/diesel, EUR/Liter) über die geöffneten Tankstellen, plus station_count/open_count und die Einzel-Tankstellen. Quelle: Markttransparenzstelle für Kraftstoffe (MTS-K) via Tankerkönig (CC BY 4.0). Ohne API-Key ODER Toggle aus -> 200 source_status=\"disabled\"; keine Tankstelle im Radius -> 200 source_status=\"no_data\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/station-departures": {
+   "get": {
+    "operationId": "getCityStationDepartures",
+    "summary": "Live-Abfahrtstafel Haupt-Bahnhof der Stadt, alle Gattungen (DB Timetables, Tier A)",
+    "description": "Nächste Zugabfahrten am Haupt-Bahnhof der Stadt mit Echtzeit-Verspätung: Sollfahrplan (/plan) und aktuelle Abweichungen (/fchg) der DB-Timetables-API, je Bahnhof zu einer nach Abfahrt sortierten Liste zusammengeführt (line, category, destination, planned_time, platform, delay_minutes, cancelled, long_distance). Volle Abdeckung über alle 84 Städte: der Haupt-Bahnhof wird automatisch aus dem amtlichen StaDa-Katalog abgeleitet (für die großen Knoten eine verifizierte Auswahl). Quelle: Deutsche Bahn AG (CC BY 4.0). Ohne Zugangsdaten ODER Toggle aus -> 200 source_status=\"disabled\"; keine Abfahrt im Zeitfenster -> 200 source_status=\"no_data\". Für einen bestimmten Bahnhof statt der Stadt-Auswahl dient /api/v1/stations/{eva}/departures.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/indicators": {
+   "get": {
+    "operationId": "getCityIndicators",
+    "summary": "Sozialökonomische Indikatoren je Stadt (INKAR/BBSR, Tier A)",
+    "description": "Kuratiertes, breites Set sozialökonomischer Indikatoren je Kreis/ kreisfreie Stadt (Arbeitsmarkt, Wirtschaft, Einkommen, Demografie, Wohnen, Erreichbarkeit, Verkehr, Bildung, Gesundheit, Fläche), aus der offenen INKAR-Wizard-API des BBSR. Je Indikator der jüngste Jahreswert mit Bezeichnung (inkl. Einheit), Wert, Jahr und Kategorie. Quelle: BBSR / INKAR (DL-DE/BY 2.0). Toggle aus -> 200 source_status=\"disabled\"; kein Snapshot für den Kreis -> 200 source_status=\"not_ingested\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/parking": {
+   "get": {
+    "operationId": "getCityParking",
+    "summary": "Parkhaus-Belegung/-Katalog je Stadt (EIN Endpunkt mit Quellen-Fallback)",
+    "description": "Parkhaus-Daten je Stadt aus EINEM Endpunkt mit Quellen-Fallback (Dedup): bevorzugt ParkenDD-Live-Belegung (frei/gesamt je Parkhaus, 13 Städte mit verifiziert offener Lizenz, keylos), für München der statische Open-Data-Standortkatalog (DL-DE/BY 2.0, ohne Live-Belegung), für Frankfurt am Main, Wuppertal und Magdeburg die Mobilithek-Quellen der Städte (DATEX II, Live-Belegung + Stammdaten, DL-DE/BY bzw. DL-DE/Zero). Lizenz/Tier kommen pro Datensatz aus der am Ursprung verifizierten Quelle (alle Tier A: z.B. Köln/Dortmund DL-DE/Zero 2.0, Hamburg DL-DE/BY 2.0, Aachen/Ulm CC0, Karlsruhe/Heidelberg CC BY 4.0). Löst den deprecateten Pfad /api/v1/live/dortmund/parking ab. Toggle aus -> 200 source_status=\"disabled\"; nicht-abgedeckte Stadt -> 200 source_status=\"not_covered\" (mit covered_cities); abgedeckte Stadt ohne Parkhaus -> 200 source_status=\"no_data\".",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/road-events": {
+   "get": {
+    "operationId": "getCityRoadEvents",
+    "summary": "Innerstädtische Baustellen und Sperrungen je Stadt (Tier A)",
+    "description": "Liefert innerstädtische Baustellen und Sperrungen einer Stadt aus den schlüssellosen Pro-Stadt-Quellen (Berlin VIZ, Hamburg, Köln, München, MobiData BW, Dortmund) im kanonischen Envelope. Teilabdeckung (kuratierte Connectoren): berlin, hamburg, koeln, muenchen, stuttgart, dortmund, bremen liefern Daten. Eine Stadt ohne Connector antwortet ehrlich mit 200 source_status=\"not_covered\", data=null und meta.covered_cities (Liste der abgedeckten Städte), klar unterscheidbar von no_data (Connector vorhanden, aber gerade keine Ereignisse). Tier A. Deaktiviert -> 200 source_status=\"disabled\". Toter Upstream ohne Cache -> 503 mit Hint.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  },
+  "/api/v1/cities/{slug}/events": {
+   "get": {
+    "operationId": "getCityEvents",
+    "summary": "Veranstaltungen je Stadt (destination.one)",
+    "description": "Aktuelle und kommende Veranstaltungen einer Stadt aus der account-gebundenen Quelle destination.one/eT4.META im kanonischen Envelope. Die Lizenz wird je Datensatz aus dem Lizenzfeld abgeleitet (CC0/CC-BY, CC-BY-SA, sonst unbekannt) und in attribution gespiegelt. Vergangene Termine werden herausgefiltert. Sonderfälle: ist die Quelle aus oder fehlt der licensekey, kommt 200 mit source_status=\"disabled\"; liefert die Quelle nichts Aktuelles, kommt 200 mit source_status=\"no_data\"; toter Upstream ohne Cache liefert 503 mit Hint.",
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Kanonischer Envelope: data (Nutzlast mit attribution/Lizenz) und meta (source_status ok/no_data/disabled, cache_status)."
+     },
+     "404": {
+      "description": "Unbekannte Stadt oder Ressource."
+     },
+     "429": {
+      "description": "Rate-Limit erreicht, spaeter erneut versuchen."
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "schemas": {}
+ }
+}

@@ -1,0 +1,156 @@
+---
+// ChatGPT- und OpenAI-Seite: InfraNode als Custom-GPT-Action (kuratierte
+// Actions-OpenAPI unter /actions/openapi.json) plus ChatGPT als MCP-Client.
+// Pendant zur /mcp/-Seite fuer das OpenAI-Oekosystem. FAQ speist sichtbare
+// Sektion UND FAQPage-JSON-LD (Single Source, wie auf der Startseite).
+import Docs from "../layouts/Docs.astro";
+import JsonLd from "../components/JsonLd.astro";
+
+const faq = [
+  {
+    q: "Was ist der Unterschied zwischen der GPT-Action und dem MCP-Server?",
+    a: "Beides greift auf dieselbe InfraNode-API zu. Die GPT-Action ist der Weg für Custom GPTs im ChatGPT-Ökosystem (OpenAPI-Import, kein Zusatzdienst nötig). Der MCP-Server ist der Weg für MCP-fähige Clients wie Claude, ChatGPT-Connectoren oder eigene Agenten und bietet mit 12 Tools die komfortablere Discovery.",
+  },
+  {
+    q: "Brauche ich einen API-Schlüssel für die Action?",
+    a: "Nein. Die InfraNode-API ist keylos und kostenlos. Im GPT-Editor wählst du bei Authentifizierung einfach None.",
+  },
+  {
+    q: "Kann ich die Action in meinem eigenen Custom GPT nutzen?",
+    a: "Ja, genau dafür ist sie da. Importiere die OpenAPI-Spec von https://infranode.dev/actions/openapi.json im GPT-Editor unter Actions, fertig. Die Spec ist auf die 23 nützlichsten Operationen kuratiert (ChatGPT erlaubt maximal 30).",
+  },
+  {
+    q: "Welche Daten kann ein GPT damit abrufen?",
+    a: "Wetter, Luftqualität, ÖPNV-Abfahrten, Parken, Ladesäulen inklusive Live-Belegung, Baustellen, Pegelstände, Veranstaltungen, Demografie, Strompreis und mehr, für alle 84 deutschen Großstädte, plus Städtevergleich über den compare-Endpunkt.",
+  },
+  {
+    q: "Muss der GPT die Datenquellen nennen?",
+    a: "Ja. Jede Antwort trägt ein attribution-Feld mit Lizenz und Herkunft (etwa DL-DE/BY oder CC-BY). Die Lizenzen verlangen Namensnennung; ein GPT sollte die Quelle daher mit ausgeben. Unsere empfohlenen GPT-Instructions tun das automatisch.",
+  },
+];
+---
+
+<Docs
+  title="InfraNode für ChatGPT: Custom-GPT-Action für offene Stadtdaten"
+  description="Offene Daten deutscher Städte in ChatGPT: kuratierte GPT-Action (OpenAPI) für Custom GPTs, keylos und kostenlos, 23 Operationen von Wetter über ÖPNV bis Ladesäulen-Live-Belegung, für alle 84 Großstädte."
+  current="chatgpt"
+  lang="de"
+  altLangPath="/en/chatgpt/"
+>
+  <JsonLd
+    slot="jsonld"
+    type="SoftwareApplication"
+    name="InfraNode GPT-Action"
+    description="Kuratierte OpenAPI-Action für Custom GPTs: offene Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
+  />
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>InfraNode in ChatGPT: Custom GPT und GPT-Actions</h1>
+  <p>
+    InfraNode gibt es auch für das OpenAI-Ökosystem: eine kuratierte
+    <strong>GPT-Action</strong> macht die offenen Daten aller 84 deutschen
+    Großstädte in Custom GPTs nutzbar, keylos, kostenlos und ohne
+    Registrierung. Ein GPT kann damit Wetter, Luftqualität, ÖPNV-Abfahrten,
+    Parkhäuser, Ladesäulen mit Live-Belegung, Pegelstände, Veranstaltungen,
+    Demografie und mehr abfragen und Städte direkt vergleichen.
+  </p>
+
+  <div class="tldr">
+    <p class="tldr__title">Sofort einbinden</p>
+    <p>
+      Die Actions-OpenAPI liegt öffentlich unter
+      <code>https://infranode.dev/actions/openapi.json</code>. Im GPT-Editor
+      unter <strong>Actions, Import from URL</strong> einfügen,
+      Authentifizierung <strong>None</strong>, fertig. 23 kuratierte
+      Operationen, alle GET, keine Schlüssel.
+    </p>
+  </div>
+
+  <h2>In drei Schritten zum eigenen Stadtdaten-GPT</h2>
+  <ol>
+    <li>
+      Im <a href="https://chatgpt.com/gpts/editor" rel="noopener" target="_blank">GPT-Editor</a>
+      unter <strong>Configure, Actions, Create new action</strong> den Punkt
+      <strong>Import from URL</strong> wählen und
+      <code>https://infranode.dev/actions/openapi.json</code> einfügen.
+    </li>
+    <li>
+      Authentifizierung auf <strong>None</strong> lassen (die API ist keylos).
+      Als Privacy Policy kannst du
+      <code>https://infranode.dev/datenschutz/</code> angeben.
+    </li>
+    <li>
+      In den Instructions festlegen, dass der GPT mit
+      <code>getCityOverview(slug)</code> einsteigt, unbekannte Städte über
+      <code>getCities</code> auflöst und die <code>attribution</code> aus jeder
+      Antwort als Quelle nennt.
+    </li>
+  </ol>
+
+  <h2>Empfohlene GPT-Instructions</h2>
+  <p>Bewährter Baustein zum Kopieren in den Instructions-Block:</p>
+  <pre><code>Du beantwortest Fragen zu deutschen Städten mit Live-Daten der InfraNode-API.
+Regeln:
+1. Stadt unklar? Erst getCities aufrufen und den passenden slug waehlen.
+2. Einstieg pro Stadt: getCityOverview(slug) zeigt, welche Daten es gibt.
+3. Fuer Vergleiche mehrerer Staedte compareCities nutzen.
+4. Jede Antwort traegt data.attribution (Lizenz + Quelle): nenne die Quelle
+   in deiner Antwort, die Lizenzen verlangen Namensnennung.
+5. meta.source_status "no_data" heisst: die Stadt hat diese Quelle nicht.
+   Sage das ehrlich, erfinde keine Werte.
+6. Zeitstempel (observed_at) mit ausgeben, wenn Aktualitaet relevant ist.</code></pre>
+
+  <h2>Was in der Action steckt</h2>
+  <p>
+    Die Spec ist bewusst auf 23 Operationen kuratiert (ChatGPT erlaubt maximal
+    30 je Action), nach demselben Discovery-Muster wie der
+    <a href="/mcp/">MCP-Server</a>:
+  </p>
+  <ul>
+    <li>
+      <strong>Discovery:</strong> <code>getCities</code> (alle Städte und
+      Slugs), <code>getCityOverview</code> (Katalog aller Datenarten je Stadt
+      plus Live-Schnappschuss), <code>getSources</code> (Quellen und Lizenzen).
+    </li>
+    <li>
+      <strong>Umwelt und Wetter:</strong> Wetter, amtliche Wetterwarnungen,
+      Luftqualität, Pollen- und UV-Index, Pegelstände, Hochwasser.
+    </li>
+    <li>
+      <strong>Mobilität:</strong> ÖPNV-Abfahrten je Stadt, Verkehrslage,
+      Baustellen, Parken, Ladesäulen und Ladesäulen-Live-Belegung,
+      Kraftstoffpreise.
+    </li>
+    <li>
+      <strong>Stadt und Wirtschaft:</strong> Veranstaltungen, POIs, Demografie,
+      Börsenstrompreis, Kennzahlen-Überblick sowie der Städtevergleich
+      <code>compareCities</code>.
+    </li>
+  </ul>
+  <p>
+    Für alles darüber hinaus (65 Datenarten insgesamt) nutzt du die
+    <a href="/">REST-API</a> direkt oder den <a href="/mcp/">MCP-Server</a>,
+    der über <code>get_city_resource</code> jede Datenart erreicht.
+  </p>
+
+  <h2>ChatGPT als MCP-Client</h2>
+  <p>
+    Unabhängig von Custom GPTs kann ChatGPT den InfraNode-MCP-Server auch
+    direkt als Connector nutzen (Streamable HTTP, URL
+    <code>https://mcp.infranode.dev/mcp</code>). Das ist der komfortabelste
+    Weg mit allen 12 Tools und 65 Datenarten. Die Einrichtung zeigt die
+    <a href="/mcp/">MCP-Server-Seite</a>.
+  </p>
+
+  <h2>Häufige Fragen</h2>
+  <div class="faq">
+    {
+      faq.map((f) => (
+        <div class="faq__item">
+          <h3 class="faq__q">{f.q}</h3>
+          <p class="faq__a">{f.a}</p>
+        </div>
+      ))
+    }
+  </div>
+</Docs>

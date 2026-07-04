@@ -71,9 +71,10 @@ const faqJsonLd = JSON.stringify({
   <p class="hero__eyebrow">Free, public open-data API</p>
   <h1>Open city data, one API instead of dozens</h1>
   <p class="hero__lede">
-    One single REST interface instead of dozens of different government and
-    open-data APIs. Every response follows the same JSON envelope and names
-    licence, origin and an honest source status.
+    Weather, live transit departures, EV charging occupancy, electricity
+    prices and more for 84 German cities, via one REST interface and an MCP
+    server for AI agents. Every response follows the same JSON envelope and
+    names licence, origin and an honest source status.
   </p>
 
   <div class="tldr">
@@ -85,7 +86,7 @@ const faqJsonLd = JSON.stringify({
       API key.
     </p>
     <ul>
-      <li>84 large cities, 90+ endpoints, one unified envelope.</li>
+      <li>84 large cities, 65 data types, 101 endpoints, one unified envelope.</li>
       <li>No key required, free and ad-free.</li>
       <li>Hosted on a server in Germany, with an honest source status.</li>
     </ul>
@@ -93,10 +94,10 @@ const faqJsonLd = JSON.stringify({
 
   <ul class="stats">
     <li class="stat"><a href="/en/cities/"><strong>84</strong> cities</a></li>
-    <li class="stat"><strong>98</strong> endpoints</li>
+    <li class="stat"><strong>65</strong> data types</li>
+    <li class="stat"><strong>101</strong> endpoints</li>
     <li class="stat"><strong>4,300+</strong> data streams, growing</li>
     <li class="stat"><strong>35+</strong> official sources</li>
-    <li class="stat"><strong>Licence tag</strong> in every response</li>
   </ul>
 
   <div class="hero__actions">
@@ -121,9 +122,24 @@ const faqJsonLd = JSON.stringify({
     </a>
   </div>
 
+  <figure class="hero-code" aria-label="Example call to the InfraNode API">
+    <div class="hero-code__bar" aria-hidden="true">
+      <i></i><i></i><i></i><span>Terminal, first call in seconds</span>
+    </div>
+    <pre><code><span class="c-dim">$</span> <span class="c-cmd">curl https://infranode.dev/api/v1/cities/berlin/weather</span>
+&#123;
+  <span class="c-key">"data"</span>: &#123;
+    <span class="c-key">"payload"</span>: &#123; <span class="c-key">"temperature_c"</span>: 12.9, <span class="c-key">"condition"</span>: <span class="c-str">"dry"</span>, <span class="c-dim">…</span> &#125;,
+    <span class="c-key">"attribution"</span>: &#123; <span class="c-key">"text"</span>: <span class="c-str">"Datenbasis: Deutscher Wetterdienst, …"</span> &#125;,
+    <span class="c-key">"license_id"</span>: <span class="c-str">"geonutzv"</span>, <span class="c-dim">…</span>
+  &#125;,
+  <span class="c-key">"meta"</span>: &#123; <span class="c-key">"source_status"</span>: <span class="c-str">"ok"</span>, <span class="c-key">"cache_status"</span>: <span class="c-str">"HIT"</span>, <span class="c-dim">…</span> &#125;
+&#125;</code></pre>
+  </figure>
+
   <h2>What data is available</h2>
   <p>
-    Over 55 endpoints per city, all permissively licensed (Tier A: DL-DE/BY,
+    65 data types per city, all permissively licensed (Tier A: DL-DE/BY,
     CC-BY, free for commercial use):
   </p>
   <ul>
@@ -133,8 +149,9 @@ const faqJsonLd = JSON.stringify({
     </li>
     <li>
       <strong>Mobility and traffic:</strong> public transit stops and live
-      departures with delays, traffic situation, roadworks, charging stations,
-      car stock and electric vehicle share (KBA), road accidents (accident atlas).
+      departures with delays, traffic situation, roadworks, charging stations
+      including live occupancy, car stock and electric vehicle share (KBA),
+      road accidents (accident atlas).
     </li>
     <li>
       <strong>Energy and statistics:</strong> energy installations (market
