@@ -247,7 +247,9 @@ async def list_cities() -> ToolEnvelope:
     Takes no arguments. Call this first to discover valid city slugs before
     invoking any city-scoped tool. Read-only.
     """
-    return await client.get_collection("cities")
+    # limit explizit auf MAX_LIMIT: der API-Default (50) wuerde die Liste
+    # abschneiden und das Tool-Versprechen "list ALL" brechen.
+    return await client.get_collection("cities", {"limit": "200"})
 
 
 async def sources() -> ToolEnvelope:
@@ -256,7 +258,9 @@ async def sources() -> ToolEnvelope:
     Takes no arguments. Shows which upstream sources InfraNode bundles and
     whether each is currently active. Read-only.
     """
-    return await client.get_collection("sources")
+    # limit explizit auf MAX_LIMIT (API-Default 50 schnitt bei 76 Quellen ab:
+    # eround_charging & Co. fehlten im Tool UND in infranode://sources).
+    return await client.get_collection("sources", {"limit": "200"})
 
 
 async def compare(

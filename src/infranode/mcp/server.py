@@ -27,7 +27,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
 from infranode.mcp import tools
-from infranode.mcp.client import UpstreamError
+from infranode.mcp.client import ALLOWED_RESOURCES, UpstreamError
 from infranode.registry.catalog import CITY_DATA_CATALOG
 
 # Server-Instructions: werden beim initialize an den Client/Agenten ausgeliefert und
@@ -259,6 +259,25 @@ def _slim_all_tool_schemas() -> None:
 
 
 _slim_all_tool_schemas()
+
+
+def _stamp_datatype_count() -> None:
+    """Ersetzt den ``~60``-Platzhalter der Docstrings durch die echte Zahl.
+
+    Die Tool-Beschreibungen sind statische Docstrings (tools.py) und wuerden
+    bei jeder neuen Datenart driften (2026-07-03: real 65 Datenarten, Text
+    sagte "~60"). Die Zahl kommt aus der einzigen Quelle der Wahrheit
+    (``ALLOWED_RESOURCES`` minus ``overview``, das ist die Meta-Ressource
+    selbst) und wird einmalig beim Import in die Beschreibungen gestempelt;
+    neue Datenarten brauchen keinen Text-Edit mehr.
+    """
+    count = len(ALLOWED_RESOURCES) - 1
+    for tool in mcp._tool_manager._tools.values():
+        if tool.description and "~60" in tool.description:
+            tool.description = tool.description.replace("~60", str(count))
+
+
+_stamp_datatype_count()
 
 
 # MCP Resources: expose the coverage catalog as browsable resources, so clients
