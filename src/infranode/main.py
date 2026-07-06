@@ -52,7 +52,9 @@ async def lifespan(app: FastAPI):
     """Oeffnet Redis-Pool + gepoolten HTTP-Client beim Start, schließt beim Stop."""
     settings = get_settings()
     app.state.settings = settings
-    app.state.redis = create_redis_pool(settings.redis_url)
+    app.state.redis = create_redis_pool(
+        settings.redis_url, max_connections=settings.redis_max_connections
+    )
     # Ein prozessweiter, gepoolter httpx-AsyncClient für alle Upstreams (RES-01/05).
     app.state.http = create_http_client(settings)
     # Dedizierter mTLS-Client NUR für Mobilithek (LIVE-04, T-20-MTLS): das

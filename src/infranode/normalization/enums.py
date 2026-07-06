@@ -42,6 +42,11 @@ class LicenseId(StrEnum):
     # (z.B. ParkenDD, dessen Lizenz pro Stadt variiert): verhindert ein
     # falsches pauschales CC-BY-Tag im Envelope (GOV-01/03-Compliance).
     UNKNOWN = "unknown"
+    # § 5 Abs. 2 UrhG: amtliches Werk, gemeinfrei. Die Weiterverbreitung ist
+    # erlaubt, solange der Inhalt UNVERAENDERT bleibt und die Quelle genannt wird
+    # (Aenderungsverbot). Faktisch permissiv (auch kommerziell) -> Tier A. Genutzt
+    # fuer die amtlichen BBK-NINA-Bevoelkerungsschutz-Warntexte.
+    AMTLICHES_WERK = "amtliches_werk"
 
 
 class SourceId(StrEnum):
@@ -282,3 +287,16 @@ class SourceId(StrEnum):
     # Attribution stehen je Stadt im Record (Mapper liest sie aus der WFS-Registry).
     # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag.
     DISTRICT_HEATING = "district_heating"
+    # Quick-260705-jgt: Koeln Behoerden-Wartezeiten (office-wait-times). Keyloser
+    # Direkt-HTTP gegen waiting-od.php (wie KOELN_EVENTS), DL-DE/Zero 2.0 = Tier A.
+    # Reine Live-Daten (kein Archiv). Wert ASCII-lowercase (StrEnum), kein Umlaut.
+    # Toggle-Name == SourceId-Wert == _KNOWN_SOURCES-Eintrag: getattr(settings,
+    # f"enable_{name}").
+    KOELN_WARTEZEITEN = "koeln_wartezeiten"
+    # Quick-260705-ufv: BBK NINA Bevoelkerungsschutz-Warnungen (civil-protection-
+    # warnings). Keyloser GET gegen warnung.bund.de/api31/dashboard/{ARS}.json,
+    # ARS aus dem Register-AGS abgeleitet. Reine Live-Warnungen (kein Archiv),
+    # amtlicher Warntext verbatim (LicenseId.AMTLICHES_WERK, Tier A). Wert ASCII-
+    # lowercase (StrEnum), kein Umlaut. Toggle-Name == SourceId-Wert ==
+    # _KNOWN_SOURCES-Eintrag: getattr(settings, f"enable_{name}").
+    BBK_NINA = "bbk_nina"

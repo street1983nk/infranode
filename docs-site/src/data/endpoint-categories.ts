@@ -62,7 +62,7 @@ const MEMBERS: Record<string, string[]> = {
     "getCityMarkets",
     "getCityParcelLockers", "getCityPostOffices", "getCityPostBoxes",
     "getCityPublicWifi", "getCityRecyclingCentres", "getCityGovernmentOffices",
-    "getCityTreeCadastre", "getCityPois", "getCityEvents",
+    "getCityOfficeWaitTimes", "getCityTreeCadastre", "getCityPois", "getCityEvents",
   ],
   stadt: [
     "getCities", "getCity", "getCityBase", "getCityGeo", "getCityHeritage",

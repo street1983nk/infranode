@@ -466,6 +466,25 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Geoportal Berlin / Energienetze",
         ttl=(86400.0, 2592000.0),
     ),
+    # Quick-260705-jgt: Koeln Behoerden-Wartezeiten (office-wait-times). Keyloser
+    # Direkt-HTTP gegen waiting-od.php, DL-DE/Zero 2.0 = Tier A, reine Live-Daten.
+    # Attribution "Stadt Koeln" VERBATIM identisch zum DATA-LICENSES.md-Eintrag.
+    SourceSpec(
+        name="koeln_wartezeiten",
+        license_id="dl_de_zero_2_0",
+        attribution="Stadt Koeln",
+    ),
+    # Quick-260705-ufv: BBK NINA Bevoelkerungsschutz-Warnungen (civil-protection-
+    # warnings). Keyloser GET gegen warnung.bund.de/api31/dashboard/{ARS}.json,
+    # amtlicher Warntext verbatim (§ 5 Abs. 2 UrhG, amtliches Werk = Tier A). Reine
+    # Live-Warnungen (kein Archiv), kurzes Cache-Fenster (60s/300s). Attribution
+    # VERBATIM identisch zu mappers/bbk_nina.py + DATA-LICENSES.md (T-11-SRC-DRIFT).
+    SourceSpec(
+        name="bbk_nina",
+        license_id="amtliches_werk",
+        attribution="Bundesamt für Bevölkerungsschutz und Katastrophenhilfe (BBK)",
+        ttl=(60.0, 300.0),
+    ),
 )
 
 # --- Abgeleitete Sichten (Rückwärts-kompatibel zu den alten Strukturen) ---

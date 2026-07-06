@@ -31,6 +31,62 @@ from infranode.normalization import (
 
 _DL_DE_BY_URL = "https://www.govdata.de/dl-de/by-2-0"
 
+# Ballast-Denylist (DATA-07/08): Felder, die der rohe Autobahn-App-Feed pro Event
+# mitliefert, die aber fuer API-/LLM-Konsumenten wertlos sind und die Response
+# aufblaehen. Die Roh-Geometrie (``geometry``) allein ist ~1,2 KB je Item; bei einer
+# stark belasteten Stadt (Koeln, ~150+ roadworks) summiert sich das auf ~305 KB und
+# sprengt das GPT-Actions-Limit (~100 KB). ``routeRecommendation``/``footer``/``icon``/
+# ``display_type``/``lorryParkingFeatureIcons``/``startLcPosition``/``point``/``future``
+# sind reine App-UI-Interna ohne fachlichen Wert. Wir LASSEN diese Felder nur WEG
+# (Denylist), wir schreiben KEINE Werte um: alle behaltenen Felder bleiben byte-
+# identisch. Denylist statt Allowlist, damit unbekannte, aber nuetzliche Felder
+# erhalten bleiben; kuenftiger Ballast wird durch Ergaenzen dieser Menge entfernt.
+_BALLAST_FIELDS = frozenset(
+    {
+        "geometry",
+        "routeRecommendation",
+        "footer",
+        "lorryParkingFeatureIcons",
+        "icon",
+        "display_type",
+        "startLcPosition",
+        "point",
+        "future",
+    }
+)
+
+
+# Default-Obergrenze fuer roadworks in der Response. Koeln hat live ~178 Baustellen;
+# selbst nach dem Slimming (geometry/Ballast weg) sind das ~160 KB und sprengen das
+# GPT-Actions-Limit (~100 KB, verifiziert 2026-07-06). Wir kappen auf die
+# _MAX_ROADWORKS wichtigsten (blockierende zuerst) und weisen die Kappung EHRLICH aus
+# (``roadworks_total``/``roadworks_truncated``, KEINE stille Kappung). warnings bleiben
+# ungekappt: sie sind der fachliche Kern der Verkehrslage (aktuelle Staus) und live
+# deutlich weniger als roadworks.
+_MAX_ROADWORKS = 50
+
+
+def _is_blocked(item: dict) -> bool:
+    """Ehrliche Bool-Interpretation des Autobahn-Feld ``isBlocked`` (Roh-String).
+
+    Der Feed liefert ``isBlocked`` als String ``"true"``/``"false"`` (selten Bool);
+    eine truthy-Pruefung auf den Roh-String waere falsch (``"false"`` ist truthy).
+    """
+    return str(item.get("isBlocked")).strip().lower() == "true"
+
+
+def _slim_event(item: dict) -> dict:
+    """Gibt ein NEUES dict ohne die Ballast-Felder zurueck (reine Funktion).
+
+    Entfernt ausschliesslich die Schluessel aus ``_BALLAST_FIELDS`` (Denylist); alle
+    uebrigen Felder werden byte-identisch uebernommen, insbesondere die Stau-
+    Anreicherung ``congestion`` (nicht in der Denylist) und unbekannte Zusatzfelder.
+    Das Eingabe-dict wird NICHT mutiert. Es werden nur Felder weggelassen, keine
+    Werte umgeschrieben.
+    """
+    return {k: v for k, v in item.items() if k not in _BALLAST_FIELDS}
+
+
 # DATA-08 Stau-Klassifizierung: ``abnormalTrafficType`` ist das ehrliche Quell-Feld
 # des Autobahn-warning-Feeds (INRIX-gespeist, DATEX-Stau-Typ). Wir labeln es nur in
 # eine grobe Stufe (kein Erfinden von Werten):
@@ -65,7 +121,7 @@ def _classify_congestion(warning: dict) -> dict | None:
             out["delay_minutes"] = delay
     except (TypeError, ValueError):
         pass
-    if str(warning.get("isBlocked")).strip().lower() == "true":
+    if _is_blocked(warning):
         out["blocked"] = True
     return out
 
@@ -124,8 +180,28 @@ def map_autobahn_traffic(
     DATA-08 Stau: jede Verkehrswarnung wird um ein ``congestion``-Feld angereichert
     (Stau-Klassifizierung aus ``abnormalTrafficType`` + Reisezeitverlust), und
     ``congestion_summary`` verdichtet die Stau-Lage je Stadt.
+
+    ``roadworks`` und ``warnings`` werden vor der Ausgabe von App-UI-Ballast und
+    Roh-Geometrie befreit (``_slim_event``), damit die Response unter dem
+    GPT-Actions-Limit (~100 KB) bleibt. Reihenfolge zwingend: erst
+    ``_enrich_warnings`` (fuegt ``congestion`` hinzu), dann ``_slim_event`` (behaelt
+    ``congestion``, da nicht in der Denylist), dann ``_congestion_summary`` aus den
+    geslimmten, angereicherten Warnungen. Nur Weglassen, kein Umschreiben von Werten.
+
+    ``roadworks`` werden zusaetzlich auf die ``_MAX_ROADWORKS`` wichtigsten gekappt
+    (blockierende zuerst), da Slimming allein bei stark belasteten Staedten (Koeln
+    ~178 Baustellen) nicht unter das GPT-Actions-Limit kommt. Die Kappung wird ehrlich
+    ausgewiesen (``roadworks_total``/``roadworks_truncated``), kein stiller Cap.
+    ``warnings`` (aktuelle Staus) bleiben ungekappt.
     """
-    warnings = _enrich_warnings(raw.get("warnings", []))
+    slimmed_roadworks = [_slim_event(r) for r in raw.get("roadworks", [])]
+    roadworks_total = len(slimmed_roadworks)
+    # Blockierende Baustellen zuerst (stabile Sortierung erhaelt sonst die
+    # Original-Reihenfolge), dann auf _MAX_ROADWORKS kappen.
+    ranked_roadworks = sorted(slimmed_roadworks, key=lambda r: not _is_blocked(r))
+    roadworks = ranked_roadworks[:_MAX_ROADWORKS]
+    roadworks_truncated = roadworks_total > _MAX_ROADWORKS
+    warnings = [_slim_event(w) for w in _enrich_warnings(raw.get("warnings", []))]
     return CanonicalRecord(
         city_slug=raw["slug"],
         geo=None,
@@ -141,8 +217,10 @@ def map_autobahn_traffic(
             license_url=_DL_DE_BY_URL,
         ),
         payload=TrafficEventPayload(
-            roadworks=raw.get("roadworks", []),
+            roadworks=roadworks,
             warnings=warnings,
+            roadworks_total=roadworks_total,
+            roadworks_truncated=roadworks_truncated,
             congestion_summary=_congestion_summary(warnings),
         ),
     )

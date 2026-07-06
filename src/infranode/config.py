@@ -54,6 +54,43 @@ class CoreSettings(BaseSettings):
     # (Feld-/Env-Name aus Kompatibilitätsgründen unverändert.)
     archive_dir: str = "data/archive"
 
+    # --- MCP-/Redis-Connection-Backpressure (quick-260704-ust) ---
+    # Drei defensive Deckel gegen Connection-Pool-Exhaustion. Rein defensiv: im
+    # Normalbetrieb aendert sich NICHTS (die Defaults spiegeln die bisherigen
+    # effektiven Werte), nur bei Ueberlast greifen die Deckel. Alle acht Felder
+    # sind per INFRANODE_*-Env ohne Code-Deploy einstellbar. BEWUSST NICHT Teil
+    # dieser Aenderung: die Umstellung des MCP-Servers auf stateless_http
+    # (separate Design-Entscheidung) und Auto-Scaling.
+    #
+    # mcp_limit_concurrency ist der EINZIGE echte neue Ueberlast-Deckel: der
+    # oeffentliche MCP-uvicorn (statefule, langlebige streamable-http-Sessions,
+    # ein Worker) hatte bisher NULL Backpressure (uvicorn-Default = unbegrenzt).
+    # Jenseits dieses Deckels antwortet uvicorn mit 503, statt den Event-Loop
+    # unbegrenzt zu fluten. 256 gleichzeitige Sessions sind auf der 8-vCPU-Box
+    # mit einem MCP-Worker grosszuegig bemessen.
+    mcp_limit_concurrency: int = 256
+    # Entspricht exakt dem uvicorn-Eigen-Default (kein Verhaltenswechsel, nur
+    # explizit gesetzt und dadurch konfigurierbar).
+    mcp_timeout_keep_alive: int = 5
+    # Entspricht exakt dem uvicorn-Eigen-Default (kein Verhaltenswechsel, nur
+    # explizit gesetzt und dadurch konfigurierbar).
+    mcp_backlog: int = 2048
+    # Deckelt das bisher unbegrenzte Socket-Wachstum des Redis-Pools grosszuegig
+    # (der Normalbetrieb nutzt nur eine Handvoll Verbindungen; ein Treffer dieses
+    # Caps ist bereits eine Anomalie). Vorher: kein max_connections gesetzt.
+    redis_max_connections: int = 150
+    # Entsprechen den httpx-Defaults (kein Verhaltenswechsel) fuer den
+    # MCP-Loopback-Client; nur explizit gesetzt und dadurch konfigurierbar.
+    mcp_loopback_max_connections: int = 100
+    mcp_loopback_max_keepalive: int = 20
+    # Die eigentliche Loopback-Verteidigung: ein KURZER Pool-Acquire-Deckel statt
+    # der heutigen 30s. Ein Burst staut sich damit nicht mehr sekundenlang auf dem
+    # Verbindungs-Pool auf, sondern faellt schnell in die 503-Behandlung.
+    mcp_loopback_pool_timeout: float = 1.0
+    # Haelt die heutige grosszuegige Read-Zeit (Upstreams hinter der API koennen
+    # langsam sein); bewusst NICHT verkuerzt, um keine langsamen Quellen zu kappen.
+    mcp_loopback_read_timeout: float = 30.0
+
 
 class RateLimitSettings(BaseSettings):
     """IP-Rate-Limiting (API-06). Echter DoS-Schutz liegt bei Cloudflare."""
@@ -342,6 +379,14 @@ class SourceToggleSettings(BaseSettings):
     enable_dortmund_parking: bool = True
     enable_kiel_zaehlstellen: bool = False
     enable_eround_charging: bool = False
+    # Quick-260705-jgt: Koeln Behoerden-Wartezeiten (office-wait-times). KEYLOS
+    # (direkter HTTPS-Feed waiting-od.php, wie enable_dortmund_parking) -> Default
+    # True. Toggle-Name == SourceId-Wert.
+    enable_koeln_wartezeiten: bool = True
+    # Quick-260705-ufv: BBK NINA Bevoelkerungsschutz-Warnungen (civil-protection-
+    # warnings). KEYLOS (GET warnung.bund.de/api31/dashboard/{ARS}.json, wie
+    # enable_dwd_warnings) -> Default True. Toggle-Name == SourceId-Wert.
+    enable_bbk_nina: bool = True
     # DATA-31: Bremen Baustellen (Mobilithek DATEX II Situation, DL-DE/BY 2.0).
     enable_bremen_baustellen: bool = False
     # Hannover Verkehrsmeldungen (Mobilithek DATEX II V2 Situation, DL-DE/BY 2.0).
@@ -540,6 +585,19 @@ class MonitoringSettings(BaseSettings):
     # hat; enabled gelassene Quellen heilen ohnehin über den persistenten Breaker.
     # Probe-URLs sind Owner-kontrolliert (kein User-Input -> kein SSRF). Leer = aus.
     selfheal_probes: str = ""
+    # Kapazitaets-/Saettigungs-Fruehwarnung (OPS-08, 2026-07-04): der Watchdog warnt
+    # den Owner per WARNING-Push, BEVOR die eine API-Replica saturiert, damit er
+    # rechtzeitig manuell skalieren kann (Stufe 1: nur Alarm, kein Auto-Scaling).
+    # Bewusst konservative Defaults (Fruehwarnung, kein Kapazitaetsregler):
+    # capacity_load_per_core_warn = 0.75 laesst auf der 8-vCPU-Box noch Kopf-Reserve,
+    # bevor die 1-min-Last pro Kern kritisch wird. capacity_redis_mem_warn = 0.80
+    # warnt, bevor der Redis-Speicheranteil (used_memory/maxmemory) die Eviction-
+    # Grenze erreicht. capacity_hysteresis_ticks = 2 verlangt zwei aufeinander-
+    # folgende Ueberschreitungen, damit ein einzelner Lastspitzen-Tick keinen
+    # Fehlalarm ausloest. Alle drei per INFRANODE_CAPACITY_*-Env ueberschreibbar.
+    capacity_load_per_core_warn: float = 0.75
+    capacity_redis_mem_warn: float = 0.80
+    capacity_hysteresis_ticks: int = 2
 
 
 class Settings(

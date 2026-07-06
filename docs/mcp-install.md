@@ -15,7 +15,7 @@ dessen normalisiertes JSON unverändert zurück (kanonischer `{data, meta}`-
 Envelope). Es gibt keine eigene Mapping-, Lizenz- oder Schreib-Logik im
 MCP-Server, keine Datenbank und keinen Zustand. Er bündelt offene Daten zu 84
 deutschen Städten (Wetter, ÖPNV, Luft, Verkehr, Demografie, öffentliche
-Auftragsvergabe und mehr) über 12 schlanke MCP-Tools, die zusammen 65
+Auftragsvergabe und mehr) über 12 schlanke MCP-Tools, die zusammen 66
 Datenarten abdecken. Das hält den Token-Footprint im Kontextfenster des
 Agenten minimal, bleibt weit unter den Tool-Limits gängiger Clients (z.B. 80
 Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools
@@ -130,15 +130,15 @@ Version erfolgt über den gepinnten Git-Tag bzw. die `uv.lock`.
 
 ## Vollständiges Tool-Manifest
 
-12 Tools, die zusammen 65 Datenarten abdecken. Stadtbezogene Tools erwarten
+12 Tools, die zusammen 67 Datenarten abdecken. Stadtbezogene Tools erwarten
 einen `slug` (z.B. `berlin`, `hamburg`); gültige Slugs liefert `list_cities`.
 Ausnahmen sind unten markiert.
 
 | Tool | Argumente | Beschreibung | Quelle |
 | --- | --- | --- | --- |
 | `get_city` | `slug` | Base data for a German city (population, area, coordinates) | Wikidata |
-| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all 65 data types with coverage status and the matching resource key, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
-| `get_city_resource` | `slug`, `resource` | Generic accessor: fetch ANY of the 65 data types by its resource key (kebab-case enum, see list below) | je Datenart |
+| `get_city_overview` | `slug` | One-call overview: base data, a catalog of all 67 data types with coverage status and the matching resource key, plus a live highlights snapshot (weather, air). Discovery entry point | InfraNode |
+| `get_city_resource` | `slug`, `resource` | Generic accessor: fetch ANY of the 67 data types by its resource key (kebab-case enum, see list below) | je Datenart |
 | `air_quality` | `slug` | Official air quality (PM10, PM2.5, NO2, O3, SO2) | UBA |
 | `weather` | `slug` | Current weather observations (not a forecast) | DWD |
 | `pois` | `slug`, `type` | Points of interest, filtered by type | OpenStreetMap |
@@ -158,7 +158,7 @@ Das `pois`-Tool nimmt zusätzlich `type` aus der API-Whitelist (z.B. `hospital`,
 Alle Datenarten ohne eigenes Tool holt der Agent über
 `get_city_resource(slug, resource="<schlüssel>")`. Beispiel:
 `get_city_resource(slug="berlin", resource="charging")` liefert die Ladesäulen
-in Berlin. Der `resource`-Parameter ist ein Enum mit 65 Schlüsseln
+in Berlin. Der `resource`-Parameter ist ein Enum mit 67 Schlüsseln
 (kebab-case). Welche Schlüssel eine Stadt abdeckt, zeigt
 `get_city_overview(slug)` (je Datenart Schlüssel plus Abdeckungsstatus); die
 Resource `infranode://catalog` listet alle Datenarten. Einige Datenarten haben
@@ -176,6 +176,7 @@ generischen Zugriff erreichbar.
 | `air` | Luftqualität, Live-Messwerte (ohne Historie) |
 | `weather` | Aktuelle Wetterbeobachtungen (DWD). Eigenes Tool: `weather` |
 | `weather-warnings` | Amtliche Wetterwarnungen (höchste aktive Stufe) |
+| `civil-protection-warnings` | Amtliche Bevölkerungsschutz-Warnungen (BBK NINA): Gefahrstoff, Großbrand, Bombenentschärfung. Warntext verbatim |
 | `pollen-uv` | Pollenflug und UV-Index (Region) |
 | `fire-danger` | Waldbrand- und Graslandfeuer-Index (DWD) |
 | `traffic` | Autobahn-Baustellen und Verkehrsmeldungen (Region) |
@@ -220,6 +221,7 @@ generischen Zugriff erreichbar.
 | `election` | Wahlergebnisse |
 | `holidays` | Feiertage des Bundeslands |
 | `heritage` | Denkmäler/Baudenkmale aus der Landes-Denkmalliste (Berlin) |
+| `office-wait-times` | Behörden-Wartezeiten je Stadt: Live-Wartezeit der Bürgerämter (nur Köln, Teilabdeckung) |
 | `playgrounds` | Öffentliche Spielplätze (OpenStreetMap) |
 | `drinking-water` | Öffentliche Trinkwasserbrunnen (OpenStreetMap) |
 | `public-toilets` | Öffentliche Toiletten (OpenStreetMap) |
@@ -243,7 +245,7 @@ plus Herkunft/Lizenz/Attribution, `meta` enthält Correlation-ID, Quell-Status
 und Cache-Status. Die folgenden Ausgaben sind echte, gekürzte Antworten der
 Live-API.
 
-`get_city_overview(slug="berlin")` — the discovery entry point, start here for any
+`get_city_overview(slug="berlin")` , the discovery entry point, start here for any
 city question instead of guessing a single tool:
 
 ```json
@@ -265,7 +267,7 @@ city question instead of guessing a single tool:
 }
 ```
 
-`get_city(slug="berlin")` — for just the base facts, without the full catalog:
+`get_city(slug="berlin")` , for just the base facts, without the full catalog:
 
 ```json
 {
@@ -288,7 +290,7 @@ city question instead of guessing a single tool:
 }
 ```
 
-`weather(slug="berlin")` — for a single known fact once you already know what you want:
+`weather(slug="berlin")` , for a single known fact once you already know what you want:
 
 ```json
 {
@@ -350,7 +352,7 @@ Tool  -> Agent: { "data": { "base": { "population": 1073096, ... },
                   "meta": { "source_status": "ok" } }
 
 Agent: Zu Köln gibt es u.a. Wetter, Luftqualität, ÖPNV, Verkehr, öffentliche
-Vergaben und mehr — soll ich zu einem Bereich ins Detail gehen?
+Vergaben und mehr , soll ich zu einem Bereich ins Detail gehen?
 ```
 
 Bei einer konkreten, bereits eindeutigen Frage ruft der Agent direkt das

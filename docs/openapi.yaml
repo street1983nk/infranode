@@ -2798,6 +2798,72 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
+  /api/v1/cities/{slug}/civil-protection-warnings:
+    get:
+      tags: [cities]
+      summary: Amtliche BBK-NINA-Bevölkerungsschutz-Warnungen je Stadt (Tier A)
+      x-summary-en: Official BBK NINA civil protection warnings per city (Tier A)
+      description: >-
+        Aktive amtliche Bevölkerungsschutz-Warnungen des Bundesamts für
+        Bevölkerungsschutz und Katastrophenhilfe (BBK, NINA-API) für die Stadt.
+        Füllt die Zivilschutz-Lücke (Gefahrstoff, Großbrand, Bombenentschärfung)
+        neben weather-warnings und flood. Der Regionsbezug erfolgt über den
+        12-stelligen Kreis-ARS (aus dem AGS abgeleitet); coverage_granularity
+        (city|district) weist die ARS-Kreisschärfe aus. Der amtliche Warntext
+        (headline) wird UNVERÄNDERT, verbatim durchgereicht (§ 5 Abs. 2 UrhG,
+        keine Umformulierung/Kürzung/Übersetzung); je Warnung stehen provider
+        (MOWAS/KATWARN/BIWAPP/POLICE/DWD/LHP), severity, sent, onset, expires,
+        detail_url und duplicate_of (DWD -> weather-warnings, LHP -> flood).
+        Quelle: BBK NINA, keylos. Deaktiviert -> 200 source_status="disabled";
+        keine aktive Warnung -> 200 source_status="ok" (count 0).
+      x-description-en: >-
+        Active official civil protection warnings from the German Federal Office
+        of Civil Protection and Disaster Assistance (BBK, NINA API) for the city.
+        Fills the civil-protection gap (hazmat, major fire, bomb disposal)
+        alongside weather-warnings and flood. Region mapping uses the 12-digit
+        district ARS (derived from the AGS); coverage_granularity (city|district)
+        states the ARS granularity. The official warning text (headline) is passed
+        through VERBATIM, unchanged (§ 5 (2) UrhG, no rewording/shortening/
+        translation); each warning carries provider (MOWAS/KATWARN/BIWAPP/POLICE/
+        DWD/LHP), severity, sent, onset, expires, detail_url and duplicate_of
+        (DWD -> weather-warnings, LHP -> flood). Source: BBK NINA, keyless.
+      operationId: getCityCivilProtectionWarnings
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >-
+            Warnungen-Envelope (CanonicalRecord mit CivilProtectionWarningPayload:
+            ars, coverage_granularity, count, warnings) oder null bei
+            source_status disabled. source_status ok/disabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "503":
+          description: Upstream (BBK NINA) nicht erreichbar, kein Cache
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/fuel-prices:
     get:
       tags: [cities]
@@ -3514,6 +3580,59 @@ paths:
       responses:
         "200":
           description: Bike-Counts-Envelope (CanonicalRecord mit CountStationPayload) oder null.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    oneOf:
+                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: "null"
+                  meta:
+                    $ref: "#/components/schemas/Meta"
+        "404":
+          description: Unbekannte Stadt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/cities/{slug}/office-wait-times:
+    get:
+      tags: [cities]
+      summary: Behörden-Wartezeiten je Stadt (live, keylos, Tier A)
+      x-summary-en: Government office wait times per city (live, keyless, Tier A)
+      description: >-
+        Live-Wartezeiten der Bürgerämter/Kundenzentren + Kfz-Zulassungsstelle je
+        Stadt aus dem offenen Feed der Stadt. Liefert je Standort (offices) name,
+        wait_minutes (Wartezeit in Minuten, null bei fehlendem/nicht-numerischem
+        Wert), is_open (bool), status_text (Klartext), detail_url (Detailseite) und
+        observed_at (ISO-UTC). Reine Live-Daten (keine Speicherung). Aktuell: Köln
+        (waiting-od.php, DL-DE/Zero 2.0, minütlich während der Öffnungszeiten).
+        Teilabgedeckt: Toggle aus -> 200 source_status="disabled"; nicht-abgedeckte
+        Stadt -> 200 source_status="not_covered" (mit covered_cities); abgedeckte
+        Stadt ohne Standort -> 200 source_status="no_data"; toter Upstream ohne
+        Cache -> 503 mit Hint. Kaputte Upstream-Felder führen nie zu 500 (Zero-Trust).
+      x-description-en: >-
+        Live wait times of citizen offices/service centres and the vehicle
+        registration office per city from the city's open feed. Each office
+        carries name, wait_minutes (null when missing/non-numeric), is_open,
+        status_text, detail_url and observed_at (ISO-UTC). Live-only (not persisted).
+        Currently: Cologne (waiting-od.php, DL-DE/Zero 2.0). Partial coverage:
+        toggle off -> 200 source_status="disabled"; city not covered -> 200
+        source_status="not_covered" (with covered_cities); covered city without an
+        office -> 200 source_status="no_data". Broken upstream fields never cause 500.
+      operationId: getCityOfficeWaitTimes
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Office-Wait-Times-Envelope (CanonicalRecord mit OfficeWaitTimesPayload) oder null.
           content:
             application/json:
               schema:

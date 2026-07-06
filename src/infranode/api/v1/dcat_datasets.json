@@ -32,6 +32,22 @@
       ]
     },
     {
+      "id": "civil-protection-warnings",
+      "endpoint": "civil-protection-warnings",
+      "theme": "ENVI",
+      "source": "bbk_nina",
+      "title_de": "Bevölkerungsschutz-Warnungen",
+      "title_en": "Civil protection warnings",
+      "desc_de": "Amtliche BBK-Warnmeldungen des Bevölkerungsschutzes je Stadt (Zivilschutz: Gefahrstoff, Großbrand u.a.), ARS-basiert.",
+      "desc_en": "Official BBK civil protection warnings per city (hazmat, major fire, etc.), ARS-based.",
+      "keywords": [
+        "Bevölkerungsschutz",
+        "Zivilschutz",
+        "MOWAS",
+        "BBK"
+      ]
+    },
+    {
       "id": "air-quality",
       "endpoint": "air-uba",
       "theme": "ENVI",

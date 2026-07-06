@@ -26,6 +26,7 @@ from fastapi import APIRouter, Request, Response
 
 from infranode.adapters.autobahn import fetch_traffic, fetch_webcams
 from infranode.adapters.baumkataster import fetch_trees
+from infranode.adapters.bbk_nina import ars_for_ags, fetch_for_ags
 from infranode.adapters.berlin_radzaehl import fetch_berlin_radzaehl
 from infranode.adapters.berlin_viz import fetch_berlin_road_events
 from infranode.adapters.db_fasta import fetch_station_facilities
@@ -60,6 +61,7 @@ from infranode.adapters.klinik_atlas import fetch_hospital_atlas
 from infranode.adapters.koeln_arcgis import fetch_koeln_road_events
 from infranode.adapters.koeln_events import fetch_events as fetch_koeln_events
 from infranode.adapters.koeln_radzaehl import fetch_koeln_radzaehl
+from infranode.adapters.koeln_wartezeiten import fetch_koeln_wartezeiten
 from infranode.adapters.leipzig_radzaehl import fetch_leipzig_radzaehl
 from infranode.adapters.lhp import fetch_flood
 from infranode.adapters.mobidata_bw import fetch_mobidata_road_events
@@ -91,6 +93,7 @@ from infranode.adapters.uba import fetch_air_uba
 from infranode.adapters.wikidata import fetch_city_base, fetch_hospitals_wikidata
 from infranode.adapters.zensus_grid import fetch_population_density
 from infranode.api.errors import UnprocessableError, UpstreamError
+from infranode.api.v1.pagination import paginate_envelope, parse_page_params
 from infranode.archive.bka_pks_db import read_crime_stats
 from infranode.archive.boris_db import read_land_values
 from infranode.archive.inkar_db import read_indicators
@@ -115,6 +118,7 @@ from infranode.normalization.mappers.autobahn import (
     map_autobahn_webcams,
 )
 from infranode.normalization.mappers.baumkataster import map_trees
+from infranode.normalization.mappers.bbk_nina import map_bbk_nina
 from infranode.normalization.mappers.berlin_viz import map_berlin_road_events
 from infranode.normalization.mappers.bike_counts import (
     map_berlin_radzaehl,
@@ -162,6 +166,7 @@ from infranode.normalization.mappers.kba import map_vehicle_registrations
 from infranode.normalization.mappers.klinik_atlas import map_hospital_atlas
 from infranode.normalization.mappers.koeln_arcgis import map_koeln_road_events
 from infranode.normalization.mappers.koeln_events import map_koeln_events
+from infranode.normalization.mappers.koeln_wartezeiten import map_koeln_wartezeiten
 from infranode.normalization.mappers.lhp import map_flood
 from infranode.normalization.mappers.mastr import map_mastr_assets
 from infranode.normalization.mappers.mobidata_bw import map_mobidata_road_events
@@ -964,7 +969,7 @@ async def city_solar_roofs(slug: str) -> dict:
 
 
 @router.get("/cities/{slug}/charging")
-async def city_charging(slug: str) -> dict:
+async def city_charging(slug: str, request: Request) -> dict:
     """Liefert E-Ladesäulen-Standorte im kanonischen Envelope (DATA-09).
 
     Ablauf (DATA-09/06, API-01, GOV-02/03): Register-Lookup (unbekannter
@@ -985,6 +990,11 @@ async def city_charging(slug: str) -> dict:
     - ``not_ingested``: Quelle aktiv, aber kein Snapshot ->
       ``read_records`` liefert [] -> data None, KEIN 5xx
     - ``ok``: jüngster Snapshot -> CanonicalRecord mit Attribution + license_id
+
+    Die ``stations``-Liste ist über ``limit`` (Default 50, max 200) + ``offset``
+    paginierbar; ``meta.pagination`` weist total/returned/truncated ehrlich aus
+    (keine stille Kappung); Offset-Overflow -> leere Seite 200. ``payload.count``
+    bleibt der volle Snapshot-Gesamtbestand (Aggregat != Seitenlänge).
     """
     entry = get_city(slug)
 
@@ -1014,13 +1024,16 @@ async def city_charging(slug: str) -> dict:
     # Jüngster Snapshot: daher hier max(retrieved_at).
     record = max(records, key=lambda r: r.retrieved_at)
 
-    return {
-        "data": record.model_dump(mode="json"),
-        "meta": {
-            "correlation_id": correlation_id.get(),
-            "source_status": "ok",
-        },
+    data = record.model_dump(mode="json")
+    meta = {
+        "correlation_id": correlation_id.get(),
+        "source_status": "ok",
     }
+    # Listen-Paginierung (DATA-09): stations-Liste begrenzen; count bleibt das
+    # volle Snapshot-Aggregat (delivered_count_field=None).
+    p = parse_page_params(request)
+    paginate_envelope(data, meta, p, list_key="stations")
+    return {"data": data, "meta": meta}
 
 
 @router.get("/cities/{slug}/district-heating")
@@ -1861,7 +1874,14 @@ async def _osm_feature_response(request: Request, entry, feature: str) -> dict:
     (``feature`` fließt per ``params`` als sha256-Hash in den Cache-Key, Cache-
     Poisoning-Schutz T-05-10), None-Guard (toter Upstream ohne Cache -> 503), dann
     Mapping mit ODbL-Attribution und Daten-Envelope. ``feature`` ist stets ein
-    festes, intern gesetztes Literal aus ``_OSM_FEATURES`` (kein User-Input)."""
+    festes, intern gesetztes Literal aus ``_OSM_FEATURES`` (kein User-Input).
+
+    Die ``items``-Liste ist über ``limit`` (Default 50, max 200) + ``offset``
+    paginierbar; ``meta.pagination`` weist total/returned/truncated ehrlich aus,
+    Offset-Overflow -> leere Seite 200. ``payload.count`` trägt die ausgelieferte
+    Seitenlänge (PoiPayload-Semantik), ``total_available`` bleibt der echte
+    Overpass-Gesamtbestand. So erben education/playgrounds/post-boxes/
+    parcel-lockers/public-wifi und die übrigen OSM-Features limit/offset."""
     if not Settings().enable_overpass:
         return {
             "data": None,
@@ -1901,14 +1921,19 @@ async def _osm_feature_response(request: Request, entry, feature: str) -> dict:
     )
     await append_record(record, source="osm")
 
-    return {
-        "data": record.model_dump(mode="json"),
-        "meta": {
-            "correlation_id": correlation_id.get(),
-            "source_status": "ok",
-            "cache_status": status,
-        },
+    data = record.model_dump(mode="json")
+    meta = {
+        "correlation_id": correlation_id.get(),
+        "source_status": "ok",
+        "cache_status": status,
     }
+    # Listen-Paginierung (DATA-04): items-Liste begrenzen. delivered_count_field=
+    # "count" -> PoiPayload.count == ausgelieferte Seite; total_available bleibt der
+    # echte Overpass-Gesamtbestand. Der Helper liest limit/offset selbst aus der
+    # Query (kein Depends), daher erben alle OSM-Route-Signaturen die Paginierung.
+    p = parse_page_params(request)
+    paginate_envelope(data, meta, p, list_key="items", delivered_count_field="count")
+    return {"data": data, "meta": meta}
 
 
 @router.get("/cities/{slug}/playgrounds")
@@ -2845,6 +2870,72 @@ async def city_bike_counts(slug: str, request: Request) -> dict:
     }
 
 
+@router.get("/cities/{slug}/office-wait-times")
+async def city_office_wait_times(slug: str, request: Request) -> dict:
+    """Liefert Behoerden-Wartezeiten je Stadt im kanonischen Envelope (Quick-jgt).
+
+    Live-Wartezeiten der Kundenzentren + Kfz-Zulassungsstelle. Aktuell NUR Koeln
+    abgedeckt (keyloser Direkt-Feed waiting-od.php, DL-DE/Zero 2.0, Tier A). Ablauf
+    wie ``city_bike_counts``: Register-Lookup (404 bei unbekanntem Slug), Coverage-
+    Pruefung (nicht abgedeckt -> 200 ``not_covered`` + covered_cities), Toggle-Guard
+    (aus -> 200 ``disabled``), resilienter Fetch ueber die Fassade, Mapping. Quelle
+    erreichbar aber ohne Standort -> ``no_data``; toter Upstream ohne Cache -> 503
+    mit selbst-korrigierendem Hint. KEIN Archiv-Write (reine Live-Daten).
+    """
+    entry = get_city(slug)
+
+    if not is_covered("office-wait-times", entry.slug):
+        return _not_covered("office-wait-times")
+
+    source = SourceId.KOELN_WARTEZEITEN.value
+    if not getattr(Settings(), f"enable_{source}"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "disabled",
+            },
+        }
+
+    client = request.app.state.resilient_client
+    key = build_cache_key(source, city_slug=entry.slug)
+
+    async def fetch_fn():
+        return await fetch_koeln_wartezeiten(request.app.state.http)
+
+    raw, status = await client.fetch(source, key, fetch_fn)
+
+    if raw is None:
+        raise UpstreamError(
+            f"Quelle '{source}' voruebergehend nicht erreichbar, kein gecachter "
+            "Wert vorhanden.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # Quelle erreichbar, aber kein Standort -> ehrliches no_data (200).
+    if not raw.get("items"):
+        return {
+            "data": None,
+            "meta": {
+                "correlation_id": correlation_id.get(),
+                "source_status": "no_data",
+            },
+        }
+
+    record = map_koeln_wartezeiten(
+        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
+    )
+
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": correlation_id.get(),
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
 @router.get("/cities/{slug}/events")
 async def city_events(slug: str, request: Request) -> dict:
     """Liefert destination.one-Stadt-Events im kanonischen Envelope (DATA-16, GOV-04).
@@ -2864,6 +2955,11 @@ async def city_events(slug: str, request: Request) -> dict:
 
     Graceful Degradation: leere/nur-Vergangenheit -> 200 ``source_status="no_data"``;
     toter Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint (DX-06).
+
+    Die ``events``-Liste ist über ``limit`` (Default 50, max 200) + ``offset``
+    paginierbar; ``meta.pagination`` weist total/returned/truncated ehrlich aus,
+    Offset-Overflow -> leere Seite 200. Der Ausschnitt wird konsistent auf jeden
+    ``meta.records``-Eintrag angewandt, damit der Envelope begrenzt bleibt.
     """
     entry = get_city(slug)
 
@@ -2993,15 +3089,23 @@ async def city_events(slug: str, request: Request) -> dict:
     for record in records:
         await append_record(record, source=record.source.value)
 
-    return {
-        "data": records[0].model_dump(mode="json"),
-        "meta": {
-            "correlation_id": correlation_id.get(),
-            "source_status": "ok",
-            "cache_status": cache_status,
-            "records": [r.model_dump(mode="json") for r in records],
-        },
+    data = records[0].model_dump(mode="json")
+    meta = {
+        "correlation_id": correlation_id.get(),
+        "source_status": "ok",
+        "cache_status": cache_status,
+        "records": [r.model_dump(mode="json") for r in records],
     }
+    # Listen-Paginierung (DATA-16): events-Liste begrenzen (meta.pagination bezieht
+    # sich auf data == records[0]). Zusätzlich JEDEN meta.records-Eintrag auf
+    # dieselbe Seite schneiden, sonst bleibt der Envelope über meta.records groß.
+    p = parse_page_params(request)
+    paginate_envelope(data, meta, p, list_key="events")
+    for r in meta["records"]:
+        events = r.get("payload", {}).get("events")
+        if isinstance(events, list):
+            r["payload"]["events"] = events[p.offset : p.offset + p.limit]
+    return {"data": data, "meta": meta}
 
 
 @router.get("/cities/{slug}/webcams", deprecated=True)
@@ -3348,6 +3452,11 @@ async def city_energy(slug: str, request: Request) -> dict:
       ``read_energy`` liefert []) -> data None, KEIN 5xx
     - ``ok``: vorverarbeitete Anlagen vorhanden -> gemappter energy_asset-Payload
       mit Attribution + license_id
+
+    Die ``assets``-Liste ist über ``limit`` (Default 50, max 200) + ``offset``
+    paginierbar; ``meta.pagination`` weist total/returned/truncated ehrlich aus,
+    Offset-Overflow -> leere Seite 200. count/by_type/total_power_kw/power_by_type
+    bleiben die vollen Snapshot-Aggregate (Aggregat != Seitenlänge).
     """
     entry = get_city(slug)
 
@@ -3389,13 +3498,17 @@ async def city_energy(slug: str, request: Request) -> dict:
         wikidata_qid=entry.qid,
     )
 
-    return {
-        "data": record.model_dump(mode="json"),
-        "meta": {
-            "correlation_id": correlation_id.get(),
-            "source_status": "ok",
-        },
+    data = record.model_dump(mode="json")
+    meta = {
+        "correlation_id": correlation_id.get(),
+        "source_status": "ok",
     }
+    # Listen-Paginierung (DATA-18): assets-Liste begrenzen. delivered_count_field=
+    # None -> count/by_type/total_power_kw/power_by_type bleiben die vollen
+    # Snapshot-Aggregate (Auflage 2: Aggregat != Seitenlänge).
+    p = parse_page_params(request)
+    paginate_envelope(data, meta, p, list_key="assets")
+    return {"data": data, "meta": meta}
 
 
 @router.get("/cities/{slug}/vehicle-registrations")
@@ -4173,6 +4286,61 @@ async def city_weather_warnings(slug: str, request: Request) -> dict:
         lon=entry.geo.lon,
     )
     await append_record(record, source="dwd_warnings")
+    return {
+        "data": record.model_dump(mode="json"),
+        "meta": {
+            "correlation_id": cid,
+            "source_status": "ok",
+            "cache_status": status,
+        },
+    }
+
+
+@router.get("/cities/{slug}/civil-protection-warnings")
+async def city_civil_protection_warnings(slug: str, request: Request) -> dict:
+    """Amtliche BBK-NINA-Bevoelkerungsschutz-Warnungen je Stadt (Tier A, keylos).
+
+    Fuellt die echte Zivilschutz-Luecke (Gefahrstoff, Grossbrand, Bomben-
+    entschaerfung) neben weather-warnings (DWD) und flood (Hochwasser). Der
+    Regionsbezug wird ueber den 12-stelligen Kreis-ARS (aus dem Register-AGS)
+    hergestellt; ``coverage_granularity`` weist ehrlich aus, ob der ARS die Stadt
+    (kreisfrei) oder ihren ganzen Kreis (kreisangehoerig) abdeckt.
+
+    LIZENZ-AUFLAGE (§ 5 Abs. 2 UrhG): Der amtliche Warntext wird UNVERAENDERT,
+    verbatim durchgereicht (modified=False, keine KI-Umformulierung). Provider
+    DWD/LHP sind je Warnung via ``duplicate_of`` auf weather-warnings bzw. flood
+    markiert. Deaktiviert -> 200 source_status="disabled"; keine aktive Warnung ->
+    200 source_status="ok" (count 0); toter Upstream ohne Cache -> 503 mit Hint.
+    KEIN Archiv-Write (reine Live-Warnungen).
+    """
+    entry = get_city(slug)
+    cid = correlation_id.get()
+    if not Settings().enable_bbk_nina:
+        return {
+            "data": None,
+            "meta": {"correlation_id": cid, "source_status": "disabled"},
+        }
+    client = request.app.state.resilient_client
+    # Cache-Key ueber den ARS: Staedte im selben Kreis teilen sich das Dashboard.
+    ars = ars_for_ags(entry.ags)
+    key = build_cache_key("bbk_nina", city_slug=ars)
+
+    async def fetch_fn():
+        return await fetch_for_ags(request.app.state.http, ags=entry.ags)
+
+    raw, status = await client.fetch("bbk_nina", key, fetch_fn)
+    if raw is None:
+        raise UpstreamError(
+            "Quelle 'bbk_nina' voruebergehend nicht erreichbar, kein Cache.",
+            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+    record = map_bbk_nina(
+        entry.slug,
+        raw,
+        retrieved_at=datetime.now(UTC),
+        ags=entry.ags,
+        wikidata_qid=entry.qid,
+    )
     return {
         "data": record.model_dump(mode="json"),
         "meta": {

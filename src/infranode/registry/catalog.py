@@ -39,6 +39,15 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
     DataType(
         "weather-warnings", "weather_warnings", "Wetterwarnungen", "Weather warnings"
     ),
+    # Quick-260705-ufv: BBK NINA Bevoelkerungsschutz-Warnungen je Stadt (keylos,
+    # ARS-basiert, Voll-Abdeckung). Kein Eintrag in _NAMED_TOOLS -> laeuft ueber
+    # get_city_resource. Label mit korrektem Umlaut, key/tool ASCII.
+    DataType(
+        "civil-protection-warnings",
+        "civil_protection_warnings",
+        "Bevölkerungsschutz-Warnungen",
+        "Civil protection warnings",
+    ),
     DataType("pollen-uv", "pollen_uv", "Pollen & UV-Index", "Pollen & UV index"),
     DataType("fire-danger", "fire_danger", "Waldbrandgefahr", "Wildfire danger"),
     DataType(
@@ -215,6 +224,15 @@ CITY_DATA_CATALOG: tuple[DataType, ...] = (
         "district_heating",
         "Fernwärme & Wärmenetze",
         "District heating networks",
+    ),
+    # Quick-260705-jgt: Behoerden-Wartezeiten je Stadt (live, keylos, Tier A,
+    # Teilabdeckung nur koeln). key/tool ASCII (Pfadsegment), Label mit korrektem
+    # Umlaut. Kein Eintrag in _NAMED_TOOLS -> laeuft ueber get_city_resource.
+    DataType(
+        "office-wait-times",
+        "office_wait_times",
+        "Behörden-Wartezeiten (live)",
+        "Government office wait times (live)",
     ),
 )
 

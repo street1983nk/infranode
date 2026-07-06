@@ -168,6 +168,11 @@ _TREE_CADASTRE_CITIES: frozenset[str] = frozenset(BAUM_WFS)
 # Modul-Assertion in ``ingest.district_heating`` hält beide Mengen drift-synchron.
 _DISTRICT_HEATING_CITIES: frozenset[str] = frozenset({"berlin", "hamburg"})
 
+# office-wait-times (Quick-260705-jgt): Behoerden-Wartezeiten live. Aktuell NUR
+# Koeln abgedeckt (keyloser Direkt-Feed waiting-od.php); andere Staedte liefern
+# ehrlich not_covered (200, kein 404). Waechst additiv je integrierter Stadt.
+_OFFICE_WAIT_TIMES_CITIES: frozenset[str] = frozenset({"koeln"})
+
 # Single source of truth: Endpunkt-Kennung -> abgedeckte Stadt-Slugs.
 # Die Kennung entspricht dem letzten Pfadsegment der Route (``/cities/{slug}/<key>``).
 PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
@@ -183,6 +188,7 @@ PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "heritage": _HERITAGE_CITIES,
     "tree-cadastre": _TREE_CADASTRE_CITIES,
     "district-heating": _DISTRICT_HEATING_CITIES,
+    "office-wait-times": _OFFICE_WAIT_TIMES_CITIES,
 }
 
 

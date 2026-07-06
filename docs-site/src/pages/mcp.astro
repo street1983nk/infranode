@@ -1,7 +1,7 @@
 ---
 // MCP-Server-Seite (/mcp): erklärt kurz MCP für Devs, zeigt die Einrichtung
 // in Claude Code und Claude Desktop (CodeTabs) und listet die 12 Tools plus
-// die 65 Datenarten nach Thema gruppiert. Quelle der Einrichtungs-Snippets
+// die 67 Datenarten nach Thema gruppiert. Quelle der Einrichtungs-Snippets
 // ist docs/mcp-install.md.
 import Docs from "../layouts/Docs.astro";
 import CodeTabs from "../components/CodeTabs.astro";
@@ -44,8 +44,8 @@ const mcpRemoteConfig = [
 // Die 12 Tools des Servers (Quelle docs/mcp-install.md).
 const coreTools = [
   ["get_city(slug)", "Stammdaten einer Stadt (Einwohner, Fläche, Koordinaten)"],
-  ["get_city_overview(slug)", "Ein-Aufruf-Überblick: Katalog aller 65 Datenarten mit Schlüssel und Abdeckungsstatus + Live-Highlights (Discovery-Einstieg)"],
-  ["get_city_resource(slug, resource)", "Generischer Zugriff auf alle 65 Datenarten per Datenarten-Schlüssel (siehe Liste unten)"],
+  ["get_city_overview(slug)", "Ein-Aufruf-Überblick: Katalog aller 67 Datenarten mit Schlüssel und Abdeckungsstatus + Live-Highlights (Discovery-Einstieg)"],
+  ["get_city_resource(slug, resource)", "Generischer Zugriff auf alle 67 Datenarten per Datenarten-Schlüssel (siehe Liste unten)"],
   ["air_quality(slug)", "Amtliche Luftqualität: PM10, PM2.5, NO2, O3, SO2 (UBA)"],
   ["weather(slug)", "Aktuelle Wetterbeobachtungen (DWD, keine Vorhersage)"],
   ["pois(slug, type)", "Points of Interest, gefiltert nach Typ (OpenStreetMap)"],
@@ -57,7 +57,7 @@ const coreTools = [
   ["compare(resource, cities)", "Eine Ressource (weather, air, indicators, demographics, unemployment, tourism, charging-status, weather-warnings) über mehrere Städte vergleichen"],
 ];
 
-// Die 65 Datenarten, thematisch gruppiert (Quelle docs/mcp-install.md).
+// Die 67 Datenarten, thematisch gruppiert (Quelle docs/mcp-install.md).
 // Anzeige-Key = resource-Schlüssel für get_city_resource (kebab-case).
 // Datenarten mit eigenem Tool sind in der Beschreibung markiert.
 const dataTypeGroups = [
@@ -78,6 +78,7 @@ const dataTypeGroups = [
       ["air", "Luftqualität, Live-Messwerte"],
       ["weather", "Wetter. Eigenes Tool: weather"],
       ["weather-warnings", "Amtliche DWD-Wetterwarnungen (Unwetter, Warnstufe)"],
+      ["civil-protection-warnings", "Amtliche Bevölkerungsschutz-Warnungen (BBK NINA: Gefahrstoff, Großbrand u.a.)"],
       ["pollen-uv", "Pollen- und UV-Index"],
       ["fire-danger", "Waldbrand- und Graslandfeuer-Index (DWD)"],
     ],
@@ -148,6 +149,7 @@ const dataTypeGroups = [
       ["election", "Wahlergebnisse"],
       ["holidays", "Feiertage"],
       ["heritage", "Denkmäler/Baudenkmale je Stadt aus der Landes-Denkmalliste (Berlin, DL-DE/Zero)"],
+      ["office-wait-times", "Behörden-Wartezeiten je Stadt: Live-Wartezeit der Bürgerämter/Kfz-Zulassung (nur Köln, Teilabdeckung)"],
     ],
   },
   {
@@ -182,11 +184,11 @@ const faq = [
   },
   {
     q: "Welche Daten liefert der InfraNode-MCP-Server?",
-    a: "12 schlanke Tools für 65 Datenarten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter und Wetterwarnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Live-Parkbelegung, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Solar und Fernwärme, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Realsteuer-Hebesätze und Gewerbeanzeigen, Insolvenzen, Bike- und Scooter-Sharing, Radzählstellen, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, öffentliche Auftragsvergabe, plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
+    a: "12 schlanke Tools für 67 Datenarten von 84 deutschen Großstädten: Stammdaten, Luftqualität, Wetter, Wetterwarnungen und Bevölkerungsschutz-Warnungen, ÖPNV inkl. Echtzeit-Abfahrten, Verkehr, Live-Parkbelegung, Pegel und Hochwasser, Gesundheit, Energie und Strommarkt, Solar und Fernwärme, Pkw-Bestand und Elektro-Anteil, Arbeitslosenquote, Tourismus, Baugenehmigungen, Verkehrsunfälle, Spritpreise, Bodenrichtwerte, Realsteuer-Hebesätze und Gewerbeanzeigen, Insolvenzen, Bike- und Scooter-Sharing, Radzählstellen, POIs, Veranstaltungen, Bahnhof-Abfahrten und -Ankünfte, Wahlen und Feiertage, öffentliche Auftragsvergabe, Behörden-Wartezeiten (nur Köln), plus Städte- und Quellenübersicht und Multi-City-Vergleich.",
   },
   {
     q: "Warum hat der InfraNode-MCP-Server nur 12 Tools?",
-    a: "12 schlanke Tools decken 65 Datenarten ab: Der generische Zugriff get_city_resource(slug, resource) holt jede Datenart über ihren Schlüssel, get_city_overview liefert je Stadt alle Schlüssel mit Abdeckungsstatus. Das hält den Token-Footprint im Kontextfenster des Agenten minimal, bleibt weit unter den Tool-Limits gängiger Clients (z.B. 80 Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools dazukommen.",
+    a: "12 schlanke Tools decken 67 Datenarten ab: Der generische Zugriff get_city_resource(slug, resource) holt jede Datenart über ihren Schlüssel, get_city_overview liefert je Stadt alle Schlüssel mit Abdeckungsstatus. Das hält den Token-Footprint im Kontextfenster des Agenten minimal, bleibt weit unter den Tool-Limits gängiger Clients (z.B. 80 Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools dazukommen.",
   },
   {
     q: "Mein MCP-Client unterstützt nur lokale stdio-Server. Wie verbinde ich InfraNode?",
@@ -205,7 +207,7 @@ const faq = [
 
 <Docs
   title="Open-Data-MCP-Server Deutschland für KI-Agenten"
-  description="Open-Data-MCP-Server für deutsche Städte: 12 schlanke Tools für 65 Datenarten, für KI-Agenten wie Claude und ChatGPT, gehostet unter mcp.infranode.dev, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel, kostenlos."
+  description="Open-Data-MCP-Server für deutsche Städte: 12 schlanke Tools für 67 Datenarten, für KI-Agenten wie Claude und ChatGPT, gehostet unter mcp.infranode.dev, Remote über Streamable HTTP, keine Installation, kein API-Schlüssel, kostenlos."
   current="mcp"
   lang="de"
   altLangPath="/en/mcp/"
@@ -214,7 +216,7 @@ const faq = [
     slot="jsonld"
     type="SoftwareApplication"
     name="InfraNode MCP-Server"
-    description="Gehosteter MCP-Server mit 12 schlanken Tools für 65 Datenarten offener Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
+    description="Gehosteter MCP-Server mit 12 schlanken Tools für 67 Datenarten offener Stadtdaten von 84 deutschen Großstädten, keylos und kostenlos."
   />
   <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
 
@@ -222,7 +224,7 @@ const faq = [
   <p>
     Der InfraNode-MCP-Server ist ein kostenloser, gehosteter
     Model-Context-Protocol-Server, der KI-Agenten über 12 schlanke Tools Zugriff
-    auf 65 Datenarten offener Daten von 84 deutschen Großstädten gibt, ohne
+    auf 67 Datenarten offener Daten von 84 deutschen Großstädten gibt, ohne
     API-Schlüssel. Er stellt die Stadtdaten als Werkzeuge bereit, die ein Agent
     direkt aufruft, ohne dass du HTTP-Aufrufe von Hand schreibst. Der Server ist
     im offiziellen
@@ -313,7 +315,7 @@ const faq = [
 
   <h2>Die 12 Tools</h2>
   <p>
-    Der Server stellt 12 schlanke Tools bereit, die zusammen 65 Datenarten
+    Der Server stellt 12 schlanke Tools bereit, die zusammen 67 Datenarten
     abdecken. Das hält den Token-Footprint im Kontextfenster des Agenten
     minimal, bleibt weit unter den Tool-Limits gängiger MCP-Clients (z.B. 80
     Tools in Cursor), und die Datenbreite wächst weiter, ohne dass neue Tools
@@ -362,7 +364,7 @@ const faq = [
     <code>list_cities</code> und <code>sources</code> brauchen kein Argument.
   </p>
 
-  <h2>Die 65 Datenarten</h2>
+  <h2>Die 67 Datenarten</h2>
   <p>
     Alle Datenarten ohne eigenes Tool holt der Agent über
     <code>get_city_resource</code>, mit dem Datenarten-Schlüssel als
@@ -402,7 +404,7 @@ const faq = [
   <h2>Beispiel-Aufruf</h2>
   <p>
     Ein Agent holt den Ein-Aufruf-Überblick für Berlin: Stammdaten, den
-    Katalog aller 65 Datenarten mit Schlüssel und Abdeckungsstatus und eine
+    Katalog aller 67 Datenarten mit Schlüssel und Abdeckungsstatus und eine
     Live-Highlights-Momentaufnahme. Guter Einstiegspunkt für jede Städtefrage,
     statt gezielt eine einzelne Datenart zu raten. Das Ergebnis ist das
     normalisierte JSON der Live-API, unverändert weitergereicht.

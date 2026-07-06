@@ -16,7 +16,7 @@ departures), traffic, electricity price (SMARD), land values (BORIS), parking,
 charging, water levels, demographics, energy and more, for **84+ German cities**
 behind **one** interface. **No API key, no account.** Every response uses one
 canonical `{ data, meta }` envelope with per-record license and attribution. The
-same data is also exposed as an MCP server (12 lean read-only tools covering 65
+same data is also exposed as an MCP server (12 lean read-only tools covering 67
 data types) for AI agents.
 Start with the one-call `get_city_overview`: it returns a catalog of every data
 type available for a city plus a live highlights snapshot, so agents discover the
@@ -132,8 +132,8 @@ See [SECURITY.md](./SECURITY.md) for the security model.
 
 ## Use it as an MCP server
 
-The same API is exposed as a remote MCP server, so AI agents can call all 65
-endpoints as tools. One line with Claude Code:
+The same API is exposed as a remote MCP server, so AI agents can call all 67
+data types as tools. One line with Claude Code:
 
 ```bash
 claude mcp add --transport http infranode https://mcp.infranode.dev/mcp

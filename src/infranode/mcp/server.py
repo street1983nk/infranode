@@ -364,6 +364,23 @@ def commute_check(slug: str) -> str:
     )
 
 
+def _mcp_uvicorn_kwargs(settings) -> dict:  # noqa: ANN001 - Settings-Duck-Typing
+    """Baut das uvicorn.run-kwargs-Dict der drei MCP-Backpressure-Deckel.
+
+    Reine Werte-Abbildung ohne Seiteneffekt (kein uvicorn-Import noetig), damit
+    der Kwargs-Bau ohne den blockierenden ``uvicorn.run`` unit-testbar bleibt.
+    ``limit_concurrency`` ist der eigentliche Ueberlast-Deckel: jenseits davon
+    liefert uvicorn 503, statt den Event-Loop unbegrenzt zu fluten;
+    ``timeout_keep_alive``/``backlog`` entsprechen den uvicorn-Eigen-Defaults
+    (nur explizit gesetzt und dadurch konfigurierbar).
+    """
+    return {
+        "limit_concurrency": settings.mcp_limit_concurrency,
+        "timeout_keep_alive": settings.mcp_timeout_keep_alive,
+        "backlog": settings.mcp_backlog,
+    }
+
+
 def run() -> None:
     """Startet den Server im per Env gewählten Transport.
 
@@ -414,15 +431,22 @@ def run() -> None:
         # erhalten, da uvicorn sie aus der ASGI-App ausführt.
         import uvicorn
 
+        from infranode.config import get_settings
         from infranode.mcp.ratelimit import MCPRateLimitMiddleware
 
         app = mcp.streamable_http_app()
         app.add_middleware(MCPRateLimitMiddleware)
+        # Backpressure-Deckel (quick-260704-ust) ueber die reine, unit-getestete
+        # _mcp_uvicorn_kwargs-Funktion: limit_concurrency bremst den bisher
+        # backpressure-losen oeffentlichen Endpunkt (uvicorn liefert bei Ueberlast
+        # 503 statt Event-Loop-Flut). host/port/log_level bleiben unveraendert aus
+        # mcp.settings.
         uvicorn.run(
             app,
             host=mcp.settings.host,
             port=mcp.settings.port,
             log_level=mcp.settings.log_level.lower(),
+            **_mcp_uvicorn_kwargs(get_settings()),
         )
     else:
         mcp.run()

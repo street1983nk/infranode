@@ -28,6 +28,8 @@ from urllib.parse import quote, urlsplit
 
 import httpx
 
+from infranode.config import get_settings
+
 # Default-Base-URL der lokalen Live-API (Loopback). Aus der Env überschreibbar,
 # aber nur auf einen allowlisteten Host (siehe ALLOWED_HOSTS).
 _DEFAULT_BASE_URL = "http://localhost:8000/api/v1"
@@ -101,6 +103,9 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "power-load",
         "power-price",
         "weather-warnings",
+        # Quick-260705-ufv: BBK NINA Bevoelkerungsschutz-Warnungen je Stadt (keylos,
+        # ARS-basiert, Tier A, Voll-Abdeckung). Ueber get_city_resource.
+        "civil-protection-warnings",
         # DATA-27/28/29: KBA + GENESIS-Trio + Unfallatlas (Tier A, Kreis-Jahreswerte).
         "vehicle-registrations",
         "unemployment",
@@ -160,6 +165,9 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         # DATA-41: Fernwärme-/Wärmenetz-Versorgung je Stadt (kommunale Wärmeplanung,
         # föderiert je Stadt-WFS, Tier A, Teilabdeckung berlin/hamburg).
         "district-heating",
+        # Quick-260705-jgt: Behoerden-Wartezeiten je Stadt (live, keylos, Tier A,
+        # Teilabdeckung nur koeln). Ueber get_city_resource(slug, "office-wait-times").
+        "office-wait-times",
     }
 )
 
@@ -191,9 +199,41 @@ ALLOWED_COLLECTIONS: frozenset[str] = frozenset(
     }
 )
 
-# Timeout für den loopback-Call. Großzügig, da einige Upstreams hinter der
-# Live-API langsam sein können, aber endlich (kein hängender Agent).
-_TIMEOUT_SECONDS = 30.0
+# Fixe, moderate Verbindungs-/Schreib-Timeouts fuer den Loopback-Call (orientiert
+# an infra/http.py). connect/write sind bewusst kurz; read + pool sind
+# settings-getrieben (siehe _loopback_timeout).
+_LOOPBACK_CONNECT_TIMEOUT = 2.0
+_LOOPBACK_WRITE_TIMEOUT = 5.0
+
+
+def _loopback_limits(settings) -> httpx.Limits:  # noqa: ANN001 - Settings-Duck-Typing
+    """Baut die httpx.Limits des Loopback-Clients aus den Settings.
+
+    Reine Werte-Abbildung (quick-260704-ust). max_connections/max_keepalive
+    entsprechen per Default den httpx-Defaults (kein Verhaltenswechsel), sind
+    aber jetzt explizit und per Env konfigurierbar.
+    """
+    return httpx.Limits(
+        max_connections=settings.mcp_loopback_max_connections,
+        max_keepalive_connections=settings.mcp_loopback_max_keepalive,
+    )
+
+
+def _loopback_timeout(settings) -> httpx.Timeout:  # noqa: ANN001 - Settings-Duck-Typing
+    """Baut das httpx.Timeout des Loopback-Clients aus den Settings.
+
+    Der KURZE ``pool``-Wert (Default 1.0s) ist die eigentliche Verteidigung: ein
+    Burst staut sich nicht mehr sekundenlang auf dem Verbindungs-Pool auf (vorher
+    lag der flache 30s-Timeout auch auf dem Pool-Acquire). ``read`` bleibt bewusst
+    grosszuegig, weil Upstreams hinter der Live-API langsam sein koennen;
+    connect/write sind fixe moderate Werte.
+    """
+    return httpx.Timeout(
+        connect=_LOOPBACK_CONNECT_TIMEOUT,
+        read=settings.mcp_loopback_read_timeout,
+        write=_LOOPBACK_WRITE_TIMEOUT,
+        pool=settings.mcp_loopback_pool_timeout,
+    )
 
 
 class UpstreamError(RuntimeError):
@@ -448,6 +488,10 @@ def _get_client() -> httpx.AsyncClient:
     loop = asyncio.get_running_loop()
     client = _clients.get(loop)
     if client is None or client.is_closed:
-        client = httpx.AsyncClient(timeout=_TIMEOUT_SECONDS)
+        settings = get_settings()
+        client = httpx.AsyncClient(
+            limits=_loopback_limits(settings),
+            timeout=_loopback_timeout(settings),
+        )
         _clients[loop] = client
     return client

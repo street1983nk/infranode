@@ -99,6 +99,12 @@ class TrafficEventPayload(BaseModel):
     station_id: str | None = None
     roadworks: list[dict] = Field(default_factory=list)
     warnings: list[dict] = Field(default_factory=list)
+    # DATA-07: roadworks werden auf die wichtigsten (blockierende zuerst) gekappt,
+    # damit die Response unter dem GPT-Actions-Limit (~100 KB) bleibt. Die Kappung
+    # wird EHRLICH ausgewiesen (kein stiller Cap): ``roadworks_total`` = Gesamtzahl
+    # vor der Kappung, ``roadworks_truncated`` = ob gekappt wurde.
+    roadworks_total: int | None = None
+    roadworks_truncated: bool = False
     # DATA-08: Stau-/Verkehrslage-Verdichtung aus den ``warnings`` (Autobahn-
     # warning-Feed, INRIX). Jede congestion-relevante Warnung trägt zusätzlich ein
     # ``congestion``-Feld (level stau/stockend/dicht/unspezifisch, delay_minutes,
@@ -195,6 +201,38 @@ class WeatherWarningPayload(BaseModel):
     max_level: int | None = None
     warnings: list[dict] = Field(default_factory=list)
     special_warnings: list[dict] = Field(default_factory=list)
+
+
+class CivilProtectionWarningPayload(BaseModel):
+    """Amtliche Bevoelkerungsschutz-Warnungen je Stadt (BBK NINA, Tier A).
+
+    Quelle: Bundesamt fuer Bevoelkerungsschutz und Katastrophenhilfe (BBK), NINA-
+    API. Deckt die echte Zivilschutz-Luecke (Gefahrstoff, Grossbrand, Bomben-
+    entschaerfung) neben den Wetter- (DWD) und Hochwasser-Warnungen (LHP) ab.
+
+    LIZENZ-AUFLAGE (§ 5 Abs. 2 UrhG, amtliches Werk): Der amtliche Warntext
+    (``headline`` und, falls vorhanden, description/instruction) wird WOERTLICH,
+    byte-identisch durchgereicht. KEINE KI-/Maschinen-Umformulierung, -Kuerzung
+    oder -Uebersetzung; die Weiterverbreitung ist nur bei unveraendertem Inhalt
+    zulaessig (siehe ``Attribution.modified == False`` im Mapper).
+
+    ``ars`` ist der 12-stellige Kreis-ARS (aus dem Register-AGS abgeleitet).
+    ``coverage_granularity`` weist die Regionsschaerfe ehrlich aus: ``"city"``
+    (kreisfreie Stadt, ARS == Stadt) oder ``"district"`` (kreisangehoerige
+    Gemeinde, ARS deckt den ganzen Kreis). ``count`` ist die Anzahl aktiver
+    Warnungen; ``warnings`` traegt je Warnung ein dict (id/event/headline/provider/
+    severity/sent/onset/effective/expires/detail_url/duplicate_of). ``provider``
+    ist MOWAS/KATWARN/BIWAPP/POLICE/DWD/LHP; DWD/LHP sind ueber ``weather-warnings``
+    bzw. ``flood`` bereits abgedeckt und je Warnung via ``duplicate_of`` markiert
+    (reine Metadaten, KEINE Textaenderung). Mutable Default IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["civil_protection_warning"] = "civil_protection_warning"
+    ars: str | None = None
+    coverage_granularity: str | None = None
+    count: int = 0
+    warnings: list[dict] = Field(default_factory=list)
 
 
 class FloodWarningPayload(BaseModel):
@@ -1088,6 +1126,25 @@ class PublicTenderPayload(BaseModel):
     source_url: str | None = None
 
 
+class OfficeWaitTimesPayload(BaseModel):
+    """Live-Wartezeiten der Buergeraemter/Kundenzentren je Stadt (Tier A, keylos).
+
+    Reine Live-Daten (kein Archiv). Quelle: Stadt Koeln (waiting-od.php), DL-DE/Zero
+    2.0. ``offices`` traegt je Standort ein schlankes dict mit ``name``
+    (Standortname, z.B. Kundenzentrum), ``wait_minutes`` (aktuelle Wartezeit in
+    Minuten als int, oder ``None`` bei fehlendem/nicht-numerischem Wert),
+    ``is_open`` (bool: True wenn geoeffnet), ``status_text`` (Klartext-Status wie
+    "geoeffnet"/"geschlossen", oder ``None``), ``detail_url`` (Link zur
+    Detailseite, oder ``None``) und ``observed_at`` (Zeitstempel der Messung als
+    ISO-UTC-String, oder ``None``). Zero-Trust: kaputte/fehlende Felder werden zu
+    ``None``, nie zu einem Fehler. Mutable Default IMMER via
+    ``Field(default_factory=list)`` (ruff B006).
+    """
+
+    kind: Literal["office_wait_times"] = "office_wait_times"
+    offices: list[dict] = Field(default_factory=list)
+
+
 PayloadUnion = Annotated[
     CityBaseDataPayload
     | AirQualityPayload
@@ -1100,6 +1157,7 @@ PayloadUnion = Annotated[
     | FloodWarningPayload
     | PowerPayload
     | WeatherWarningPayload
+    | CivilProtectionWarningPayload
     | PollenUvPayload
     | FireDangerPayload
     | BathingWaterPayload
@@ -1141,6 +1199,7 @@ PayloadUnion = Annotated[
     | TransitDeparturePayload
     | TransitTripPayload
     | TransitRouteStatusPayload
-    | PublicTenderPayload,
+    | PublicTenderPayload
+    | OfficeWaitTimesPayload,
     Field(discriminator="kind"),
 ]
