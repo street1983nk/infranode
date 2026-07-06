@@ -26,15 +26,42 @@ types and cities added regularly.
 Sources include the Deutscher Wetterdienst (DWD), Umweltbundesamt (UBA),
 Mobilithek/DELFI, GovData, OpenStreetMap, Bundesnetzagentur, KBA, DIVI and more.
 
+## See it in action
+
+[![InfraNode live overview for Cologne: current weather, official air quality, DWD warnings, live train departures with delays, roadworks and the full data-type catalog, all from one keyless call](https://infranode.dev/showcase/koeln-live-dashboard.png)](https://infranode.dev)
+
+*A single `get_city_overview("koeln")` call: current weather, official air
+quality, DWD warnings, live train departures with delays, roadworks and the full
+per-city data catalog, from one keyless endpoint. Try any city live at
+[infranode.dev](https://infranode.dev).*
+
 ## How it works
+
+One shared HTTP client fans out to the upstream sources, each response is mapped
+into the canonical schema, license-gated with its attribution and cached in Redis
+(with stale-on-error fallback), then served through both a REST API and an MCP
+server. A failing upstream degrades to `source_status`, it never fails the call.
 
 ```mermaid
 flowchart LR
-    SRC["German open-data sources<br/>DWD, UBA, SMARD, BORIS,<br/>Mobilithek, GovData, ..."] --> CORE["InfraNode<br/>normalize, license-gate, cache"]
-    CORE --> API["REST API<br/>infranode.dev/api/v1"]
-    CORE --> MCP["MCP server<br/>mcp.infranode.dev, 12 tools / 65 data types"]
-    API --> APPS["Your apps &amp; dashboards"]
-    MCP --> AGENTS["AI agents (Claude &amp; co.)"]
+    subgraph SRC["25+ German open-data sources"]
+        direction TB
+        S1["DWD, UBA<br/>weather, air"]
+        S2["Mobilithek, DELFI, DB<br/>transit, realtime"]
+        S3["SMARD, BNetzA, MaStR<br/>energy"]
+        S4["BORIS, GovData, OSM,<br/>DIVI, KBA, ..."]
+    end
+
+    subgraph CORE["InfraNode core"]
+        direction TB
+        N["Normalize<br/>one canonical schema"] --> L["License-gate<br/>per-record attribution"] --> C["Redis cache<br/>stale-on-error fallback"]
+    end
+
+    SRC --> CORE
+    CORE --> API["REST API<br/>infranode.dev/api/v1<br/>84 cities, keyless"]
+    CORE --> MCP["MCP server<br/>mcp.infranode.dev<br/>12 read-only tools"]
+    API --> APPS["Apps &amp; dashboards"]
+    MCP --> AGENTS["AI agents<br/>Claude, ChatGPT"]
 ```
 
 > If InfraNode saves you a data integration, a star helps other developers find it.
@@ -83,12 +110,12 @@ Every category below is a REST endpoint under `/api/v1/cities/{slug}/<key>`.
 Over MCP the same data comes through 12 lean tools: a few named ones
 (`get_city_overview`, `weather`, `air_quality`, `pois`, `compare`, live boards)
 plus one generic `get_city_resource(slug, resource=<key>)` for every other data
-type (its `resource` enum lists all 65 keys).
+type (its `resource` enum lists all 67 keys).
 
 | Group | Data types (endpoint keys) |
 |-------|----------------------------|
 | **Discovery** | `list_cities`, `sources`, `compare` (one resource across many cities), `overview` (one-call catalog + live snapshot) |
-| **Weather & environment** | `weather`, `weather-warnings`, `air-uba` (official), `air` (live), `pollen-uv`, `water-level`, `flood`, `fire-danger`, `bathing-water` |
+| **Weather & environment** | `weather`, `weather-warnings`, `civil-protection-warnings` (BBK NINA), `air-uba` (official), `air` (live), `pollen-uv`, `water-level`, `flood`, `fire-danger`, `bathing-water` |
 | **Mobility** | `transit`, live stop departures (`transit_departures` tool), `stations` (catalog), station boards by EVA (`station_board_departures`/`station_board_arrivals` tools, incl. local trains + disruptions), `station-departures`, `station-arrivals`, `traffic`, `road-events`, `webcams`, `charging`, `parking` (live occupancy), `sharing`, `fuel-prices`, `bike-counts` |
 | **City & people** | `base`, `geo`, `demographics`, `indicators`, `unemployment`, `tourism`, `construction`, `accidents`, `crime-stats`, `health`, `icu-live`, `holidays`, `election`, `events`, `pois`, playgrounds/markets/toilets and more OSM types |
 | **Economy & real estate** | `land-values`, `tax-rates` (trade/property tax multipliers per municipality), `business-registrations` (founding dynamics per district), `insolvencies` (insolvency filings per district: corporate and other debtors, annual), `public-tenders` (public procurement: running tenders and awarded contracts per city) |
@@ -169,7 +196,7 @@ each other:
 - **[mcp-server-public-transport](https://github.com/mirodn/mcp-server-public-transport)** public transport across Europe; in Germany it covers Berlin/Brandenburg (VBB).
 - **Single-city servers** (e.g. Munich, Berlin) cover one city each.
 
-InfraNode covers **84 German cities and 65 data types** behind one keyless, hosted
+InfraNode covers **84 German cities and 67 data types** behind one keyless, hosted
 endpoint, from environment and mobility to energy, economy and city life. Full
 side-by-side comparison:
 [infranode.dev/en/mcp-comparison](https://infranode.dev/en/mcp-comparison/).
