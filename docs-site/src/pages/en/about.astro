@@ -37,21 +37,30 @@ import Docs from "../../layouts/Docs.astro";
 
   <h2>How the project runs</h2>
   <p>
-    The entire project is free to use and ad-free. A source code release is in
-    preparation. It is built with accessibility in mind. Maintenance and
-    operation rest with a single person, namely me. Everything runs on a server
-    in Germany.
+    The entire project is free to use, ad-free and built with accessibility in
+    mind. The source code is public on GitHub (Apache-2.0): anyone can inspect
+    how the API works and what happens with requests. There is no registration,
+    so no account data is created in the first place. The production system
+    runs on a server in Germany; an independent standby system in a second
+    European data centre stands ready for failover.
   </p>
   <p>
-    To make up for that, I use every available technique for a self-healing
-    system: outages of individual sources are caught automatically and recover
-    on their own as soon as the source returns. And just in case, I am connected
-    directly via ntfy and always respond immediately.
+    Reliability rests on a layered safety net: outages of individual sources
+    are caught automatically and recover on their own as soon as the source
+    returns, and every response states honestly whether a source is currently
+    delivering. The service is monitored around the clock and incidents trigger
+    immediate alerts. Daily off-site backups are in place, recovery has been
+    tested in practice, and every change passes an extensive automated test
+    suite before deployment.
   </p>
 
   <h2>Contact</h2>
   <p>
     For suggestions, bug reports and enquiries you can reach me at
-    <a href="mailto:admin@infranode.dev">admin@infranode.dev</a>.
+    <a href="mailto:admin@infranode.dev">admin@infranode.dev</a>. You can also
+    find me on
+    <a href="https://www.linkedin.com/in/khaled-cherif-infranode/" rel="me">LinkedIn</a>
+    and
+    <a href="https://github.com/street1983nk" rel="me">GitHub</a>.
   </p>
 </Docs>
