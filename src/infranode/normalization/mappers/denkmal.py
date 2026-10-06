@@ -65,12 +65,14 @@ def map_heritage(
         for field in fields:
             value = props.get(field)
             if value is not None:
-                # Kanonischer englischer Key zuerst, der rohe Quell-Key bleibt
-                # als abgekündigtes Duplikat (identischer Wert) stehen.
+                # Nur noch der kanonische englische Key; der rohe Quell-Key war
+                # seit 2026-08-01 abgekündigt und ist zum 2026-08-31 entfernt.
+                # Felder ohne Mapping (schon englisch) behalten ihren Namen.
                 canonical = _CANONICAL_KEYS.get(field)
                 if canonical is not None:
                     item[canonical] = value
-                item[field] = value
+                else:
+                    item[field] = value
         items.append(item)
 
     total = raw.get("total_available")

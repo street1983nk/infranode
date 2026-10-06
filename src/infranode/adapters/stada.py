@@ -73,15 +73,14 @@ def _normalize(station: dict) -> dict | None:
         # traegt in allen anderen Datenarten ein Text-Label (Zuggattung,
         # Badegewaesser-Einstufung, Indikator-Gruppe); die Namensgleichheit bei
         # unterschiedlichem Typ war der letzte offene Punkt des Konsistenz-Audits
-        # 2026-07-25. ``category`` bleibt abgekuendigt mit identischem Wert.
+        # 2026-07-25. ``category`` war seit 2026-08-01 abgekuendigt und ist zum
+        # 2026-08-31 entfernt.
         "station_category": station.get("category"),
-        "category": station.get("category"),
         "lat": lat,
         "lon": lon,
         # Kanonischer Name (Konsistenz-Audit 2026-07-25), immer fuenfstellig;
-        # ``zip`` bleibt abgekuendigt mit identischem Wert stehen.
+        # ``zip`` war seit 2026-08-01 abgekuendigt und ist zum 2026-08-31 entfernt.
         "post_code": post_code(addr.get("zipcode")),
-        "zip": post_code(addr.get("zipcode")),
         # Amtlicher Gemeindeschlüssel = Zuordnungsschlüssel zur Stadt (== ags).
         "ags": station.get("municipalityCode"),
     }

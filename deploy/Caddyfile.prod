@@ -10,6 +10,14 @@
 {$INFRANODE_PUBLIC_DOMAIN} {
 	encode zstd gzip
 
+	# Access-Log als JSON nach stdout (Docker json-file rotiert 10m x 3, s. Compose).
+	# Eingefuehrt 2026-08-31: Diagnose externer Fehlanfragen braucht Cf-Connecting-Ip
+	# und User-Agent; ohne Access-Log war die Quelle von 400ern nicht feststellbar.
+	log {
+		output stdout
+		format json
+	}
+
 	tls {
 		# DNS-01-Challenge via Cloudflare-API-Token (Zone.Zone:Read + Zone.DNS:Edit).
 		# Token kommt aus der Umgebung (env_file), NIE im Caddyfile hartkodiert.

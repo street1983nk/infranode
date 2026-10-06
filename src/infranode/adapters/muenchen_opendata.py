@@ -202,13 +202,6 @@ async def fetch_muenchen_road_events(
                 "affected_areas": affected_areas,
                 "lat": feature_lat,
                 "lon": feature_lon,
-                # Abgekündigt (alte deutsche Namen), Werte identisch:
-                "strasse_hausnr": street,
-                "betroffene_bereiche": affected_areas,
-                "art": event_type,
-                "beschreibung": description,
-                "von": start,
-                "bis": end,
             }
         )
 

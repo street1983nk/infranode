@@ -215,16 +215,20 @@ const groupActive = (group: NavGroup) => group.items.some(itemActive);
     </header>
 
     {
+      /* Als aside eine eigene Landmark, damit der Banner nicht ausserhalb
+         aller Landmarks haengt (WCAG 1.3.1 / Landmark-Vollstaendigkeit). */
       current !== "mcp" && (
-        <a class="mcphint" href={isEn ? "/en/mcp/" : "/mcp/"}>
-          <span class="mcphint__badge">MCP</span>
-          <span class="mcphint__text">
-            {isEn
-              ? "InfraNode is also available as an MCP server for AI assistants like Claude and ChatGPT."
-              : "InfraNode gibt es auch als MCP-Server für KI-Assistenten wie Claude und ChatGPT."}
-          </span>
-          <span class="mcphint__arrow" aria-hidden="true">→</span>
-        </a>
+        <aside aria-label={isEn ? "MCP server note" : "MCP-Server-Hinweis"}>
+          <a class="mcphint" href={isEn ? "/en/mcp/" : "/mcp/"}>
+            <span class="mcphint__badge">MCP</span>
+            <span class="mcphint__text">
+              {isEn
+                ? "InfraNode is also available as an MCP server for AI assistants like Claude and ChatGPT."
+                : "InfraNode gibt es auch als MCP-Server für KI-Assistenten wie Claude und ChatGPT."}
+            </span>
+            <span class="mcphint__arrow" aria-hidden="true">→</span>
+          </a>
+        </aside>
       )
     }
 
@@ -308,7 +312,8 @@ const groupActive = (group: NavGroup) => group.items.some(itemActive);
         </details>
       </nav>
 
-      <main class="content" id="main">
+      {/* tabindex=-1: Skip-Link-Ziel programmatisch fokussierbar (Safari). */}
+      <main class="content" id="main" tabindex="-1">
         {isEndpointPage && <PageActions mdUrl={mdUrl} prompt={actionPrompt} lang={lang} />}
         <article data-pagefind-body data-content-root>
           <slot />
@@ -384,6 +389,40 @@ const groupActive = (group: NavGroup) => group.items.some(itemActive);
         }
       }
 
+      // Scrollbare Code-/Antwort-Bereiche per Tastatur erreichbar machen
+      // (WCAG 2.1.1): tabindex=0, wo noch keins gesetzt ist (die
+      // CodeTabs-Panels bringen ihres statisch mit).
+      for (const el of document.querySelectorAll<HTMLElement>("pre, .tryit__out")) {
+        if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "0");
+      }
+
+      // Content-Tabellen (alle ausser .cov, die haben ein eigenes Mobil-Layout)
+      // in einen scrollenden Wrapper mit role=region + tabindex=0 heben. Ersetzt
+      // das display:block auf der Tabelle (zerstoert die Tabellensemantik in
+      // WebKit/VoiceOver) und macht den Scrollbereich tastaturerreichbar.
+      const isEnPage = document.documentElement.lang === "en";
+      for (const table of document.querySelectorAll<HTMLTableElement>(".content table:not(.cov)")) {
+        const wrap = document.createElement("div");
+        wrap.className = "table-scroll";
+        wrap.setAttribute("role", "region");
+        wrap.setAttribute("tabindex", "0");
+        const caption = table.querySelector("caption")?.textContent?.trim();
+        wrap.setAttribute("aria-label", caption || (isEnPage ? "Table" : "Tabelle"));
+        table.replaceWith(wrap);
+        wrap.append(table);
+      }
+
+      // Links mit target=_blank: Screenreader-Hinweis "oeffnet neues Fenster"
+      // ergaenzen (WCAG 3.2.5-Best-Practice). rel=noopener ist ueberall gesetzt;
+      // ein vorhandenes aria-label (z.B. GPT-Karten) gewinnt ohnehin.
+      const newWindowHint = isEnPage ? " (opens in a new window)" : " (öffnet neues Fenster)";
+      for (const link of document.querySelectorAll<HTMLAnchorElement>('a[target="_blank"]')) {
+        const hint = document.createElement("span");
+        hint.className = "sr-only";
+        hint.textContent = newWindowHint;
+        link.append(hint);
+      }
+
       // Mobiles Navigationsmenü: mit JS wird das <details> zum Overlay-Drawer,
       // geöffnet über den Hamburger in der Topbar. Die Nav-Gruppen starten im
       // Drawer geschlossen, nur die Gruppe der aktuellen Seite ist offen. Auf
@@ -396,13 +435,22 @@ const groupActive = (group: NavGroup) => group.items.some(itemActive);
       const navGroups = document.querySelectorAll<HTMLDetailsElement>(".nav__grp");
       if (navDisclosure && navToggle && topbar) {
         const navMq = window.matchMedia("(max-width: 1080px)");
+        // Hintergrund des offenen Drawers: diese Bereiche werden inert, damit
+        // Tab und Screenreader nicht hinter das Overlay geraten (WCAG 2.4.3).
+        const inertTargets = [".mcphint", "main", ".toc", ".footer"]
+          .map((sel) => document.querySelector<HTMLElement>(sel))
+          .filter((el): el is HTMLElement => el !== null);
         const setTopbarHeight = () => {
           document.documentElement.style.setProperty("--topbar-h", `${topbar.offsetHeight}px`);
         };
         const syncToggle = () => {
           navToggle.setAttribute("aria-expanded", String(navDisclosure.open));
+          const drawerOpen = navMq.matches && navDisclosure.open;
           // Drawer offen -> Seite dahinter nicht scrollen (nur mobil relevant).
-          document.body.classList.toggle("nav-open", navMq.matches && navDisclosure.open);
+          document.body.classList.toggle("nav-open", drawerOpen);
+          for (const el of inertTargets) {
+            el.inert = drawerOpen;
+          }
         };
         const applyNavState = () => {
           setTopbarHeight();
@@ -419,6 +467,15 @@ const groupActive = (group: NavGroup) => group.items.some(itemActive);
           syncToggle();
         });
         navDisclosure.addEventListener("toggle", syncToggle);
+        // Escape schliesst den offenen Drawer und gibt den Fokus an den
+        // Hamburger zurueck (WAI-ARIA-Dialog-Konvention).
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && navMq.matches && navDisclosure.open) {
+            navDisclosure.open = false;
+            syncToggle();
+            navToggle.focus();
+          }
+        });
         window.addEventListener("resize", setTopbarHeight);
         applyNavState();
         navMq.addEventListener("change", applyNavState);

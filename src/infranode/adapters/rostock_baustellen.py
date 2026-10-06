@@ -80,15 +80,6 @@ async def fetch_rostock_road_events(
                 "end": end,
                 "lat": feat_lat,
                 "lon": feat_lon,
-                # Abgekündigt (alte deutsche Namen), Werte identisch:
-                "beschreibung": description,
-                "sparte": sector,
-                "einschraenkung": restriction,
-                "strasse": street,
-                "abschnitt_von": section_from,
-                "abschnitt_nach": section_to,
-                "baubeginn": start,
-                "bauende": end,
             }
         )
     return {"slug": slug, "events": events}

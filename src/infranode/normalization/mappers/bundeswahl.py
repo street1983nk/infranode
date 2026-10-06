@@ -87,9 +87,9 @@ def map_election(
         ),
         payload=ElectionResultPayload(
             election=raw.get("election"),
-            # granularity (deutsche Werte) ist abgekündigt; kanonisch ist
-            # coverage_granularity mit "city"/"partial" (Abkündigung 2026-08-01).
-            granularity=granularity,
+            # Kanonisch coverage_granularity mit "city"/"partial"; das deutsche
+            # granularity war seit 2026-08-01 abgekündigt und ist zum 2026-08-31
+            # entfernt. ``granularity`` bleibt der interne Ingest-Wert.
             coverage_granularity=_ELECTION_COVERAGE_EN.get(granularity, granularity),
             area_name=raw.get("area_name"),
             # [VERIFIED 2026-06-10] kerg2-Wahlbeteiligung (Prozent-String mit

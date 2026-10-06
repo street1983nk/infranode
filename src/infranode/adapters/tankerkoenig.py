@@ -99,10 +99,9 @@ def _station(rec: dict) -> dict:
         "diesel": _price(rec.get("diesel")),
         "is_open": bool(rec.get("isOpen")),
         # ``distance_km`` ist der kanonische Name (bathing-water,
-        # station-facilities, hospitals-atlas); ``dist_km`` bleibt abgekuendigt
-        # mit identischem Wert stehen (Konsistenz-Audit 2026-07-25).
+        # station-facilities, hospitals-atlas); ``dist_km`` war seit 2026-08-01
+        # abgekuendigt und ist zum 2026-08-31 entfernt.
         "distance_km": _coord(rec.get("dist")),
-        "dist_km": rec.get("dist"),
         "lat": _coord(rec.get("lat")),
         "lon": _coord(rec.get("lng")),
         "street": street,

@@ -32,6 +32,18 @@ class SourceSpec:
         ttl: (fresh_s, stale_s) Cache-Fenster; None = Default (60s/120s).
         cooldown: HALF_OPEN-Probe-Intervall (s) für fragile Upstreams;
             None = 30s-Default des Breakers.
+        emergency_keep_s: Notreserve HINTER dem Stale-Fenster (Sekunden), nur
+            per Opt-in. Der Redis-Key lebt um diesen Zuschlag laenger als
+            stale_until, damit der Stale-on-error-Fallback nach einer Luecke
+            (Deploy, stille Stadt) noch eine letzte echte Antwort findet statt
+            503 (Vorfall 2026-09-07 abends: Key-TTL == Stale-Ende, also
+            has_stale=false, sobald das Fenster ablaeuft, und ein kalter Key
+            verliert gegen die Aggregat-Bremse). Ausgeliefert wird die Reserve
+            AUSSCHLIESSLICH im Fehlerpfad (Bremse/5xx/Timeout), nie als
+            regulaerer HIT/STALE; cache_status STALE-ON-ERROR und retrieved_at
+            sagen es ehrlich. 0.0 = bisheriges Verhalten (Key stirbt mit dem
+            Stale-Ende); NIE fuer Live-/Transit-Quellen oder Tier-C-Live-only
+            setzen (deren Vorhalte-Grenzen gelten unveraendert).
     """
 
     name: str
@@ -39,6 +51,7 @@ class SourceSpec:
     attribution: str
     ttl: tuple[float, float] | None = None
     cooldown: float | None = None
+    emergency_keep_s: float = 0.0
 
 
 # Quick-260709-huj: Stale-Notfenster für statische/langsam-veränderliche Quellen.
@@ -324,9 +337,78 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Tankerkoenig (creativecommons.tankerkoenig.de), MTS-K",
         # Kurzlebiger Redis-Cache erlaubt (Owner-Entscheid 2026-07-08), KEINE
         # dauerhafte Speicherung (kein Archiv; Redis läuft ohne Persistence).
-        # 5 min fresh entlastet den geteilten API-Key; kurzes Stale-Fenster nur
-        # für Upstream-Ausfälle.
-        ttl=(300.0, 900.0),
+        # 5 min fresh entlastet den geteilten API-Key.
+        #
+        # Stale-Fenster 180 min (zuerst 15, am 2026-09-06 vormittags 60):
+        # seit die Aggregat-Bremse auf dem echten Limit der Quelle steht
+        # (1 Anfrage/Minute fuer ALLE Staedte zusammen, 0cb5e1fd), entscheidet
+        # das Stale-Fenster, ob eine Stadt zwischen zwei Slots 200 (stale) oder
+        # 503 bekommt. Mit 15 min fiel jede Stadt, die eine Viertelstunde nicht
+        # abgefragt wurde, in den kalten Zustand und verlor gegen die Bremse:
+        # 196 x 503 in 24 h. Mit 60 min blieben genau die Clients haengen, die
+        # im Stundentakt abfragen: das Fenster lief exakt auf ihrer Kadenz ab,
+        # der Key war wieder kalt, und ein kalter Key verliert gegen 1/min. Im
+        # Nachmittagslog vom 2026-09-06 kamen 13 von 48 Bremsen-503 genau 45 bis
+        # 61 min nach der vorigen Anfrage derselben Stadt. 180 min haelt auch
+        # einen Stundenrhythmus (mit Ausfaellen) sicher im Cache. Der Preis:
+        # eine Stadt, die drei Stunden niemand abfragt, kann bis zu drei Stunden
+        # alte Preise als STALE liefern (cache_status sagt es ehrlich); das ist
+        # besser als ein 503, und laenger waere bei Preisen, die sich mehrmals
+        # taeglich aendern, unehrlich. Weiterhin nur zwischengespeichert, kein
+        # dauerhaftes Vorhalten und kein Hintergrund-Job (ToS: on demand).
+        #
+        # NACHZUG 2026-09-07 (Tagesprofil, Stale 180 min -> 24 h): der Satz
+        # "laenger waere bei Preisen, die sich mehrmals taeglich aendern,
+        # unehrlich" stand unter altem Recht. Seit dem 2026-04-01 gilt das
+        # Kraftstoffpreisanpassungsgesetz (KPAnG): Preiserhoehungen sind nur
+        # EINMAL je Kalendertag zulaessig, und zwar um 12:00 Uhr
+        # (Europe/Berlin), Senkungen jederzeit. Das Bundeskartellamt beobachtet
+        # 96,5 % der Erhoehungen im Fenster 11:50 bis 12:10. Der Tagesverlauf
+        # ist damit bekannt statt geraten (22 bis 5 Uhr fast statisch,
+        # vormittags nur fallend, mittags ein Sprung, 12 bis 19 Uhr die
+        # Hauptaenderungslast), und EIN fresh-Wert fuer alle Stunden ist in
+        # jeder Phase falsch. Deshalb zwei Aenderungen:
+        #   * fresh kommt im Live-Pfad aus dem Tagesprofil
+        #     (registry/ttl_profiles.tankerkoenig_fresh_s, gekappt auf die
+        #     naechste 11:50-Grenze). Die 300 hier bleiben der Rueckfall, falls
+        #     die Quelle ihr Profil verliert, und sind bewusst der Wert des
+        #     engsten Fensters (11:50 bis 12:20).
+        #   * stale 180 min -> 24 h. Mit 180 min blieben 151 x 503 in 24 h
+        #     (29 % Fehlerquote): eine Stadt, die drei Stunden niemand
+        #     abfragt, wird kalt und verliert gegen die 1-Anfrage/Minute-Bremse.
+        #     24 h heisst: eine einmal abgefragte Stadt bleibt einen Tag lang
+        #     beantwortbar. Ehrlich ist das nur, weil der Preisverlauf
+        #     gesetzlich gedeckelt ist, cache_status STALE es sagt und
+        #     retrieved_at den echten Abrufzeitpunkt traegt (nicht mehr die
+        #     Uhrzeit der Antwort).
+        # Unveraendert: die Aggregat-Bremse (1/min), die Warte-Logik, kein
+        # dauerhaftes Vorhalten, kein Timer-Abruf (ToS: on demand).
+        #
+        # NACHZUG 2026-09-15 (Owner-Entscheid nach der Ursachenanalyse): Verliert
+        # eine Nutzeranfrage den Slot der Minute, wird die Stadt eingereiht und
+        # der Abruf zeitversetzt nachgeholt (infra/demand_queue.py,
+        # collector/demand_drain.py). Der Ausloeser bleibt die Useraktion, es
+        # entsteht KEIN nicht user-initiierter Abruf. Grund: ohne dieses
+        # Nachholen erreichte eine selten abgefragte Stadt nie wieder einen
+        # freien Slot, ihr Eintrag lief nach 48 h aus, und danach kam dauerhaft
+        # 503. Die Fenster hier sind davon unberuehrt.
+        ttl=(300.0, 86400.0),
+        # NACHZUG 2026-09-07 abends (Notreserve +24 h): das 24-h-Stale-Fenster
+        # allein hat die 503-Wellen nicht beendet, weil der Redis-Key exakt mit
+        # dem Stale-Ende starb (infra/cache._store: ex == ttl_stale). Nach dem
+        # 161er-Deploy stand fuer etliche Staedte GAR KEIN Eintrag mehr da
+        # (resilient_fetch_fallback has_stale=false), und jeder kalte Abruf
+        # verlor gegen die 1/min-Bremse; die Kuma-Retries (35-s-Takt)
+        # verbrannten das Budget zusaetzlich. Die Notreserve haelt den Key
+        # 24 h UEBER das Stale-Ende hinaus (Alter der Antwort damit maximal
+        # 48 h), ausgeliefert NUR im Fehlerpfad mit ehrlichem retrieved_at und
+        # cache_status STALE-ON-ERROR. Das bleibt Zwischenspeichern, kein
+        # Archiv: Redis laeuft ohne Persistence (allkeys-lru), kein
+        # Hintergrund-Abruf, kein append_record. Bewusst 24 h und nicht mehr:
+        # die ToS-Lesart vom 2026-07-25 ("on demand", kein Spiegeln) traegt
+        # kurzlebiges Vorhalten, ein Mehrtages-Puffer waere eine neue
+        # Absprache-Frage (liegt beim Owner fuer den MTS-K/TK-Kontakt).
+        emergency_keep_s=86400.0,
     ),
     SourceSpec(name="gbfs", license_id="cc0", attribution="nextbike GmbH / GBFS (CC0)"),
     SourceSpec(
@@ -557,6 +639,13 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Freie und Hansestadt Hamburg",
         cooldown=1800.0,
         ttl=_TRAFFIC_FLOW_STALE,
+        # api.hamburg.de hat ein naechtliches Wartungsfenster von rund 39
+        # Minuten (taeglich ab etwa 21:53 UTC, Kuma-Historie seit 07.09.2026).
+        # Das Stale-Fenster von 30 Minuten laeuft mittendrin aus, der Rest der
+        # Nacht war eine nackte 503. Zwei Stunden Notreserve decken das
+        # Fenster samt Breaker-Nachlauf; die Antwort traegt STALE-ON-ERROR
+        # und den echten Abrufzeitpunkt.
+        emergency_keep_s=7200.0,
     ),
     SourceSpec(
         name="solar",
@@ -834,4 +923,11 @@ SOURCE_TTL: dict[str, tuple[float, float]] = {
 
 FRAGILE_SOURCE_COOLDOWN: dict[str, float] = {
     s.name: s.cooldown for s in SOURCE_SPECS if s.cooldown is not None
+}
+
+# Notreserve hinter dem Stale-Fenster, nur Opt-in-Quellen (siehe SourceSpec-
+# Docstring und den tankerkoenig-Eintrag). Quellen ohne Eintrag behalten das
+# bisherige Verhalten: Key-TTL == Stale-Ende.
+SOURCE_EMERGENCY_KEEP: dict[str, float] = {
+    s.name: s.emergency_keep_s for s in SOURCE_SPECS if s.emergency_keep_s > 0.0
 }

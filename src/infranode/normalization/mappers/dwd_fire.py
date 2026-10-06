@@ -92,7 +92,8 @@ def map_fire_danger(
             glfi_label=_label(glfi_level),
             station_name=raw.get("station_name"),
             station_id=raw.get("station_id"),
-            bundesland=bundesland,
+            # Kanonisch federal_state; das deutsche bundesland war seit
+            # 2026-08-01 abgekündigt und ist zum 2026-08-31 entfernt.
             federal_state=bundesland,
             distance_km=raw.get("distance_km"),
             forecast_date=raw.get("forecast_date"),

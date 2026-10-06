@@ -47,13 +47,22 @@ _CANONICAL_KEYS: dict[str, str] = {
 
 
 def _backfill_events(events: list[dict]) -> list[dict]:
-    """Ergänzt fehlende kanonische Keys aus den abgekündigten deutschen Keys."""
+    """Liest alte deutsche Keys auf die kanonischen um und entfernt sie danach.
+
+    Die deutschen Namen waren seit 2026-08-01 abgekündigt und sind zum
+    2026-08-31 aus der Ausgabe entfernt. Roh-Antworten aus dem Redis-Cache, die
+    vor dem Deploy entstanden sind, tragen sie noch; darum bleibt die Umschrift
+    (gesetzt wird nur, wenn der neue Key fehlt), aber der alte Key verlässt das
+    Item und erscheint nicht mehr in der API-Antwort.
+    """
     result: list[dict] = []
     for event in events:
         item = dict(event)
         for old, new in _CANONICAL_KEYS.items():
-            if new not in item and old in item:
-                item[new] = item[old]
+            if old in item:
+                value = item.pop(old)
+                if new not in item:
+                    item[new] = value
         result.append(item)
     return result
 

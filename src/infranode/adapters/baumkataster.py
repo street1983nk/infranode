@@ -27,14 +27,15 @@ import httpx
 # Obergrenze der je Anfrage geladenen Baum-Features (Größen-/DoS-Schutz). Kataster
 # sind sehr groß -> bewusste Stichprobe, in der Doku als gedeckelt gekennzeichnet.
 # Der Cap ist so gewählt, dass der Worst-Case unter dem GPT-Actions-Antwortlimit
-# (~100 KB) bleibt: 225 x 395 B (größtes Live-Item Berlin 394 B plus Komma; seit
-# der Abkündigung 2026-08-01 trägt jedes Item die kanonischen englischen Keys
-# ZUSÄTZLICH zu den rohen Quell-Keys) plus ~2 KB Envelope = ~91 KB, sicher unter
-# 95 KB. Nach dem Entfernen der abgekündigten Duplikate (31.08.2026) kann der Cap
-# wieder auf 350 steigen. Regressionstest:
+# (~100 KB) bleibt. Seit dem Entfernen der abgekündigten Roh-Duplikate
+# (2026-08-31, angekündigt 2026-08-01) trägt jedes Item NUR die kanonischen
+# englischen Keys und ist damit gut halb so groß wie zur Übergangszeit
+# (Berlin-Worst-Case damals 395 B mit Duplikaten); 350 x ~220 B plus ~2 KB
+# Envelope = ~79 KB, sicher unter 95 KB. Damit gilt wieder der ursprüngliche
+# Cap von 350, wie beim Absenken am 2026-08-01 angekündigt. Regressionstest:
 # tests/integration/test_city_tree_cadastre.py (test_worst_case_response_under_
 # actions_limit). Die Truncation bleibt ehrlich (count/total_available/truncated).
-_COUNT_CAP = 225
+_COUNT_CAP = 350
 
 
 class BaumSource(NamedTuple):

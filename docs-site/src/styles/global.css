@@ -19,6 +19,9 @@
   --fg-muted: #56656c;
   --border: #eef1f2;
   --border-strong: #dde4e6;
+  /* Rahmen von Bedienelementen (Inputs): >=3:1 auf --bg und --bg-soft
+     (WCAG 1.4.11); --border-strong ist dafuer zu hell (1,29:1). */
+  --border-control: #6c7a81;
   --accent: var(--color-primary);
   --accent-soft: var(--color-primary-soft);
   --code-bg: #0d2a33; /* dunkler Petrol fuer Code-Bloecke */
@@ -29,6 +32,11 @@
   /* Text auf gefuellten Marken-Buttons/Badges (Petrol/Gruen). Im Dark Mode
      werden die Fuellungen hell, dann kippt dieser Wert auf dunkel. */
   --on-accent: #ffffff;
+  /* Method-Badges POST/PUT/PATCH/DELETE: Fuellungen mit >=4.5:1 zu
+     --on-accent in beiden Modi (GET nutzt --color-accent-strong). */
+  --method-post: #a35d08;
+  --method-put: #8a5a12;
+  --method-delete: #b23b3b;
   /* Warn-/Deprecated-Badges (Abdeckung, Changelog): ein Satz Toene statt
      verstreuter Hexwerte. */
   --warn-fg: #9a5b00;
@@ -65,6 +73,10 @@
     --fg-muted: #9db0b7;
     --border: #1f333b;
     --border-strong: #2c4550;
+    --border-control: #7f939b;
+    --method-post: #e09a4a;
+    --method-put: #d8a55c;
+    --method-delete: #e98f8f;
     --code-bg: #0b2229; /* bleibt die dunkelste Flaeche der Seite */
     --code-fg: #e8f0f1;
     --code-border: #2c4550;
@@ -135,6 +147,20 @@ code {
 .skip-link:focus {
   top: 0.5rem;
   text-decoration: none;
+}
+
+/* Nur fuer Screenreader (visually hidden): Hinweise wie "oeffnet neues
+   Fenster" oder Live-Trefferzahlen. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Topbar */
@@ -598,21 +624,23 @@ body.nav-open {
   vertical-align: middle;
 }
 
+/* GET: die dunkle Gruen-Stufe statt der Markenstufe, damit --on-accent
+   4,5:1 erreicht (hell 5,05:1, dunkel 9,77:1; Muster .mcphint__badge). */
 .method--get {
-  background: var(--color-accent);
+  background: var(--color-accent-strong);
 }
 
 .method--post {
-  background: #b4690e;
+  background: var(--method-post);
 }
 
 .method--put,
 .method--patch {
-  background: #8a5a12;
+  background: var(--method-put);
 }
 
 .method--delete {
-  background: #b23b3b;
+  background: var(--method-delete);
 }
 
 .path {
@@ -645,6 +673,14 @@ body.nav-open {
   background: var(--bg-soft);
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
+}
+
+/* JS-Wrapper um Content-Tabellen (role=region, tabindex=0): horizontales
+   Scrollen ohne display:block auf der Tabelle selbst, denn das zerstoert
+   die Tabellensemantik in WebKit/VoiceOver. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 /* Code-Tabs */
@@ -754,7 +790,7 @@ body.nav-open {
 .tryit__field input {
   font: inherit;
   padding: 0.45rem 0.6rem;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: 8px;
   background: var(--bg);
 }
@@ -805,9 +841,16 @@ body.nav-open {
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.7rem;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border-control);
   border-radius: 10px;
   background: var(--bg-soft);
+}
+
+/* Fokusindikator fuer das Suchfeld: der Ring liegt auf dem Feld-Container,
+   weil das Input selbst outline: none traegt (WCAG 2.4.7). */
+.search__field:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .search__field svg {
@@ -871,6 +914,14 @@ body.nav-open {
 .search__result:hover {
   background: var(--bg-soft);
   text-decoration: none;
+}
+
+/* Aktive Option bei Pfeiltasten-Navigation (aria-activedescendant): gleiche
+   Optik wie der aktive Nav-Link, deutlich unterscheidbar vom Hover. */
+.search__result[aria-selected="true"] {
+  background: var(--accent-soft);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
 }
 
 .search__result-title {
@@ -1261,7 +1312,9 @@ body.nav-open {
 
 .feature h3::before {
   counter-increment: feat;
-  content: counter(feat, decimal-leading-zero);
+  /* Alternativtext "": der dekorative Zaehler wird nicht als Teil der
+     Ueberschrift vorgelesen (Fallback ohne Alt-Syntax: kein Zaehler). */
+  content: counter(feat, decimal-leading-zero) / "";
   font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 600;
@@ -1365,8 +1418,10 @@ body.nav-open {
     overflow-wrap: normal;
   }
   /* Tabellen ohne eigenes Mobil-Layout (alle ausser .cov) scrollen intern,
-     statt die ganze Seite zu verbreitern. */
-  .content table:not(.cov) {
+     statt die ganze Seite zu verbreitern. Mit JS uebernimmt das der
+     .table-scroll-Wrapper (Tabellensemantik bleibt erhalten); display:block
+     auf der Tabelle ist nur noch der No-JS-Fallback. */
+  html:not(.js) .content table:not(.cov) {
     display: block;
     max-width: 100%;
     overflow-x: auto;
@@ -1442,7 +1497,9 @@ body.nav-open {
   color: var(--color-accent-strong);
 }
 .tldr__title::before {
-  content: "// ";
+  /* Alternativtext "": rein dekorativ, Screenreader lesen das "// " nicht vor.
+     Browser ohne content-Alt-Syntax lassen den Marker einfach weg. */
+  content: "// " / "";
   color: var(--border-strong);
 }
 .tldr p {
@@ -1502,4 +1559,18 @@ body.nav-open {
 }
 .legal dd {
   margin: 0 0 0.2rem;
+}
+
+/* Reduzierte Bewegung (WCAG 2.3.3): Catch-all fuer ALLE Transitions und
+   Animationen, auch die ohne eigenen Guard (Skip-Link, Nav-Chevrons,
+   Feature-Hover). Steht bewusst am Dateiende (Quellreihenfolge). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
 }

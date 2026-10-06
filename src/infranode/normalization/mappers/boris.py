@@ -66,10 +66,9 @@ def map_land_values(
             brw_min_eur_m2=row["brw_min_eur_m2"],
             brw_max_eur_m2=row["brw_max_eur_m2"],
             zone_count=row["zone_count"],
-            # Kanonisch reference_date; das abgekündigte stichtag trägt identisch
-            # denselben Wert. Auch Bestands-Zeilen ohne das neue Feld werden so
-            # befüllt (Abkündigung 2026-08-01).
-            stichtag=row["stichtag"],
+            # Kanonisch reference_date; das deutsche stichtag war seit
+            # 2026-08-01 abgekündigt und ist zum 2026-08-31 entfernt. ``row``
+            # behält seinen Quell-Schlüssel (Lesekontrakt, keine API-Ausgabe).
             reference_date=row["stichtag"],
             bbox_radius_deg=row["bbox_radius_deg"],
             # .get(): ältere Archiv-/Ingest-Zeilen ohne das Feld -> False.

@@ -101,12 +101,10 @@ async def fetch_hospital_atlas(
             {
                 "name": item.get("name"),
                 "street": item.get("street"),
-                # Kanonische Adressnamen (Konsistenz-Audit 2026-07-25);
-                # zip/city bleiben abgekuendigt mit identischem Wert stehen.
+                # Kanonische Adressnamen (Konsistenz-Audit 2026-07-25); zip/city
+                # waren seit 2026-08-01 abgekuendigt, entfernt zum 2026-08-31.
                 "post_code": post_code(item.get("zip")),
                 "place": clean_text(item.get("city")),
-                "zip": post_code(item.get("zip")),
-                "city": clean_text(item.get("city")),
                 "beds": beds,
                 "lat": hlat,
                 "lon": hlon,

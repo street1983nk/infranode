@@ -153,10 +153,10 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
         class="city-search__input"
         placeholder="Filter by name, slug or state..."
         autocomplete="off"
-        aria-label="Filter cities by name, slug or state"
       />
     </label>
   </p>
+  <p class="sr-only" id="cities-count" aria-live="polite"></p>
 
   <table class="cities" id="cities-table">
     <thead>
@@ -220,7 +220,7 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
   .city-search__input {
     font: inherit;
     padding: 0.5rem 0.7rem;
-    border: 1px solid var(--border-strong);
+    border: 1px solid var(--border-control);
     border-radius: 8px;
     background: var(--bg);
     color: var(--fg);
@@ -258,6 +258,7 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
     var input = document.getElementById("city-search");
     var table = document.getElementById("cities-table");
     var empty = document.getElementById("cities-empty");
+    var count = document.getElementById("cities-count");
     if (!input || !table) return;
     var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
     input.addEventListener("input", function () {
@@ -276,6 +277,13 @@ const coreCount = sorted.filter((c) => c.coverage === "full").length;
         if (match) visible++;
       }
       if (empty) empty.hidden = visible !== 0;
+      // Announce the result count to screen readers (aria-live=polite).
+      if (count) {
+        count.textContent =
+          visible === 0
+            ? "No city found."
+            : visible + " of " + rows.length + " cities shown.";
+      }
     });
   })();
 </script>

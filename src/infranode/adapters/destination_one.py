@@ -190,6 +190,13 @@ async def fetch_events(
         location = it.get("name") or it.get("city")
         events.append(
             {
+                # Kanonischer Bezeichnungsname wie in allen anderen Datenarten.
+                # BEFUND 2026-08-31: die Abkuendigung title->name vom 2026-08-01
+                # war hier nie umgesetzt, diese Quelle lieferte NUR title. Darum
+                # bekommt title eine NEUE Frist (fruehestens 2026-09-30) statt
+                # heute zu fallen: entfernt wuerde sonst ein Feld, auf dessen
+                # Nachfolger niemand umsteigen konnte.
+                "name": it.get("title"),
                 "title": it.get("title"),
                 "date_from": date_from_raw,
                 "date_to": date_to_raw,

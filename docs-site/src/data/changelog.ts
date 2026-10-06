@@ -41,6 +41,311 @@ export const KIND_LABEL: Record<ChangeKind, { de: string; en: string }> = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    date: "2026-09-15",
+    kind: "fixed",
+    de: {
+      title: "Spritpreise: Anfrage-Spitzen werden zeitversetzt beantwortet statt mit 503-Wellen",
+      body:
+        "Tankerkönig erlaubt eine Anfrage je Minute für alle Städte zusammen. " +
+        "Dieser Platz wurde bisher nur in dem Moment vergeben, in dem jemand " +
+        "fragte. Kommen viele Anfragen als Block über alle Städte, bekamen ein " +
+        "bis zwei davon den Platz der Minute, der Rest ging leer aus. Selten " +
+        "abgefragte Städte erreichten dadurch nie wieder eine Auffrischung, ihr " +
+        "Zwischenstand lief aus, und danach kam für sie dauerhaft 503. Ab " +
+        "sofort geht eine Anfrage, die den Platz der Minute verliert, nicht " +
+        "mehr verloren: die Stadt wird vorgemerkt und der Abruf in den " +
+        "folgenden Minuten nachgeholt, über denselben Weg und dieselbe Bremse " +
+        "wie jede normale Anfrage. Ist der Platz gerade vergeben, wird still " +
+        "gewartet statt gedrängelt. Für Nutzende heißt das: eine Stadt, die " +
+        "lange niemand abgefragt hat, antwortet nach kurzer Zeit wieder mit " +
+        "Daten statt mit 503. Abgerufen wird weiterhin nur, was jemand " +
+        "tatsächlich angefragt hat; eine Vormerkung verfällt nach sechs " +
+        "Stunden. An den Fenstern für Frische und Zwischenstand ändert sich " +
+        "nichts.",
+    },
+    en: {
+      title: "Fuel prices: request peaks are now answered with a delay instead of 503 waves",
+      body:
+        "Tankerkoenig allows one request per minute for all cities combined. " +
+        "That slot used to be handed out only at the moment someone asked. " +
+        "When many requests arrive as a sweep across all cities, one or two of " +
+        "them won the slot and the rest got nothing. Rarely requested cities " +
+        "therefore never got refreshed again, their cached value expired, and " +
+        "from then on they returned 503 permanently. From now on a request " +
+        "that loses the slot is no longer lost: the city is queued and the " +
+        "fetch is caught up over the following minutes, using the same path " +
+        "and the same rate limit as any normal request. If the slot is taken, " +
+        "the run waits quietly instead of pushing. For consumers this means a " +
+        "city nobody has queried for a long time answers with data again " +
+        "shortly afterwards instead of 503. Only what someone actually " +
+        "requested is ever fetched, and a queued entry expires after six " +
+        "hours. The freshness and stale windows are unchanged.",
+    },
+    endpoint: "getCityFuelPrices",
+  },
+  {
+    date: "2026-09-07",
+    kind: "changed",
+    de: {
+      title: "Spritpreise: Frische nach dem Tagesverlauf, Zwischenstand für einen Tag",
+      body:
+        "Seit dem 1. April 2026 dürfen Kraftstoffpreise nur noch einmal je " +
+        "Kalendertag steigen, und zwar um 12:00 Uhr; Senkungen bleiben " +
+        "jederzeit möglich (Kraftstoffpreisanpassungsgesetz). Der Tagesverlauf " +
+        "der Daten ist damit bekannt statt geraten, und das Frische-Fenster " +
+        "der Spritpreise folgt ihm jetzt: zwischen 22 und 5 Uhr vier Stunden, " +
+        "vormittags 60 Minuten, im Erhöhungsfenster von 11:50 bis 12:20 fünf " +
+        "Minuten, von 12:20 bis 19 Uhr 20 Minuten und abends 45 Minuten. " +
+        "Zusätzlich endet jedes Fenster spätestens um 11:50 Uhr: ein Preis, " +
+        "der um 11 Uhr geholt wurde, gilt nicht über den Mittagssprung hinaus " +
+        "als frisch. Die zehn Minuten Vorlauf haben einen Grund, das " +
+        "Bundeskartellamt beobachtet 96,5 Prozent der Erhöhungen im Fenster " +
+        "11:50 bis 12:10. Zweite Änderung: eine einmal abgefragte Stadt bleibt " +
+        "jetzt bis zu 24 Stunden aus dem Cache beantwortbar, vorher drei " +
+        "Stunden. Grund sind 151 Fehlerantworten (503) in 24 Stunden, knapp " +
+        "29 Prozent der Anfragen. Tankerkönig erlaubt eine Anfrage je Minute " +
+        "für alle Städte zusammen, und jede Stadt, die drei Stunden niemand " +
+        "abfragte, war wieder kalt und verlor gegen dieses Limit. Damit das " +
+        "ehrlich bleibt, nennt data.retrieved_at ab jetzt den Zeitpunkt des " +
+        "Abrufs bei der Quelle und nicht mehr den der Antwort; cache_status " +
+        "STALE weist den Zwischenstand weiterhin aus. Wer das Alter der Preise " +
+        "prüfen will, liest also diese beiden Felder. Die Quelle sieht dadurch " +
+        "keine einzige Anfrage mehr als vorher: es bleibt bei einer Anfrage je " +
+        "Minute, nur auf Nutzeranfrage, ohne dauerhafte Speicherung und ohne " +
+        "Abrufe im Hintergrund.",
+    },
+    en: {
+      title: "Fuel prices: freshness follows the day, cached data for a day",
+      body:
+        "Since 1 April 2026, German fuel prices may rise only once per " +
+        "calendar day, at 12:00 local time; decreases remain possible at any " +
+        "time (Kraftstoffpreisanpassungsgesetz, the fuel price adjustment " +
+        "act). The daily shape of the data is therefore known rather than " +
+        "guessed, and the freshness window of the fuel prices now follows it: " +
+        "four hours between 22:00 and 05:00, 60 minutes in the morning, five " +
+        "minutes inside the increase window from 11:50 to 12:20, 20 minutes " +
+        "from 12:20 to 19:00 and 45 minutes in the evening. On top of that, " +
+        "every window ends at 11:50 at the latest: a price fetched at 11:00 " +
+        "does not count as fresh beyond the noon step. The ten minutes of " +
+        "lead time are deliberate, the federal cartel office observes 96.5 " +
+        "percent of all increases in the window from 11:50 to 12:10. Second " +
+        "change: a city that has been requested once now stays answerable " +
+        "from the cache for up to 24 hours, previously three hours. The " +
+        "reason is 151 error responses (503) in 24 hours, close to 29 percent " +
+        "of all requests. Tankerkönig allows one request per minute for all " +
+        "cities together, and every city that nobody asked for during three " +
+        "hours was cold again and lost against that limit. To keep this " +
+        "honest, data.retrieved_at now names the time of the upstream fetch " +
+        "instead of the time of the response; cache_status STALE still marks " +
+        "cached data. Reading both fields tells you exactly how old a price " +
+        "is. The source sees no additional requests at all: it stays at one " +
+        "request per minute, only on a user request, with nothing stored " +
+        "permanently and nothing fetched in the background.",
+    },
+    endpoint: "getCityFuelPrices",
+  },
+  {
+    date: "2026-09-06",
+    kind: "changed",
+    de: {
+      title: "Spritpreise: drei Stunden Zwischenstand, eine Anfrage darf auf den freien Abruf warten",
+      body:
+        "Nachtrag zum selben Tag: das Stundenraster vieler Clients traf genau " +
+        "das 60-Minuten-Fenster. Wer eine Stadt stündlich abfragt, kam an, " +
+        "wenn der Zwischenstand gerade abgelaufen war, und ein kalter Eintrag " +
+        "verliert gegen das Limit von einer Anfrage je Minute. Im Nachmittags" +
+        "protokoll kamen 13 von 48 Bremsen-503 exakt 45 bis 61 Minuten nach " +
+        "der vorigen Anfrage derselben Stadt. Deshalb zwei Änderungen. Erstens " +
+        "bleibt eine einmal abgefragte Stadt jetzt bis zu drei Stunden aus dem " +
+        "Cache beantwortbar, nach den ersten fünf Minuten als STALE " +
+        "gekennzeichnet (cache_status); ein Stundenrhythmus findet damit " +
+        "immer einen Zwischenstand. Zweitens darf genau EINE Anfrage je Quelle " +
+        "auf den nächsten freien Abruf warten, höchstens 20 Sekunden; früher " +
+        "wurde jede Restwartezeit über 12 Sekunden sofort abgewiesen, obwohl " +
+        "27 von 48 dieser 503 nur Sekunden vom nächsten freien Abruf entfernt " +
+        "waren. Jede weitere gleichzeitige Anfrage derselben Quelle wird " +
+        "weiterhin sofort mit 503 und Retry-After beantwortet, statt sich " +
+        "anzustellen. Die Quelle sieht dadurch keine einzige Anfrage mehr als " +
+        "vorher: es bleibt bei einer Anfrage je Minute, nur auf Nutzeranfrage " +
+        "und weiterhin ohne dauerhafte Speicherung und ohne Abrufe im " +
+        "Hintergrund. Wer lieber sofort einen 503 als bis zu 20 Sekunden " +
+        "Wartezeit sieht, kann den Betreiber-Schalter " +
+        "INFRANODE_SOURCE_PACE_WAIT_MAX_S auf 12 setzen.",
+    },
+    en: {
+      title: "Fuel prices: three hours of cached data, one request may wait for the free slot",
+      body:
+        "Follow-up on the same day: many clients poll on the hour, which hit " +
+        "the 60 minute window exactly. Asking for a city once an hour meant " +
+        "arriving just after the cached value had expired, and a cold entry " +
+        "loses against the limit of one request per minute. In the afternoon " +
+        "log, 13 of 48 brake 503s came exactly 45 to 61 minutes after the " +
+        "previous request for the same city. Hence two changes. First, a city " +
+        "that has been requested once now stays answerable from the cache for " +
+        "up to three hours, marked STALE in cache_status after the first five " +
+        "minutes, so an hourly rhythm always finds a cached value. Second, " +
+        "exactly ONE request per source may wait for the next free upstream " +
+        "call, at most 20 seconds; previously any remaining wait above 12 " +
+        "seconds was rejected right away, even though 27 of 48 of those 503s " +
+        "were only seconds away from the next free call. Every further " +
+        "concurrent request for the same source still gets an immediate 503 " +
+        "with Retry-After instead of queueing. The source sees no additional " +
+        "requests at all: it stays at one request per minute, only on a user " +
+        "request, still with nothing stored permanently and nothing fetched " +
+        "in the background. If you prefer an immediate 503 over a wait of up " +
+        "to 20 seconds, the operator switch INFRANODE_SOURCE_PACE_WAIT_MAX_S " +
+        "can be set to 12.",
+    },
+    endpoint: "getCityFuelPrices",
+  },
+  {
+    date: "2026-09-06",
+    kind: "fixed",
+    de: {
+      title: "Spritpreise: weniger 503 unter dem Ein-Anfrage-pro-Minute-Limit, Retry-After am 503",
+      body:
+        "Die Bremse vom 4. September hält das Limit der Quelle ein, hatte aber " +
+        "eine Nebenwirkung: eine Stadt, die eine Viertelstunde lang niemand " +
+        "abgefragt hatte, fiel aus dem Cache und verlor dann gegen die Bremse, " +
+        "also 503 statt Preise. Zwei Änderungen. Erstens bleibt eine einmal " +
+        "abgefragte Stadt jetzt bis zu 60 Minuten aus dem Cache beantwortbar, " +
+        "nach den ersten fünf Minuten als STALE gekennzeichnet (cache_status). " +
+        "Es wird weiterhin nichts dauerhaft gespeichert und nichts im " +
+        "Hintergrund abgerufen, die Quelle wird nur auf Nutzeranfrage gefragt. " +
+        "Zweitens trägt ein 503, der aus " +
+        "der Bremse stammt, jetzt einen Retry-After-Header mit den Sekunden bis " +
+        "zum nächsten freien Abruf; Meldung und Hinweis im Fehler-Envelope sagen " +
+        "das auch in Worten. Ein 503 ohne Retry-After bedeutet weiterhin, dass " +
+        "die Quelle selbst nicht antwortet.",
+    },
+    en: {
+      title: "Fuel prices: fewer 503s under the one-request-per-minute limit, Retry-After on 503",
+      body:
+        "The brake from 4 September keeps the source's limit, but it had a side " +
+        "effect: a city nobody had asked for in fifteen minutes dropped out of " +
+        "the cache and then lost against the brake, so 503 instead of prices. " +
+        "Two changes. First, a city that has been requested once now stays " +
+        "answerable from the cache for up to 60 minutes, marked STALE in " +
+        "cache_status after the first five. Nothing is stored permanently and " +
+        "nothing is fetched in the background; the source is only asked on a " +
+        "user request. Second, a " +
+        "503 that comes from the brake now carries a Retry-After header with the " +
+        "seconds until the next free upstream call; message and hint in the error " +
+        "envelope say the same in words. A 503 without Retry-After still means " +
+        "the source itself is not answering.",
+    },
+    endpoint: "getCityFuelPrices",
+  },
+  {
+    date: "2026-09-04",
+    kind: "changed",
+    de: {
+      title: "Spritpreise: Aggregat-Bremse auf das Limit der Quelle gezogen",
+      body:
+        "Die Spritpreise stammen von Tankerkönig, und deren Limit ist eine " +
+        "Anfrage pro Minute. Unsere Ausgangsbremse liess bisher deutlich mehr " +
+        "zu, was in einer vorübergehenden Sperre unserer Server-Adresse " +
+        "endete. Die Bremse entspricht jetzt dem Limit der Quelle. Für den " +
+        "Normalfall ändert sich nichts: jede Stadt liegt fünf Minuten im " +
+        "Cache, wiederholte Abfragen derselben Stadt sind also unverändert " +
+        "schnell. Neu ist, dass eine Anfrage auf eine Stadt, die gerade nicht " +
+        "im Cache liegt, mit 503 und dem Code upstream_unavailable antworten " +
+        "kann, wenn der letzte Abruf bei der Quelle weniger als eine Minute " +
+        "zurückliegt. Vorher wäre dieselbe Anfrage stattdessen lange hängen " +
+        "geblieben. Wer viele Städte hintereinander abfragt, sollte 503 " +
+        "abfangen und die Anfrage später wiederholen; der Hinweis in der " +
+        "Antwort nennt GET /api/v1/health für den Zustand der Quellen.",
+    },
+    en: {
+      title: "Fuel prices: outbound pacing aligned with the source limit",
+      body:
+        "Fuel prices come from Tankerkönig, whose limit is one request per " +
+        "minute. Our outbound pacing allowed considerably more than that, " +
+        "which ended in a temporary block of our server address. The pacing " +
+        "now matches the source limit. Nothing changes for the normal case: " +
+        "every city stays in the cache for five minutes, so repeated requests " +
+        "for the same city are as fast as before. What is new is that a " +
+        "request for a city that is currently not cached may answer with 503 " +
+        "and the code upstream_unavailable when the last upstream call was " +
+        "less than a minute ago. Previously the same request would have hung " +
+        "for a long time instead. If you query many cities in sequence, catch " +
+        "503 and retry later; the hint in the response points to " +
+        "GET /api/v1/health for the state of the sources.",
+    },
+    endpoint: "getCityFuelPrices",
+  },
+  {
+    date: "2026-08-31",
+    kind: "removed",
+    de: {
+      title: "Alte Feldnamen entfernt (Abkündigung vom 01.08.)",
+      body:
+        "Die am 01.08.2026 abgekündigten alten Feldnamen sind fristgerecht " +
+        "nach 30 Tagen aus den Antworten entfernt. Jedes betroffene Feld " +
+        "trug den Wert seit dem 01.08. doppelt; ab jetzt gilt nur noch der " +
+        "kanonische englische Name. Betroffen sind unter anderem stand " +
+        "(jetzt as_of), bundesland (federal_state), stichtag " +
+        "(reference_date), granularity (coverage_granularity), die " +
+        "deutschen Steuer-, Gewerbe- und Insolvenzfelder, die rohen " +
+        "Quell-Feldnamen von Baumkataster, Denkmalliste und Baustellen, " +
+        "dist_km (distance_km), zip/category (post_code/station_category), " +
+        "plz/ort (post_code/place), stop_id an den Bahnhofstafeln " +
+        "(trip_stop_id) sowie die sechs camelCase-Rohfelder des " +
+        "Autobahn-Feeds. Die vollständige Liste je Endpunkt steht im " +
+        "Abkündigungs-Register der Dokumentation. Die abgekündigten " +
+        "Altpfade unter /api/v1/live mit deutschen Slugs bleiben wie " +
+        "zugesagt als Alias erhalten.",
+    },
+    en: {
+      title: "Old field names removed (deprecated on 1 August)",
+      body:
+        "The old field names deprecated on 2026-08-01 have been removed " +
+        "from responses after the announced 30-day window. Each affected " +
+        "field had been carrying its value twice since 1 August; from now " +
+        "on only the canonical English name is returned. This covers, " +
+        "among others, stand (now as_of), bundesland (federal_state), " +
+        "stichtag (reference_date), granularity (coverage_granularity), " +
+        "the German tax, business-registration and insolvency fields, the " +
+        "raw source field names of the tree cadastre, heritage register " +
+        "and roadworks sources, dist_km (distance_km), zip/category " +
+        "(post_code/station_category), plz/ort (post_code/place), stop_id " +
+        "on the station boards (trip_stop_id), and the six camelCase raw " +
+        "fields of the Autobahn feed. The full per-endpoint list lives in " +
+        "the documentation's deprecation register. The deprecated legacy " +
+        "paths under /api/v1/live with German slugs remain available as " +
+        "aliases, as promised.",
+    },
+  },
+  {
+    date: "2026-08-31",
+    kind: "deprecated",
+    de: {
+      title: "Veranstaltungen: title wird zu name (neue Frist bis 30.09.)",
+      body:
+        "Der Veranstaltungsname im Endpunkt /cities/{slug}/events heißt " +
+        "jetzt kanonisch name, wie in allen anderen Datenarten. Das alte " +
+        "Feld title liefert bis auf Weiteres denselben Wert und wird " +
+        "frühestens am 30.09.2026 entfernt. Hintergrund: die Ankündigung " +
+        "vom 01.08. hatte den Nachfolger name für die " +
+        "destination.one-Städte nie ausgeliefert; ein Entfernen heute " +
+        "hätte ein Feld ohne verfügbaren Ersatz gestrichen. Deshalb läuft " +
+        "eine neue, saubere Frist.",
+      },
+    en: {
+      title: "Events: title becomes name (new window until 30 September)",
+      body:
+        "The event name on /cities/{slug}/events is now canonically " +
+        "called name, as in every other data type. The old field title " +
+        "keeps returning the same value for now and will be removed no " +
+        "earlier than 2026-09-30. Background: the 1 August announcement " +
+        "never actually shipped the successor field name for the " +
+        "destination.one cities, so removing title today would have " +
+        "dropped a field without an available replacement. Hence a fresh, " +
+        "clean window.",
+    },
+    endpoint: "getCityEvents",
+  },
+  {
     date: "2026-08-24",
     kind: "fixed",
     de: {

@@ -97,9 +97,9 @@ async def fetch_events(
             continue
         # Phase-7/8/9-Konvention: fehlendes Feld -> None (kein KeyError).
         # Adresse einmal normalisiert (Konsistenz-Audit 2026-07-25): Leerstrings
-        # werden None, die PLZ immer fuenfstellig. Die kanonischen englischen
-        # Namen (street/house_number/post_code) stehen additiv neben den alten
-        # deutschen Feldern, die abgekuendigt sind.
+        # werden None, die PLZ immer fuenfstellig. Nur noch die kanonischen
+        # englischen Namen (street/house_number/post_code); die deutschen Felder
+        # waren seit 2026-08-01 abgekuendigt und sind zum 2026-08-31 entfernt.
         street = clean_text(it.get("strasse"))
         house_number = clean_text(it.get("hausnummer"))
         if house_number is None:
@@ -119,10 +119,6 @@ async def fetch_events(
                 "street": street,
                 "house_number": house_number,
                 "post_code": plz,
-                # Abgekuendigt (alte deutsche Namen), Werte identisch:
-                "strasse": street,
-                "hausnummer": house_number,
-                "plz": plz,
                 "link": it.get("link"),
                 # D-06: uniform DL-DE/Zero (= _LICENSE_RAW "dl-de-zero-2.0"); läuft
                 # durch dieselbe map_license-Logik (Kommentar-Fix Audit 2026-06-29:

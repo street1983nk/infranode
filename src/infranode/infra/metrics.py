@@ -68,6 +68,16 @@ _MCP_CLIENTS_PREFIX = "metrics:mcp:clients:"
 _GPT_ROUTE_PREFIX = "metrics:gpt:route:"
 _GPT_USERS_PREFIX = "metrics:gpt:users:"
 
+# Neue-Devs-Stunden-Bucket (Fix ntfy-Flut 2026-10-05): der Erstkontakt eines neuen
+# Devs löste bisher je IP einen ntfy-Einzelpush aus (~235/Tag, 460 von 474
+# Nachrichten in 48 h); ntfy.sh drosselte daraufhin die Upstream-Polls (429) und
+# der iPhone-Push blieb aus. Jetzt landet jeder Erstkontakt in einem Hash je
+# UTC-Stunde (Feld=Dev-Kennung -> "Typ\tErster Abruf\tUser-Agent") und erscheint
+# als Abschnitt im stündlichen consumer-digest, also OHNE eigene Nachricht. Gleiche
+# 3h-TTL wie die übrigen Stunden-Buckets; Redis-persistent, daher übersteht der
+# Bucket einen api-Neustart.
+_NEW_DEV_PREFIX = "metrics:newdevs:"
+
 # Tages-Request-Zähler je Kanal (api|mcp): ein einzelner Counter-Key pro UTC-Tag
 # (metrics:daily:<channel>:<YYYY-MM-DD>) für den täglichen 00:05-Digest. Bewusst
 # NICHT per-IP wie die Consumer-Buckets: genau 2 Keys/Tag, daher kein Redis-OOM
@@ -378,6 +388,59 @@ async def record_gpt_action(redis, *, route: str, user: str, now) -> None:
         await pipe.execute()
     except Exception as exc:
         log.debug("record_gpt_action_failed", error=str(exc))
+
+
+async def record_new_dev(
+    redis, *, ident: str, kind: str, first_call: str, user_agent: str, now
+) -> None:
+    """Bündelt einen Dev-Erstkontakt in den Stunden-Bucket statt eines Einzelpushs.
+
+    ``ident`` ist die Dev-Kennung ohne Präfix (IP bzw. Key-Hash), ``kind`` "IP"
+    oder "API-Key", ``first_call`` z.B. ``"GET /api/v1/... -> 200"``. Alle Werte
+    werden über ``_sanitize_field`` bereinigt (Zero-Trust: User-Agent und Pfad
+    kommen von aussen). Graceful wie ``record_mcp_action``: crasht nie den Request.
+    """
+    try:
+        key = f"{_NEW_DEV_PREFIX}{consumer_hour(now)}"
+        meta = "\t".join(
+            (
+                _sanitize_field(kind, max_len=16),
+                _sanitize_field(first_call, max_len=120),
+                _sanitize_field(user_agent, max_len=80),
+            )
+        )
+        pipe = redis.pipeline()
+        pipe.hset(key, _sanitize_field(ident), meta)
+        pipe.expire(key, _CONSUMER_TTL)
+        await pipe.execute()
+    except Exception as exc:
+        log.debug("record_new_dev_failed", error=str(exc))
+
+
+async def read_new_devs(redis, hour: str) -> list[dict]:
+    """Liest die neuen Devs eines Stunden-Buckets für den consumer-digest.
+
+    Rückgabe je Eintrag: ``{ident, kind, first_call, user_agent}``, nach Kennung
+    sortiert (stabile Reihenfolge im Push). Fehlender Key / Redis-Fehler -> leere
+    Liste. decode_responses-agnostisch via ``_to_bytes``.
+    """
+    try:
+        raw = await redis.hgetall(f"{_NEW_DEV_PREFIX}{hour}")
+    except Exception:
+        return []
+    out = []
+    for ident_raw, meta_raw in (raw or {}).items():
+        parts = _to_bytes(meta_raw).decode().split("\t")
+        out.append(
+            {
+                "ident": _to_bytes(ident_raw).decode(),
+                "kind": parts[0] if parts else "",
+                "first_call": parts[1] if len(parts) > 1 else "",
+                "user_agent": parts[2] if len(parts) > 2 else "",
+            }
+        )
+    out.sort(key=lambda d: d["ident"])
+    return out
 
 
 async def read_consumers(redis, hour: str) -> list[dict]:

@@ -41,16 +41,21 @@ einen KeyError/IndexError auszulösen.
 
 from __future__ import annotations
 
+import asyncio
 import math
+import time
 from datetime import UTC, datetime
 
 import httpx
+import structlog
 
 # Host hartkodiert (T-07-IN SSRF): nur diese eine öffentliche UBA-Instanz.
 # 2026-06-13: UBA-Luftdaten-API umgezogen. Der alte Host www.umweltbundesamt.de
 # /api/air_data antwortet mit 301 auf luftdaten.umweltbundesamt.de/api/air-data
 # (Unterstrich -> Bindestrich); der Adapter folgt Redirects bewusst nicht (SSRF),
 # daher lief er ins Leere. Neue Basis verifiziert: stations/components/measures = 200.
+log = structlog.get_logger()
+
 _BASE = "https://luftdaten.umweltbundesamt.de/api/air-data/v3"
 
 # v3-Komponenten-IDs (Adapter-lokal). Korrektes Schema: 1=PM10, 9=PM2,5,
@@ -89,7 +94,13 @@ def _deg_distance(alat: float, alon: float, blat: float, blon: float) -> float:
 
 
 def _nearest_stations(
-    stations: dict, lat: float, lon: float, *, limit: int, today: str | None = None
+    stations: dict,
+    lat: float,
+    lon: float,
+    *,
+    limit: int,
+    today: str | None = None,
+    measuring: frozenset[str] | None = None,
 ) -> list[tuple[str, float, float]]:
     """Liefert die ``limit`` nächsten AKTIVEN Stationen zu (lat, lon), nach Distanz.
 
@@ -144,9 +155,21 @@ def _nearest_stations(
         if not active_to or str(active_to) >= today:
             active.append(entry)
 
-    # Aktive Stationen bevorzugen; gibt es gar keine (Format-/Datenausfall),
-    # defensiv auf alle zurückfallen statt einen Fehler zu werfen.
-    pool = active or candidates
+    # Messende Stationen bevorzugen, dann aktive, dann alle: jede Stufe ist ein
+    # Rückfall, nie ein Fehler. ``measuring`` kommt aus ``_measuring_stations``
+    # und ist leer, wenn die Liste nicht zu holen war; dann greift exakt das
+    # Verhalten von vor dem 2026-09-17.
+    # Warum die Stufe überhaupt nötig ist (Vorfall 2026-09-17): "station active
+    # to" ist KEINE Aussage darüber, ob eine Station heute Werte liefert. Station
+    # 1195 (Köln) und 881 (Rostock) gelten dort als aktiv, stehen aber nicht in
+    # der Messliste des Tages und antworten auf jede measures-Abfrage mit einem
+    # leeren Datenblock. Der Adapter fuhr deshalb die volle Kaskade (fünf
+    # Komponenten mal zehn Stationen = bis zu 50 Abfragen je Stadt) vergeblich,
+    # und genau dieser Burst hat den 429 der Quelle ausgelöst.
+    measuring_pool = (
+        [entry for entry in active if entry[1] in measuring] if measuring else []
+    )
+    pool = measuring_pool or active or candidates
     if not pool:
         raise httpx.HTTPError("UBA /stations/json: keine Station mit Koordinaten")
 
@@ -167,26 +190,43 @@ def _nearest_station(
 
 
 def _latest_value(measures: dict, station_id: str) -> tuple[float | None, str | None]:
-    """Liest defensiv den jüngsten Messwert + Zeitpunkt aus dem measures-Body.
+    """Liest defensiv den jüngsten GEFÜLLTEN Messwert + Zeitpunkt aus dem Body.
 
     ``data`` ist ``station_id -> {datetime: [component_id, scope_id, value, ...]}``.
-    Rückgabe (value, observed_at_iso) des spätesten datetime-Schlüssels; bei
+    Rückgabe (value, observed_at_iso) der spätesten Zeitscheibe MIT Wert; bei
     leerem/fehlerhaftem Body ``(None, None)`` statt KeyError/IndexError (T-07-IN).
+
+    Warum nicht einfach die späteste Zeitscheibe (Vorfall 2026-09-17): die
+    Quelle legt die laufende Stunde bereits als Scheibe an und trägt den Wert
+    erst nach, ``[1, 2, None, "2026-09-17 18:00:00", None]``. Wer stur
+    ``max(keys)`` nimmt, liest an einer voll messenden Station ``None``, obwohl
+    17 gefüllte Stunden darunter liegen. Der Aufrufer wertete das als "Station
+    hat nichts" und kaskadierte durch alle zehn Nachbarstationen mal fünf
+    Komponenten - dieser Burst war es, der den 429 der Quelle auslöste, und
+    genau deshalb standen Städte wie Schwerin und Hannover trotz messender
+    Station auf einem leeren Datenblock.
     """
     by_time = (measures.get("data") or {}).get(station_id) or {}
     if not isinstance(by_time, dict) or not by_time:
         return None, None
 
-    latest_key = max(by_time.keys())
-    row = by_time.get(latest_key)
-    if not isinstance(row, list) or len(row) < 3:
-        return None, None
+    # Absteigend über die Zeitscheiben, bis eine einen echten Wert trägt. Der
+    # Zeitstempel gehört zum gefundenen Wert, nicht zur leeren Scheibe darüber.
+    value: float | None = None
+    latest_key: str | None = None
+    for key in sorted(by_time.keys(), reverse=True):
+        row = by_time.get(key)
+        if not isinstance(row, list) or len(row) < 3:
+            continue
+        try:
+            value = float(row[2])
+        except (TypeError, ValueError):
+            continue
+        latest_key = key
+        break
 
-    raw_value = row[2]
-    try:
-        value: float | None = float(raw_value)
-    except (TypeError, ValueError):
-        value = None
+    if latest_key is None:
+        return None, None
 
     # UBA-Zeitstempel "YYYY-MM-DD HH:MM:SS" -> ISO-8601 UTC.
     observed_at: str | None = None
@@ -200,6 +240,169 @@ def _latest_value(measures: dict, station_id: str) -> tuple[float | None, str | 
         observed_at = None
 
     return value, observed_at
+
+
+# Messliste des Tages: Stations-IDs, die im Tagesfenster ueberhaupt Werte
+# fuehren. Prozess-lokal je Tag gehalten, weil die Liste ueber den Tag stabil ist
+# und rund 500 KB gross. Der Cache haelt genau einen Tag; ein Tageswechsel
+# raeumt den alten Eintrag weg.
+_MEASURING_CACHE: dict[str, frozenset[str]] = {}
+
+# Single-Flight fuer den Messlisten-Abruf. Ohne ihn startet JEDE gleichzeitige
+# Stadtabfrage ihren eigenen Abruf, solange der Cache noch leer ist: der
+# Collector faehrt alle 84 Staedte parallel an, und am 2026-09-17 um 18:32:00
+# schlugen dadurch binnen einer Sekunde vier Messlisten-Abrufe und vierzehn 429
+# der Quelle auf. Mit dem Lock holt genau ein Aufruf die Liste, alle anderen
+# warten kurz und lesen sie dann aus dem Cache.
+_MEASURING_LOCK = asyncio.Lock()
+
+# Kurze Sperre nach einem Fehlschlag. Ohne sie rennt dieselbe Welle sofort
+# wieder los und haelt das Quota der Quelle unten. Eine Minute ist kurz genug,
+# dass sich ein Abruf im selben Collector-Zyklus noch erholen kann.
+_MEASURING_FAIL_COOLDOWN_S = 60.0
+_MEASURING_FAILED_UNTIL: dict[str, float] = {}
+
+# Kuerzer als bei der Messliste, und das mit Absicht: ohne Stationsliste
+# scheitert JEDER Stadtabruf, und die Sperre leert sich nur ueber einen
+# erfolgreichen Abruf, den sie selbst so lange verhindert. Sie soll den Ansturm
+# einer Welle abfangen, nicht die Erholung um eine Minute verzoegern. Fuer die
+# Messwerte gilt dasselbe.
+_STATIONS_FAIL_COOLDOWN_S = 10.0
+_MEASURES_FAIL_COOLDOWN_S = 10.0
+
+# Deckel fuer den Metadaten-Abruf. Er ist die groesste Antwort der Quelle und
+# darf einen Stadtabruf nicht aufhalten: laeuft er in den Deckel, faellt der
+# Adapter auf die alte Auswahl zurueck, statt den Abruf scheitern zu lassen.
+_META_TIMEOUT_S = 15.0
+
+
+async def _measuring_stations(http: httpx.AsyncClient, *, today: str) -> frozenset[str]:
+    """Stations-IDs, die am Tag ``today`` tatsaechlich Messwerte fuehren.
+
+    Quelle ist ``GET {_BASE}/meta/json?use=measure`` mit demselben Tagesfenster
+    wie die Messabfragen. Die Antwort traegt unter ``stations`` nur die Stationen
+    mit Messbetrieb im Fenster (am 2026-09-17: 420 von 2400 aus
+    ``stations/json``).
+
+    Rueckgabe ist bewusst eine leere Menge, wenn die Liste nicht zu holen ist:
+    der Aufrufer filtert dann nicht und verhaelt sich wie zuvor. Jede Stoerung
+    der Zusatzabfrage degradiert also still, sie darf den Stadtabruf nie
+    scheitern lassen.
+
+    Der Abruf laeuft unter ``_MEASURING_LOCK`` (Single-Flight): der erste
+    Aufrufer holt die Liste, alle gleichzeitigen warten und lesen danach den
+    Cache. Ein Fehlschlag sperrt den Abruf fuer ``_MEASURING_FAIL_COOLDOWN_S``,
+    damit dieselbe Welle nicht sofort erneut gegen die Quelle laeuft.
+    """
+    cached = _MEASURING_CACHE.get(today)
+    if cached is not None:
+        return cached
+    if _MEASURING_FAILED_UNTIL.get(today, 0.0) > time.monotonic():
+        return frozenset()
+
+    async with _MEASURING_LOCK:
+        # Zweite Pruefung unter dem Lock: waehrend des Wartens kann ein anderer
+        # Aufrufer die Liste geholt oder die Sperre gesetzt haben.
+        cached = _MEASURING_CACHE.get(today)
+        if cached is not None:
+            return cached
+        if _MEASURING_FAILED_UNTIL.get(today, 0.0) > time.monotonic():
+            return frozenset()
+        return await _fetch_measuring_stations(http, today=today)
+
+
+async def _fetch_measuring_stations(
+    http: httpx.AsyncClient, *, today: str
+) -> frozenset[str]:
+    """Holt die Messliste EINMAL und legt sie ab; nur aus ``_measuring_stations``.
+
+    Getrennt gehalten, damit der Lock-Abschnitt oben lesbar bleibt. Jeder
+    Fehlschlag degradiert still auf die leere Menge und setzt die kurze Sperre.
+    """
+    try:
+        resp = await http.get(
+            f"{_BASE}/meta/json",
+            params={
+                "use": "measure",
+                "lang": "de",
+                "date_from": today,
+                "time_from": "1",
+                "date_to": today,
+                "time_to": "24",
+            },
+            timeout=_META_TIMEOUT_S,
+        )
+        resp.raise_for_status()
+        rows = resp.json().get("stations") or {}
+        ids = frozenset(str(key) for key in rows)
+    except Exception as exc:  # jede Stoerung faellt auf das alte Verhalten zurueck
+        _MEASURING_FAILED_UNTIL[today] = time.monotonic() + _MEASURING_FAIL_COOLDOWN_S
+        log.warning(
+            "uba_measuring_list_unavailable",
+            error=type(exc).__name__,
+            cooldown_s=_MEASURING_FAIL_COOLDOWN_S,
+        )
+        return frozenset()
+    if not ids:
+        _MEASURING_FAILED_UNTIL[today] = time.monotonic() + _MEASURING_FAIL_COOLDOWN_S
+        log.warning("uba_measuring_list_empty", day=today)
+        return frozenset()
+    _MEASURING_CACHE.clear()
+    _MEASURING_FAILED_UNTIL.clear()
+    _MEASURING_CACHE[today] = ids
+    return ids
+
+
+# Stationsliste des Tages. Sie ist Stammdatenbestand, aendert sich innerhalb
+# eines Tages praktisch nicht und ist mit rund 560 KB die zweitgroesste Antwort
+# der Quelle. Vorfall 2026-09-17: sie wurde fuer JEDE der 84 Staedte neu geholt,
+# also rund 47 MB je Collector-Lauf, alles in derselben Sekunde. Genau wie bei
+# der Messliste holt sie jetzt ein Aufrufer je Tag, alle anderen warten kurz.
+_STATIONS_CACHE: dict[str, dict] = {}
+_STATIONS_LOCK = asyncio.Lock()
+_STATIONS_FAILED_UNTIL: dict[str, float] = {}
+
+
+async def _stations_payload(http: httpx.AsyncClient, *, today: str) -> dict:
+    """Die Stationsliste des Tages, hoechstens einmal je Tag geholt.
+
+    Anders als die Messliste darf sie NICHT still degradieren: ohne sie ist
+    keine Station waehlbar, der Stadtabruf muss dann scheitern und den
+    STALE-ON-ERROR-Pfad ausloesen. Ein Fehlschlag wird kurz gemerkt, damit die
+    83 wartenden Abrufe derselben Welle nicht einzeln nachschlagen; sie sehen
+    denselben Fehler, ohne die Quelle erneut anzufassen.
+    """
+    cached = _STATIONS_CACHE.get(today)
+    if cached is not None:
+        return cached
+    if _STATIONS_FAILED_UNTIL.get(today, 0.0) > time.monotonic():
+        raise httpx.HTTPError("UBA /stations/json: kurz zuvor fehlgeschlagen")
+
+    async with _STATIONS_LOCK:
+        cached = _STATIONS_CACHE.get(today)
+        if cached is not None:
+            return cached
+        if _STATIONS_FAILED_UNTIL.get(today, 0.0) > time.monotonic():
+            raise httpx.HTTPError("UBA /stations/json: kurz zuvor fehlgeschlagen")
+        try:
+            # Mit rund 560 KB die groesste Antwort der Quelle. Ohne eigenes
+            # Timeout liefe ausgerechnet sie in den straffen Client-Default
+            # (read 5 s), waehrend die kleineren Abrufe 15 s bekommen, und ein
+            # Timeout hier reisst den Breaker fuer die ganze Quelle mit.
+            resp = await http.get(
+                f"{_BASE}/stations/json",
+                params={"lang": "de"},
+                timeout=_META_TIMEOUT_S,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+        except Exception:
+            _STATIONS_FAILED_UNTIL[today] = time.monotonic() + _STATIONS_FAIL_COOLDOWN_S
+            raise
+        _STATIONS_CACHE.clear()
+        _STATIONS_FAILED_UNTIL.clear()
+        _STATIONS_CACHE[today] = payload
+        return payload
 
 
 async def fetch_air_uba(
@@ -216,22 +419,26 @@ async def fetch_air_uba(
     Rückgabe-Keys (exakt das, was ``map_air_uba`` erwartet): ``slug``,
     ``station_id`` (UBA-Station-ID der NÄCHSTEN Station als ``str``), ``lat``,
     ``lon`` (Geo der nächsten Station, stabiler record_id-Schlüssel),
-    ``observed_at`` (jüngster Messzeitpunkt über alle gefüllten Komponenten)
+    ``observed_at`` (ÄLTESTER Messzeitpunkt über alle gefüllten Komponenten)
     sowie ``pm10``/``pm25``/``no2``/``o3``/``so2`` (fehlender Wert -> ``None``).
     Der Host ist hartkodiert (SSRF-Schutz, T-07-IN); ``resp.raise_for_status()``
     ist Pflicht (STALE-ON-ERROR-Pfad).
     """
-    stations_resp = await http.get(f"{_BASE}/stations/json", params={"lang": "de"})
-    stations_resp.raise_for_status()
+    today = datetime.now(UTC).strftime("%Y-%m-%d")
+    measuring = await _measuring_stations(http, today=today)
+    stations = await _stations_payload(http, today=today)
     nearest = _nearest_stations(
-        stations_resp.json(), lat, lon, limit=_FALLBACK_STATIONS
+        stations,
+        lat,
+        lon,
+        limit=_FALLBACK_STATIONS,
+        measuring=measuring,
     )
 
     # Die nächste Station bestimmt station_id/Geo (stabiler record_id-Schlüssel,
     # ARCH-02); die weiteren dienen nur dem Pro-Komponenten-Fallback.
     primary_id, primary_lat, primary_lon = nearest[0]
 
-    today = datetime.now(UTC).strftime("%Y-%m-%d")
     raw: dict = {
         "slug": slug,
         "station_id": primary_id,
@@ -245,7 +452,17 @@ async def fetch_air_uba(
         "so2": None,
     }
 
-    latest_observed: str | None = None
+    # Der AELTESTE gefuellte Messzeitpunkt stempelt den Record, nicht der
+    # juengste (Owner-Entscheid 2026-09-17). Die fuenf Schadstoffe stammen nicht
+    # zwingend aus derselben Stunde: am 17.09. lagen zwischen dem juengsten und
+    # dem aeltesten Wert einer Stadt bis zu sieben Stunden (guetersloh,
+    # bielefeld), weil manche Stationen eine Komponente nur selten melden. Das
+    # Maximum haette einem sieben Stunden alten SO2-Wert denselben frischen
+    # Stempel gegeben wie einem aktuellen PM10. Das Minimum irrt dagegen in die
+    # sichere Richtung: der Record erscheint hoechstens aelter als sein
+    # frischester Wert, nie frischer als sein aeltester. Bei 74 der 84 Staedte
+    # stammen ohnehin alle Werte aus derselben Stunde, dort aendert sich nichts.
+    oldest_observed: str | None = None
     for key, component_id in _COMPONENTS.items():
         # Fallback-Kaskade je Komponente: erste Station, die einen Wert liefert,
         # gewinnt. SO2 darf weiterhin ehrlich None bleiben, wenn keine nahe
@@ -258,13 +475,116 @@ async def fetch_air_uba(
                 continue
             raw[key] = value
             if observed_at is not None and (
-                latest_observed is None or observed_at > latest_observed
+                oldest_observed is None or observed_at < oldest_observed
             ):
-                latest_observed = observed_at
+                oldest_observed = observed_at
             break
 
-    raw["observed_at"] = latest_observed
+    raw["observed_at"] = oldest_observed
     return raw
+
+
+# Messwerte je Komponente, fuer ALLE Stationen in einem Abruf. Laesst man den
+# station-Parameter weg, antwortet die Quelle mit dem kompletten Feld (am
+# 2026-09-17: 342 Stationen, 371 KB je Komponente). Vorher fragte der Adapter
+# Station fuer Station: 84 Staedte mal fuenf Komponenten sind 420 Abrufe je
+# Collector-Lauf, alle in derselben Sekunde, und genau die rissen weiterhin das
+# Quota der Quelle (zehn 429 noch im Lauf um 19:12). Jetzt sind es fuenf.
+#
+# Kurze Haltezeit statt Tagescache: das sind MESSWERTE, keine Stammdaten. Fuenf
+# Minuten decken den Ansturm eines Laufs ab, ohne die stuendliche Aktualitaet zu
+# verlieren, auf die der Stadt-Cache (fresh 600 s) aufsetzt.
+_MEASURES_TTL_S = 300.0
+# Gekeyt nach (Tag, Komponente), nicht nur nach Komponente: der Body wurde mit
+# date_from=today geholt. Ohne den Tag im Schluessel wuerde ueber den
+# UTC-Tageswechsel hinweg bis zu _MEASURES_TTL_S lang der Body des Vortags
+# ausgeliefert. Der Tageswechsel raeumt die alten Eintraege weg.
+_MEASURES_CACHE: dict[tuple[str, int], tuple[float, dict]] = {}
+_MEASURES_LOCKS: dict[tuple[str, int], asyncio.Lock] = {}
+
+# Ohne diese Sperre kehrt der Burst genau im Fehlerfall zurueck: faellt der
+# Abruf aus, holt sich jeder der 84 gleichzeitigen Stadtabrufe nacheinander den
+# Lock und feuert seinen eigenen, seriell hinter bis zu 83 Round-Trips. Also
+# dieselbe Menge Abrufe, die dieser Weg gerade beseitigt hat, und ausgerechnet
+# in dem Zustand, der den Vorfall ausgeloest hat.
+_MEASURES_FAILED_UNTIL: dict[tuple[str, int], float] = {}
+
+
+async def _measures_for_component(
+    http: httpx.AsyncClient, *, component_id: int, today: str
+) -> dict:
+    """Der measures-Body EINER Komponente fuer alle Stationen, kurz gehalten.
+
+    Gehalten wird je (Tag, Komponente): der Body traegt das Tagesfenster, ein
+    Eintrag des Vortags waere nach Mitternacht UTC schlicht falsch.
+
+    Ein Fehlschlag wird NICHT zwischengespeichert und nicht geschluckt: ohne
+    Messwerte muss der Stadtabruf scheitern und den STALE-ON-ERROR-Pfad
+    ausloesen, so wie der Einzelabruf es vorher tat.
+    """
+    schluessel = (today, component_id)
+    entry = _MEASURES_CACHE.get(schluessel)
+    if entry is not None and entry[0] > time.monotonic():
+        return entry[1]
+    if _MEASURES_FAILED_UNTIL.get(schluessel, 0.0) > time.monotonic():
+        raise httpx.HTTPError("UBA /measures/json: kurz zuvor fehlgeschlagen")
+
+    lock = _MEASURES_LOCKS.setdefault(schluessel, asyncio.Lock())
+    async with lock:
+        entry = _MEASURES_CACHE.get(schluessel)
+        if entry is not None and entry[0] > time.monotonic():
+            return entry[1]
+        if _MEASURES_FAILED_UNTIL.get(schluessel, 0.0) > time.monotonic():
+            raise httpx.HTTPError("UBA /measures/json: kurz zuvor fehlgeschlagen")
+        try:
+            resp = await http.get(
+                f"{_BASE}/measures/json",
+                params={
+                    "date_from": today,
+                    "time_from": "1",
+                    "date_to": today,
+                    "time_to": "24",
+                    # kein station-Parameter: die Quelle liefert alle Stationen
+                    "component": str(component_id),
+                    "scope": str(_SCOPE),
+                    # Audit-156: index=id explizit. Die UBA-API liefert "id"
+                    # zwar bereits als Default (im request-Echo sichtbar), aber
+                    # _latest_value verlässt sich auf
+                    # data->station_id->{datetime:[...]}; explizit setzen
+                    # härtet gegen eine stille Default-Änderung der Quelle.
+                    "index": "id",
+                },
+                timeout=_META_TIMEOUT_S,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+        except Exception:
+            _MEASURES_FAILED_UNTIL[schluessel] = (
+                time.monotonic() + _MEASURES_FAIL_COOLDOWN_S
+            )
+            raise
+
+        # Der Adapter verlaesst sich jetzt darauf, dass die Quelle ohne
+        # station-Parameter das KOMPLETTE Feld liefert. Kaeme sie eines Tages
+        # gekappt oder paginiert zurueck, laese _latest_value fuer jede Station
+        # (None, None), und der leere Record wuerde still fortgeschrieben.
+        # Ein leeres Feld ist allerdings ein LEGITIMER Zustand: misst gerade
+        # keine Station im Land diese Komponente, ist genau das die richtige
+        # Antwort (die Tests zu SO2 und zum Komponenten-Mapping decken das ab).
+        # Es darf deshalb nicht scheitern, aber es soll sichtbar sein.
+        if not (payload.get("data") or {}):
+            log.warning("uba_measures_feld_leer", component=component_id, day=today)
+
+        # Tageswechsel: alles raeumen, was nicht zu heute gehoert. Damit
+        # wachsen weder Cache noch Lock-Verzeichnis ueber die Tage.
+        for alt in [k for k in _MEASURES_CACHE if k[0] != today]:
+            del _MEASURES_CACHE[alt]
+        for alt in [k for k in _MEASURES_LOCKS if k[0] != today]:
+            del _MEASURES_LOCKS[alt]
+        for alt in [k for k in _MEASURES_FAILED_UNTIL if k[0] != today]:
+            del _MEASURES_FAILED_UNTIL[alt]
+        _MEASURES_CACHE[schluessel] = (time.monotonic() + _MEASURES_TTL_S, payload)
+        return payload
 
 
 async def _fetch_component(
@@ -274,29 +594,13 @@ async def _fetch_component(
     component_id: int,
     today: str,
 ) -> tuple[float | None, str | None]:
-    """Holt den jüngsten Stundenwert einer Komponente an EINER Station.
+    """Der jüngste gefüllte Stundenwert einer Komponente an EINER Station.
 
-    Kapselt den ``GET {_BASE}/measures/json``-Call (Tagesfenster, scope-id 2) und
-    die defensive Wert-Extraktion. Rückgabe ``(value, observed_at)``; fehlt der
-    Wert an dieser Station, ``(None, None)`` -> die Kaskade in ``fetch_air_uba``
-    probiert die nächste Station.
+    Liest aus dem gebündelten Body aller Stationen. Rückgabe
+    ``(value, observed_at)``; fehlt der Wert an dieser Station, ``(None, None)``
+    -> die Kaskade in ``fetch_air_uba`` probiert die nächste Station.
     """
-    measures_resp = await http.get(
-        f"{_BASE}/measures/json",
-        params={
-            "date_from": today,
-            "time_from": "1",
-            "date_to": today,
-            "time_to": "24",
-            "station": station_id,
-            "component": str(component_id),
-            "scope": str(_SCOPE),
-            # Audit-156: index=id explizit. Die UBA-API liefert "id" zwar bereits
-            # als Default (im request-Echo sichtbar), aber _latest_value verlässt
-            # sich auf data->station_id->{datetime:[...]}; explizit setzen härtet
-            # gegen eine stille Default-Änderung der Quelle.
-            "index": "id",
-        },
+    payload = await _measures_for_component(
+        http, component_id=component_id, today=today
     )
-    measures_resp.raise_for_status()
-    return _latest_value(measures_resp.json(), station_id)
+    return _latest_value(payload, station_id)

@@ -128,7 +128,15 @@ const gpts = [
           <h2 class="gpt-card__name">{g.name}</h2>
           <p class="gpt-card__desc">{g.description}</p>
           <p class="gpt-card__cta">
-            <a href={g.url} rel="noopener" target="_blank">
+            {/* aria-label mit GPT-Namen: unterscheidbare Linktexte statt 8x
+                identischem "In ChatGPT öffnen" (WCAG 2.4.4). Sichtbarer Text
+                bleibt im Namen enthalten (2.5.3). */}
+            <a
+              href={g.url}
+              rel="noopener"
+              target="_blank"
+              aria-label={`${g.name}: In ChatGPT öffnen (öffnet neues Fenster)`}
+            >
               <strong>In ChatGPT öffnen</strong>
             </a>
           </p>

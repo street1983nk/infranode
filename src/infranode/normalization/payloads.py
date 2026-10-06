@@ -13,15 +13,32 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-# Wert-Mapping der Wahl-Abdeckung: deutsches ``granularity`` (abgekündigt) ->
-# kanonisches englisches ``coverage_granularity`` (Abkündigung 2026-08-01).
+# Wert-Mapping der Wahl-Abdeckung: deutscher Ingest-/Bestandswert ->
+# kanonischer englischer Wert von ``coverage_granularity``.
 _ELECTION_COVERAGE_EN: dict[str, str] = {"stadt": "city", "teilweise": "partial"}
-# Inverses Mapping für die Rückrichtung (nur coverage_granularity gesetzt ->
-# granularity rückbefüllen), aus _ELECTION_COVERAGE_EN abgeleitet (eine Quelle
-# der Wahrheit, kein zweites Literal).
-_ELECTION_COVERAGE_DE: dict[str, str] = {
-    en: de for de, en in _ELECTION_COVERAGE_EN.items()
-}
+
+
+def _adopt_legacy_keys(data: object, mapping: dict[str, str]) -> object:
+    """Liest alte deutsche Schlüssel aus BESTANDSDATEN auf die kanonischen um.
+
+    Hintergrund: die deutschen Feldnamen waren am 2026-08-01 abgekündigt und
+    sind am 2026-08-31 aus der API-Ausgabe entfernt. Persistierte Snapshots und
+    Archiv-JSONL, die VOR dem 2026-08-01 geschrieben wurden, tragen aber nur den
+    alten Schlüssel. Ohne diese Umschrift lieferten solche Zeilen nach dem
+    Entfernen stillschweigend ``None`` statt des Werts.
+
+    Wirkt nur beim EINLESEN (``mode="before"``) und nur, wenn der kanonische
+    Schlüssel fehlt oder ``None`` ist; der alte Schlüssel wird dabei verworfen
+    und erscheint NICHT in der Ausgabe (keine Rücknahme der Abkündigung).
+    """
+    if not isinstance(data, dict):
+        return data
+    for old, new in mapping.items():
+        if old in data:
+            value = data.pop(old)
+            if data.get(new) is None:
+                data[new] = value
+    return data
 
 
 class CityBaseDataPayload(BaseModel):
@@ -148,14 +165,34 @@ class ChargingStationPayload(BaseModel):
     Bildet die stadt-gefilterte Teilmenge des CSV-Bulk-Downloads ab (Batch-
     Ingest ``ingest.bnetza``). ``stations`` trägt je Standort ein schlankes
     dict (operator, power_kw, lat, lon; additiv station_id/status/charging_type/
-    points/plz/ort/connectors). Keine Belegung/Auslastung (bundesweit keine
-    freie Tier-A-Echtzeitquelle). Mutable Default über
-    ``Field(default_factory=list)`` (ruff B006).
+    points/post_code/place/connectors). Die deutschen Item-Keys ``plz``/``ort``
+    waren seit 2026-08-01 abgekündigt und sind zum 2026-08-31 entfernt; weil
+    diese Route aus PERSISTIERTEN Archivzeilen bedient wird, räumt der
+    Validator unten auch Bestandszeilen beim Einlesen auf. Keine Belegung/
+    Auslastung (bundesweit keine freie Tier-A-Echtzeitquelle). Mutable Default
+    über ``Field(default_factory=list)`` (ruff B006).
     """
 
     kind: Literal["charging_station"] = "charging_station"
     count: int
     stations: list[dict] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _strip_legacy_item_keys(self) -> ChargingStationPayload:
+        """Liest ``plz``/``ort`` der Bestandszeilen auf die kanonischen Keys um.
+
+        Der Ingest schreibt seit 2026-08-31 nur noch ``post_code``/``place``;
+        bereits geschriebene JSONL-Zeilen tragen beide Namen und würden die
+        alten sonst dauerhaft weiter ausliefern.
+        """
+        for station in self.stations:
+            if isinstance(station, dict):
+                for old, new in (("plz", "post_code"), ("ort", "place")):
+                    if old in station:
+                        value = station.pop(old)
+                        if station.get(new) is None:
+                            station[new] = value
+        return self
 
 
 class WaterLevelPayload(BaseModel):
@@ -255,24 +292,19 @@ class FloodWarningPayload(BaseModel):
     Pflicht, siehe Mapper). Mutable Default über ``Field(default_factory=list)``
     (ruff B006).
 
-    ``as_of`` ist der kanonische englische Name; das alte deutsche Feld
-    ``stand`` bleibt abgekündigt mit identischem Wert stehen
-    (Abkündigung 2026-08-01).
+    ``as_of`` ist der kanonische Name. Das deutsche ``stand`` war seit
+    2026-08-01 abgekündigt und ist zum 2026-08-31 entfernt.
     """
 
     kind: Literal["flood_warning"] = "flood_warning"
     warnings: list[dict] = Field(default_factory=list)
-    stand: str | None = None
     as_of: str | None = None
 
-    @model_validator(mode="after")
-    def _sync_deprecated_fields(self) -> FloodWarningPayload:
-        """Hält ``as_of`` und das abgekündigte ``stand`` identisch (Bestandsdaten)."""
-        if self.as_of is None:
-            self.as_of = self.stand
-        elif self.stand is None:
-            self.stand = self.as_of
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _read_legacy_keys(cls, data: object) -> object:
+        """Bestandsdaten mit ``stand`` werden auf ``as_of`` gelesen."""
+        return _adopt_legacy_keys(data, {"stand": "as_of"})
 
 
 class PollenUvPayload(BaseModel):
@@ -301,9 +333,8 @@ class FireDangerPayload(BaseModel):
     Graslandfeuerindex (best-effort, kann ``None`` sein). ``forecast_date`` ist das
     Vorhersagedatum (ISO), ``updated_at`` der DWD-Aktualisierungszeitpunkt.
 
-    ``federal_state`` ist der kanonische englische Name; das alte deutsche Feld
-    ``bundesland`` bleibt abgekündigt mit identischem Wert stehen
-    (Abkündigung 2026-08-01).
+    ``federal_state`` ist der kanonische Name. Das deutsche ``bundesland`` war
+    seit 2026-08-01 abgekündigt und ist zum 2026-08-31 entfernt.
     """
 
     kind: Literal["fire_danger"] = "fire_danger"
@@ -313,20 +344,16 @@ class FireDangerPayload(BaseModel):
     glfi_label: str | None = None
     station_name: str | None = None
     station_id: str | None = None
-    bundesland: str | None = None
     federal_state: str | None = None
     distance_km: float | None = None
     forecast_date: str | None = None
     updated_at: str | None = None
 
-    @model_validator(mode="after")
-    def _sync_deprecated_fields(self) -> FireDangerPayload:
-        """Hält ``federal_state`` und das abgekündigte ``bundesland`` identisch."""
-        if self.federal_state is None:
-            self.federal_state = self.bundesland
-        elif self.bundesland is None:
-            self.bundesland = self.federal_state
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _read_legacy_keys(cls, data: object) -> object:
+        """Bestandsdaten mit ``bundesland`` werden auf ``federal_state`` gelesen."""
+        return _adopt_legacy_keys(data, {"bundesland": "federal_state"})
 
 
 class BathingWaterPayload(BaseModel):
@@ -513,16 +540,15 @@ class ElectionResultPayload(BaseModel):
     teilweise (RESEARCH Pitfall 7). Mutable Liste IMMER via
     ``Field(default_factory=list)`` (ruff B006).
 
-    ``coverage_granularity`` ist der kanonische englische Name mit englischen
-    Werten ("city"/"partial"); das alte deutsche Feld ``granularity`` bleibt
-    abgekündigt mit den deutschen Werten ("stadt"/"teilweise") und identischer
-    Bedeutung stehen (Abkündigung 2026-08-01).
+    ``coverage_granularity`` ist der kanonische Name mit englischen Werten
+    ("city"/"partial"). Das deutsche ``granularity`` mit den Werten
+    "stadt"/"teilweise" war seit 2026-08-01 abgekündigt und ist zum 2026-08-31
+    entfernt; Bestandsdaten werden beim Einlesen umgeschrieben.
     """
 
     kind: Literal["election_result"] = "election_result"
     election: str | None = None
-    granularity: str = "teilweise"
-    coverage_granularity: str | None = None
+    coverage_granularity: str = "partial"
     area_name: str | None = None
     # [VERIFIED 2026-06-10] Wahlbeteiligung aus der kerg2-Zeile
     # Gruppenname=="Wählende", Spalte Prozent (String mit Dezimal-KOMMA,
@@ -530,27 +556,20 @@ class ElectionResultPayload(BaseModel):
     turnout: str | None = None
     results: list[dict] = Field(default_factory=list)
 
-    @model_validator(mode="after")
-    def _sync_deprecated_fields(self) -> ElectionResultPayload:
-        """Hält ``coverage_granularity`` und das abgekündigte ``granularity`` synchron.
+    @model_validator(mode="before")
+    @classmethod
+    def _read_legacy_keys(cls, data: object) -> object:
+        """Bestandsdaten mit ``granularity`` werden auf ``coverage_granularity``
+        gelesen, samt Wert-Umschrift "stadt"->"city", "teilweise"->"partial".
 
-        Hin-Richtung: Bestandsdaten (persistierte Snapshots ohne das neue Feld)
-        erhalten den englischen Wert per Wert-Mapping "stadt"->"city",
-        "teilweise"->"partial"; ein unbekannter Alt-Wert wird unverändert
-        durchgereicht (ehrlich statt stillem None). Rückrichtung: wird NUR
-        ``coverage_granularity`` gesetzt, wird ``granularity`` per inversem
-        Mapping rückbefüllt; ``model_fields_set`` unterscheidet den Default
-        "teilweise" von einem explizit gesetzten Wert.
+        Ein unbekannter Alt-Wert wird unverändert durchgereicht (ehrlich statt
+        stillem Default).
         """
-        if self.coverage_granularity is None:
-            self.coverage_granularity = _ELECTION_COVERAGE_EN.get(
-                self.granularity, self.granularity
-            )
-        elif "granularity" not in self.model_fields_set:
-            self.granularity = _ELECTION_COVERAGE_DE.get(
-                self.coverage_granularity, self.coverage_granularity
-            )
-        return self
+        if isinstance(data, dict) and "granularity" in data:
+            legacy = data.pop("granularity")
+            if data.get("coverage_granularity") is None:
+                data["coverage_granularity"] = _ELECTION_COVERAGE_EN.get(legacy, legacy)
+        return data
 
 
 class HolidayPayload(BaseModel):
@@ -596,8 +615,8 @@ class RoadEventPayload(BaseModel):
     Köln-Events tragen die kanonischen Namen ``name``/``start``/``end``/
     ``event_type`` plus ``event_type_label`` (Klartext aus der codierten
     Werteliste des Dienstes); die alten deutschen Felder ``bezeichnung``/
-    ``beginn``/``ende``/``art`` bleiben abgekündigt mit identischem Wert
-    stehen (Konsistenz-Audit 2026-07-25).
+    ``beginn``/``ende``/``art`` waren seit 2026-08-01 abgekündigt und sind zum
+    2026-08-31 entfernt.
     """
 
     kind: Literal["road_event"] = "road_event"
@@ -779,11 +798,11 @@ class FuelPricePayload(BaseModel):
     bzw. Minimum je Sorte (e5/e10/diesel, EUR/Liter) über die geöffneten
     Tankstellen mit gültigem Preis. ``station_count`` = Tankstellen im Radius,
     ``open_count`` = davon geöffnet. ``stations`` trägt je Tankstelle ein
-    schlankes dict (station_id/name/brand/e5/e10/diesel/is_open/dist_km; additiv
-    lat/lon = Koordinate der Tankstelle für die Kartendarstellung sowie street/
-    house_number/post_code/place = gemeldete Adresse, post_code immer als
-    fünfstelliger String, distance_km = kanonischer Name neben dem
-    abgekündigten dist_km; fehlt ein Feld upstream -> None). Quelle:
+    schlankes dict (station_id/name/brand/e5/e10/diesel/is_open/distance_km;
+    additiv lat/lon = Koordinate der Tankstelle für die Kartendarstellung sowie
+    street/house_number/post_code/place = gemeldete Adresse, post_code immer
+    als fünfstelliger String; das abgekündigte ``dist_km`` ist zum 2026-08-31
+    entfernt; fehlt ein Feld upstream -> None). Quelle:
     Markttransparenzstelle für Kraftstoffe (MTS-K) via Tankerkönig. Mutable
     Default via ``Field(default_factory=list)`` (ruff B006).
     """
@@ -910,10 +929,10 @@ class StationDeparturesPayload(BaseModel):
 
     ``trip_stop_id`` identifiziert EINEN HALT EINER ZUGFAHRT und ist KEINE
     Haltestellen-ID: fuer ``/live/{city}/transit/departures`` wird die DELFI-ID
-    aus ``/cities/{slug}/transit`` gebraucht. Das gleichwertige ``stop_id``
-    heisst nur noch aus Kompatibilitaetsgruenden so und ist abgekuendigt
-    (Konsistenz-Audit 2026-07-25; die Namensgleichheit war die Ursache
-    taeglicher 400er auf der Live-Route).
+    aus ``/cities/{slug}/transit`` gebraucht. Das gleichwertige ``stop_id`` war
+    seit 2026-08-01 abgekuendigt (Konsistenz-Audit 2026-07-25; die
+    Namensgleichheit war die Ursache taeglicher 400er auf der Live-Route) und
+    ist zum 2026-08-31 entfernt.
     """
 
     kind: Literal["station_departures"] = "station_departures"
@@ -935,8 +954,8 @@ class StationArrivalsPayload(BaseModel):
     DB Timetables (CC BY 4.0). Mutable Default via ``Field(default_factory=list)``.
 
     ``trip_stop_id`` identifiziert wie bei den Abfahrten EINEN HALT EINER
-    ZUGFAHRT, nicht eine Haltestelle; ``stop_id`` traegt denselben Wert und ist
-    abgekuendigt (Konsistenz-Audit 2026-07-25).
+    ZUGFAHRT, nicht eine Haltestelle; das gleichwertige ``stop_id`` war seit
+    2026-08-01 abgekuendigt und ist zum 2026-08-31 entfernt.
     """
 
     kind: Literal["station_arrivals"] = "station_arrivals"
@@ -956,11 +975,11 @@ class StationCatalogPayload(BaseModel):
     Großbahnhöfe haben mehrere Ebenen, deren Abfahrtstafel teils an einer
     Ebenen-EVA hängt statt an der Haupt-EVA -> Fallback für Split-Bahnhöfe),
     ``name``, ``station_category`` (1-7, je kleiner desto
-    groesser/wichtiger der Bahnhof; das gleichwertige ``category`` ist
-    abgekuendigt, weil dieser Name anderswo ein Text-Label traegt),
-    ``lat``/``lon`` (aus der EVA-Geokoordinate)
-    und ``post_code`` (PLZ, fünfstelliger String; ``zip`` trägt denselben Wert
-    und ist abgekündigt). ``station_count`` = Anzahl. Quelle: DB StaDa (CC BY 4.0).
+    groesser/wichtiger der Bahnhof; das gleichwertige ``category`` war
+    abgekuendigt, weil dieser Name anderswo ein Text-Label traegt, und ist zum
+    2026-08-31 entfernt), ``lat``/``lon`` (aus der EVA-Geokoordinate)
+    und ``post_code`` (PLZ, fünfstelliger String; das abgekündigte ``zip`` ist
+    zum 2026-08-31 entfernt). ``station_count`` = Anzahl. Quelle: DB StaDa (CC BY 4.0).
     Mutable Default via ``Field(default_factory=list)`` (ruff B006).
     """
 
@@ -978,9 +997,9 @@ class LandValuesPayload(BaseModel):
     Kennzahl: ``brw_median_eur_m2`` (Median des Bodenrichtwerts in EUR/m2),
     ``brw_min_eur_m2``/``brw_max_eur_m2`` (Spanne) und ``zone_count`` (Anzahl der
     berücksichtigten Zonen). ``reference_date`` ist der Bewertungsstichtag des
-    Landes-WFS (ISO-Datum, z.B. "2026-01-01"); das alte deutsche Feld
-    ``stichtag`` bleibt abgekündigt mit identischem Wert stehen
-    (Abkündigung 2026-08-01). ``bbox_radius_deg`` dokumentiert
+    Landes-WFS (ISO-Datum, z.B. "2026-01-01"); das deutsche ``stichtag`` war
+    seit 2026-08-01 abgekündigt und ist zum 2026-08-31 entfernt (Bestandsdaten
+    werden beim Einlesen umgeschrieben). ``bbox_radius_deg`` dokumentiert
     den Umkreis um das Stadtzentrum, über den aggregiert wurde (ehrliche
     Methoden-Transparenz: kein amtlicher Stadtgrenzen-Schnitt, sondern eine
     Bounding-Box). Regionale Auflösung ist das Stadtgebiet; BORIS ist pro
@@ -992,7 +1011,6 @@ class LandValuesPayload(BaseModel):
     brw_min_eur_m2: float | None = None
     brw_max_eur_m2: float | None = None
     zone_count: int = 0
-    stichtag: str | None = None
     reference_date: str | None = None
     bbox_radius_deg: float | None = None
     # True, wenn die Werte NORMIERTE Bodenrichtwerte sind (auf 1000 m2/GFZ 1.0
@@ -1004,14 +1022,11 @@ class LandValuesPayload(BaseModel):
     # nicht -> Default False). Methoden-Transparenz, Audit 2026-06-29.
     truncated: bool = False
 
-    @model_validator(mode="after")
-    def _sync_deprecated_fields(self) -> LandValuesPayload:
-        """Hält ``reference_date`` und das abgekündigte ``stichtag`` identisch."""
-        if self.reference_date is None:
-            self.reference_date = self.stichtag
-        elif self.stichtag is None:
-            self.stichtag = self.reference_date
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _read_legacy_keys(cls, data: object) -> object:
+        """Bestandsdaten mit ``stichtag`` werden auf ``reference_date`` gelesen."""
+        return _adopt_legacy_keys(data, {"stichtag": "reference_date"})
 
 
 class PopulationDensityPayload(BaseModel):
@@ -1050,48 +1065,33 @@ class TaxRatesPayload(BaseModel):
     vorliegt.
 
     ``trade_tax_rate``/``property_tax_a``/``property_tax_b``/``property_tax_c``/
-    ``reference_date`` sind die kanonischen englischen Namen; die alten deutschen
-    Felder ``gewerbesteuer_hebesatz``/``grundsteuer_a``/``grundsteuer_b``/
-    ``grundsteuer_c``/``stichtag`` bleiben abgekündigt mit identischem Wert
-    stehen (Abkündigung 2026-08-01).
+    ``reference_date`` sind die kanonischen Namen. Die deutschen Felder
+    ``gewerbesteuer_hebesatz``/``grundsteuer_a``/``grundsteuer_b``/
+    ``grundsteuer_c``/``stichtag`` waren seit 2026-08-01 abgekündigt und sind
+    zum 2026-08-31 entfernt (Bestandsdaten werden beim Einlesen umgeschrieben).
     """
 
     kind: Literal["tax_rates"] = "tax_rates"
-    gewerbesteuer_hebesatz: int | None = None
-    grundsteuer_a: int | None = None
-    grundsteuer_b: int | None = None
-    grundsteuer_c: int | None = None
-    stichtag: str | None = None
     trade_tax_rate: int | None = None
     property_tax_a: int | None = None
     property_tax_b: int | None = None
     property_tax_c: int | None = None
     reference_date: str | None = None
 
-    @model_validator(mode="after")
-    def _sync_deprecated_fields(self) -> TaxRatesPayload:
-        """Hält die kanonischen und die abgekündigten deutschen Felder identisch."""
-        if self.trade_tax_rate is None:
-            self.trade_tax_rate = self.gewerbesteuer_hebesatz
-        elif self.gewerbesteuer_hebesatz is None:
-            self.gewerbesteuer_hebesatz = self.trade_tax_rate
-        if self.property_tax_a is None:
-            self.property_tax_a = self.grundsteuer_a
-        elif self.grundsteuer_a is None:
-            self.grundsteuer_a = self.property_tax_a
-        if self.property_tax_b is None:
-            self.property_tax_b = self.grundsteuer_b
-        elif self.grundsteuer_b is None:
-            self.grundsteuer_b = self.property_tax_b
-        if self.property_tax_c is None:
-            self.property_tax_c = self.grundsteuer_c
-        elif self.grundsteuer_c is None:
-            self.grundsteuer_c = self.property_tax_c
-        if self.reference_date is None:
-            self.reference_date = self.stichtag
-        elif self.stichtag is None:
-            self.stichtag = self.reference_date
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _read_legacy_keys(cls, data: object) -> object:
+        """Bestandsdaten mit den deutschen Feldern werden kanonisch gelesen."""
+        return _adopt_legacy_keys(
+            data,
+            {
+                "gewerbesteuer_hebesatz": "trade_tax_rate",
+                "grundsteuer_a": "property_tax_a",
+                "grundsteuer_b": "property_tax_b",
+                "grundsteuer_c": "property_tax_c",
+                "stichtag": "reference_date",
+            },
+        )
 
 
 class BusinessRegistrationsPayload(BaseModel):
@@ -1106,41 +1106,30 @@ class BusinessRegistrationsPayload(BaseModel):
     kreisfreie Stadt (kreisfreie Städte stadtgenau, sonst der umgebende Kreis).
 
     ``registrations``/``deregistrations``/``balance``/``year`` sind die
-    kanonischen englischen Namen; die alten deutschen Felder ``anmeldungen``/
-    ``abmeldungen``/``saldo``/``jahr`` bleiben abgekündigt mit identischem Wert
-    stehen (Abkündigung 2026-08-01).
+    kanonischen Namen. Die deutschen Felder ``anmeldungen``/``abmeldungen``/
+    ``saldo``/``jahr`` waren seit 2026-08-01 abgekündigt und sind zum 2026-08-31
+    entfernt (Bestandsdaten werden beim Einlesen umgeschrieben).
     """
 
     kind: Literal["business_registrations"] = "business_registrations"
-    anmeldungen: int | None = None
-    abmeldungen: int | None = None
-    saldo: int | None = None
-    jahr: int | None = None
     registrations: int | None = None
     deregistrations: int | None = None
     balance: int | None = None
     year: int | None = None
 
-    @model_validator(mode="after")
-    def _sync_deprecated_fields(self) -> BusinessRegistrationsPayload:
-        """Hält die kanonischen und die abgekündigten deutschen Felder identisch."""
-        if self.registrations is None:
-            self.registrations = self.anmeldungen
-        elif self.anmeldungen is None:
-            self.anmeldungen = self.registrations
-        if self.deregistrations is None:
-            self.deregistrations = self.abmeldungen
-        elif self.abmeldungen is None:
-            self.abmeldungen = self.deregistrations
-        if self.balance is None:
-            self.balance = self.saldo
-        elif self.saldo is None:
-            self.saldo = self.balance
-        if self.year is None:
-            self.year = self.jahr
-        elif self.jahr is None:
-            self.jahr = self.year
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _read_legacy_keys(cls, data: object) -> object:
+        """Bestandsdaten mit den deutschen Feldern werden kanonisch gelesen."""
+        return _adopt_legacy_keys(
+            data,
+            {
+                "anmeldungen": "registrations",
+                "abmeldungen": "deregistrations",
+                "saldo": "balance",
+                "jahr": "year",
+            },
+        )
 
 
 class InsolvenciesPayload(BaseModel):
@@ -1163,35 +1152,29 @@ class InsolvenciesPayload(BaseModel):
     umgebende Kreis).
 
     ``corporate_insolvencies``/``other_debtor_insolvencies``/``year`` sind die
-    kanonischen englischen Namen; die alten deutschen Felder
-    ``unternehmensinsolvenzen``/``uebrige_schuldner_insolvenzen``/``jahr``
-    bleiben abgekündigt mit identischem Wert stehen (Abkündigung 2026-08-01).
+    kanonischen Namen. Die deutschen Felder ``unternehmensinsolvenzen``/
+    ``uebrige_schuldner_insolvenzen``/``jahr`` waren seit 2026-08-01 abgekündigt
+    und sind zum 2026-08-31 entfernt (Bestandsdaten werden beim Einlesen
+    umgeschrieben).
     """
 
     kind: Literal["insolvencies"] = "insolvencies"
-    unternehmensinsolvenzen: int | None = None
-    uebrige_schuldner_insolvenzen: int | None = None
-    jahr: int | None = None
     corporate_insolvencies: int | None = None
     other_debtor_insolvencies: int | None = None
     year: int | None = None
 
-    @model_validator(mode="after")
-    def _sync_deprecated_fields(self) -> InsolvenciesPayload:
-        """Hält die kanonischen und die abgekündigten deutschen Felder identisch."""
-        if self.corporate_insolvencies is None:
-            self.corporate_insolvencies = self.unternehmensinsolvenzen
-        elif self.unternehmensinsolvenzen is None:
-            self.unternehmensinsolvenzen = self.corporate_insolvencies
-        if self.other_debtor_insolvencies is None:
-            self.other_debtor_insolvencies = self.uebrige_schuldner_insolvenzen
-        elif self.uebrige_schuldner_insolvenzen is None:
-            self.uebrige_schuldner_insolvenzen = self.other_debtor_insolvencies
-        if self.year is None:
-            self.year = self.jahr
-        elif self.jahr is None:
-            self.jahr = self.year
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _read_legacy_keys(cls, data: object) -> object:
+        """Bestandsdaten mit den deutschen Feldern werden kanonisch gelesen."""
+        return _adopt_legacy_keys(
+            data,
+            {
+                "unternehmensinsolvenzen": "corporate_insolvencies",
+                "uebrige_schuldner_insolvenzen": "other_debtor_insolvencies",
+                "jahr": "year",
+            },
+        )
 
 
 class SolarRoofsPayload(BaseModel):

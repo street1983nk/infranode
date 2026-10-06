@@ -4,7 +4,7 @@ Liefert den jüngsten Stundenwert der Hamburger Rad-Dauerzählstelle "Gurlittins
 (die FHH betreibt aktuell genau diese eine offene Dauerzählstelle) keylos aus dem
 Open-Data-CSV-Export (DL-DE/BY 2.0, [VERIFIED 2026-06-23]):
 
-  https://daten-hamburg.de/transport_verkehr/dauerzaehlstellen_rad/export_radverkehr.csv
+  https://www.daten-hamburg.de/transport_verkehr/dauerzaehlstellen_rad/export_radverkehr.csv
 
 CSV-Aufbau (UTF-8, [VERIFIED 2026-06-29]: Bytes ``c3 a4`` = "ä"): Zeile 1 =
 Stationsname ("Gurlittinsel;;"),
@@ -29,8 +29,13 @@ import io
 
 import httpx
 
+# MIT www: der Host ohne www antwortet seit dem 11.09.2026 mit 301 auf die
+# www-Variante. Automatische Redirects sind bewusst aus (SSRF-Invariante,
+# infra/http.py), also zieht der Adapter wie vorgesehen selbst auf die finale
+# URL nach. Gleiche Falle wie bei PEGELONLINE; ohne den Nachzug lief der Breaker
+# auf und /cities/hamburg/bike-counts lieferte 503.
 _CSV_URL = (
-    "https://daten-hamburg.de/transport_verkehr/dauerzaehlstellen_rad/"
+    "https://www.daten-hamburg.de/transport_verkehr/dauerzaehlstellen_rad/"
     "export_radverkehr.csv"
 )
 # Quelle ist echtes UTF-8 (live verifiziert 2026-06-29); cp1252 war falsch.

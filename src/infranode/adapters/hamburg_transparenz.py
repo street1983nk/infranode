@@ -114,11 +114,6 @@ async def fetch_hamburg_road_events(
                 "end": end,
                 "lat": feature_lat,
                 "lon": feature_lon,
-                # Abgekündigt (alte deutsche Namen), Werte identisch:
-                "titel": name,
-                "anlass": reason,
-                "baubeginn": start,
-                "bauende": end,
             }
         )
 

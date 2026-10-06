@@ -20,6 +20,10 @@ zu Stadt-Kennzahlen verdichtet.
 Sicherheit:
 - T-05-08 (SSRF): Der Host ist in ``_BASE`` hartkodiert; nur die kuratierten
   ``system_id`` aus der Allowlist fließen in die URL.
+- Redirects: Der Pool folgt keinen Redirects (SSRF-Invariante). ``_get_json``
+  folgt 3xx deshalb selbst, höchstens ``_MAX_REDIRECTS`` Sprünge, nur https und
+  nur auf Hosts aus ``_REDIRECT_HOSTS`` (Nextbike leitet seit 2026-09 per 301 von
+  gbfs.nextbike.net auf gbfs2.nextbike.net um, auch die Feed-URLs).
 - Resilienz: Der Adapter baut KEINEN ``CanonicalRecord`` und kennt KEIN
   Cache/Breaker (das liefert die Resilienz-Fassade). ``raise_for_status`` ist
   Pflicht (5xx -> STALE-ON-ERROR).
@@ -84,6 +88,12 @@ _BASE = "https://gbfs.nextbike.net"
 # Discovery-Pfad je System (GBFS v2). Die system_id stammt NUR aus der kuratierten
 # Allowlist (cities.GBFS_SYSTEMS), nie aus User-Input.
 _DISCOVERY = "/maps/gbfs/v2/{system_id}/gbfs.json"
+
+# Kuratierte Redirect-Ziele (SSRF): nur auf diese Hosts folgt ``_get_json`` einem
+# 3xx. Nextbike leitet gbfs.nextbike.net -> gbfs2.nextbike.net um (301, gesehen
+# 2026-09-29, Discovery UND Feeds). Jeder andere Zielhost -> Fehler (Fassade).
+_REDIRECT_HOSTS = frozenset({"gbfs.nextbike.net", "gbfs2.nextbike.net"})
+_MAX_REDIRECTS = 3
 
 # Attribution der Nextbike-Primaerquelle (CC0). Verbatim wie in DATA-LICENSES.md +
 # SOURCE_LICENSE. Wird verwendet, wenn eine GbfsSystem-Spec keine eigene
@@ -159,8 +169,21 @@ def _feeds(discovery: dict) -> dict[str, str]:
 
 
 async def _get_json(http: httpx.AsyncClient, url: str) -> dict:
-    """Holt eine GBFS-JSON-Ressource (``raise_for_status`` Pflicht -> Fassade)."""
+    """Holt eine GBFS-JSON-Ressource (``raise_for_status`` Pflicht -> Fassade).
+
+    Folgt 3xx selbst (der Pool hat ``follow_redirects=False``), aber nur auf https
+    und kuratierte ``_REDIRECT_HOSTS``, höchstens ``_MAX_REDIRECTS`` Sprünge. Ein
+    nicht erlaubtes Ziel oder zu viele Sprünge -> ``raise_for_status`` wirft.
+    """
     resp = await http.get(url)
+    for _ in range(_MAX_REDIRECTS):
+        nxt = resp.next_request
+        if not resp.is_redirect or nxt is None:
+            break
+        if nxt.url.scheme != "https" or nxt.url.host not in _REDIRECT_HOSTS:
+            break
+        await resp.aclose()
+        resp = await http.get(nxt.url)
     resp.raise_for_status()
     return resp.json()
 

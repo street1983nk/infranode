@@ -257,16 +257,6 @@ async def fetch_sperrinfosys_road_events(
                 "diversion_via": diversion_via,
                 "lat": feat_lat,
                 "lon": feat_lon,
-                # Abgekündigt (alte deutsche Namen), Werte identisch:
-                "art": event_type,
-                "typ": closure_type,
-                "grund": reason,
-                "von": start,
-                "bis": end,
-                "strasse": street,
-                "strassenklasse": road_class,
-                "ortslage": location,
-                "umleitung_ueber": diversion_via,
             }
         )
     return {"slug": slug, "events": events}

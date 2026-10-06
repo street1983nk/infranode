@@ -71,9 +71,8 @@ def map_flood(
         ),
         payload=FloodWarningPayload(
             warnings=raw.get("warnings", []),
-            # Kanonisch as_of; das abgekündigte stand trägt identisch denselben
-            # Wert (Abkündigung 2026-08-01).
-            stand=stand,
+            # Kanonisch as_of; das deutsche stand war seit 2026-08-01
+            # abgekündigt und ist zum 2026-08-31 entfernt.
             as_of=stand,
         ),
     )

@@ -139,6 +139,7 @@ from infranode.charging.geomap import load_city_points
 from infranode.charging.store import get_point_statuses
 from infranode.config import Settings
 from infranode.infra.cache import build_cache_key
+from infranode.infra.demand_queue import enqueue as enqueue_demand
 from infranode.normalization.enums import SourceId
 from infranode.normalization.mappers.autobahn import (
     map_autobahn_traffic,
@@ -267,6 +268,8 @@ from infranode.registry import get_city, list_cities
 from infranode.registry.catalog import CITY_DATA_CATALOG
 from infranode.registry.coverage import PARTIAL_COVERAGE, covered_cities, is_covered
 from infranode.registry.source_specs import SOURCE_LICENSE
+from infranode.resilience.client import retry_after_s
+from infranode.resilience.types import CacheStatus
 
 router = APIRouter()
 
@@ -5203,6 +5206,21 @@ async def city_civil_protection_warnings(slug: str, request: Request) -> dict:
     }
 
 
+def _fuel_fetched_at(raw: dict) -> datetime:
+    """Zeitpunkt des Upstream-Abrufs aus dem zwischengespeicherten raw-dict.
+
+    Die Route stempelt ``fetched_at`` in dem Moment, in dem der Upstream-Call
+    zurueckkommt (siehe ``city_fuel_prices``); der Stempel liegt damit MIT der
+    Nutzlast im Cache und ueberlebt jeden HIT/STALE. Fehlt oder faellt er aus
+    dem Format (Eintrag aus einer aelteren Version), ist die Antwortzeit der
+    Rueckfall: nie ein Fehler, nur eine unschaerfere Angabe.
+    """
+    try:
+        return datetime.fromisoformat(raw["fetched_at"])
+    except (KeyError, TypeError, ValueError):
+        return datetime.now(UTC)
+
+
 @router.get("/cities/{slug}/fuel-prices")
 async def city_fuel_prices(slug: str, request: Request) -> dict:
     """Aktuelle Spritpreise je Stadt, aggregiert (Tankerkoenig/MTS-K, Tier A).
@@ -5232,24 +5250,75 @@ async def city_fuel_prices(slug: str, request: Request) -> dict:
     apikey = key.get_secret_value()
 
     async def fetch_fn():
-        return await fetch_fuel_prices(
+        raw = await fetch_fuel_prices(
             request.app.state.http,
             slug=entry.slug,
             lat=entry.geo.lat,
             lon=entry.geo.lon,
             apikey=apikey,
         )
+        # Zeitanker fuer die Ehrlichkeit des Envelopes: der Stempel entsteht
+        # HIER (nach dem Upstream-Call) und wird mit der Nutzlast
+        # zwischengespeichert, damit ``retrieved_at`` in der Antwort den echten
+        # Abruf nennt und nicht die Uhrzeit der Antwort. Bei 24 h Stale-Fenster
+        # ist das der Unterschied zwischen einer Angabe und einer Behauptung.
+        raw["fetched_at"] = datetime.now(UTC).isoformat()
+        return raw
 
-    # Kurzlebiger Redis-Cache (Owner-Entscheid 2026-07-08): 5 min fresh via
-    # Registry-TTL entlastet den geteilten API-Key und hält uns unter dem
-    # Tankerkönig-Limit von 1 Request/Minute. KEINE dauerhafte Speicherung:
-    # kein Archiv (append_record), kein Hintergrund-Job; Redis läuft ohne
-    # Persistence (allkeys-lru). Outbound-Limits (2 parallel, 1s Abstand) bleiben.
+    # Redis-Cache (Owner-Entscheid 2026-07-08) entlastet den geteilten API-Key
+    # und hält uns unter dem Tankerkönig-Limit von 1 Request/Minute (quellenweit,
+    # alle Städte zusammen; Aggregat-Bremse in resilience/client.py). Das
+    # Frische-Fenster folgt seit 2026-09-07 dem Tagesprofil des
+    # Kraftstoffpreisanpassungsgesetzes (registry/ttl_profiles.py: 4 h nachts,
+    # 60 min vormittags, 5 min im Erhöhungsfenster 11:50 bis 12:20, 20 min
+    # nachmittags, 45 min abends, immer gekappt auf die nächste 11:50-Grenze),
+    # das Stale-Fenster liegt bei 24 h. KEINE dauerhafte Speicherung: kein
+    # append_record, kein Abruf im Hintergrund; Redis läuft ohne Persistence
+    # (allkeys-lru).
     raw, status = await client.fetch("tankerkoenig", cache_key, fetch_fn)
     if raw is None:
+        # Zwei verschiedene 503: die Bremse hat abgewiesen (Quota-Signal, Retry-
+        # After sagt wann es wieder geht) oder die Quelle ist wirklich weg.
+        # slowapi (headers_enabled) legt auf jede Antwort das Maximum aus diesem
+        # Wert und dem Reset des Rate-Limit-Fensters; der Header wird also nie
+        # kleiner als die Bremse, hoechstens das Fenster.
+        retry_after = retry_after_s("tankerkoenig")
+        if retry_after is not None:
+            # VERLUSTPFAD 1 (RCA 2026-09-15): Diese Useraktion hat den Slot der
+            # Minute verloren und bekommt keine Daten. Die Stadt wandert in die
+            # Nachfrage-Warteschlange, damit der Collector die Anfrage
+            # zeitversetzt nachholt (infra/demand_queue.py, dort auch die
+            # ToS-Begruendung). Fail-open: ein Redis-Fehler aendert die Antwort
+            # nicht, er kostet nur den Nachhol-Versuch.
+            await enqueue_demand(
+                request.app.state.redis, source="tankerkoenig", slug=entry.slug
+            )
+            raise UpstreamError(
+                "Tankerkoenig erlaubt eine Anfrage je Minute fuer alle Staedte "
+                "zusammen; fuer diese Stadt liegt noch kein Zwischenstand vor.",
+                hint=(
+                    "Nach Retry-After Sekunden erneut versuchen. Eine bereits "
+                    "abgefragte Stadt bleibt bis zu 24 Stunden aus dem Cache "
+                    "beantwortbar; cache_status STALE weist den Zwischenstand "
+                    "aus, retrieved_at nennt den Zeitpunkt des Abrufs."
+                ),
+                headers={"Retry-After": str(retry_after)},
+            )
         raise UpstreamError(
             "Quelle 'tankerkoenig' voruebergehend nicht erreichbar, kein Cache.",
             hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
+        )
+
+    # VERLUSTPFAD 2 (RCA 2026-09-15): Die Antwort ist 200, aber aus der
+    # Notreserve. STALE-ON-ERROR heisst, dass es KEINEN Upstream-Call gab
+    # (Bremse, Cooldown oder offener Breaker) und der Cache-Key damit NICHT
+    # erneuert wurde: diese Useraktion hat den Slot der Minute ebenso verloren
+    # wie im 503-Fall, sie bekam nur noch einen alten Stand zu sehen. Also
+    # ebenfalls einreihen. Bei HIT/MISS/STALE wird NICHT eingereiht: dort lief
+    # ein Fetch oder es liegt ein frischer Stand vor, es gibt nichts nachzuholen.
+    if status == CacheStatus.STALE_ON_ERROR:
+        await enqueue_demand(
+            request.app.state.redis, source="tankerkoenig", slug=entry.slug
         )
 
     # Keine Tankstelle im Radius -> ehrliches no_data (200) OHNE Mapper/Archiv.
@@ -5265,7 +5334,7 @@ async def city_fuel_prices(slug: str, request: Request) -> dict:
 
     record = map_fuel_prices(
         raw,
-        retrieved_at=datetime.now(UTC),
+        retrieved_at=_fuel_fetched_at(raw),
         ags=entry.ags,
         wikidata_qid=entry.qid,
         lat=entry.geo.lat,
@@ -5275,10 +5344,14 @@ async def city_fuel_prices(slug: str, request: Request) -> dict:
     # ausdrückliches Cache-/Speicherverbot (Wortlaut geprüft 2026-07-25), verlangen
     # aber "Requests on Demand - auf Useraktion" und "Regelmäßige, nicht explizit
     # vom User initiierte Requests sind zu vermeiden"; Spiegeln/Massenabfragen nur
-    # nach Absprache mit Tankerkönig. Deshalb: kein Archiv, kein Hintergrund-Job,
-    # nur Live-Auslieferung bei Useraktion. Der kurze Redis-Cache oben senkt die
-    # Upstream-Last und arbeitet damit FÜR die Vorgabe "unnötige Belastungen des
-    # Tankerkönig-Servers sind zu vermeiden".
+    # nach Absprache mit Tankerkönig. Deshalb: kein Archiv, kein Timer-Job, nur
+    # Live-Auslieferung bei Useraktion. NACHZUG 2026-09-15 (RCA, Owner-Entscheid):
+    # Verliert eine Useraktion den Slot der Minute, wird die Stadt eingereiht und
+    # der Abruf ZEITVERSETZT nachgeholt (siehe Verlustpfade oben und
+    # infra/demand_queue.py). Der Auslöser bleibt damit die Nutzeraktion; eine
+    # Stadt, die niemand abfragt, wird auch nie abgerufen. Der kurze Redis-Cache
+    # oben senkt die Upstream-Last und arbeitet damit FÜR die Vorgabe "unnötige
+    # Belastungen des Tankerkönig-Servers sind zu vermeiden".
     return {
         "data": record.model_dump(mode="json"),
         "meta": {

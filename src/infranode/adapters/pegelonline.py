@@ -51,7 +51,7 @@ import math
 import httpx
 
 # Host hartkodiert (T-07-IN SSRF): nur diese eine öffentliche PEGELONLINE-Instanz.
-_BASE = "https://www.pegelonline.wsv.de/webservices/rest-api/v2"
+_BASE = "https://pegelonline.wsv.de/webservices/rest-api/v2"
 
 # Nähe-Toleranz in Grad (~55 km): Stationen weiter weg gelten als "keine nahe
 # Station" -> Teilabdeckung (Pitfall 3, Binnenstadt). Eine Bundeswasserstraße in

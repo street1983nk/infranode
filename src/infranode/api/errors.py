@@ -45,9 +45,19 @@ class AppError(Exception):
     status_code: int = 500
     code: str = "internal_error"
 
-    def __init__(self, message: str, *, hint: str | None = None) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        hint: str | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> None:
         self.message = message
         self.hint = hint
+        # Zusatz-Header der Fehlerantwort, z.B. Retry-After bei einem 503, das
+        # aus einer Quota-Bremse stammt (Tankerkoenig 2026-09-06). Nur Werte,
+        # die der Code selbst setzt, nie Fremd-Input.
+        self.headers = headers
         super().__init__(message)
 
 
@@ -108,7 +118,10 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(AppError)
     async def _app_error(request: Request, exc: AppError) -> OrjsonResponse:
-        return _envelope(exc.status_code, exc.code, exc.message, exc.hint)
+        response = _envelope(exc.status_code, exc.code, exc.message, exc.hint)
+        for name, value in (exc.headers or {}).items():
+            response.headers[name] = value
+        return response
 
     @app.exception_handler(RateLimitExceeded)
     async def _rate_limited(request: Request, exc: RateLimitExceeded) -> OrjsonResponse:

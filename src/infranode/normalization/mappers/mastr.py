@@ -44,7 +44,8 @@ def map_mastr_assets(
     """Bildet die schlanken MaStR-Anlagen-dicts auf einen ``CanonicalRecord`` ab.
 
     ``rows`` sind die vom SQLite-Reader gelieferten schlanken Anlagen-dicts (je
-    ein dict mit ``einheit_typ``/``plz``/``lat``/``lon``/``leistung_kw``). Der
+    ein dict mit ``asset_type``/``post_code``/``lat``/``lon``/``power_kw``;
+    die deutschen Namen sind seit 2026-08-31 entfernt). Der
     ``retrieved_at``-Zeitstempel wird injiziert (kein ``datetime.now()`` im
     Mapper), damit das Ergebnis deterministisch bleibt. Die Join-Keys
     ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht (ARCH-02,
@@ -61,11 +62,32 @@ def map_mastr_assets(
     power_by_type: dict[str, float] = {}
     total_power_kw = 0.0
     has_power = False
+    # Zeilen auf die kanonischen Keys normalisieren: der Lese-Pfad (mastr_db)
+    # liefert sie schon kanonisch, der Ingest-Pfad (ingest/mastr.py) traegt die
+    # deutschen Quell-Keys. Umschrift hier, damit BEIDE Pfade kanonisch
+    # aggregieren und ``assets`` keine deutschen Keys mehr ausliefert
+    # (Abkuendigung 2026-08-01, entfernt 2026-08-31).
+    _LEGACY = {
+        "einheit_typ": "asset_type",
+        "leistung_kw": "power_kw",
+        "plz": "post_code",
+    }
+    normalized: list[dict] = []
+    for raw_row in rows:
+        row = dict(raw_row)
+        for old, new in _LEGACY.items():
+            if old in row:
+                value = row.pop(old)
+                if row.get(new) is None:
+                    row[new] = value
+        normalized.append(row)
+    rows = normalized
+
     for row in rows:
-        typ = row.get("einheit_typ")
+        typ = row.get("asset_type")
         if typ:
             by_type[typ] = by_type.get(typ, 0) + 1
-        leistung = row.get("leistung_kw")
+        leistung = row.get("power_kw")
         if isinstance(leistung, (int, float)) and not isinstance(leistung, bool):
             has_power = True
             total_power_kw += leistung

@@ -877,6 +877,14 @@ class MonitoringSettings(BaseSettings):
     # 0 oder negativ = Drossel aus.
     notify_max_per_window: int = 20
     notify_window_seconds: int = 60
+    # Budget je Betreff (Fix ntfy-Flut 2026-10-05): die Burst-Drossel oben fängt
+    # nur Spitzen; ein stetiges Rinnsal (Erstkontakt-Pushes, ~235/Tag) lief unter
+    # ihr durch, bis ntfy.sh die Upstream-Polls mit 429 drosselte und der
+    # iPhone-Push ausblieb. Daher zusätzlich je Betreff höchstens N nicht-kritische
+    # Pushes pro UTC-Stunde und pro UTC-Tag (prozesslokal, CRITICAL ausgenommen).
+    # 0 oder negativ = das jeweilige Limit aus.
+    notify_max_per_subject_per_hour: int = 3
+    notify_max_per_subject_per_day: int = 6
     # Dead-Man-Ping (Kuma-Push bzw. Healthchecks.io) je Timer-Job; per systemd-Drop-in
     # überschreibbar. None = kein Ping.
     deadman_url: str | None = None

@@ -170,13 +170,11 @@ def _parse_board(
             {
                 # Kanonischer Name (Konsistenz-Audit 2026-07-25): die DB-``id``
                 # identifiziert EINEN HALT EINER ZUGFAHRT, nicht eine Haltestelle.
-                # Der frueher einzige Name ``stop_id`` kollidierte mit der
+                # Der fruehere Name ``stop_id`` kollidierte mit der
                 # Haltestellen-ID von /live/{city}/transit/departures (DELFI
-                # "de:<AGS>:<id>") und fuehrte dort taeglich zu 400ern, weil
-                # Agenten den Wert von hier weiterreichten. ``stop_id`` bleibt
-                # abgekuendigt mit identischem Wert stehen.
+                # "de:<AGS>:<id>") und fuehrte dort taeglich zu 400ern; er war
+                # seit 2026-08-01 abgekuendigt und ist zum 2026-08-31 entfernt.
                 "trip_stop_id": sid,
-                "stop_id": sid,
                 "station": station,
                 "line": _line_label(ev, category, number),
                 "category": category,
@@ -295,8 +293,8 @@ async def _fetch_board(
                     path_index=path_index,
                     station=root.get("station"),
                 ):
-                    if entry["stop_id"] and entry["stop_id"] not in by_id:
-                        by_id[entry["stop_id"]] = entry
+                    if entry["trip_stop_id"] and entry["trip_stop_id"] not in by_id:
+                        by_id[entry["trip_stop_id"]] = entry
         except httpx.HTTPError as exc:
             # httpx.HTTPError deckt HTTPStatusError (5xx aus _get) UND die
             # Transportfehler (ReadTimeout/ConnectError) ab. Kein Key im Log

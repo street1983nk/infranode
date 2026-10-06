@@ -55,6 +55,18 @@ _BALLAST_FIELDS = frozenset(
     }
 )
 
+# camelCase-Rohfelder mit kanonischem snake_case-Nachfolger: abgekuendigt am
+# 2026-08-01, aus der Ausgabe entfernt am 2026-08-31 (Register docs-site
+# deprecations.ts, getCityTraffic). ``extent`` wird zu ``bbox`` + lat/lon.
+_DEPRECATED_RAW_FIELDS = (
+    "isBlocked",
+    "startTimestamp",
+    "delayTimeValue",
+    "averageSpeed",
+    "abnormalTrafficType",
+    "extent",
+)
+
 
 # Default-Obergrenze fuer roadworks in der Response. Koeln hat live ~178 Baustellen;
 # selbst nach dem Slimming (geometry/Ballast weg) sind das ~160 KB und sprengen das
@@ -132,7 +144,8 @@ def _canonical_event_fields(item: dict) -> dict:
     ``is_blocked`` (bool), ``start_timestamp``, ``delay_minutes`` (int),
     ``average_speed_kmh`` (float), ``abnormal_traffic_type``, ``name``,
     ``description_text`` sowie ``bbox``/``lat``/``lon`` dazu (Konsistenz-Audit
-    2026-07-25). Die Rohfelder bleiben abgekuendigt daneben stehen; es wird nur
+    2026-07-25). Die sechs Rohfelder mit Nachfolger sind zum 2026-08-31
+    entfernt (``_DEPRECATED_RAW_FIELDS`` in ``_slim_event``); es wird nur
     umbenannt und typisiert, nie ein Wert erfunden.
     """
     out: dict = {"is_blocked": _is_blocked(item)}
@@ -199,6 +212,11 @@ def _slim_event(item: dict, *, ballast: frozenset[str] = _BALLAST_FIELDS) -> dic
     canonical = {
         k: v for k, v in _canonical_event_fields(item).items() if k not in kept
     }
+    # Die sechs camelCase-Rohfelder mit kanonischem Nachfolger waren seit
+    # 2026-08-01 abgekuendigt und sind zum 2026-08-31 entfernt; alle uebrigen
+    # Rohfelder (title, subtitle, ...) bleiben unveraendert erhalten.
+    for old in _DEPRECATED_RAW_FIELDS:
+        kept.pop(old, None)
     return {**kept, **canonical}
 
 
@@ -324,8 +342,12 @@ def map_autobahn_traffic(
     ]
     roadworks_total = len(slimmed_roadworks)
     # Blockierende Baustellen zuerst (stabile Sortierung erhaelt sonst die
-    # Original-Reihenfolge), dann auf _MAX_ROADWORKS kappen.
-    ranked_roadworks = sorted(slimmed_roadworks, key=lambda r: not _is_blocked(r))
+    # Original-Reihenfolge), dann auf _MAX_ROADWORKS kappen. Seit dem Entfernen
+    # des Rohfelds isBlocked (2026-08-31) traegt das geslimmte Item nur noch
+    # das kanonische ``is_blocked`` (bool) aus _canonical_event_fields.
+    ranked_roadworks = sorted(
+        slimmed_roadworks, key=lambda r: not r.get("is_blocked", False)
+    )
     roadworks = ranked_roadworks[:_MAX_ROADWORKS]
     roadworks_truncated = roadworks_total > _MAX_ROADWORKS
     warnings = [

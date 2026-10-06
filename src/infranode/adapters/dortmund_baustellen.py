@@ -82,14 +82,6 @@ async def fetch_dortmund_road_events(
                 "district": district,
                 "lat": feat_lat,
                 "lon": feat_lon,
-                # Abgekündigt (alte deutsche Namen), Werte identisch:
-                "beschreibung": description,
-                "auftraggeber": client,
-                "einschraenkung": restriction,
-                "zeitraum": period,
-                "von": start,
-                "bis": end,
-                "stadtbezirk": district,
             }
         )
     return {"slug": slug, "events": events}

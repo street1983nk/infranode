@@ -42,9 +42,12 @@ const tabs = [
           <button
             type="button"
             role="tab"
+            id={`${id}-tab-${tab.key}`}
             class="codetabs__btn"
             data-tab={tab.key}
             aria-selected={index === 0 ? "true" : "false"}
+            aria-controls={`${id}-panel-${tab.key}`}
+            tabindex={index === 0 ? "0" : "-1"}
           >
             {tab.label}
           </button>
@@ -53,13 +56,17 @@ const tabs = [
     </div>
     <button type="button" class="codetabs__copy" data-copy aria-label={t.copyAria} data-copied-label={t.copied}>
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>
-      <span data-copy-label>{t.copy}</span>
+      <span data-copy-label aria-live="polite">{t.copy}</span>
     </button>
   </div>
   {
     tabs.map((tab, index) => (
       <pre
         class="codetabs__pre"
+        id={`${id}-panel-${tab.key}`}
+        role="tabpanel"
+        aria-labelledby={`${id}-tab-${tab.key}`}
+        tabindex="0"
         data-panel={tab.key}
         hidden={index !== 0}
       ><code>{tab.code}</code></pre>
@@ -69,18 +76,43 @@ const tabs = [
 
 <script>
   // Schaltet je Tab-Gruppe den sichtbaren Panel. Mehrere Gruppen pro Seite
-  // möglich (jede ist ein eigenes [data-codetabs]).
+  // möglich (jede ist ein eigenes [data-codetabs]). Vollständiges WAI-ARIA-
+  // Tabs-Pattern: Roving-Tabindex, Pfeiltasten/Home/End auf der Tab-Liste,
+  // Auswahl folgt dem Fokus.
   for (const group of document.querySelectorAll<HTMLElement>("[data-codetabs]")) {
-    const buttons = group.querySelectorAll<HTMLButtonElement>(".codetabs__btn");
+    const buttons = [...group.querySelectorAll<HTMLButtonElement>(".codetabs__btn")];
     const panels = group.querySelectorAll<HTMLElement>(".codetabs__pre");
+
+    function select(button: HTMLButtonElement): void {
+      const key = button.dataset.tab;
+      for (const other of buttons) {
+        const isActive = other === button;
+        other.setAttribute("aria-selected", isActive ? "true" : "false");
+        other.tabIndex = isActive ? 0 : -1;
+      }
+      for (const panel of panels) {
+        panel.hidden = panel.dataset.panel !== key;
+      }
+    }
+
     for (const button of buttons) {
-      button.addEventListener("click", () => {
-        const key = button.dataset.tab;
-        for (const other of buttons) {
-          other.setAttribute("aria-selected", other === button ? "true" : "false");
+      button.addEventListener("click", () => select(button));
+      button.addEventListener("keydown", (e) => {
+        const index = buttons.indexOf(button);
+        let next = -1;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          next = (index + 1) % buttons.length;
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          next = (index - 1 + buttons.length) % buttons.length;
+        } else if (e.key === "Home") {
+          next = 0;
+        } else if (e.key === "End") {
+          next = buttons.length - 1;
         }
-        for (const panel of panels) {
-          panel.hidden = panel.dataset.panel !== key;
+        if (next >= 0) {
+          e.preventDefault();
+          buttons[next].focus();
+          select(buttons[next]);
         }
       });
     }

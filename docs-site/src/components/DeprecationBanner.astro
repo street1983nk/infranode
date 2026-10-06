@@ -16,8 +16,8 @@
 // traegt: im Badge und im neuen Namen.
 import {
   FIELD_DEPRECATIONS,
-  REMOVAL_DATE,
   type DeprecatedField,
+  type DeprecationEntry,
 } from "../data/deprecations";
 
 interface Props {
@@ -26,7 +26,20 @@ interface Props {
 }
 
 const { operationId, lang = "de" } = Astro.props;
-const fields: DeprecatedField[] | undefined = FIELD_DEPRECATIONS[operationId];
+const entry: DeprecationEntry | undefined = FIELD_DEPRECATIONS[operationId];
+const fields: DeprecatedField[] | undefined = entry?.fields;
+
+// Entfernungsdatum je Eintrag formatiert (ISO -> lesbares Datum je Sprache).
+const formatDate = (iso: string): string => {
+  const [y, m, d] = iso.split("-").map(Number);
+  const months =
+    lang === "en"
+      ? ["January", "February", "March", "April", "May", "June", "July",
+         "August", "September", "October", "November", "December"]
+      : ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
+         "August", "September", "Oktober", "November", "Dezember"];
+  return lang === "en" ? `${d} ${months[m - 1]} ${y}` : `${d}. ${months[m - 1]} ${y}`;
+};
 
 const t =
   lang === "en"
@@ -54,7 +67,7 @@ const t =
         roadmap: "/roadmap/",
         roadmapLabel: "Roadmap",
       };
-const removal = lang === "en" ? REMOVAL_DATE.en : REMOVAL_DATE.de;
+const removal = entry ? formatDate(entry.removal) : "";
 ---
 
 {

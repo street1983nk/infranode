@@ -140,8 +140,26 @@ async def read_entry_meta(redis, key: str) -> EntryMeta | None:
     return EntryMeta(fresh_until=v["fresh_until"], stale_until=v["stale_until"])
 
 
-async def _store(redis, key: str, payload, ttl_fresh: float, ttl_stale: float) -> None:
-    """Schreibt Payload + Fresh-/Stale-Fenster; Redis-Key-TTL = Stale-Ende."""
+async def _store(
+    redis,
+    key: str,
+    payload,
+    ttl_fresh: float,
+    ttl_stale: float,
+    keep_extra_s: float = 0.0,
+) -> None:
+    """Schreibt Payload + Fresh-/Stale-Fenster; Redis-Key-TTL = Stale-Ende + Reserve.
+
+    ``keep_extra_s`` (Default 0.0 = bisheriges Verhalten) laesst den Key um die
+    Notreserve LAENGER leben als ``stale_until``. Grund (Vorfall 2026-09-07
+    abends, fuel-prices): mit Key-TTL == Stale-Ende existiert nach dem Fenster
+    NICHTS mehr, der Stale-on-error-Fallback in resilience/client.py findet
+    ``has_stale=false``, und ein kalter Key verliert gegen die Aggregat-Bremse
+    der Quelle -> 503-Wellen nach jedem Deploy und jeder Abfrage-Luecke. Die
+    Urteilsgrundlage bleiben ``fresh_until``/``stale_until`` im Value: ein
+    Eintrag JENSEITS von stale_until ist fuer ``cache_get_or_set`` ein Miss und
+    wird ausschliesslich vom Fehlerpfad der Fassade gelesen.
+    """
     now = time.time()
     value = {
         "payload": _encode_payload(payload),
@@ -149,7 +167,7 @@ async def _store(redis, key: str, payload, ttl_fresh: float, ttl_stale: float) -
         "stale_until": now + ttl_stale,
     }
     # ex muss >= 1 sein; bei winzigem ttl_stale runden wir auf 1s auf.
-    ex = max(1, round(ttl_stale))
+    ex = max(1, round(ttl_stale + keep_extra_s))
     await redis.set(key, orjson.dumps(value), ex=ex)
 
 
@@ -159,6 +177,7 @@ async def _refresh_and_store(
     ttl_fresh: float,
     ttl_stale: float,
     fetch: Callable[[], Awaitable],
+    keep_extra_s: float = 0.0,
 ) -> None:
     """Single-Flight-Refresh-Coroutine: fetcht neu und speichert (Lock via ex aus).
 
@@ -178,7 +197,7 @@ async def _refresh_and_store(
         log.info("cache_refresh_failed", key=key, error=type(exc).__name__)
         return
     try:
-        await _store(redis, key, payload, ttl_fresh, ttl_stale)
+        await _store(redis, key, payload, ttl_fresh, ttl_stale, keep_extra_s)
     except Exception as exc:
         # Redis-Schreibfehler beim Hintergrund-Refresh degradiert ignorieren.
         log.debug("cache_refresh_store_failed", key=key, error=str(exc))
@@ -202,6 +221,7 @@ async def cache_get_or_set(
     fetch: Callable[[], Awaitable],
     ttl_stale: float | None = None,
     schedule: Callable[[Awaitable], None] | None = None,
+    keep_extra_s: float = 0.0,
 ):
     """Cache-Aside + Stale-While-Revalidate + Single-Flight um ``fetch``.
 
@@ -214,6 +234,10 @@ async def cache_get_or_set(
             diesen Wert): ``max(ttl + Mindest-Pad, 24h-Floor)`` als
             Defense-in-Depth. Explizit übergeben wird der Wert exakt respektiert.
         schedule: plant die Hintergrund-Refresh-Coroutine (Default: asyncio-Task).
+        keep_extra_s: Notreserve hinter dem Stale-Fenster (siehe ``_store``);
+            veraendert NUR die Key-Lebensdauer, nie HIT/STALE/MISS: ein Eintrag
+            jenseits von stale_until faellt hier in den Miss-Pfad und wird
+            allein vom Fehlerpfad der Fassade (resilience/client.py) gelesen.
 
     Returns:
         ``(payload, status)`` mit status in {"HIT", "STALE", "MISS"}.
@@ -255,7 +279,9 @@ async def cache_get_or_set(
             except Exception:
                 got_lock = False
             if got_lock:
-                schedule(_refresh_and_store(redis, key, ttl, ttl_stale, fetch))
+                schedule(
+                    _refresh_and_store(redis, key, ttl, ttl_stale, fetch, keep_extra_s)
+                )
             return _decode_payload(v["payload"]), "STALE"
 
     # 2. Miss/expired. Single-Flight auch für den kalten Pfad, damit N parallele
@@ -287,7 +313,7 @@ async def cache_get_or_set(
     # 3. Synchron fetchen + speichern (Lock-Halter oder degradierter Pfad).
     payload = await fetch()
     try:
-        await _store(redis, key, payload, ttl, ttl_stale)
+        await _store(redis, key, payload, ttl, ttl_stale, keep_extra_s)
     except Exception as exc:
         # Redis-Schreibfehler ignorieren (Graceful Degradation, Pitfall 2).
         log.debug("cache_store_failed", key=key, error=str(exc))

@@ -346,20 +346,17 @@ async def catalog_resource() -> dict:
                 "the source does not provide is null, never an empty string."
             ),
             "deprecated": (
-                "Legacy names still carry identical values but will be removed no "
-                "earlier than 30 days after the changelog entry of 2026-07-25: "
-                "plz, zip, strasse, hausnummer, ort, city, bezeichnung, beginn, "
-                "ende, art, dist_km, leistung_kw, einheit_typ, plus the camelCase "
-                "raw fields of the Autobahn traffic messages (isBlocked, "
-                "startTimestamp, delayTimeValue, averageSpeed, "
-                "abnormalTrafficType, extent). Prefer the canonical names. In the "
-                "station boards (station_departures/station_arrivals) the "
-                "deprecated stop_id is now trip_stop_id: it identifies one stop "
-                "of one train run and is NOT a station/stop id, so never pass it "
-                "to transit_departures (that one needs the DELFI id from "
-                "get_city_resource(slug, resource='transit')). In the station "
-                "catalog the DB station category is station_category (a number); "
-                "the deprecated category carried the same value."
+                "The legacy names announced on 2026-08-01 (plz, zip, strasse, "
+                "hausnummer, ort, city, bezeichnung, beginn, ende, art, dist_km, "
+                "leistung_kw, einheit_typ, stop_id, category, plus the camelCase "
+                "raw fields of the Autobahn traffic messages) were REMOVED on "
+                "2026-08-31; only the canonical names remain. One exception: in "
+                "events the old title still carries the same value as the "
+                "canonical name until 2026-09-30. In the station boards "
+                "trip_stop_id identifies one stop of one train run and is NOT a "
+                "station/stop id, so never pass it to transit_departures (that "
+                "one needs the DELFI id from get_city_resource(slug, "
+                "resource='transit'))."
             ),
         },
     }

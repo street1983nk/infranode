@@ -159,9 +159,8 @@ async def fetch_koeln_road_events(
     ``name``/``event_type``/``event_type_label``/``start``/``end`` (aus
     ``attributes`` per ``.get()`` mit None-Fallback, T-9-02; ``typ`` als String,
     Epoch-ms -> ISO-8601) und ``lat``/``lon`` (repräsentativer Punkt) extrahiert.
-    Die alten deutschen Namen ``bezeichnung``/``art``/``beginn``/``ende`` bleiben
-    abgekündigt mit identischem Wert daneben stehen (Konsistenz-Audit
-    2026-07-25).
+    Die alten deutschen Namen ``bezeichnung``/``art``/``beginn``/``ende`` waren
+    seit 2026-08-01 abgekündigt und sind zum 2026-08-31 entfernt.
 
     Rückgabe-Keys (exakt das, was ``map_koeln_road_events`` erwartet): ``slug``
     und ``events``.
@@ -225,11 +224,6 @@ async def fetch_koeln_road_events(
                     ),
                     "lat": feature_lat,
                     "lon": feature_lon,
-                    # Abgekuendigt (alte deutsche Namen), Werte identisch:
-                    "bezeichnung": name,
-                    "art": art_code,
-                    "beginn": start,
-                    "ende": end,
                 }
             )
 
