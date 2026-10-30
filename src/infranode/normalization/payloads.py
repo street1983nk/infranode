@@ -612,30 +612,20 @@ class RoadEventPayload(BaseModel):
     je Event ein schlankes dict. Mutable Liste IMMER via
     ``Field(default_factory=list)`` (ruff B006).
 
-    Köln-Events tragen die kanonischen Namen ``name``/``start``/``end``/
-    ``event_type`` plus ``event_type_label`` (Klartext aus der codierten
-    Werteliste des Dienstes); die alten deutschen Felder ``bezeichnung``/
-    ``beginn``/``ende``/``art`` waren seit 2026-08-01 abgekündigt und sind zum
-    2026-08-31 entfernt.
+    Köln-Events tragen die kanonischen Namen ``id``/``name``/``start``/``end``/
+    ``event_type`` plus ``event_type_label``. Seit dem WFS-Umstieg 2026-10
+    (ArcGIS-Server der Stadt abgeschaltet) ist ``event_type`` der
+    Baustellenart-Slug des Baustellen-WFS (z. B. ``strassenbauarbeiten``) und
+    ``event_type_label`` der Klartext der Quelle (``Kategorie``); die alten
+    Integer-Codes des Verkehrskalenders (inkl. Veranstaltungs-Typen wie
+    Karneval/Messen) gibt es im WFS nicht mehr. Die alten deutschen Felder
+    ``bezeichnung``/``beginn``/``ende``/``art`` waren seit 2026-08-01
+    abgekündigt und sind zum 2026-08-31 entfernt.
     """
 
     kind: Literal["road_event"] = "road_event"
     city_source: str | None = None
     events: list[dict] = Field(default_factory=list)
-
-
-class WebcamPayload(BaseModel):
-    """Autobahn-Webcams je Stadt (DATA-22, Tier A).
-
-    Erweitert den keylosen Autobahn-Adapter um den webcam-Sub-Service:
-    Koordinaten + Bild-URLs der Webcams im BBox um die Stadt. ``count`` trägt die
-    Anzahl, ``webcams`` je Cam ein schlankes dict (imageurl/coordinate/title).
-    Mutable Liste IMMER via ``Field(default_factory=list)`` (ruff B006).
-    """
-
-    kind: Literal["webcam"] = "webcam"
-    count: int
-    webcams: list[dict] = Field(default_factory=list)
 
 
 class EventPayload(BaseModel):
@@ -1559,7 +1549,6 @@ PayloadUnion = Annotated[
     | HolidayPayload
     | HospitalPayload
     | RoadEventPayload
-    | WebcamPayload
     | EventPayload
     | TrafficFlowPayload
     | ParkingPayload

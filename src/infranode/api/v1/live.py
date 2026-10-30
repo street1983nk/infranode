@@ -8,7 +8,7 @@ Quelle), ohne den Bestands-Envelope zu brechen.
 
 Re-Exposition Bestand (LIVE-03, REST-Regel 6 = eine Quelle der Wahrheit): die
 bestehenden Live-/Quasi-Live-Handler aus ``cities.py`` (air, air-uba, water-level,
-traffic, webcams, flood) werden hier als DÜNNE Alias-Wrapper unter ``/live``
+traffic, flood) werden hier als DÜNNE Alias-Wrapper unter ``/live``
 re-exponiert. Es wird KEIN Handler-Body dupliziert: die Wrapper rufen exakt den
 jeweiligen ``cities.py``-Handler auf. Die Altpfade in ``cities.py`` bleiben
 funktionsfähig (kein Breaking Change, Envelope-Kontrakt stabil) und tragen
@@ -1664,12 +1664,6 @@ async def live_water_level(slug: str, request: Request) -> dict:
 async def live_traffic(slug: str, request: Request) -> dict:
     """Live-Alias für den Autobahn-Verkehrs-Endpunkt (LIVE-03)."""
     return await cities.city_traffic(slug, request, Response())
-
-
-@router.get("/{slug}/webcams")
-async def live_webcams(slug: str, request: Request) -> dict:
-    """Live-Alias für den Autobahn-Webcam-Endpunkt (LIVE-03)."""
-    return await cities.city_webcams(slug, request, Response())
 
 
 @router.get("/{slug}/flood")

@@ -29,7 +29,7 @@ from asgi_correlation_id import correlation_id
 from fastapi import APIRouter, Request, Response
 
 from infranode.adapters.aachen_parking import fetch_aachen_parking
-from infranode.adapters.autobahn import fetch_traffic, fetch_webcams
+from infranode.adapters.autobahn import fetch_traffic
 from infranode.adapters.baumkataster import fetch_trees
 from infranode.adapters.bbk_nina import ars_for_ags, fetch_for_ags
 from infranode.adapters.berlin_radzaehl import fetch_berlin_bike_counts
@@ -143,7 +143,6 @@ from infranode.infra.demand_queue import enqueue as enqueue_demand
 from infranode.normalization.enums import SourceId
 from infranode.normalization.mappers.autobahn import (
     map_autobahn_traffic,
-    map_autobahn_webcams,
 )
 from infranode.normalization.mappers.baumkataster import map_trees
 from infranode.normalization.mappers.bbk_nina import map_bbk_nina
@@ -2370,7 +2369,7 @@ async def city_traffic(slug: str, request: Request, response: Response) -> dict:
     _mark_deprecated(response, "/api/v1/live/{slug}/traffic")
 
     # Coverage-Guard (Owner 2026-06-13): die Autobahn-Verkehrslage deckt nur Städte
-    # mit kuratierten Autobahnen ab (_CITY_ROADS, dieselbe Map wie webcams). Eine
+    # mit kuratierten Autobahnen ab (_CITY_ROADS). Eine
     # nicht-abgedeckte Stadt liefert ehrlich not_covered (200) + covered_cities,
     # statt eines leeren "ok". Vor dem Toggle: die Abdeckung ist strukturell.
     if not is_covered("traffic", entry.slug):
@@ -3600,94 +3599,6 @@ async def city_events(slug: str, request: Request) -> dict:
             else:
                 r["payload"]["events"] = events[p.offset : p.offset + p.limit]
     return {"data": data, "meta": meta}
-
-
-@router.get("/cities/{slug}/webcams", deprecated=True)
-async def city_webcams(slug: str, request: Request, response: Response) -> dict:
-    """Liefert Autobahn-Live-Webcams im kanonischen Envelope (DATA-22).
-
-    Ablauf (DATA-22/06, API-01, GOV-02, DX-06) nach dem ``city_water_level``-
-    no_data-Muster: Register-Lookup (unbekannter Slug -> 404 mit Hint über den
-    zentralen Handler), Quellen-Toggle-Prüfung (``enable_autobahn_webcam`` aus ->
-    200 ``source_status="disabled"``, nie 5xx), resilienter Fetch über die Fassade
-    gegen die keylose Autobahn-Webcam-API (BBox um den Register-Geo), Mapping über
-    ``map_autobahn_webcams``, dann der Daten-Envelope mit Attribution.
-
-    KRITISCH (Decision 3, Pitfall 1): Webcams sind ein Live-Bild-Feature. Diese
-    Route gibt das Live-Bild direkt aus (Feature-Entscheidung, KEIN Tier-Downgrade;
-    license_tier bleibt A). Ein leeres ``webcams``-Array ist NORMAL
-    (Live-Realität) -> ehrliches 200 ``source_status="no_data"`` OHNE Mapper.
-    Toter Upstream ohne Cache -> 503 mit selbst-korrigierendem Hint (DX-06).
-    """
-    entry = get_city(slug)
-    # LIVE-03: Altpfad ist deprecated -> /live-Nachfolger (kein Breaking Change).
-    _mark_deprecated(response, "/api/v1/live/{slug}/webcams")
-
-    # Coverage-Guard (Owner 2026-06-13): Autobahn-Webcams decken nur Städte mit
-    # kuratierten Autobahnen ab (_CITY_ROADS, dieselbe Map wie traffic). Eine
-    # nicht-abgedeckte Stadt liefert ehrlich not_covered (200) + covered_cities,
-    # statt eines leeren "ok". Vor dem Toggle: die Abdeckung ist strukturell.
-    if not is_covered("webcams", entry.slug):
-        return _not_covered("webcams")
-
-    # Quellen-Toggle frisch lesen (Settings() statt app.state.settings, damit der
-    # per-Test gesetzte Env-Override greift). DATA-06: deaktiviert -> 200 disabled.
-    if not Settings().enable_autobahn_webcam:
-        return {
-            "data": None,
-            "meta": {
-                "correlation_id": correlation_id.get(),
-                "source_status": "disabled",
-            },
-        }
-
-    client = request.app.state.resilient_client
-    key = build_cache_key("autobahn_webcam", city_slug=entry.slug)
-
-    async def fetch_fn():
-        return await fetch_webcams(
-            request.app.state.http,
-            slug=entry.slug,
-            lat=entry.geo.lat,
-            lon=entry.geo.lon,
-        )
-
-    raw, status = await client.fetch("autobahn_webcam", key, fetch_fn)
-
-    # Pitfall: raw is None (toter Upstream ohne Cache) MUSS vor dem Mapper
-    # geprüft werden, sonst 500. 503 mit selbst-korrigierendem Hint (DX-06).
-    if raw is None:
-        raise UpstreamError(
-            "Quelle 'autobahn_webcam' voruebergehend nicht erreichbar, kein "
-            "gecachter Wert vorhanden.",
-            hint="Erneut versuchen oder GET /api/v1/health fuer Quellen-Status.",
-        )
-
-    # KRITISCH (Decision 3, Pitfall 1): leeres webcams-Array (Live-Realität) ->
-    # ehrliches no_data (200) OHNE Mapper. KEIN 5xx.
-    if not raw.get("webcams"):
-        return {
-            "data": None,
-            "meta": {
-                "correlation_id": correlation_id.get(),
-                "source_status": "no_data",
-            },
-        }
-
-    record = map_autobahn_webcams(
-        raw, retrieved_at=datetime.now(UTC), ags=entry.ags, wikidata_qid=entry.qid
-    )
-    # KRITISCH (Decision 3): Webcams = Live-Bild-Feature. Der Envelope wird direkt
-    # zurückgegeben (Feature-Entscheidung, kein Tier-Downgrade; license_tier bleibt A).
-
-    return {
-        "data": record.model_dump(mode="json"),
-        "meta": {
-            "correlation_id": correlation_id.get(),
-            "source_status": "ok",
-            "cache_status": status,
-        },
-    }
 
 
 def _transit_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

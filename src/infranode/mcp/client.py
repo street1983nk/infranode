@@ -128,7 +128,6 @@ ALLOWED_RESOURCES: frozenset[str] = frozenset(
         "health",
         "road-events",
         "events",
-        "webcams",
         # SMARD/DWD (früher ergänzt, in der MCP-Allowlist nachgezogen).
         "power-load",
         "power-price",

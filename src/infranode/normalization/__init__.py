@@ -72,7 +72,6 @@ from infranode.normalization.payloads import (
     WaterLevelPayload,
     WeatherPayload,
     WeatherWarningPayload,
-    WebcamPayload,
 )
 
 __all__ = [
@@ -139,5 +138,4 @@ __all__ = [
     "WaterLevelPayload",
     "WeatherPayload",
     "WeatherWarningPayload",
-    "WebcamPayload",
 ]

@@ -1,7 +1,7 @@
 """Agentenfreundliche 404-Hints fuer unbekannte Pfade unter /api/v1/ (DX-404-HINT).
 
 Ein Maschinen-Client ohne unsere Prompt-Regeln, der einen falschen Pfad rief
-(z.B. GET /api/v1/cameras statt .../webcams), soll ohne externe Doku zurueck auf
+(z.B. GET /api/v1/fuel statt .../fuel-prices), soll ohne externe Doku zurueck auf
 einen gueltigen Pfad finden, analog zum Stadt-Slug-Resolver-Hint. Dieses Modul
 baut dazu einen reinen, testbaren Hint aus (a) der festen Pfadstruktur und (b)
 einem difflib-basierten "Meintest du"-Vorschlag gegen die bekannten Datenart-Keys
@@ -80,10 +80,11 @@ def _did_you_mean(segment: str) -> str | None:
     """Bester Fuzzy-Treffer aus der Kandidatenmenge oder None.
 
     Cutoff bewusst 0.5 (nicht 0.7 wie beim Stadt-Resolver): Datenart-Keys aehneln
-    ihrem gaengigen Falschnamen weniger als Stadtnamen-Tippfehler. ``cameras`` vs.
-    ``webcams`` ergibt in difflib nur ~0.57, soll aber vorgeschlagen werden, waehrend
-    ein voellig unbekanntes Segment keinen Treffer liefern darf. Der Rueckgabewert
-    ist immer ein Wert aus der eigenen Kandidatenmenge, nie roher Input.
+    ihrem gaengigen Falschnamen weniger als Stadtnamen-Tippfehler. ``fuel`` vs.
+    ``fuel-prices`` ergibt in difflib nur ~0.53, soll aber vorgeschlagen werden,
+    waehrend ein voellig unbekanntes Segment keinen Treffer liefern darf. Der
+    Rueckgabewert ist immer ein Wert aus der eigenen Kandidatenmenge, nie roher
+    Input.
     """
     norm = _normalize_segment(segment)
     if not norm:

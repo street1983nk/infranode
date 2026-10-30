@@ -181,12 +181,21 @@ def _jittered_fresh(source: str, ttl_fresh: float) -> float:
 # mehrere Städte in Timeouts (beobachtet 2026-07-17: 8 parallel -> nur ~3 ok, Rest
 # per-Stadt "error"). Ein Concurrency-Cap serialisiert den kalten Fan-out in kleine
 # Wellen, sodass jede Stadt durchkommt und cacht (warme compares bleiben instant).
+# autobahn (verkehr.autobahn.de, keylos), Eintrag seit 2026-10-18: der Adapter
+# fetcht je Stadt mit interner Semaphore 8 (adapters/autobahn.py _MAX_CONCURRENCY),
+# 2 gleichzeitige Stadt-Fetches ergeben also höchstens 16 Verbindungen und bleiben
+# unter dem per-Host-Pool von 20 (infra/http.py, pool=1.0s). Vorfall 2026-10-18:
+# der stündliche Collector-Sweep über 84 Städte plus SWR-Refreshes erzeugte 500 bis
+# 1000 req/min und je Stunde 30 bis 70 PoolTimeouts. Der Cap serialisiert den Sweep
+# in kleine Wellen, statt ihn in PoolTimeouts laufen zu lassen. Bewusst KEIN
+# _SOURCE_MIN_INTERVAL_S-Eintrag: kein Rate-Limit-Befund, nur Pool-Erschöpfung.
 # Quellen ohne Eintrag: unbegrenzt (Verhalten unverändert).
 _SOURCE_MAX_CONCURRENCY: dict[str, int] = {
     "wikidata": 5,
     "tankerkoenig": 2,
     "overpass": 1,
     "genesis": 3,
+    "autobahn": 2,
 }
 # Mindestabstand (Sekunden) zwischen Upstream-Calls je Quelle (Aggregat-Rate).
 # DB-Timetables-ToS: <=60 Aufrufe/Minute -> >=1.0s.

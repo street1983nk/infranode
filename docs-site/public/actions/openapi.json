@@ -725,8 +725,7 @@
         "vehicle-registrations",
         "water-level",
         "weather",
-        "weather-warnings",
-        "webcams"
+        "weather-warnings"
        ]
       }
      }

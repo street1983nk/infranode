@@ -442,8 +442,8 @@ class SourceToggleSettings(BaseSettings):
             "INFRANODE_ENABLE_HOLIDAYS", "INFRANODE_ENABLE_FEIERTAGE"
         ),
     )
-    # Phase 9: keylose Stadt-Verkehrs-Quellen (Baustellen/Sperrungen) je Stadt +
-    # Autobahn-Webcam-Sub-Service. Alle keylos, daher Default True.
+    # Phase 9: keylose Stadt-Verkehrs-Quellen (Baustellen/Sperrungen) je Stadt.
+    # Alle keylos, daher Default True.
     enable_berlin_viz: bool = True
     enable_hamburg_roadworks: bool = Field(
         default=True,
@@ -481,7 +481,6 @@ class SourceToggleSettings(BaseSettings):
     # SPERRINFOSYS Sachsen: keylos, EINE Quelle für Dresden + Leipzig.
     enable_sperrinfosys: bool = True
     enable_mobidata_bw: bool = True
-    enable_autobahn_webcam: bool = True
     # Phase 10: Stadt-Events/Veranstaltungen. destination.one ist KEYLOS (Experience
     # "open-data" frei zugänglich, Support-Bestätigung 2026-06-10) -> Default True.
     enable_destination_one: bool = True

@@ -41,6 +41,59 @@ export const KIND_LABEL: Record<ChangeKind, { de: string; en: string }> = {
 
 export const changelog: ChangelogEntry[] = [
   {
+    date: "2026-10-28",
+    kind: "changed",
+    de: {
+      title: "Köln road-events: neue Quelle Baustellen-WFS",
+      body:
+        "Die Stadt Köln hat ihren ArcGIS-Server abgeschaltet, die bisherige " +
+        "Quelle des Endpunkts /cities/koeln/road-events lieferte dadurch 503. " +
+        "Die Daten kommen jetzt aus dem Baustellen-WFS der Stadt (Lizenz " +
+        "unverändert DL-DE/Zero 2.0). Inhaltlich umfasst die Quelle nur noch " +
+        "Baustellenarten (z. B. Straßenbauarbeiten, Kanalsanierung); die " +
+        "früheren Veranstaltungs-Ereignistypen (Karneval, Messen, " +
+        "Stadion-Events) gibt es im WFS nicht mehr. event_type trägt nun den " +
+        "Baustellenart-Slug statt eines Zahlencodes, event_type_label den " +
+        "Klartext der Quelle; neu je Event: id (Aktenzeichen).",
+    },
+    en: {
+      title: "Cologne road-events: new source Baustellen-WFS",
+      body:
+        "The city of Cologne shut down its ArcGIS server, so the previous " +
+        "source of /cities/koeln/road-events returned 503. Data now comes " +
+        "from the city's roadworks WFS (license unchanged, DL-DE/Zero 2.0). " +
+        "The source now only covers roadwork categories (e.g. road " +
+        "construction, sewer rehabilitation); the former event types " +
+        "(carnival, trade fairs, stadium events) no longer exist in the WFS. " +
+        "event_type now carries the roadwork category slug instead of a " +
+        "numeric code, event_type_label the source's plain-text category; " +
+        "new per event: id (case number).",
+    },
+    endpoint: "getCityRoadEvents",
+  },
+  {
+    date: "2026-10-18",
+    kind: "removed",
+    de: {
+      title: "Autobahn-Webcams: Endpunkt entfernt",
+      body:
+        "Die Endpunkte /cities/{slug}/webcams und /live/{slug}/webcams " +
+        "entfallen ersatzlos. Die Quelle lieferte seit längerem bundesweit " +
+        "keine Webcams, beide Endpunkte antworteten durchgehend mit no_data " +
+        "bzw. disabled. Faktisch fallen damit keine Daten weg. Die " +
+        "Autobahn-Verkehrslage (/traffic) bleibt unverändert.",
+    },
+    en: {
+      title: "Autobahn webcams: endpoint removed",
+      body:
+        "The endpoints /cities/{slug}/webcams and /live/{slug}/webcams are " +
+        "removed without replacement. The source had not delivered any " +
+        "webcams nationwide for a long time, and both endpoints consistently " +
+        "responded with no_data or disabled. In practice no data is lost. " +
+        "Autobahn traffic (/traffic) remains unchanged.",
+    },
+  },
+  {
     date: "2026-09-15",
     kind: "fixed",
     de: {

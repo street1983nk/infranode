@@ -5,13 +5,14 @@
 keine Log-Aufrufe, keine Systemuhr. Der ``retrieved_at``-Zeitstempel wird
 keyword-only injiziert, damit Tests deterministisch bleiben.
 
-Die Köln-Verkehrsdaten (Stadt Köln) stehen unter der Datenlizenz Deutschland
-Zero 2.0 (verifiziert 2026-06-26 gegen den Datensatz "Verkehrsbeeintraechtigungen
-Stadt Koeln" auf offenedaten-koeln.de, dl-zero-de/2.0; Köln stellt seit Mitte
-2022 standardmäßig unter DL-DE/Zero bereit): ``license_id=DL_DE_ZERO_2_0``,
-``license_tier=A`` (permissiv, KEINE Namensnennungspflicht; Attribution
-"Stadt Köln" bleibt informativ erhalten). Die Einzel-Events tragen ihre Zeit und
-Geometrie im Payload, daher ``observed_at=None`` und ``geo=None``.
+Die Köln-Baustellendaten (Stadt Köln) stehen unter der Datenlizenz Deutschland
+Zero 2.0 (verifiziert 2026-10-28 gegen den Datensatz "Baustellen Koeln" auf
+offenedaten-koeln.de, dessen Distribution der genutzte Baustellen-WFS ist;
+Köln stellt seit Mitte 2022 standardmäßig unter DL-DE/Zero bereit):
+``license_id=DL_DE_ZERO_2_0``, ``license_tier=A`` (permissiv, KEINE
+Namensnennungspflicht; Attribution "Stadt Köln" bleibt informativ erhalten).
+Die Einzel-Events tragen ihre Zeit und Geometrie im Payload, daher
+``observed_at=None`` und ``geo=None``.
 """
 
 from __future__ import annotations
@@ -39,8 +40,8 @@ def map_koeln_road_events(
 ) -> CanonicalRecord:
     """Bildet rohe Kölner Road-Events auf einen ``CanonicalRecord`` (Tier A) ab.
 
-    Die ``events`` (Baustellen/Verkehrsbeeintraechtigungen, DATA-15) wandern
-    unverändert in den ``RoadEventPayload`` (``city_source="koeln_road_events"``).
+    Die ``events`` (Baustellen aus dem Köln-WFS, DATA-15) wandern unverändert
+    in den ``RoadEventPayload`` (``city_source="koeln_road_events"``).
     Der ``retrieved_at``-Zeitstempel wird injiziert (keine Systemuhr im Mapper),
     damit das Ergebnis deterministisch bleibt. Die Join-Keys
     ``ags``/``wikidata_qid`` werden aus dem Register durchgereicht (Default

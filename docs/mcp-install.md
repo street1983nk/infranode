@@ -230,7 +230,6 @@ generischen Zugriff erreichbar.
 | `insolvencies` | Beantragte Insolvenzen je Kreis, jährlich (Regionalstatistik) |
 | `public-tenders` | Öffentliche Auftragsvergabe: laufende und vergebene Aufträge (OCDS) |
 | `events` | Veranstaltungen (Teilabdeckung, kommunal) |
-| `webcams` | Verkehrs-Webcams (Region, Teilabdeckung, Autobahn) |
 | `election` | Wahlergebnisse |
 | `holidays` | Feiertage des Bundeslands |
 | `heritage` | Denkmäler/Baudenkmale aus der Landes-Denkmalliste (Berlin) |

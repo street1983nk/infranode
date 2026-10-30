@@ -34,7 +34,7 @@ const MEMBERS: Record<string, string[]> = {
   verkehr: [
     "getCityTransit", "getCityStationDepartures", "getCityStationArrivals",
     "getCityStations", "getCityStationFacilities", "getCityTraffic",
-    "getCityRoadEvents", "getCityWebcams",
+    "getCityRoadEvents",
     "getCitySharing", "getCityParking", "getCityFuelPrices", "getCityBikeCounts",
     "getCityParkingOnstreet", "getCityParkAndRide", "getCityMobilityPoints",
     "getCityBikeParking",
@@ -43,7 +43,7 @@ const MEMBERS: Record<string, string[]> = {
     "getLiveNuernbergDepartures", "getLiveTraffic", "getLiveTrafficFlow",
     "getLiveRoadworks", "getLiveBerlinTrafficReports",
     "getLiveHannoverTrafficReports", "getLiveHamburgTrafficSituation",
-    "getLiveIncidents", "getLiveWebcams", "getLiveDortmundParking",
+    "getLiveIncidents", "getLiveDortmundParking",
     "getLiveFrankfurtParking", "getLiveWuppertalParking", "getLiveMagdeburgParking",
     "getLiveKielCountingStations", "getLiveFrankfurtDepartures", "getLiveVrrDepartures",
     "getLiveBaustellen", "getLiveEreignisse", "getLiveBerlinVerkehrsmeldungen",

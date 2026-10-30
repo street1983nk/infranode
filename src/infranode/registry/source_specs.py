@@ -504,15 +504,6 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         attribution="Verkehrsministerium Baden-Württemberg / MobiData BW",
         ttl=_TRAFFIC_MESSAGE_STALE,
     ),
-    # Die Webcam-LISTE (Standorte/URLs) ist quasi statisch, die Bilder liegen
-    # beim Betreiber: Fresh 1h / Stale 24h statt 60s/120s-Default
-    # (TTL-Tuning quick-260717-ttl).
-    SourceSpec(
-        name="autobahn_webcam",
-        license_id="dl_de_by_2_0",
-        attribution="Bundesanstalt für Straßenwesen (BASt) / Autobahn GmbH",
-        ttl=(3600.0, 86400.0),
-    ),
     # Veranstaltungskalender ändern sich täglich, nicht minütlich: Fresh 1h /
     # Stale 24h; überbrückt Ausfälle des externen SaaS statt 503 nach 2 Minuten
     # (TTL-Tuning quick-260717-ttl).
@@ -794,8 +785,14 @@ SOURCE_SPECS: tuple[SourceSpec, ...] = (
         ttl=(300.0, 3600.0),
     ),
     SourceSpec(
+        # Parkleitsystem-Seite oldenburg-service.de/pls.php (Owner-Entscheid
+        # 2026-10-20): der DL-DE/BY-Datensatz ist nach dem DKAN-Relaunch von
+        # opendata.oldenburg.de verschwunden -> Lizenzgrundlage weg. Konservativ
+        # unknown/Tier C (live-only, NICHT public) bis zur Lizenzklärung bei der
+        # Stadt Oldenburg (Muster aachen_parking). Attribution verbatim aus
+        # mappers/stadt_parking.
         name="oldenburg_parking",
-        license_id="dl_de_by_2_0",
+        license_id="unknown",
         attribution="Stadt Oldenburg (Oldb)",
         ttl=(300.0, 3600.0),
     ),

@@ -69,6 +69,47 @@
 		}
 	}
 
+	# GSC-Hygiene (2026-10-07): llms.txt und die /api/*.md-Exporte sind fuer
+	# KI-Crawler gedacht, nicht fuer den Google-Index ("Gecrawlt - zurzeit
+	# nicht indexiert"-Ballast). Bewusst KEIN robots-Disallow: GPTBot & Co.
+	# sollen sie weiter lesen (GEO), Google soll sie nur nicht listen.
+	# /en/api/*.md gibt es noch nicht, der Matcher deckt eine spaetere
+	# englische Export-Schiene gleich mit ab.
+	@llm_exports path /llms.txt /api/*.md /en/api/*.md
+	header @llm_exports X-Robots-Tag "noindex"
+
+	# 301-Karte der Doku-Altrouten (GSC "Nicht gefunden (404)", Stand
+	# 04.10.2026, 26 URLs): Umbenennung snake_case -> operationId, entfernte
+	# Test-/Key-Operationen (keyless!), getOpenApiSpec -> getOpenapiYaml,
+	# ICU-Live-Doku steckt in getCityHealth, get_city_resource ist ein
+	# MCP-Tool -> /mcp/. Alte .md-Direktpfade auf die HTML-Seiten.
+	redir /api/compare_cities/ /api/compareCities/ 301
+	redir /en/api/compare_cities/ /en/api/compareCities/ 301
+	redir /api/get_city_road_events/ /api/getCityRoadEvents/ 301
+	redir /en/api/get_city_road_events/ /en/api/getCityRoadEvents/ 301
+	redir /api/get_city_bike_counts/ /api/getCityBikeCounts/ 301
+	redir /en/api/get_city_bike_counts/ /en/api/getCityBikeCounts/ 301
+	redir /api/get_city_charging_status/ /api/getCityChargingStatus/ 301
+	redir /en/api/get_city_charging_status/ /en/api/getCityChargingStatus/ 301
+	redir /api/get_city_parking/ /api/getCityParking/ 301
+	redir /en/api/get_city_parking/ /en/api/getCityParking/ 301
+	redir /api/get_city_resource/ /mcp/ 301
+	redir /en/api/get_city_resource/ /en/mcp/ 301
+	redir /api/getPing/ /api/getHealth/ 301
+	redir /en/api/getPing/ /en/api/getHealth/ 301
+	redir /api/getEcho/ /api/getHealth/ 301
+	redir /en/api/getEcho/ /en/api/getHealth/ 301
+	redir /api/getBoom/ /api/getHealth/ 301
+	redir /en/api/getBoom/ /en/api/getHealth/ 301
+	redir /api/getCityIcuLive/ /api/getCityHealth/ 301
+	redir /en/api/getCityIcuLive/ /en/api/getCityHealth/ 301
+	redir /api/getOpenApiSpec/ /api/getOpenapiYaml/ 301
+	redir /en/api/getOpenApiSpec/ /en/api/getOpenapiYaml/ 301
+	redir /api/mintKey/ /api/ 301
+	redir /en/api/mintKey/ /en/api/ 301
+	redir /api/ueber.md /ueber/ 301
+	redir /api/pagination.md /pagination/ 301
+
 	# PUBLIC LAUNCH (Owner-Entscheid 2026-06-12 abends): statische Doku-Site
 	# (Astro-Build, per rsync nach /srv/docs auf dem Host, read-only in den
 	# Container gemountet). Ersetzt das fruehere BETA-GATE (404 auf alles

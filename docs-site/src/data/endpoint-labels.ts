@@ -52,7 +52,6 @@ export const NAV_LABEL: Record<string, NavLabel> = {
   getCityStationFacilities: { de: "Aufzug-Status Bahnhöfe", en: "Station elevator status" },
   getCityTraffic: { de: "Verkehr & Baustellen (Autobahn)", en: "Traffic & roadworks (Autobahn)" },
   getCityRoadEvents: { de: "Baustellen innerstädtisch", en: "Inner-city roadworks" },
-  getCityWebcams: { de: "Autobahn-Webcams", en: "Autobahn webcams" },
   getCitySharing: { de: "Bike- & Scooter-Sharing", en: "Bike & scooter sharing" },
   getCityParking: { de: "Parkhaus-Belegung", en: "Parking occupancy" },
   getCityFuelPrices: { de: "Spritpreise", en: "Fuel prices" },
@@ -138,8 +137,7 @@ export const NAV_LABEL: Record<string, NavLabel> = {
 // liefern (on-demand oder Poller), tragen das Badge zusätzlich zu den
 // /live/-Routen (OpenAPI-Tag "Live"). Bewusst NICHT dabei: stündliche
 // Messwerte (Wetter, Luft) und Warnlagen (Hochwasser, Wetterwarnungen),
-// sonst verliert das Badge seine Aussage. webcams kommt dazu, sobald die
-// Autobahn-Quelle wieder liefert.
+// sonst verliert das Badge seine Aussage.
 export const NAV_LIVE = new Set<string>([
   "getCityFuelPrices",
   "getCityParking",
@@ -162,7 +160,6 @@ export const NAV_HIDDEN = new Set<string>([
   "getLiveAirUba",
   "getLiveWaterLevel",
   "getLiveTraffic",
-  "getLiveWebcams",
   "getLiveFlood",
   "getLiveDortmundParking",
 ]);

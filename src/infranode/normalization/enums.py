@@ -143,10 +143,10 @@ class SourceId(StrEnum):
     HOLIDAYS = "holidays"
     # Phase 9: keylose Stadt-Verkehrs-Quellen (Baustellen/Sperrungen) je Stadt.
     # Alle Werte ASCII (StrEnum), kein Umlaut (Slugs muenchen/koeln). Toggle-Name
-    # == SourceId-Wert == _KNOWN_SOURCES-Eintrag. Webcams nutzen weiterhin
-    # SourceId.AUTOBAHN als Live-Bild-Feature; daher gibt es hier KEINE eigene
-    # Webcam-SourceId. Kein neuer LicenseId-Wert
-    # (alle Phase-9-Quellen sind DL-DE/BY 2.0 = DL_DE_BY_2_0, bereits vorhanden).
+    # == SourceId-Wert == _KNOWN_SOURCES-Eintrag. Autobahn-Webcams (DATA-22) am
+    # 2026-10-18 ausgebaut (Quelle lieferte bundesweit 0 Items). Kein neuer
+    # LicenseId-Wert (alle Phase-9-Quellen sind DL-DE/BY 2.0 = DL_DE_BY_2_0,
+    # bereits vorhanden).
     BERLIN_VIZ = "berlin_viz"
     HAMBURG_ROADWORKS = "hamburg_roadworks"
     KOELN_ROAD_EVENTS = "koeln_road_events"

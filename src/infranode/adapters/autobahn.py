@@ -1,4 +1,4 @@
-"""Keyloser Autobahn-Adapter: fetch_traffic (DATA-07/08) + fetch_webcams (DATA-22).
+"""Keyloser Autobahn-Adapter: fetch_traffic (DATA-07/08).
 
 Die Autobahn-API der Autobahn GmbH (Datenbasis BASt) ist keylos. Der Adapter
 löst die 1->N-Zuordnung Stadt -> Autobahnen über eine kuratierte, Adapter-
@@ -501,43 +501,3 @@ async def fetch_traffic(
                 warnings.extend(filtered)
 
     return {"slug": slug, "roadworks": roadworks, "warnings": warnings}
-
-
-async def fetch_webcams(
-    http: httpx.AsyncClient,
-    *,
-    slug: str,
-    lat: float,
-    lon: float,
-    radius_km: float = 30.0,
-) -> dict:
-    """Holt die Autobahn-Webcams je kuratierter Autobahn der Stadt (DATA-22).
-
-    Additiver webcam-Sub-Service (Decision 3): KEIN neuer Adapter, sondern eine
-    1:1-Wiederverwendung von ``_CITY_ROADS``, ``_BASE`` und ``_within_bbox`` wie
-    in ``fetch_traffic`` (ebenfalls nebenläufig + einzel-fehlertolerant). Je
-    ``road`` wird der Dienst ``services/webcam`` abgefragt.
-
-    Webcams sind ein Live-Bild-Feature: die Route gibt das Live-Bild direkt aus.
-    Die Lizenz bleibt Tier A DL-DE/BY (siehe ``map_autobahn_webcams``).
-
-    Der webcam-Sub-Service liefert in der Live-Realität oft leere Arrays; ein
-    leeres ``webcams`` ist daher KEIN Fehler, sondern speist den ehrlichen
-    no_data-Pfad der Route. Rückgabe-Keys exakt für den Mapper: ``slug`` und
-    ``webcams``.
-    """
-    roads = _CITY_ROADS.get(slug, ())
-    sem = asyncio.Semaphore(_MAX_CONCURRENCY)
-    cams: list[dict] = []
-    if roads:
-        results = await asyncio.gather(
-            *(_get_service_items(http, sem, road, "webcam") for road in roads),
-            return_exceptions=True,
-        )
-        _raise_if_all_failed(results)
-        for result in results:
-            if isinstance(result, BaseException):
-                continue
-            cams.extend(_bbox_items(result, lat, lon, radius_km))
-
-    return {"slug": slug, "webcams": cams}

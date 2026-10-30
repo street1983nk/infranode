@@ -134,7 +134,7 @@ ohne API-Key direkt im Browser ausprobieren lässt.
 
 <!-- Die Endpunktzahl stammt aus docs/openapi.yaml (eine operationId je Operation).
      Sie muss synchron bleiben: docs-site/scripts/check-endpoint-count.mjs prüft das. -->
-## Daten (84 Städte, 124 Endpunkte)
+## Daten (84 Städte, 122 Endpunkte)
 
 Jede Kategorie unten ist ein REST-Endpoint unter
 `/api/v1/cities/{slug}/<key>`. Über MCP kommen dieselben Daten durch 12 schlanke
@@ -147,7 +147,7 @@ Tools: ein paar benannte (`get_city_overview`, `weather`, `air_quality`, `pois`,
 |--------|----------------------------|
 | **Entdecken** | `list_cities`, `sources`, `compare` (eine Datenart über viele Städte), `overview` (Katalog plus Live-Auszug in einem Aufruf) |
 | **Wetter & Umwelt** | `weather`, `weather-warnings`, `civil-protection-warnings` (BBK NINA), `air-uba` (amtlich), `air` (live), `pollen-uv`, `water-level`, `flood`, `fire-danger`, `bathing-water` |
-| **Mobilität** | `transit`, Live-Abfahrten je Haltestelle (Tool `transit_departures`), `stations` (Katalog), Bahnhofstafeln nach EVA (Tools `station_board_departures`/`station_board_arrivals`, inklusive Nahverkehr und Störungen), `station-departures`, `station-arrivals`, `traffic`, `road-events`, `webcams`, `charging`, `parking` (Live-Belegung), `parking-onstreet`, `park-and-ride`, `mobility-points`, `bike-parking`, `sharing`, `fuel-prices`, `bike-counts` |
+| **Mobilität** | `transit`, Live-Abfahrten je Haltestelle (Tool `transit_departures`), `stations` (Katalog), Bahnhofstafeln nach EVA (Tools `station_board_departures`/`station_board_arrivals`, inklusive Nahverkehr und Störungen), `station-departures`, `station-arrivals`, `traffic`, `road-events`, `charging`, `parking` (Live-Belegung), `parking-onstreet`, `park-and-ride`, `mobility-points`, `bike-parking`, `sharing`, `fuel-prices`, `bike-counts` |
 | **Stadt & Menschen** | `base`, `geo`, `demographics`, `indicators`, `sustainability` (SDG-Indikatoren je Kommune als Zeitreihe 2006-2023, Wegweiser Kommune / Bertelsmann Stiftung, CC0), `unemployment`, `tourism`, `construction`, `accidents`, `crime-stats`, `health`, `icu-live`, `holidays`, `election`, `events`, `council-papers` (kommunale Ratsinformationen über OParl: Vorlagen, Anträge und Beschlüsse je Stadt), `pois`, Spielplätze, Märkte, Toiletten und weitere OSM-Typen |
 | **Wirtschaft & Immobilien** | `land-values`, `tax-rates` (Hebesätze für Gewerbe- und Grundsteuer je Kommune), `business-registrations` (Gründungsdynamik je Kreis), `insolvencies` (Insolvenzverfahren je Kreis: Unternehmen und übrige Schuldner, jährlich), `public-tenders` (öffentliche Vergabe: laufende Ausschreibungen und vergebene Aufträge je Stadt) |
 | **Energie & Fahrzeuge** | `power-load`, `power-price`, `energy`, `solar`, `solar-roofs`, `district-heating`, `vehicle-registrations` |

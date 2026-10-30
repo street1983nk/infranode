@@ -135,7 +135,7 @@ async def get_city_resource(
 
     One tool for the whole breadth of InfraNode: live data (air, traffic, transit
     stops, parking, charging, water-level, flood, sharing, fuel-prices,
-    webcams, station-departures/-arrivals/stations, ...), statistics
+    station-departures/-arrivals/stations, ...), statistics
     (demographics, unemployment, tourism, accidents, crime-stats, indicators,
     land-values, tax-rates, insolvencies, ...), multi-year TIME SERIES
     (``sustainability``: SDG indicators per municipality, one value per year from

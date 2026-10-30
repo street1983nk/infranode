@@ -9,7 +9,7 @@ info:
     AGS- und geobasierte Quellen bedient. Jede Antwort folgt demselben
     kanonischen Envelope (data/meta/attribution) mit Lizenz-Tag und ehrlichem
     source_status (ok/no_data/disabled/not_covered). Teilabgedeckte Endpunkte
-    (flood, webcams, traffic, road-events) liefern für eine nicht-abgedeckte
+    (flood, traffic, road-events) liefern für eine nicht-abgedeckte
     Stadt 200 source_status="not_covered" + meta.covered_cities statt eines
     leeren "ok"; die Abdeckung listet die Seite /abdeckung. Pfade tragen den vollen
     /api/v1-Prefix, damit die ausgelieferte Spec driftfrei zu den live
@@ -54,7 +54,7 @@ tags:
       Getrennte Live-Kategorie unter /api/v1/live. Minutenfrische bzw.
       quasi-live Quellen mit eigenem Envelope-Kennzeichen: meta.as_of
       (Datenstand) und meta.refresh_seconds (Kadenz). Re-exponiert zusätzlich
-      bestehende Live-Endpunkte (air, air-uba, water-level, traffic, webcams,
+      bestehende Live-Endpunkte (air, air-uba, water-level, traffic,
       flood); deren Altpfade unter /api/v1/cities bleiben als Deprecation-Alias
       erhalten (kein Breaking Change).
   - name: stations
@@ -2582,8 +2582,8 @@ paths:
       responses:
         "200":
           description: >-
-            Energie-Envelope. data ist eine Liste von CanonicalRecord
-            (EnergyAssetPayload) oder null/leer, je nach source_status.
+            Energie-Envelope. data ist ein CanonicalRecord
+            (EnergyAssetPayload) oder null, je nach source_status.
           content:
             application/json:
               schema:
@@ -2592,9 +2592,7 @@ paths:
                 properties:
                   data:
                     oneOf:
-                      - type: array
-                        items:
-                          $ref: "#/components/schemas/CanonicalRecord"
+                      - $ref: "#/components/schemas/CanonicalRecord"
                       - type: "null"
                   meta:
                     $ref: "#/components/schemas/Meta"
@@ -2916,7 +2914,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Geo-Envelope (CanonicalRecord oder null)
+          description: Geo-Envelope (Liste von CanonicalRecord oder null)
           content:
             application/json:
               schema:
@@ -2925,7 +2923,9 @@ paths:
                 properties:
                   data:
                     oneOf:
-                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: array
+                        items:
+                          $ref: "#/components/schemas/CanonicalRecord"
                       - type: "null"
                   meta:
                     $ref: "#/components/schemas/Meta"
@@ -2967,7 +2967,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Wahl-Envelope (CanonicalRecord oder null)
+          description: Wahl-Envelope (Liste von CanonicalRecord oder null)
           content:
             application/json:
               schema:
@@ -2976,7 +2976,9 @@ paths:
                 properties:
                   data:
                     oneOf:
-                      - $ref: "#/components/schemas/CanonicalRecord"
+                      - type: array
+                        items:
+                          $ref: "#/components/schemas/CanonicalRecord"
                       - type: "null"
                   meta:
                     $ref: "#/components/schemas/Meta"
@@ -4738,7 +4740,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/bike-counts:
     get:
       tags: [cities]
@@ -4794,7 +4796,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/office-wait-times:
     get:
       tags: [cities]
@@ -4847,7 +4849,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/parking-onstreet:
     get:
       tags: [cities]
@@ -4909,7 +4911,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/park-and-ride:
     get:
       tags: [cities]
@@ -4973,7 +4975,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/mobility-points:
     get:
       tags: [cities]
@@ -5037,7 +5039,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/bike-parking:
     get:
       tags: [cities]
@@ -5108,7 +5110,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Error"
+                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/cities/{slug}/solar-roofs:
     get:
       tags: [cities]
@@ -5448,64 +5450,6 @@ paths:
       responses:
         "200":
           description: Event-Envelope (CanonicalRecord oder null)
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, meta]
-                properties:
-                  data:
-                    oneOf:
-                      - $ref: "#/components/schemas/CanonicalRecord"
-                      - type: "null"
-                  meta:
-                    $ref: "#/components/schemas/Meta"
-        "404":
-          description: Unbekannte Stadt
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-        "503":
-          description: Quelle vorübergehend nicht erreichbar (kein Cache)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-  /api/v1/cities/{slug}/webcams:
-    get:
-      tags: [cities]
-      summary: Autobahn-Webcams je Stadt (Autobahn-API, Tier A)
-      x-summary-en: Autobahn webcams per city (Autobahn API, Tier A)
-      description: >-
-        Liefert Autobahn-Webcams (Koordinaten und Bild-URLs) im Umfeld einer
-        Stadt aus dem schlüssellosen Autobahn-Webcam-Service. Die Webcams werden
-        per Bounding-Box um die Stadt gefiltert. Tier A. Flächendeckend: jeder der
-        84 Städte sind die nahen Autobahnen kuratiert zugeordnet; eine Stadt ohne
-        Webcam antwortet ehrlich mit no_data. Weitere Sonderfälle: deaktiviert -> 200
-        source_status="disabled"; toter Upstream ohne Cache -> 503 mit Hint.
-        Hinweis: Die Autobahn-Webcam-Quelle liefert aktuell bundesweit keine
-        Webcams, daher antwortet der Endpunkt derzeit durchgehend mit no_data.
-      x-description-en: >-
-        Returns Autobahn webcams (coordinates and image URLs) around a city from
-        the keyless Autobahn webcam service. The webcams are filtered by a
-        bounding box around the city. Tier A. Full coverage: each of the 84 cities
-        has its nearby motorways curated; a city with no webcam honestly responds
-        with no_data. Other special
-        cases: disabled -> 200 source_status="disabled"; dead upstream with no
-        cache -> 503 with a hint. Note: the Autobahn webcam source currently
-        returns no webcams nationwide, so this endpoint currently always responds
-        with no_data.
-      operationId: getCityWebcams
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Webcam-Envelope (CanonicalRecord oder null)
           content:
             application/json:
               schema:
@@ -7235,54 +7179,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorEnvelope"
-  /api/v1/live/{slug}/webcams:
-    get:
-      tags: [Live]
-      summary: Live-Alias für Autobahn-Webcams
-      x-summary-en: Live alias for Autobahn webcams
-      description: >-
-        Spiegelt den bestehenden Autobahn-Webcam-Endpunkt unter der
-        Live-Kategorie. Gleicher Envelope-Kontrakt wie
-        /api/v1/cities/{slug}/webcams, derselbe Handler. Der alte Pfad bleibt als
-        Alias erhalten und ist als veraltet markiert.
-      x-description-en: >-
-        Mirrors the existing Autobahn webcam endpoint under the live category.
-        Same envelope contract as /api/v1/cities/{slug}/webcams, same handler.
-        The old path remains as an alias and is marked deprecated.
-      operationId: getLiveWebcams
-      parameters:
-        - name: slug
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: Webcam-Envelope (CanonicalRecord oder null)
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, meta]
-                properties:
-                  data:
-                    oneOf:
-                      - $ref: "#/components/schemas/CanonicalRecord"
-                      - type: "null"
-                  meta:
-                    $ref: "#/components/schemas/Meta"
-        "404":
-          description: Unbekannte Stadt
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
-        "503":
-          description: Quelle vorübergehend nicht erreichbar (kein Cache)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorEnvelope"
   /api/v1/live/{slug}/flood:
     get:
       tags: [Live]
@@ -7394,7 +7290,7 @@ components:
             type: string
           description: >-
             Nur bei source_status="not_covered": die Stadt-Slugs, die dieser
-            teilabgedeckte Endpunkt tatsächlich bedient (z. B. flood, webcams,
+            teilabgedeckte Endpunkt tatsächlich bedient (z. B. flood,
             traffic, road-events).
         pagination:
           type: object
@@ -7594,6 +7490,15 @@ components:
           type: array
           items:
             type: object
+        roadworks_total:
+          type: integer
+          nullable: true
+        roadworks_truncated:
+          type: boolean
+          default: false
+        congestion_summary:
+          type: object
+          nullable: true
     RoadEventPayload:
       type: object
       required: [kind]
@@ -7606,20 +7511,6 @@ components:
           type: string
           nullable: true
         events:
-          type: array
-          items:
-            type: object
-    WebcamPayload:
-      type: object
-      required: [kind, count]
-      properties:
-        kind:
-          type: string
-          enum: [webcam]
-          default: webcam
-        count:
-          type: integer
-        webcams:
           type: array
           items:
             type: object
@@ -7764,6 +7655,11 @@ components:
           type: array
           items:
             type: object
+        total_power_kw:
+          type: number
+          nullable: true
+        power_by_type:
+          type: object
     AdminBoundaryPayload:
       type: object
       required: [kind]
@@ -7859,6 +7755,1061 @@ components:
         reference_date:
           type: string
           nullable: true
+    AccidentPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [accident]
+          default: accident
+        reference_year:
+          type: integer
+          nullable: true
+        total:
+          type: integer
+          nullable: true
+        fatal:
+          type: integer
+          nullable: true
+        serious:
+          type: integer
+          nullable: true
+        light:
+          type: integer
+          nullable: true
+        with_bicycle:
+          type: integer
+          nullable: true
+        with_pedestrian:
+          type: integer
+          nullable: true
+        with_car:
+          type: integer
+          nullable: true
+        with_motorcycle:
+          type: integer
+          nullable: true
+        district_key:
+          type: string
+          nullable: true
+    BathingWaterPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [bathing_water]
+          default: bathing_water
+        season_year:
+          type: integer
+          nullable: true
+        count:
+          type: integer
+          default: 0
+        counts:
+          type: object
+        sites:
+          type: array
+          items:
+            type: object
+        truncated:
+          type: boolean
+          default: false
+    BikeParkingPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [bike_parking]
+          default: bike_parking
+        facility_count:
+          type: integer
+          nullable: true
+        spaces_total:
+          type: integer
+          nullable: true
+        covered_facilities:
+          type: integer
+          nullable: true
+        double_deck_facilities:
+          type: integer
+          nullable: true
+        lit_facilities:
+          type: integer
+          nullable: true
+        time_limited_facilities:
+          type: integer
+          nullable: true
+        bike_and_ride_facilities:
+          type: integer
+          nullable: true
+        bike_and_ride_spaces:
+          type: integer
+          nullable: true
+        planned_facilities:
+          type: integer
+          nullable: true
+        planned_spaces:
+          type: integer
+          nullable: true
+        removed_facilities:
+          type: integer
+          nullable: true
+        out_of_service_facilities:
+          type: integer
+          nullable: true
+        by_type:
+          type: array
+          items:
+            type: object
+        cargo_bike:
+          type: object
+          nullable: true
+        largest_facilities:
+          type: array
+          items:
+            type: object
+    BusinessRegistrationsPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [business_registrations]
+          default: business_registrations
+        registrations:
+          type: integer
+          nullable: true
+        deregistrations:
+          type: integer
+          nullable: true
+        balance:
+          type: integer
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+    ChargingStatusCityPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [charging_status_city]
+          default: charging_status_city
+        total_points:
+          type: integer
+          default: 0
+        reported_points:
+          type: integer
+          default: 0
+        status_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        points:
+          type: array
+          items:
+            type: object
+        truncated:
+          type: boolean
+          default: false
+    ChargingStatusPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [charging_status]
+          default: charging_status
+        points:
+          type: array
+          items:
+            type: object
+    CivilProtectionWarningPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [civil_protection_warning]
+          default: civil_protection_warning
+        ars:
+          type: string
+          nullable: true
+        coverage_granularity:
+          type: string
+          nullable: true
+        count:
+          type: integer
+          default: 0
+        warnings:
+          type: array
+          items:
+            type: object
+    CountStationPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [count_station]
+          default: count_station
+        counts:
+          type: array
+          items:
+            type: object
+    CrimeStatsPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [crime_stats]
+          default: crime_stats
+        reference_year:
+          type: integer
+          nullable: true
+        version:
+          type: string
+          nullable: true
+        groups:
+          type: array
+          items:
+            type: object
+    DistrictHeatingPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [district_heating]
+          default: district_heating
+        network_area_count:
+          type: integer
+          nullable: true
+        supplied_area_km2:
+          type: number
+          nullable: true
+        operator_count:
+          type: integer
+          nullable: true
+        operators:
+          type: array
+          items:
+            type: string
+        house_connections:
+          type: integer
+          nullable: true
+        network_length_km:
+          type: number
+          nullable: true
+        networks:
+          type: array
+          items:
+            type: object
+        area_basis:
+          type: string
+          nullable: true
+        reference_date:
+          type: string
+          nullable: true
+    EventPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [event]
+          default: event
+        city_source:
+          type: string
+          nullable: true
+        events:
+          type: array
+          items:
+            type: object
+    FireDangerPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [fire_danger]
+          default: fire_danger
+        wbi_level:
+          type: integer
+          nullable: true
+        wbi_label:
+          type: string
+          nullable: true
+        glfi_level:
+          type: integer
+          nullable: true
+        glfi_label:
+          type: string
+          nullable: true
+        station_name:
+          type: string
+          nullable: true
+        station_id:
+          type: string
+          nullable: true
+        federal_state:
+          type: string
+          nullable: true
+        distance_km:
+          type: number
+          nullable: true
+        forecast_date:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+    FuelPricePayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [fuel_price]
+          default: fuel_price
+        radius_km:
+          type: number
+          nullable: true
+        station_count:
+          type: integer
+          default: 0
+        open_count:
+          type: integer
+          default: 0
+        avg_e5:
+          type: number
+          nullable: true
+        avg_e10:
+          type: number
+          nullable: true
+        avg_diesel:
+          type: number
+          nullable: true
+        min_e5:
+          type: number
+          nullable: true
+        min_e10:
+          type: number
+          nullable: true
+        min_diesel:
+          type: number
+          nullable: true
+        stations:
+          type: array
+          items:
+            type: object
+    HospitalAtlasPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [hospital_atlas]
+          default: hospital_atlas
+        count:
+          type: integer
+          default: 0
+        total_beds:
+          type: integer
+          nullable: true
+        truncated:
+          type: boolean
+          default: false
+        hospitals:
+          type: array
+          items:
+            type: object
+    IndicatorSeriesPayload:
+      type: object
+      required: [kind, dataset]
+      properties:
+        kind:
+          type: string
+          enum: [indicator_series]
+          default: indicator_series
+        dataset:
+          type: string
+        indicator_count:
+          type: integer
+          default: 0
+        year_min:
+          type: integer
+          nullable: true
+        year_max:
+          type: integer
+          nullable: true
+        indicators:
+          type: array
+          items:
+            type: object
+    IndicatorsPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [indicators]
+          default: indicators
+        indicator_count:
+          type: integer
+          default: 0
+        indicators:
+          type: array
+          items:
+            type: object
+    InsolvenciesPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [insolvencies]
+          default: insolvencies
+        corporate_insolvencies:
+          type: integer
+          nullable: true
+        other_debtor_insolvencies:
+          type: integer
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+    LandValuesPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [land_values]
+          default: land_values
+        brw_median_eur_m2:
+          type: number
+          nullable: true
+        brw_min_eur_m2:
+          type: number
+          nullable: true
+        brw_max_eur_m2:
+          type: number
+          nullable: true
+        zone_count:
+          type: integer
+          default: 0
+        reference_date:
+          type: string
+          nullable: true
+        bbox_radius_deg:
+          type: number
+          nullable: true
+        normalized:
+          type: boolean
+          default: false
+        truncated:
+          type: boolean
+          default: false
+    MobilityPointPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [mobility_point]
+          default: mobility_point
+        point_count:
+          type: integer
+          nullable: true
+        carsharing_area_count:
+          type: integer
+          nullable: true
+        carsharing_spaces:
+          type: integer
+          nullable: true
+        points:
+          type: array
+          items:
+            type: object
+        carsharing_areas:
+          type: array
+          items:
+            type: object
+    OfficeWaitTimesPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [office_wait_times]
+          default: office_wait_times
+        offices:
+          type: array
+          items:
+            type: object
+    ParkAndRidePayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [park_and_ride]
+          default: park_and_ride
+        car_facility_count:
+          type: integer
+          nullable: true
+        car_spaces_total:
+          type: integer
+          nullable: true
+        bike_facility_count:
+          type: integer
+          nullable: true
+        bike_spaces_total:
+          type: integer
+          nullable: true
+        car_facilities:
+          type: array
+          items:
+            type: object
+        bike_facilities:
+          type: array
+          items:
+            type: object
+    ParkingOnStreetPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [parking_onstreet]
+          default: parking_onstreet
+        segment_count:
+          type: integer
+          nullable: true
+        total_spaces:
+          type: integer
+          nullable: true
+        zone_count:
+          type: integer
+          nullable: true
+        accessible_bay_count:
+          type: integer
+          nullable: true
+        accessible_spaces:
+          type: integer
+          nullable: true
+        loading_zone_count:
+          type: integer
+          nullable: true
+        loading_spaces:
+          type: integer
+          nullable: true
+        by_regulation:
+          type: array
+          items:
+            type: object
+        by_street:
+          type: array
+          items:
+            type: object
+        zones:
+          type: array
+          items:
+            type: object
+        accessible_bays:
+          type: array
+          items:
+            type: object
+        loading_zones:
+          type: array
+          items:
+            type: object
+    ParkingPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [parking]
+          default: parking
+        facilities:
+          type: array
+          items:
+            type: object
+    PopulationDensityPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [population_density]
+          default: population_density
+        population:
+          type: integer
+          nullable: true
+        populated_cells:
+          type: integer
+          default: 0
+        populated_area_km2:
+          type: number
+          nullable: true
+        density_per_km2:
+          type: number
+          nullable: true
+        grid:
+          type: string
+        reference_year:
+          type: integer
+          default: 2022
+    PowerPayload:
+      type: object
+      required: [kind, measure]
+      properties:
+        kind:
+          type: string
+          enum: [power]
+          default: power
+        measure:
+          type: string
+          enum: [load, price]
+        value:
+          type: number
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        region:
+          type: string
+          nullable: true
+        series_date:
+          type: string
+          nullable: true
+    PublicTenderPayload:
+      type: object
+      required: [kind, notice_id, notice_version]
+      properties:
+        kind:
+          type: string
+          enum: [public_tender]
+          default: public_tender
+        notice_id:
+          type: string
+        notice_version:
+          type: string
+        release_id:
+          type: string
+          nullable: true
+        notice_type:
+          type: string
+          nullable: true
+        status:
+          type: string
+          nullable: true
+        award_status:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        buyer_name:
+          type: string
+          nullable: true
+        buyer_city:
+          type: string
+          nullable: true
+        buyer_postal_code:
+          type: string
+          nullable: true
+        nuts:
+          type: string
+          nullable: true
+        cpv:
+          type: string
+          nullable: true
+        value:
+          type: number
+          nullable: true
+        currency:
+          type: string
+          nullable: true
+        publication_date:
+          type: string
+          nullable: true
+        deadline:
+          type: string
+          nullable: true
+        award_date:
+          type: string
+          nullable: true
+        suppliers:
+          type: array
+          items:
+            type: string
+        award_value:
+          type: number
+          nullable: true
+        award_currency:
+          type: string
+          nullable: true
+        match:
+          type: array
+          items:
+            type: string
+        source_url:
+          type: string
+          nullable: true
+    RegionalStatPayload:
+      type: object
+      required: [kind, dataset]
+      properties:
+        kind:
+          type: string
+          enum: [regional_stat]
+          default: regional_stat
+        dataset:
+          type: string
+        reference_year:
+          type: integer
+          nullable: true
+        region_name:
+          type: string
+          nullable: true
+        values:
+          type: object
+    SharingPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [sharing]
+          default: sharing
+        radius_km:
+          type: number
+          nullable: true
+        vehicles_available:
+          type: integer
+          default: 0
+        free_floating_available:
+          type: integer
+          default: 0
+        docked_available:
+          type: integer
+          default: 0
+        station_count:
+          type: integer
+          default: 0
+        providers:
+          type: array
+          items:
+            type: object
+    SolarPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [solar]
+          default: solar
+        annual_irradiation_kwh_m2:
+          type: number
+          nullable: true
+        annual_yield_kwh_kwp:
+          type: number
+          nullable: true
+        optimal_slope_deg:
+          type: number
+          nullable: true
+        optimal_azimuth_deg:
+          type: number
+          nullable: true
+        peakpower_kwp:
+          type: number
+          nullable: true
+        system_loss_pct:
+          type: number
+          nullable: true
+        total_performance_delta_pct:
+          type: number
+          nullable: true
+        radiation_db:
+          type: string
+          nullable: true
+        period_start:
+          type: integer
+          nullable: true
+        period_end:
+          type: integer
+          nullable: true
+        monthly:
+          type: array
+          items:
+            type: object
+    SolarRoofsPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [solar_roofs]
+          default: solar_roofs
+        potential_kwp:
+          type: number
+          nullable: true
+        potential_yield_mwh:
+          type: number
+          nullable: true
+        installed_kwp:
+          type: number
+          nullable: true
+        installed_yield_mwh:
+          type: number
+          nullable: true
+        exploitation_pct:
+          type: number
+          nullable: true
+        potential_by_category:
+          type: object
+        reference_date:
+          type: string
+          nullable: true
+    StationArrivalsPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [station_arrivals]
+          default: station_arrivals
+        arrival_count:
+          type: integer
+          default: 0
+        long_distance_count:
+          type: integer
+          default: 0
+        arrivals:
+          type: array
+          items:
+            type: object
+    StationCatalogPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [station_catalog]
+          default: station_catalog
+        station_count:
+          type: integer
+          default: 0
+        stations:
+          type: array
+          items:
+            type: object
+    StationDeparturesPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [station_departures]
+          default: station_departures
+        departure_count:
+          type: integer
+          default: 0
+        long_distance_count:
+          type: integer
+          default: 0
+        departures:
+          type: array
+          items:
+            type: object
+    StationFacilityPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [station_facilities]
+          default: station_facilities
+        count:
+          type: integer
+          default: 0
+        counts:
+          type: object
+        facilities:
+          type: array
+          items:
+            type: object
+        truncated:
+          type: boolean
+          default: false
+    TaxRatesPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [tax_rates]
+          default: tax_rates
+        trade_tax_rate:
+          type: integer
+          nullable: true
+        property_tax_a:
+          type: integer
+          nullable: true
+        property_tax_b:
+          type: integer
+          nullable: true
+        property_tax_c:
+          type: integer
+          nullable: true
+        reference_date:
+          type: string
+          nullable: true
+    TrafficFlowPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [traffic_flow]
+          default: traffic_flow
+        station_id:
+          type: string
+          nullable: true
+        measurements:
+          type: array
+          items:
+            type: object
+        summary:
+          type: object
+          nullable: true
+    TransitDeparturePayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [transit_departure]
+          default: transit_departure
+        stop_id:
+          type: string
+          nullable: true
+        departures:
+          type: array
+          items:
+            type: object
+    TransitRouteStatusPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [transit_route_status]
+          default: transit_route_status
+        route_id:
+          type: string
+          nullable: true
+        active_trips:
+          type: integer
+          default: 0
+        avg_delay_s:
+          type: number
+          nullable: true
+        max_delay_s:
+          type: integer
+          nullable: true
+        trips:
+          type: array
+          items:
+            type: object
+    TransitTripPayload:
+      type: object
+      required: [kind, trip_id]
+      properties:
+        kind:
+          type: string
+          enum: [transit_trip]
+          default: transit_trip
+        trip_id:
+          type: string
+        route_id:
+          type: string
+          nullable: true
+        delay_s:
+          type: integer
+          nullable: true
+        estimated_position:
+          type: object
+          nullable: true
+        stop_time_updates:
+          type: array
+          items:
+            type: object
+        unresolved:
+          type: boolean
+          default: false
+    VehicleRegistrationPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [vehicle_registration]
+          default: vehicle_registration
+        pkw_total:
+          type: integer
+          nullable: true
+        electric_share:
+          type: number
+          nullable: true
+        bev_share:
+          type: number
+          nullable: true
+        plugin_hybrid_share:
+          type: number
+          nullable: true
+        bev_estimated:
+          type: integer
+          nullable: true
+        district:
+          type: string
+          nullable: true
+        district_key:
+          type: string
+          nullable: true
+        reference_period:
+          type: string
+          nullable: true
+    WeatherWarningPayload:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [weather_warning]
+          default: weather_warning
+        count:
+          type: integer
+          default: 0
+        max_level:
+          type: integer
+          nullable: true
+        warnings:
+          type: array
+          items:
+            type: object
+        special_warnings:
+          type: array
+          items:
+            type: object
     CanonicalRecord:
       type: object
       required: [city_slug, retrieved_at, source, license_id, license_tier, schema_version, record_id, content_hash, attribution, payload]
@@ -7915,7 +8866,7 @@ components:
           enum: [wikidata, dwd, osm, autobahn, bnetza, uba, delfi, hvv, pegelonline, lhp, dwd_pollen, dwd_fire, eea_bathing, klinik_atlas, db_fasta, genesis, zensus, mastr, smard, dwd_warnings, bkg, bundeswahl, holidays, berlin_viz, hamburg_roadworks, koeln_road_events, muenchen_roadworks, dortmund_roadworks, rostock_roadworks, sperrinfosys, mobidata_bw, destination_one, koeln_events, koeln_traffic_flow, koeln_roadworks_live, koeln_incidents_live, koeln_lez_live, berlin_traffic_reports, dortmund_parking, kiel_counting_stations, eround_charging, frankfurt_parking, wuppertal_parking, magdeburg_parking, koeln_parking, gtfs_rt, hvv_geofox, vgn, rmv, vrr, vvs, hamburg_traffic_situation, kba, unfallatlas, tankerkoenig, bremen_roadworks, hannover_traffic_reports, gbfs, inkar, wegweiser, bka_pks, db_timetables, boris, stada, regionalstatistik, solar, solar_cadastre, muenchen_parking, muenchen_bike_counts, muenchen_parking_onstreet, muenchen_park_and_ride, muenchen_mobility_points, muenchen_bike_parking, leipzig_bike_counts, hamburg_bike_counts, berlin_bike_counts, stuttgart_bike_counts, koeln_bike_counts, essen_bike_counts, duesseldorf_bike_counts, parkendd, heritage, tree_cadastre, zensus_grid, oeffentlichevergabe, district_heating, koeln_wait_times, bbk_nina, council, mobidata_parkapi, pr_hessen_parking, db_bahnpark, muenster_parking, aachen_parking, oldenburg_parking, kaiserslautern_parking, dresden_parking, karlsruhe_parking, hamburg_parking]
         license_id:
           type: string
-          enum: [cc0, cc_by_4_0, dl_de_by_2_0, dl_de_zero_2_0, geonutzv, odbl, cc_by_sa_4_0, unknown]
+          enum: [cc0, cc_by_4_0, dl_de_by_2_0, dl_de_zero_2_0, geonutzv, odbl, cc_by_sa_4_0, ec_reuse, unknown, amtliches_werk]
         license_tier:
           type: string
           enum: [A, B, C]
@@ -7940,9 +8891,108 @@ components:
             - $ref: "#/components/schemas/HolidayPayload"
             - $ref: "#/components/schemas/HospitalPayload"
             - $ref: "#/components/schemas/RoadEventPayload"
-            - $ref: "#/components/schemas/WebcamPayload"
+            - $ref: "#/components/schemas/AccidentPayload"
+            - $ref: "#/components/schemas/BathingWaterPayload"
+            - $ref: "#/components/schemas/BikeParkingPayload"
+            - $ref: "#/components/schemas/BusinessRegistrationsPayload"
+            - $ref: "#/components/schemas/ChargingStatusCityPayload"
+            - $ref: "#/components/schemas/ChargingStatusPayload"
+            - $ref: "#/components/schemas/CivilProtectionWarningPayload"
+            - $ref: "#/components/schemas/CountStationPayload"
+            - $ref: "#/components/schemas/CrimeStatsPayload"
+            - $ref: "#/components/schemas/DistrictHeatingPayload"
+            - $ref: "#/components/schemas/EventPayload"
+            - $ref: "#/components/schemas/FireDangerPayload"
+            - $ref: "#/components/schemas/FuelPricePayload"
+            - $ref: "#/components/schemas/HospitalAtlasPayload"
+            - $ref: "#/components/schemas/IndicatorSeriesPayload"
+            - $ref: "#/components/schemas/IndicatorsPayload"
+            - $ref: "#/components/schemas/InsolvenciesPayload"
+            - $ref: "#/components/schemas/LandValuesPayload"
+            - $ref: "#/components/schemas/MobilityPointPayload"
+            - $ref: "#/components/schemas/OfficeWaitTimesPayload"
+            - $ref: "#/components/schemas/ParkAndRidePayload"
+            - $ref: "#/components/schemas/ParkingOnStreetPayload"
+            - $ref: "#/components/schemas/ParkingPayload"
+            - $ref: "#/components/schemas/PopulationDensityPayload"
+            - $ref: "#/components/schemas/PowerPayload"
+            - $ref: "#/components/schemas/PublicTenderPayload"
+            - $ref: "#/components/schemas/RegionalStatPayload"
+            - $ref: "#/components/schemas/SharingPayload"
+            - $ref: "#/components/schemas/SolarPayload"
+            - $ref: "#/components/schemas/SolarRoofsPayload"
+            - $ref: "#/components/schemas/StationArrivalsPayload"
+            - $ref: "#/components/schemas/StationCatalogPayload"
+            - $ref: "#/components/schemas/StationDeparturesPayload"
+            - $ref: "#/components/schemas/StationFacilityPayload"
+            - $ref: "#/components/schemas/TaxRatesPayload"
+            - $ref: "#/components/schemas/TrafficFlowPayload"
+            - $ref: "#/components/schemas/TransitDeparturePayload"
+            - $ref: "#/components/schemas/TransitRouteStatusPayload"
+            - $ref: "#/components/schemas/TransitTripPayload"
+            - $ref: "#/components/schemas/VehicleRegistrationPayload"
+            - $ref: "#/components/schemas/WeatherWarningPayload"
           discriminator:
             propertyName: kind
+            mapping:
+              city_base: "#/components/schemas/CityBaseDataPayload"
+              air_quality: "#/components/schemas/AirQualityPayload"
+              weather: "#/components/schemas/WeatherPayload"
+              poi: "#/components/schemas/PoiPayload"
+              traffic_event: "#/components/schemas/TrafficEventPayload"
+              transit_stop: "#/components/schemas/TransitStopPayload"
+              charging_station: "#/components/schemas/ChargingStationPayload"
+              water_level: "#/components/schemas/WaterLevelPayload"
+              flood_warning: "#/components/schemas/FloodWarningPayload"
+              pollen_uv: "#/components/schemas/PollenUvPayload"
+              demographics: "#/components/schemas/DemographicsPayload"
+              energy_asset: "#/components/schemas/EnergyAssetPayload"
+              admin_boundary: "#/components/schemas/AdminBoundaryPayload"
+              election_result: "#/components/schemas/ElectionResultPayload"
+              holiday: "#/components/schemas/HolidayPayload"
+              hospital: "#/components/schemas/HospitalPayload"
+              road_event: "#/components/schemas/RoadEventPayload"
+              accident: "#/components/schemas/AccidentPayload"
+              bathing_water: "#/components/schemas/BathingWaterPayload"
+              bike_parking: "#/components/schemas/BikeParkingPayload"
+              business_registrations: "#/components/schemas/BusinessRegistrationsPayload"
+              charging_status_city: "#/components/schemas/ChargingStatusCityPayload"
+              charging_status: "#/components/schemas/ChargingStatusPayload"
+              civil_protection_warning: "#/components/schemas/CivilProtectionWarningPayload"
+              count_station: "#/components/schemas/CountStationPayload"
+              crime_stats: "#/components/schemas/CrimeStatsPayload"
+              district_heating: "#/components/schemas/DistrictHeatingPayload"
+              event: "#/components/schemas/EventPayload"
+              fire_danger: "#/components/schemas/FireDangerPayload"
+              fuel_price: "#/components/schemas/FuelPricePayload"
+              hospital_atlas: "#/components/schemas/HospitalAtlasPayload"
+              indicator_series: "#/components/schemas/IndicatorSeriesPayload"
+              indicators: "#/components/schemas/IndicatorsPayload"
+              insolvencies: "#/components/schemas/InsolvenciesPayload"
+              land_values: "#/components/schemas/LandValuesPayload"
+              mobility_point: "#/components/schemas/MobilityPointPayload"
+              office_wait_times: "#/components/schemas/OfficeWaitTimesPayload"
+              park_and_ride: "#/components/schemas/ParkAndRidePayload"
+              parking_onstreet: "#/components/schemas/ParkingOnStreetPayload"
+              parking: "#/components/schemas/ParkingPayload"
+              population_density: "#/components/schemas/PopulationDensityPayload"
+              power: "#/components/schemas/PowerPayload"
+              public_tender: "#/components/schemas/PublicTenderPayload"
+              regional_stat: "#/components/schemas/RegionalStatPayload"
+              sharing: "#/components/schemas/SharingPayload"
+              solar: "#/components/schemas/SolarPayload"
+              solar_roofs: "#/components/schemas/SolarRoofsPayload"
+              station_arrivals: "#/components/schemas/StationArrivalsPayload"
+              station_catalog: "#/components/schemas/StationCatalogPayload"
+              station_departures: "#/components/schemas/StationDeparturesPayload"
+              station_facilities: "#/components/schemas/StationFacilityPayload"
+              tax_rates: "#/components/schemas/TaxRatesPayload"
+              traffic_flow: "#/components/schemas/TrafficFlowPayload"
+              transit_departure: "#/components/schemas/TransitDeparturePayload"
+              transit_route_status: "#/components/schemas/TransitRouteStatusPayload"
+              transit_trip: "#/components/schemas/TransitTripPayload"
+              vehicle_registration: "#/components/schemas/VehicleRegistrationPayload"
+              weather_warning: "#/components/schemas/WeatherWarningPayload"
     ErrorDetail:
       type: object
       required: [code, message]

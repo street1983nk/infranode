@@ -12,8 +12,7 @@ Daten) und vom 404 (Stadt unbekannt).
 Dieses Modul ist die EINZIGE Quelle der Wahrheit der Abdeckung und wird aus den
 kuratierten Adapter-Stadt-Maps ABGELEITET (kein Duplizieren der Slug-Listen):
 - ``flood``    -> ``adapters.lhp._CITY_PEGEL`` (kuratierte Pegel je Stadt)
-- ``webcams``  -> ``adapters.autobahn._CITY_ROADS`` (kuratierte Autobahnen)
-- ``traffic``  -> ``adapters.autobahn._CITY_ROADS`` (dieselbe Map wie webcams)
+- ``traffic``  -> ``adapters.autobahn._CITY_ROADS`` (kuratierte Autobahnen)
 - ``road-events`` -> ``api.v1.cities.CONNECTOR_MAP`` (kuratierte Stadt-Connectoren)
 
 Da ``CONNECTOR_MAP`` in ``cities.py`` lebt (mit fetch_fn/mapper-Tupeln) und
@@ -486,7 +485,6 @@ _WEGWEISER_CARE_CITIES: frozenset[str] = frozenset(
 
 PARTIAL_COVERAGE: dict[str, frozenset[str]] = {
     "flood": frozenset(_CITY_PEGEL),
-    "webcams": frozenset(_CITY_ROADS),
     "traffic": frozenset(_CITY_ROADS),
     "road-events": _ROAD_EVENTS_CITIES,
     "sharing": _SHARING_CITIES,

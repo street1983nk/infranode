@@ -1,0 +1,178 @@
+---
+// Tutorial EN: using InfraNode from Java (java.net.http.HttpClient + Jackson, OpenAPI Generator client).
+import Docs from "../../../layouts/Docs.astro";
+import JsonLd from "../../../components/JsonLd.astro";
+
+const title = "InfraNode with Java: HttpClient and OpenAPI Generator";
+const description =
+  "Tutorial: fetch open data for German cities from Java, with the built-in java.net.http.HttpClient and Jackson or with a typed client that OpenAPI Generator builds from the official spec. No API key.";
+
+const maven = `<dependency>
+  <groupId>com.fasterxml.jackson.core</groupId>
+  <artifactId>jackson-databind</artifactId>
+  <version>2.18.2</version>
+</dependency>`;
+
+const basic = `import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
+
+public class Main {
+    private static final String BASE = "https://infranode.dev/api/v1";
+    private static final HttpClient HTTP = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+    private static final ObjectMapper JSON = new ObjectMapper();
+
+    static JsonNode get(String path) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(BASE + path))
+                .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(30))
+                .build();
+        HttpResponse<String> res = HTTP.send(req, HttpResponse.BodyHandlers.ofString());
+        if (res.statusCode() != 200) {
+            throw new IllegalStateException("HTTP " + res.statusCode() + ": " + res.body());
+        }
+        return JSON.readTree(res.body());
+    }
+
+    public static void main(String[] args) throws Exception {
+        JsonNode data = get("/cities/berlin/weather").path("data");
+        System.out.println(data.path("payload").path("temperature_c").asDouble() + " °C");
+        System.out.println("Source: " + data.path("attribution").path("text").asText());
+
+        JsonNode cities = get("/cities").path("data");
+        System.out.println(cities.size() + " cities");
+    }
+}`;
+
+const generate = `docker run --rm -v "\${PWD}:/local" openapitools/openapi-generator-cli:v7.10.0 generate \\
+  -i https://infranode.dev/openapi.json \\
+  -g java --library native \\
+  -o /local/infranode-client \\
+  --api-package dev.infranode.api \\
+  --model-package dev.infranode.model \\
+  --invoker-package dev.infranode.client`;
+
+const installClient = `cd infranode-client
+mvn install -DskipTests`;
+
+const typed = `import dev.infranode.api.CitiesApi;
+import dev.infranode.client.ApiClient;
+import dev.infranode.client.ApiException;
+import dev.infranode.model.CanonicalRecord;
+import dev.infranode.model.WeatherPayload;
+
+public class Weather {
+    public static void main(String[] args) throws ApiException {
+        ApiClient client = new ApiClient();
+        client.updateBaseUri("https://infranode.dev");
+        CitiesApi cities = new CitiesApi(client);
+
+        CanonicalRecord rec = cities.getCityWeather("berlin").getData();
+        WeatherPayload w = rec.getPayload().getWeatherPayload();
+        System.out.println(w.getTemperatureC() + " °C");
+        System.out.println("Source: " + rec.getAttribution().getText());
+
+        // Errors (404 unknown city, 503 source down) arrive as ApiException
+        try {
+            cities.getCityWeather("atlantis");
+        } catch (ApiException e) {
+            System.out.println("HTTP " + e.getCode());
+        }
+    }
+}`;
+
+const faq = [
+  {
+    q: "Is there an official Java SDK?",
+    a: "No, there is no dedicated Java package. The API is lean enough for the built-in HttpClient, and for typed classes OpenAPI Generator builds a complete client from https://infranode.dev/openapi.json.",
+  },
+  {
+    q: "Do I need an API key?",
+    a: "No. The InfraNode API is free and keyless. No key, no sign-up.",
+  },
+  {
+    q: "Which Java version do I need?",
+    a: "Java 11 or newer. java.net.http.HttpClient has been part of the JDK since Java 11, and the generated client targets Java 11 as well.",
+  },
+  {
+    q: "Does this work with Kotlin or Spring?",
+    a: "Yes. The generated Java client runs unchanged in Kotlin. OpenAPI Generator also has dedicated targets such as -g kotlin, or --library resttemplate and webclient for Spring.",
+  },
+];
+---
+
+<Docs title={title} description={description} current="tutorial" lang="en" altLangPath="/tutorials/java/">
+  <JsonLd slot="jsonld" type="FAQPage" faq={faq} />
+
+  <h1>{title}</h1>
+  <p class="lead">{description}</p>
+
+  <h2>Option 1: HttpClient and Jackson</h2>
+  <p>
+    Since Java 11 the JDK ships <code>java.net.http.HttpClient</code>, which covers
+    HTTP. For the JSON, Jackson is the only dependency you need (Maven):
+  </p>
+  <pre><code>{maven}</code></pre>
+  <p>
+    Every response has the same envelope: the data under <code>data</code>, the
+    source status under <code>meta</code>. For a single record the values sit in
+    <code>data.payload</code> and the source credit in <code>data.attribution</code>.
+  </p>
+  <pre><code>{basic}</code></pre>
+  <p>
+    Every record carries its own <code>attribution</code> (source and license URL).
+    The open data licenses require the credit, so show it to your users. The
+    available data types are listed in the <a href="/en/data/">data catalog</a>.
+  </p>
+
+  <h2>Option 2: typed client via OpenAPI Generator</h2>
+  <p>
+    If you prefer classes over <code>JsonNode</code>, generate the client from the
+    official spec at
+    <a href="/openapi.json">https://infranode.dev/openapi.json</a>. With Docker
+    there is nothing to install locally:
+  </p>
+  <pre><code>{generate}</code></pre>
+  <p>
+    <code>--library native</code> builds on the JDK HttpClient and only pulls in
+    Jackson. Then install the client into your local Maven repository:
+  </p>
+  <pre><code>{installClient}</code></pre>
+  <p>
+    Add the generated client through the coordinates in its <code>pom.xml</code>
+    (default: <code>org.openapitools:openapi-java-client</code>). Every data type
+    has its own method, e.g. <code>getCityWeather</code>,
+    <code>getCityParking</code> or <code>getCityCharging</code>:
+  </p>
+  <pre><code>{typed}</code></pre>
+  <p>
+    <code>payload</code> is a union over all payload types, told apart by the
+    <code>kind</code> field. Get the matching type with its getter
+    (<code>getWeatherPayload()</code>, <code>getParkingPayload()</code>, ...) or
+    generically with <code>getActualInstance()</code>.
+  </p>
+
+  <h2>Further reading</h2>
+  <p>
+    Endpoints and parameters: <a href="/en/api/">API reference</a>. List endpoints
+    support optional paging, see <a href="/en/pagination/">pagination</a>. For AI
+    agents there is the <a href="/en/mcp/">InfraNode MCP server</a>.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+  <dl class="faq">
+    {faq.map((item) => (<><dt>{item.q}</dt><dd>{item.a}</dd></>))}
+  </dl>
+</Docs>
+
+<style>
+  .lead { font-size: 1.1rem; color: var(--fg-muted); }
+  dl.faq dt { font-weight: 700; margin-top: 1rem; }
+  dl.faq dd { margin: 0.3rem 0 0; }
+</style>

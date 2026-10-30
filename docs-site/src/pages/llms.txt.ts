@@ -78,7 +78,7 @@ export const GET: APIRoute = async ({ site }) => {
   lines.push(`- [Quick-Start](${base}/quickstart/): In drei Schritten zum ersten Aufruf, ohne Schlüssel.`);
   lines.push(`- [Städte](${base}/staedte/): Durchsuchbare Liste aller 84 abgedeckten Großstädte mit Slug, Bundesland, Einwohnern und Abdeckung.`);
   lines.push(`- [Daten-API](${base}/daten/): Daten-API und Datenanalyse-API für deutsche Städte, Hub über alle Datenarten, Datensatz (CSV/Parquet) und MCP-Zugang.`);
-  lines.push(`- [Abdeckung & Status](${base}/abdeckung/): Welche Endpunkte für welche Städte Daten liefern (flächendeckend vs. teilabgedeckt: flood, webcams, traffic, road-events), source_status-Werte inkl. not_covered, Live-Status-Page für Störungen.`);
+  lines.push(`- [Abdeckung & Status](${base}/abdeckung/): Welche Endpunkte für welche Städte Daten liefern (flächendeckend vs. teilabgedeckt: flood, traffic, road-events), source_status-Werte inkl. not_covered, Live-Status-Page für Störungen.`);
   lines.push(`- [MCP-Server](${base}/mcp/): Gehosteter MCP-Server unter https://mcp.infranode.dev/mcp (Remote, Streamable HTTP, keylos) mit 12 schlanken Tools für 82 Datenarten inkl. Stadt-Überblick (Katalog aller Datenarten), Echtzeit-Abfahrten, Städte- und Quellenübersicht. Als Connector in Claude/ChatGPT verbinden, keine Installation.`);
   lines.push(`- [MCP-Server-Vergleich](${base}/mcp-vergleich/): InfraNode sachlich verglichen mit anderen MCP-Servern für deutsche und europäische Daten (germany-mcp-server, db-mcp, mcp-server-public-transport, Einzelstadt-Server): Abdeckung, Datenbreite, ÖPNV-Echtzeit, keylos, hosted. InfraNode ist der breiteste (84 Städte, 82 Datenarten).`);
   lines.push(`- [ChatGPT & GPT-Actions](${base}/chatgpt/): InfraNode als Custom-GPT-Action: kuratierte Actions-OpenAPI unter https://infranode.dev/actions/openapi.json (23 Operationen, keylos, alle GET), Import per URL im GPT-Editor, empfohlene GPT-Instructions mit Attribution-Pflicht.`);
@@ -94,7 +94,7 @@ export const GET: APIRoute = async ({ site }) => {
   lines.push(`- [Quickstart](${base}/en/quickstart/): Your first call in three steps, no key.`);
   lines.push(`- [Cities](${base}/en/cities/): Searchable list of all 84 covered cities with slug, state, population and coverage.`);
   lines.push(`- [Data API](${base}/en/data/): Data API and data analysis API for German cities, hub over all data types, dataset (CSV/Parquet) and MCP access.`);
-  lines.push(`- [Coverage & status](${base}/en/coverage/): Which endpoints serve which cities (fully vs. partially covered: flood, webcams, traffic, road-events), source_status values incl. not_covered, live status page for outages.`);
+  lines.push(`- [Coverage & status](${base}/en/coverage/): Which endpoints serve which cities (fully vs. partially covered: flood, traffic, road-events), source_status values incl. not_covered, live status page for outages.`);
   lines.push(`- [MCP server](${base}/en/mcp/): Hosted MCP server at https://mcp.infranode.dev/mcp (remote, Streamable HTTP, key-free) with 12 lean tools covering 82 data types incl. city overview (catalog of all data types), live departures, cities and sources overview. Add as a connector in Claude/ChatGPT, no install.`);
   lines.push(`- [MCP server comparison](${base}/en/mcp-comparison/): InfraNode compared factually with other MCP servers for German and European data (germany-mcp-server, db-mcp, mcp-server-public-transport, single-city servers): coverage, data breadth, transit realtime, keyless, hosted. InfraNode is the broadest (84 cities, 82 data types).`);
   lines.push(`- [ChatGPT & GPT actions](${base}/en/chatgpt/): InfraNode as a Custom GPT action: curated actions OpenAPI at https://infranode.dev/actions/openapi.json (23 operations, keyless, all GET), import via URL in the GPT editor, recommended GPT instructions with attribution requirement.`);
@@ -134,10 +134,12 @@ export const GET: APIRoute = async ({ site }) => {
   lines.push(`- [Stadtdaten mit Python und pandas abrufen](${base}/tutorials/python-pandas-stadtdaten/): Offene Daten deutscher Großstädte mit requests und pandas über alle Städte auswerten.`);
   lines.push(`- [InfraNode mit Python: das infranode-Paket](${base}/tutorials/python-sdk/): Keyloses Python-Paket (PyPI: infranode), synchron und asynchron, plus LangChain- und LlamaIndex-Tools für KI-Agenten.`);
   lines.push(`- [InfraNode mit JavaScript: infranode-sdk](${base}/tutorials/javascript-sdk/): Keyloses TypeScript-Paket (npm: infranode-sdk) für Node und Browser, mit Vercel-AI-SDK-Tool und Cursor-Starter-Template.`);
+  lines.push(`- [InfraNode mit Java: HttpClient und OpenAPI Generator](${base}/tutorials/java/): Stadtdaten aus Java mit java.net.http.HttpClient und Jackson oder per OpenAPI Generator als typisierter Client aus /openapi.json.`);
   lines.push(`- [What is an MCP server? Simply explained](${base}/en/tutorials/what-is-an-mcp-server/): Model Context Protocol explained, with a free open-data example for German cities.`);
   lines.push(`- [Set up an MCP server in Claude and ChatGPT](${base}/en/tutorials/set-up-mcp-server-claude/): Set up the free, keyless InfraNode MCP server in Claude and ChatGPT.`);
   lines.push(`- [InfraNode with Python: the infranode package](${base}/en/tutorials/python-sdk/): Keyless Python package (PyPI: infranode), sync and async, with LangChain and LlamaIndex tools for AI agents.`);
   lines.push(`- [InfraNode with JavaScript: infranode-sdk](${base}/en/tutorials/javascript-sdk/): Keyless TypeScript package (npm: infranode-sdk) for Node and the browser, with a Vercel AI SDK tool and a Cursor starter template.`);
+  lines.push(`- [InfraNode with Java: HttpClient and OpenAPI Generator](${base}/en/tutorials/java/): City data from Java with java.net.http.HttpClient and Jackson, or a typed client generated by OpenAPI Generator from /openapi.json.`);
   lines.push("");
   lines.push("## Libraries / SDKs");
   lines.push("");

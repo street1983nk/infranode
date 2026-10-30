@@ -1,4 +1,4 @@
-"""Reine Stadt-OpenData-Parkmapper (PARK-06, Tier A) für Münster/Aachen/Oldenburg.
+"""Reine Stadt-Parkmapper (PARK-06) für Münster/Aachen/Oldenburg/Hamburg.
 
 Übersetzt das rohe Adapter-dict (``slug``/``facilities``/``as_of``) je Stadt
 deterministisch in einen ``CanonicalRecord`` mit ``ParkingPayload``. Rein: kein
@@ -11,7 +11,9 @@ Lizenz, wortgenau identisch zu ``DATA-LICENSES.md`` und ``registry/source_specs`
 - Münster: DL-DE/BY 2.0, "Stadt Münster"
 - Aachen (regress-kritisch): UNKNOWN / Tier C (Owner-Entscheid 2026-07-19, Direktbezug
   APAG über NRW.Mobidrom nicht offen deklariert -> live-only, NICHT public bis geklärt)
-- Oldenburg: DL-DE/BY 2.0, "Stadt Oldenburg (Oldb)"
+- Oldenburg: UNKNOWN / Tier C (Owner-Entscheid 2026-10-20, Open-Data-Datensatz nach
+  Portal-Relaunch verschwunden, Bezug über oldenburg-service.de/pls.php -> live-only,
+  NICHT public bis zur Lizenzklärung bei der Stadt Oldenburg)
 
 mannheim/koeln sind hier bewusst NICHT enthalten (nicht Teil dieses Slices).
 """
@@ -40,6 +42,8 @@ _LICENSE_DEED: dict[LicenseId, str] = {
 # Fallback-Quellangabe für UNKNOWN-lizenzierte Direktquellen (Tier C, live-only):
 # die NRW.Mobidrom-Plattform, über die der Aachener APAG-Feed bezogen wird.
 _UNKNOWN_URL = "https://www.mobilitaetsdaten.nrw"
+# Quellangabe für Oldenburg (UNKNOWN, Tier C): die städtische Parkleitsystem-Seite.
+_OLDENBURG_SOURCE_URL = "https://oldenburg-service.de/pls.php"
 
 
 def _parse_as_of(value: object) -> datetime | None:
@@ -62,8 +66,12 @@ def _build(
     retrieved_at: datetime,
     ags: str | None,
     wikidata_qid: str | None,
+    unknown_url: str = _UNKNOWN_URL,
 ) -> CanonicalRecord:
-    """Gemeinsamer reiner Aufbau des ``CanonicalRecord`` (keine Systemuhr, geo=None)."""
+    """Gemeinsamer reiner Aufbau des ``CanonicalRecord`` (keine Systemuhr, geo=None).
+
+    ``unknown_url`` ist die Quellangabe, falls ``license_id`` keine Deed-URL hat.
+    """
     return CanonicalRecord(
         city_slug=raw["slug"],
         geo=None,
@@ -76,7 +84,7 @@ def _build(
         wikidata_qid=wikidata_qid,
         attribution=Attribution(
             text=attribution_text,
-            license_url=_LICENSE_DEED.get(license_id, _UNKNOWN_URL),
+            license_url=_LICENSE_DEED.get(license_id, unknown_url),
         ),
         payload=ParkingPayload(
             facilities=raw.get("facilities", []),
@@ -172,14 +180,22 @@ def map_oldenburg_parking(
     ags: str | None = None,
     wikidata_qid: str | None = None,
 ) -> CanonicalRecord:
-    """Bildet rohe Oldenburg-Parkdaten auf einen ``CanonicalRecord`` (Tier A) ab."""
+    """Bildet rohe Oldenburg-Parkdaten auf einen ``CanonicalRecord`` (Tier C) ab.
+
+    LIZENZ (Owner-Entscheid 2026-10-20): Der DL-DE/BY-2.0-Datensatz ist nach dem
+    Relaunch von opendata.oldenburg.de verschwunden; Bezug jetzt über die städtische
+    Parkleitsystem-Seite ``oldenburg-service.de/pls.php`` ohne erkennbare Lizenz ->
+    konservativ ``LicenseId.UNKNOWN`` / ``LicenseTier.C`` (live-only, NICHT public)
+    bis zur Lizenzklärung bei der Stadt Oldenburg. Muster ``map_aachen_parking``.
+    """
     return _build(
         raw,
         source=SourceId.OLDENBURG_PARKING,
-        license_id=LicenseId.DL_DE_BY_2_0,
-        license_tier=LicenseTier.A,
+        license_id=LicenseId.UNKNOWN,
+        license_tier=LicenseTier.C,
         attribution_text="Stadt Oldenburg (Oldb)",
         retrieved_at=retrieved_at,
         ags=ags,
         wikidata_qid=wikidata_qid,
+        unknown_url=_OLDENBURG_SOURCE_URL,
     )
