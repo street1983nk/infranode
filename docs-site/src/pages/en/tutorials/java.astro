@@ -80,7 +80,7 @@ public class Weather {
 
         // Errors (404 unknown city, 503 source down) arrive as ApiException
         try {
-            cities.getCityWeather("atlantis");
+            cities.getCityWeather("essen");
         } catch (ApiException e) {
             System.out.println("HTTP " + e.getCode());
         }

@@ -923,6 +923,15 @@ class MonitoringSettings(BaseSettings):
     # auf ein systematisches Problem. Bewusst konservativer Default 10, per
     # INFRANODE_WATCHDOG_MATRIX_WARN_CELLS ohne Code-Deploy anpassbar.
     watchdog_matrix_warn_cells: int = 10
+    # Watchdog-Mengenprüfung (2026-10-31): der Watchdog warnt per WARNING-Push, wenn
+    # eine Quelle/Stadt im jüngsten ok-Lauf der letzten 24 h weniger Einträge
+    # (runs.items_seen) liefert als factor x Median der ok-Läufe der 7 Tage davor.
+    # min_baseline: Mindest-Median der Basis, darunter keine Bewertung (kleine
+    # Quellen schwanken zu stark). factor: Warnung bei aktuell < factor x Median,
+    # 0 = Check aus. Per INFRANODE_WATCHDOG_VOLUME_DROP_MIN_BASELINE bzw.
+    # INFRANODE_WATCHDOG_VOLUME_DROP_FACTOR ohne Code-Deploy anpassbar.
+    watchdog_volume_drop_min_baseline: int = 10
+    watchdog_volume_drop_factor: float = 0.5
     # 5xx-Häufungs-Alarm (2026-07-09, Owner-Wunsch Fehler-Tracking): der Watchdog
     # warnt per WARNING-Push, wenn die laufende UTC-Stunde mehr als diese Zahl
     # Server-Fehler (Status >= 500) zählt (Quelle: metrics:req:5xx:hour:*, von der

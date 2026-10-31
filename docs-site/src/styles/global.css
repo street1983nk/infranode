@@ -1287,7 +1287,6 @@ body.nav-open {
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   overflow: hidden;
-  counter-reset: feat;
 }
 
 .feature {
@@ -1308,18 +1307,6 @@ body.nav-open {
   margin: 0 0 0.5rem;
   color: var(--fg);
   letter-spacing: -0.005em;
-}
-
-.feature h3::before {
-  counter-increment: feat;
-  /* Alternativtext "": der dekorative Zaehler wird nicht als Teil der
-     Ueberschrift vorgelesen (Fallback ohne Alt-Syntax: kein Zaehler). */
-  content: counter(feat, decimal-leading-zero) / "";
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--color-accent-strong);
-  padding-top: 0.1rem;
 }
 
 .feature h3 svg {

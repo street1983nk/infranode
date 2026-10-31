@@ -395,19 +395,19 @@ Tool  -> Agent: { "data": { "payload": { "temperature_c": 19.4, "condition": "dr
 Agent: In Berlin sind es aktuell 19,4 Grad, trocken (Quelle: DWD).
 ```
 
-Fehlerfall, unbekannte Stadt. Die Live-API antwortet mit HTTP 404 und einem
+Fehlerfall, Stadt außerhalb der Abdeckung (Husum gehört nicht zu den 84 Städten). Die Live-API antwortet mit HTTP 404 und einem
 strukturierten Fehler-Envelope. Der MCP-Server gibt diesen nicht als rohen
 Traceback weiter, sondern reicht `message` und `hint` als lesbare
 Tool-Fehlermeldung durch, sodass das Modell sich selbst korrigieren kann (z.B.
 `list_cities` aufrufen):
 
 ```
-Agent -> Tool: get_city(slug="atlantis")
+Agent -> Tool: get_city(slug="husum")
 Tool  -> Agent: HTTP 404
                 {
                   "error": {
                     "code": "not_found",
-                    "message": "Unbekannte Stadt 'atlantis'.",
+                    "message": "Unbekannte Stadt 'husum'.",
                     "hint": "Nutze GET /api/v1/cities fuer alle unterstuetzten Staedte."
                   }
                 }
@@ -418,7 +418,7 @@ beliebige Groß/Kleinschreibung, gängige englische Exonyme und Kurzformen führ
 zum kanonischen Slug (`München`/`münchen`/`munich`/`munchen` -> `muenchen`,
 `cologne` -> `koeln`, `frankfurt` -> `frankfurt-am-main`). Ein Agent muss die
 ASCII-Schreibweise also nicht kennen. Nur ein wirklich unbekannter Name (wie
-`atlantis` oben, kein naher Treffer) liefert den generischen 404; bei einem
+`husum` oben, kein naher Treffer) liefert den generischen 404; bei einem
 Tippfehler nennt der `hint` stattdessen den nächstliegenden Slug
 (`Meintest du 'muenchen'?`).
 

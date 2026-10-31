@@ -122,6 +122,7 @@ const NAV_PRE: NavGroup[] = [
     en: "Get started",
     items: [
       { de: "Quick-Start", en: "Quickstart", deHref: "/quickstart/", enHref: "/en/quickstart/", keys: ["quickstart"], cta: true },
+      { de: "SDKs", en: "SDKs", deHref: "/quickstart/#sdks", enHref: "/en/quickstart/#sdks", keys: ["sdks"] },
       { de: "Tutorials", en: "Tutorials", deHref: "/tutorials/", enHref: "/en/tutorials/", keys: ["tutorials", "tutorial"] },
     ],
   },
@@ -334,6 +335,7 @@ const groupActive = (group: NavGroup) => group.items.some(itemActive);
             <nav class="footer__nav" aria-label="Footer">
               <a class="footer__link" href="/en/">Home</a>
               <a class="footer__link" href="/en/quickstart/">Quickstart</a>
+              <a class="footer__link" href="/en/quickstart/#sdks">SDKs</a>
               <a class="footer__link" href="/en/cities/">Cities</a>
               <a class="footer__link" href="/en/mcp/">MCP server</a>
               <a class="footer__link" href="/en/mcp-comparison/">MCP comparison</a>
@@ -346,6 +348,7 @@ const groupActive = (group: NavGroup) => group.items.some(itemActive);
           ) : (
             <nav class="footer__nav" aria-label="Footer">
               <a class="footer__link" href="/quickstart/">Quick-Start</a>
+              <a class="footer__link" href="/quickstart/#sdks">SDKs</a>
               <a class="footer__link" href="/staedte/">Städte</a>
               <a class="footer__link" href="/mcp/">MCP-Server</a>
               <a class="footer__link" href="/mcp-vergleich/">MCP-Vergleich</a>
