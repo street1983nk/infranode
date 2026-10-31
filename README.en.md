@@ -125,6 +125,16 @@ mirrors every endpoint with real example responses, so you can try the
 [InfraNode API Postman collection](https://www.postman.com/alster83-7133231/infranode/collection/pft781f/infranode-api)
 in the browser without an API key.
 
+## SDKs
+
+Keyless client libraries, source and issues in their own repos:
+
+| Language | Install | Repo |
+|---|---|---|
+| Python | `pip install infranode` ([PyPI](https://pypi.org/project/infranode/)) | [infranode-python](https://github.com/street1983nk/infranode-python), with LangChain and LlamaIndex tools |
+| JavaScript/TypeScript | `npm install infranode-sdk` ([npm](https://www.npmjs.com/package/infranode-sdk)) | [infranode-js](https://github.com/street1983nk/infranode-js), with a Vercel AI SDK tool |
+| Java | no package | [Tutorial](https://infranode.dev/en/tutorials/java/): `HttpClient` or OpenAPI Generator |
+
 <!-- Endpoint count comes from docs/openapi.yaml (one operationId per operation).
      Keep it in sync: docs-site/scripts/check-endpoint-count.mjs verifies this. -->
 ## Data (84 cities, 122 endpoints)
