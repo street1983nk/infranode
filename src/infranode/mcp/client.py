@@ -366,8 +366,9 @@ def _validate_slug(slug: str) -> str:
     """Validiert und quotet den Slug als reinen Pfadbestandteil (T-12-MCP-INJECT).
 
     Ein Slug darf keine Pfad-Trenner oder Host-Anteile (``/``, ``@``, ``:``,
-    Whitespace) enthalten; solche Eingaben könnten die URL umlenken. Gibt den
-    url-gequoteten Slug zurück oder löst ``ValueError`` aus.
+    Whitespace) enthalten und kein reines Punkt-Segment (``.``, ``..``) sein;
+    solche Eingaben könnten die URL umlenken oder Pfad-Segmente auflösen. Gibt
+    den url-gequoteten Slug zurück oder löst ``ValueError`` aus.
     """
     if not slug or not isinstance(slug, str):
         raise ValueError("Slug muss ein nicht-leerer String sein.")
@@ -378,6 +379,13 @@ def _validate_slug(slug: str) -> str:
         raise ValueError(
             f"Ungueltiger Slug {slug!r}: enthaelt unzulaessige Zeichen "
             "(Pfad-/Host-Trenner)."
+        )
+    # Reine Punkt-Segmente ("." / "..") enthalten keinen Trenner, werden aber von
+    # httpx (RFC 3986 remove_dot_segments) aufgelöst: "/cities/../weather" wird zu
+    # "/weather" und verlässt so den festen /cities/{slug}/- bzw. /live/{slug}/-Pfad.
+    if set(slug) == {"."}:
+        raise ValueError(
+            f"Ungültiger Slug {slug!r}: reines Punkt-Segment (Pfad-Traversal)."
         )
     return quote(slug, safe="")
 

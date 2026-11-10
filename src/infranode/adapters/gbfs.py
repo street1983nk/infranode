@@ -168,6 +168,34 @@ def _feeds(discovery: dict) -> dict[str, str]:
     return {f.get("name"): f.get("url") for f in block.get("feeds", []) if f.get("url")}
 
 
+def _safe_feeds(feeds: dict[str, str], discovery_url: str) -> dict[str, str]:
+    """Behält nur Feed-URLs, die dieselbe SSRF-Invariante wie Redirects erfüllen (rein).
+
+    Die Feed-URLs stammen aus der Upstream-Antwort (``gbfs.json``), nicht aus der
+    kuratierten Registry. Erlaubt sind nur ``https``-URLs ohne Userinfo und auf
+    Standard-Port 443, deren Host dem Discovery-Host entspricht oder in
+    ``_REDIRECT_HOSTS`` liegt. Alles andere wird verworfen.
+    """
+    allowed = {httpx.URL(discovery_url).host, *_REDIRECT_HOSTS}
+    safe: dict[str, str] = {}
+    for name, url in feeds.items():
+        if not isinstance(name, str) or not isinstance(url, str):
+            continue
+        clean = url.strip()
+        if not clean or "\\" in clean:
+            continue
+        try:
+            parsed = httpx.URL(clean)
+        except httpx.InvalidURL:
+            continue
+        if parsed.scheme != "https" or parsed.host not in allowed or parsed.userinfo:
+            continue
+        if parsed.port not in (None, 443):
+            continue
+        safe[name] = clean
+    return safe
+
+
 async def _get_json(http: httpx.AsyncClient, url: str) -> dict:
     """Holt eine GBFS-JSON-Ressource (``raise_for_status`` Pflicht -> Fassade).
 
@@ -290,7 +318,7 @@ async def _fetch_system(
     system_id = spec.system_id
     discovery_url = spec.base_url + spec.discovery_path.format(system_id=system_id)
     discovery = await _get_json(http, discovery_url)
-    feeds = _feeds(discovery)
+    feeds = _safe_feeds(_feeds(discovery), discovery_url)
 
     info: dict = {}
     if "system_information" in feeds:
